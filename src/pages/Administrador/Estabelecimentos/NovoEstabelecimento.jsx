@@ -45,7 +45,7 @@ export default function NovoEstabelecimento() {
       }
 
       const resp = await fetch(
-        `${API_URL}/admin/estabelecimentos/nova`,
+        `${API_URL}/admin/estabelecimentos/criar`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
