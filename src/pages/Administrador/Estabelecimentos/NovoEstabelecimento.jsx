@@ -17,6 +17,7 @@ export default function NovoEstabelecimento() {
     endereco_completo: "",
     status_assinatura: "ativa",
     data_vencimento: "",
+    tipo_estabelecimento: "mercearia",
   });
 
   const [salvando, setSalvando] = useState(false);
@@ -84,6 +85,21 @@ export default function NovoEstabelecimento() {
             onChange={atualizar}
             required
           />
+
+          <label>Tipo de Estabelecimento</label>
+          <select
+            name="tipo_estabelecimento"
+            value={form.tipo_estabelecimento}
+            onChange={atualizar}
+          >
+            <option value="mercearia">Mercearia</option>
+            <option value="padaria">Padaria</option>
+            <option value="ferragem">Ferragem</option>
+            <option value="agropecuaria">Agropecuária</option>
+            <option value="loja">Loja</option>
+            <option value="restaurante">Restaurante</option>
+            <option value="outro">Outro</option>
+          </select>
 
           <label>CNPJ</label>
           <input
