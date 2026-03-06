@@ -1,25 +1,21 @@
 // ===== NovoOperador.jsx =====
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "../Estabelecimentos/Estabelecimentos.css";
 
 export default function NovoOperador() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { id: estabelecimentoId } = useParams();
 
   const API_URL = import.meta.env.VITE_API_URL;
-
-  // Captura ? estabelecimento=ID se existir
-  const estabelecimentoFromQuery =
-    new URLSearchParams(location.search).get("mercearia") || "";
 
   const [form, setForm] = useState({
     nome: "",
     email: "",
     senha: "",
     telefone: "",
-    mercearia_id: merceariaFromQuery,
+    mercearia_id: estabelecimentoId || "",
   });
 
   const [estabelecimentos, setEstabelecimentos] = useState([]);
@@ -27,7 +23,7 @@ export default function NovoOperador() {
   const [erro, setErro] = useState("");
 
   // ============================
-  // CARREGAR ESTABELECIMENTOS ATIVOS
+  // CARREGAR ESTABELECIMENTOS
   // ============================
   async function carregarEstabelecimentos() {
     try {
@@ -35,8 +31,11 @@ export default function NovoOperador() {
 
       const resp = await fetch(
         `${API_URL}/admin/estabelecimentos/listar`,
-        { credentials: "include" }
+        {
+          credentials: "include",
+        }
       );
+
       const data = await resp.json();
       setEstabelecimentos(data || []);
     } catch (err) {
@@ -50,7 +49,7 @@ export default function NovoOperador() {
   }, []);
 
   // ============================
-  // HANDLER
+  // HANDLER FORM
   // ============================
   function atualizar(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -61,6 +60,7 @@ export default function NovoOperador() {
   // ============================
   async function salvar(e) {
     e.preventDefault();
+
     setErro("");
     setLoading(true);
 
@@ -89,7 +89,10 @@ export default function NovoOperador() {
         setErro(json.error || "Erro ao criar operador.");
       } else {
         alert("Operador criado com sucesso!");
-        navigate(`/admin/estabelecimentos/${form.mercearia_id}/operadores`);
+
+        navigate(
+          `/admin/estabelecimentos/${form.mercearia_id}/operadores`
+        );
       }
     } catch (err) {
       console.error("Erro salvar operador:", err);
@@ -107,6 +110,7 @@ export default function NovoOperador() {
         {erro && <p className="erro-box">{erro}</p>}
 
         <form className="merc-form" onSubmit={salvar}>
+
           {/* ESTABELECIMENTO */}
           <label>Estabelecimento</label>
           <select
@@ -116,6 +120,7 @@ export default function NovoOperador() {
             required
           >
             <option value="">Selecione...</option>
+
             {estabelecimentos.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nome_fantasia}
@@ -163,7 +168,7 @@ export default function NovoOperador() {
             onChange={atualizar}
           />
 
-          {/* AÇÕES */}
+          {/* BOTÕES */}
           <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
             <button className="btn-primary" disabled={loading}>
               {loading ? "Salvando..." : "Cadastrar Operador"}
@@ -177,6 +182,7 @@ export default function NovoOperador() {
               Voltar
             </button>
           </div>
+
         </form>
       </div>
     </LayoutAdmin>
