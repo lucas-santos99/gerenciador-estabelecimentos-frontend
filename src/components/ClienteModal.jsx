@@ -6,7 +6,7 @@ import './ClienteModal.css';
 const BACKEND_BASE_URL =
   window.location.hostname === 'localhost'
     ? 'http://localhost:3001'
-    : 'https://mercearia-api.onrender.com';
+    : 'https://estabelecimentos-api.onrender.com';
 
 // Helper formatação moeda
 const formatCurrency = (value) => {
@@ -23,7 +23,7 @@ const formatarDataInput = (dataString) => {
   }
 };
 
-const ClienteModal = ({ merceariaId, cliente, onClose, onSave, onDelete }) => {
+const ClienteModal = ({ estabelecimentoId, cliente, onClose, onSave, onDelete }) => {
   const isEdit = !!cliente;
 
   const [nome, setNome] = useState(cliente?.nome || '');
@@ -70,7 +70,7 @@ const ClienteModal = ({ merceariaId, cliente, onClose, onSave, onDelete }) => {
     const method = isEdit ? 'PUT' : 'POST';
 
     const body = {
-      merceariaId,
+      estabelecimentoId,
       nome: nome.trim(),
       telefone: telefone.trim() || null,
       limiteCredito: limiteCredito.replace(/\./g, '').replace(',', '.'),
@@ -105,7 +105,7 @@ const ClienteModal = ({ merceariaId, cliente, onClose, onSave, onDelete }) => {
     setError(null);
 
     try {
-      const url = `${BACKEND_BASE_URL}/api/clientes/deletar/${encodeURIComponent(cliente.id)}?merceariaId=${encodeURIComponent(merceariaId)}`;
+      const url = `${BACKEND_BASE_URL}/api/clientes/deletar/${encodeURIComponent(cliente.id)}?estabelecimentoId=${encodeURIComponent(estabelecimentoId)}`;
       const response = await fetch(url, { method: 'DELETE' });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Falha ao excluir cliente.');

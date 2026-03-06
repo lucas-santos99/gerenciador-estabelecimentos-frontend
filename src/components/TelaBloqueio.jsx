@@ -25,7 +25,7 @@ const TelaBloqueio = ({ onLogout, nomeFantasia }) => {
             <h2>Acesso Bloqueado</h2>
 
             <p className="bloqueio-msg">
-                A assinatura da mercearia <strong>{nomeFantasia || "do usuário"}</strong> 
+                A assinatura do estabelecimento <strong>{nomeFantasia || "do usuário"}</strong> 
                 expirou ou não foi paga.
             </p>
 

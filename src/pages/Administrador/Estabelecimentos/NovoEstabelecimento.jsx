@@ -1,10 +1,10 @@
-// src/pages/Administrador/Mercearias/NovaMercearia.jsx
+// src/pages/Administrador/Estabelecimentos/NovoEstabelecimento.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "./Mercearias.css";
+import "./Estabelecimentos.css";
 
-export default function NovaMercearia() {
+export default function NovoEstabelecimento() {
   const navigate = useNavigate();
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -32,7 +32,7 @@ export default function NovaMercearia() {
 
     // Regra: exigido somente se ativa
     if (form.status_assinatura === "ativa" && !form.data_vencimento) {
-      setErro("Data de vencimento é obrigatória para mercearias ativas.");
+      setErro("Data de vencimento é obrigatória para estabelecimentos ativos.");
       return;
     }
 
@@ -44,7 +44,7 @@ export default function NovaMercearia() {
       }
 
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/nova`,
+        `${API_URL}/admin/estabelecimentos/nova`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,14 +56,14 @@ export default function NovaMercearia() {
       const json = await resp.json();
 
       if (!resp.ok) {
-        setErro(json.error || "Erro ao criar mercearia");
+        setErro(json.error || "Erro ao criar estabelecimento");
       } else {
-        alert("Mercearia criada com sucesso!");
+        alert("Estabelecimento criado com sucesso!");
         navigate("/admin");
       }
     } catch (e) {
       console.error(e);
-      setErro("Erro ao criar mercearia.");
+      setErro("Erro ao criar estabelecimento.");
     }
 
     setSalvando(false);
@@ -72,7 +72,7 @@ export default function NovaMercearia() {
   return (
     <LayoutAdmin>
       <div className="merc-wrapper">
-        <h1>Nova Mercearia</h1>
+        <h1>Novo estabelecimento</h1>
 
         {erro && <p className="erro-box">{erro}</p>}
 
@@ -139,7 +139,7 @@ export default function NovaMercearia() {
 
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <button className="btn-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Criar Mercearia"}
+              {salvando ? "Salvando..." : "Criar Estabelecimento"}
             </button>
 
             <button

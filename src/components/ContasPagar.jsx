@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // Formata data para pt-BR
 const formatDate = (dateString) => {
@@ -17,7 +17,7 @@ const formatDate = (dateString) => {
     }
 };
 
-const ContasPagar = ({ merceariaId }) => {
+const ContasPagar = ({ estabelecimentoId }) => {
 
     const [contas, setContas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ const ContasPagar = ({ merceariaId }) => {
         try {
             const response = await fetch(
                 `${BACKEND_BASE_URL}/api/financeiro/pagar/${encodeURIComponent(
-                    merceariaId
+                    estabelecimentoId
                 )}?status=${encodeURIComponent(status)}`
             );
 
@@ -64,7 +64,7 @@ const ContasPagar = ({ merceariaId }) => {
 
     useEffect(() => {
         fetchContas();
-    }, [merceariaId, filterStatus]);
+    }, [estabelecimentoId, filterStatus]);
 
     // ===============================
     // Adicionar nova conta
@@ -81,7 +81,7 @@ const ContasPagar = ({ merceariaId }) => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    merceariaId: merceariaId,
+                    estabelecimentoId: estabelecimentoId,
                     descricao: novaConta.descricao,
                     valor: valorCorrigido,
                     data_vencimento: novaConta.data_vencimento,
@@ -127,7 +127,7 @@ const ContasPagar = ({ merceariaId }) => {
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ merceariaId }),
+                    body: JSON.stringify({ estabelecimentoId }),
                 }
             );
 

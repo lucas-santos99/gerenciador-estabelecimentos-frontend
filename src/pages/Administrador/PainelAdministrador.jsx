@@ -18,17 +18,17 @@ export default function PainelAdministrador() {
       <h2>Atalhos</h2>
       <ul>
         <li>
-          <Link to="/admin/mercearias">Gerenciar Mercearias</Link>
+          <Link to="/admin/estabelecimentos">Gerenciar Estabelecimentos</Link>
         </li>
 
         <li>
-          <Link to="/admin/mercearias/excluidas">Mercearias Excluídas</Link>
+          <Link to="/admin/estabelecimentos/excluidas">Estabelecimentos Excluídas</Link>
         </li>
 
         <li>
           {/* este não tem rota global ainda, então removemos */}
-          {/* operadores ficam dentro da mercearia */}
-          Operadores → abra uma mercearia para gerenciar
+          {/* operadores ficam dentro do estabelecimento */}
+          Operadores → abra um estabelecimento para gerenciar
         </li>
 
         <li>

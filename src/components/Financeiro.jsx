@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // --- Helpers ---
 const formatCurrency = (value) => {
@@ -62,7 +62,7 @@ const DreSubRow = ({ label, valor }) => (
 );
 
 // ===== COMPONENTE PRINCIPAL =====
-const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
+const Financeiro = ({ estabelecimentoId, logoUrl, nomeFantasia }) => {
 
     // --- Aba ativa ---
     const [activeTab, setActiveTab] = useState("fluxo");
@@ -105,11 +105,11 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
 
     // --- Carregamento inicial ---
     useEffect(() => {
-        if (merceariaId) {
+        if (estabelecimentoId) {
             fetchResumo();
             fetchCategorias();
         }
-    }, [merceariaId]);
+    }, [estabelecimentoId]);
     // ================================
     // 📌 1. FUNÇÕES — FLUXO DE CAIXA
     // ================================
@@ -119,7 +119,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
 
         try {
             const response = await fetch(
-                `${BACKEND_BASE_URL}/api/financeiro/resumo/${encodeURIComponent(merceariaId)}`
+                `${BACKEND_BASE_URL}/api/financeiro/resumo/${encodeURIComponent(estabelecimentoId)}`
             );
 
             if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
@@ -152,7 +152,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
 
             const response = await fetch(
                 `${BACKEND_BASE_URL}/api/financeiro/relatorio_dre/${encodeURIComponent(
-                    merceariaId
+                    estabelecimentoId
                 )}?${params.toString()}`
             );
 
@@ -256,10 +256,10 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
     // 📌 4. FUNÇÕES — CONTAS A PAGAR
     // ================================
     useEffect(() => {
-        if (merceariaId && (activeTab === "contas" || loadingContas)) {
+        if (estabelecimentoId && (activeTab === "contas" || loadingContas)) {
             fetchContas(filterStatus);
         }
-    }, [filterStatus, merceariaId, activeTab]);
+    }, [filterStatus, estabelecimentoId, activeTab]);
 
     const fetchContas = async (status = filterStatus) => {
         setLoadingContas(true);
@@ -268,7 +268,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
         try {
             const response = await fetch(
                 `${BACKEND_BASE_URL}/api/financeiro/${encodeURIComponent(
-                    merceariaId
+                    estabelecimentoId
                 )}?status=${encodeURIComponent(status)}`
             );
 
@@ -313,7 +313,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    merceariaId,
+                    estabelecimentoId,
                     descricao: formDataContas.descricao,
                     valor: valorFormatado,
                     data_vencimento: formDataContas.data_vencimento,
@@ -347,7 +347,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        merceariaId,
+                        estabelecimentoId,
                         descricao: formDataContas.descricao,
                         valor: valorFormatado,
                         data_vencimento: formDataContas.data_vencimento,
@@ -396,7 +396,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ merceariaId }),
+                    body: JSON.stringify({ estabelecimentoId }),
                 }
             );
 
@@ -432,7 +432,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
                 {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ merceariaId }),
+                    body: JSON.stringify({ estabelecimentoId }),
                 }
             );
 
@@ -457,7 +457,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
     const fetchCategorias = async () => {
         try {
             const response = await fetch(
-                `${BACKEND_BASE_URL}/api/categorias/${encodeURIComponent(merceariaId)}`
+                `${BACKEND_BASE_URL}/api/categorias/${encodeURIComponent(estabelecimentoId)}`
             );
 
             if (!response.ok) throw new Error("Erro ao buscar categorias.");
@@ -485,7 +485,7 @@ const Financeiro = ({ merceariaId, logoUrl, nomeFantasia }) => {
             if (categoriaFiltro) params.append("categoria_id", categoriaFiltro);
 
             const response = await fetch(
-                `${BACKEND_BASE_URL}/api/financeiro/relatorio_produtos/${encodeURIComponent(merceariaId)}?${params.toString()}`
+                `${BACKEND_BASE_URL}/api/financeiro/relatorio_produtos/${encodeURIComponent(estabelecimentoId)}?${params.toString()}`
             );
 
             const data = await response.json();

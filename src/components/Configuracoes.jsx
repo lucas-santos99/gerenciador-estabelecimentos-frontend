@@ -6,7 +6,7 @@ import './Configuracoes.css';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // --- Helpers de Máscara ---
 const mascaraCNPJ = (valor) => {
@@ -34,7 +34,7 @@ const mascaraTelefone = (valor) => {
     return r;
 };
 
-const Configuracoes = ({ merceariaId, supabaseProp, onLogoUpdated, logoUrl }) => {
+const Configuracoes = ({ estabelecimentoId, supabaseProp, onLogoUpdated, logoUrl }) => {
     
     const [formData, setFormData] = useState({
         nome_fantasia: '',
@@ -54,11 +54,11 @@ const Configuracoes = ({ merceariaId, supabaseProp, onLogoUpdated, logoUrl }) =>
     // ---- BUSCAR DADOS AO ABRIR ----
     useEffect(() => {
         const fetchDados = async () => {
-            if (!merceariaId) return;
+            if (!estabelecimentoId) return;
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch(`${BACKEND_BASE_URL}/api/mercearias/dados/${merceariaId}`);
+                const response = await fetch(`${BACKEND_BASE_URL}/api/estabelecimentos/dados/${estabelecimentoId}`);
                 if (!response.ok) throw new Error('Falha ao carregar dados da mercearia.');
                 const data = await response.json();
 
@@ -78,7 +78,7 @@ const Configuracoes = ({ merceariaId, supabaseProp, onLogoUpdated, logoUrl }) =>
         };
 
         fetchDados();
-    }, [merceariaId]);
+    }, [estabelecimentoId]);
 
     // ---- MÁSCARAS ----
     const handleChange = (e) => {
@@ -112,7 +112,7 @@ const Configuracoes = ({ merceariaId, supabaseProp, onLogoUpdated, logoUrl }) =>
         }
 
         const fileExt = file.name.split('.').pop();
-        const filePath = `public/${merceariaId}.${fileExt}`;
+        const filePath = `public/${estabelecimentoId}.${fileExt}`;
 
         setUploading(true);
         try {
@@ -154,7 +154,7 @@ const Configuracoes = ({ merceariaId, supabaseProp, onLogoUpdated, logoUrl }) =>
         setSuccess(null);
 
         try {
-            const response = await fetch(`${BACKEND_BASE_URL}/api/mercearias/dados/${merceariaId}`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/estabelecimentos/dados/${estabelecimentoId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData)

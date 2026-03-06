@@ -31,12 +31,12 @@ export default function DashboardAdmin() {
       }
 
       const resp1 = await fetch(
-        `${API_URL}/admin/mercearias/listar`
+        `${API_URL}/admin/estabelecimentos/listar`
       );
       const lista = (await resp1.json()) || [];
 
       const resp2 = await fetch(
-        `${API_URL}/admin/mercearias/excluidas`
+        `${API_URL}/admin/estabelecimentos/excluidas`
       );
       const excluidas = (await resp2.json()) || [];
 
@@ -83,16 +83,16 @@ export default function DashboardAdmin() {
   });
 
   async function excluir(id) {
-    if (!window.confirm("Tem certeza que deseja excluir esta mercearia?")) return;
+    if (!window.confirm("Tem certeza que deseja excluir este estabelecimento?")) return;
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         { method: "DELETE" }
       );
 
       if (resp.ok) {
-        alert("Mercearia excluída.");
+        alert("Estabelecimento excluído.");
         carregarDados();
       } else {
         alert("Erro ao excluir.");
@@ -123,14 +123,14 @@ export default function DashboardAdmin() {
           <div className="dash-actions">
             <button
               className="btn-primary"
-              onClick={() => navigate("/admin/mercearias/nova")}
+              onClick={() => navigate("/admin/estabelecimentos/nova")}
             >
-              + Nova Mercearia
+              + Novo Estabelecimento
             </button>
 
             <button
               className="btn-secondary"
-              onClick={() => navigate("/admin/mercearias/excluidas")}
+              onClick={() => navigate("/admin/estabelecimentos/excluidas")}
             >
               Ver Excluídas
             </button>
@@ -141,7 +141,7 @@ export default function DashboardAdmin() {
         <div className="dash-cards">
           <div className="dash-card green">
             <h2>{stats.total}</h2>
-            <p>Total de Mercearias</p>
+            <p>Total de Estabelecimentos</p>
           </div>
 
           <div className="dash-card blue">
@@ -187,7 +187,7 @@ export default function DashboardAdmin() {
 
         {/* LISTA */}
         <div className="dash-box">
-          <h3>Mercearias</h3>
+          <h3>Estabelecimentos</h3>
 
           <table className="dash-table">
             <thead>
@@ -234,7 +234,7 @@ export default function DashboardAdmin() {
                     <button
                       className="btn-secondary"
                       onClick={() =>
-                        navigate(`/admin/mercearias/${m.id}?view=details`)
+                        navigate(`/admin/estabelecimentos/${m.id}?view=details`)
                       }
                     >
                       Detalhes
@@ -243,7 +243,7 @@ export default function DashboardAdmin() {
                     <button
                       className="btn-primary"
                       onClick={() =>
-                        navigate(`/admin/mercearias/${m.id}`)
+                        navigate(`/admin/estabelecimentos/${m.id}`)
                       }
                     >
                       Editar
@@ -259,7 +259,7 @@ export default function DashboardAdmin() {
                     <button
                       className="btn-operators"
                       onClick={() =>
-                        navigate(`/admin/mercearias/${m.id}/operadores`)
+                        navigate(`/admin/estabelecimentos/${m.id}/operadores`)
                       }
                     >
                       Operadores
@@ -271,7 +271,7 @@ export default function DashboardAdmin() {
               {listaFiltrada.length === 0 && (
                 <tr>
                   <td colSpan="6" style={{ textAlign: "center", padding: 20 }}>
-                    Nenhuma mercearia encontrada.
+                    Nenhum estabelecimento encontrado.
                   </td>
                 </tr>
               )}

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // Formata data para pt-BR
 const formatDate = (dateString) => {
@@ -17,7 +17,7 @@ const formatDate = (dateString) => {
     }
 };
 
-const ContasReceber = ({ merceariaId }) => {
+const ContasReceber = ({ estabelecimentoId }) => {
 
     const [fiados, setFiados] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ const ContasReceber = ({ merceariaId }) => {
         try {
             const response = await fetch(
                 `${BACKEND_BASE_URL}/api/financeiro/receber/${encodeURIComponent(
-                    merceariaId
+                    estabelecimentoId
                 )}`
             );
 
@@ -55,8 +55,8 @@ const ContasReceber = ({ merceariaId }) => {
 
     // Load inicial
     useEffect(() => {
-        if (merceariaId) fetchFiados();
-    }, [merceariaId]);
+        if (estabelecimentoId) fetchFiados();
+    }, [estabelecimentoId]);
 
     // ===============================
     // MARCAR FIADO COMO RECEBIDO
@@ -74,7 +74,7 @@ const ContasReceber = ({ merceariaId }) => {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        merceariaId: encodeURIComponent(merceariaId),
+                        estabelecimentoId: encodeURIComponent(estabelecimentoId),
                     }),
                 }
             );

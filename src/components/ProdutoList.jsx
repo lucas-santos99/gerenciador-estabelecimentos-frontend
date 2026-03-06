@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // --- Helpers ---
 const formatCurrency = (value) => {
@@ -34,7 +34,7 @@ const normalizeText = (text) => {
         .replace(/[\u0300-\u036f]/g, "");
 };
 
-const ProdutoList = ({ merceariaId, shouldFocusSearch, onFocusHandled }) => {
+const ProdutoList = ({ estabelecimentoId, shouldFocusSearch, onFocusHandled }) => {
 
     // --- Estados ---
     const [produtos, setProdutos] = useState([]);
@@ -52,26 +52,26 @@ const ProdutoList = ({ merceariaId, shouldFocusSearch, onFocusHandled }) => {
 
     const searchInputRef = useRef(null);
 
-    // 🛑 Se merceariaId ainda não carregou, evita erros
+    // 🛑 Se estabelecimentoId ainda não carregou, evita erros
     useEffect(() => {
-        if (!merceariaId) {
-            console.log("ProdutoList.jsx: aguardando merceariaId...");
+        if (!estabelecimentoId) {
+            console.log("ProdutoList.jsx: aguardando estabelecimentoId...");
             return;
         }
         fetchData();
-    }, [merceariaId]);
+    }, [estabelecimentoId]);
 
     // === 1. BUSCAR PRODUTOS E CATEGORIAS ===
     const fetchData = async (focarNoProdutoId = null) => {
-        if (!merceariaId) return;
+        if (!estabelecimentoId) return;
 
         setLoading(true);
         setError(null);
 
         try {
             const [produtosRes, categoriasRes] = await Promise.all([
-                fetch(`${BACKEND_BASE_URL}/api/mercearias/${merceariaId}/produtos`),
-                fetch(`${BACKEND_BASE_URL}/api/categorias/${merceariaId}`)
+                fetch(`${BACKEND_BASE_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos`),
+                fetch(`${BACKEND_BASE_URL}/api/categorias/${estabelecimentoId}`)
             ]);
 
             if (!produtosRes.ok) throw new Error(`Erro ao buscar produtos (status ${produtosRes.status})`);
@@ -124,7 +124,7 @@ const ProdutoList = ({ merceariaId, shouldFocusSearch, onFocusHandled }) => {
 
         try {
             const resp = await fetch(
-                `${BACKEND_BASE_URL}/api/mercearias/${merceariaId}/produtos/${produtoId}`,
+                `${BACKEND_BASE_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos/${produtoId}`,
                 { method: "DELETE" }
             );
 
@@ -222,7 +222,7 @@ const ProdutoList = ({ merceariaId, shouldFocusSearch, onFocusHandled }) => {
             {/* Modais */}
             {isModalOpen && (
                 <ProdutoModal 
-                    merceariaId={merceariaId}
+                    estabelecimentoId={estabelecimentoId}
                     onClose={() => { setIsModalOpen(false); setProdutoSelecionado(null); }}
                     produtoParaEditar={produtoSelecionado}
                     onProdutoSalvo={handleProdutoSalvo}
@@ -231,7 +231,7 @@ const ProdutoList = ({ merceariaId, shouldFocusSearch, onFocusHandled }) => {
 
             {isCategoriaModalOpen && (
                 <CategoriaModal
-                    merceariaId={merceariaId}
+                    estabelecimentoId={estabelecimentoId}
                     onClose={() => setIsCategoriaModalOpen(false)}
                     onCategoriaSalva={() => { fetchData(); setIsCategoriaModalOpen(false); }}
                 />

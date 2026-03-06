@@ -1,10 +1,10 @@
-// src/pages/Administrador/Mercearias/EditarMercearia.jsx
+// src/pages/Administrador/Estabelecimentos/EditarEstabelecimento.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "./Mercearias.css";
+import "./Estabelecimentos.css";
 
-export default function EditarMercearia() {
+export default function EditarEstabelecimento() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,7 +39,7 @@ export default function EditarMercearia() {
       }
 
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         { credentials: "include" }
       );
 
@@ -57,7 +57,7 @@ export default function EditarMercearia() {
           logo_url: data.logo_url || "",
         });
       } else {
-        setErro(data.error || "Erro ao carregar mercearia");
+        setErro(data.error || "Erro ao carregar estabelecimento");
       }
     } catch (e) {
       console.error(e);
@@ -80,7 +80,7 @@ export default function EditarMercearia() {
     setSalvando(true);
 
     if (form.status_assinatura === "ativa" && !form.data_vencimento) {
-      setErro("Data de vencimento é obrigatória quando a mercearia está ativa.");
+      setErro("Data de vencimento é obrigatória quando o estabelecimento está ativo.");
       setSalvando(false);
       return;
     }
@@ -95,7 +95,7 @@ export default function EditarMercearia() {
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -110,7 +110,7 @@ export default function EditarMercearia() {
         setErro(json.error || "Erro ao salvar");
       } else {
         alert("Salvo com sucesso!");
-        navigate(`/admin/mercearias/${id}?view=details`);
+        navigate(`/admin/estabelecimentos/${id}?view=details`);
       }
     } catch (e) {
       console.error(e);
@@ -128,7 +128,7 @@ export default function EditarMercearia() {
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}/upload-logo`,
+        `${API_URL}/admin/estabelecimentos/${id}/upload-logo`,
         {
           method: "POST",
           body: formData,
@@ -154,7 +154,7 @@ export default function EditarMercearia() {
     if (!window.confirm("Remover logo?")) return;
 
     const resp = await fetch(
-      `${API_URL}/admin/mercearias/${id}/remover-logo`,
+      `${API_URL}/admin/estabelecimentos/${id}/remover-logo`,
       {
         method: "DELETE",
         credentials: "include",
@@ -173,7 +173,7 @@ export default function EditarMercearia() {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
 
     const resp = await fetch(
-      `${API_URL}/admin/mercearias/${id}`,
+      `${API_URL}/admin/estabelecimentos/${id}`,
       {
         method: "DELETE",
         credentials: "include",
@@ -181,7 +181,7 @@ export default function EditarMercearia() {
     );
 
     if (resp.ok) {
-      alert("Mercearia excluída!");
+      alert("Estabelecimento excluído!");
       navigate("/admin");
     } else {
       alert("Erro ao excluir");
@@ -205,7 +205,7 @@ export default function EditarMercearia() {
     return (
       <LayoutAdmin>
         <div className="merc-wrapper">
-          <h1>Detalhes da Mercearia</h1>
+          <h1>Detalhes do Estabelecimento</h1>
 
           <div className="det-wrapper">
             <div className="det-header">
@@ -228,7 +228,7 @@ export default function EditarMercearia() {
               <div className="det-head-actions">
                 <button
                   className="btn-edit"
-                  onClick={() => navigate(`/admin/mercearias/${id}`)}
+                  onClick={() => navigate(`/admin/estabelecimentos/${id}`)}
                 >
                   Editar
                 </button>
@@ -264,7 +264,7 @@ export default function EditarMercearia() {
   return (
     <LayoutAdmin>
       <div className="merc-wrapper">
-        <h1>Editar Mercearia</h1>
+        <h1>Editar Estabelecimento</h1>
 
         {erro && <p className="erro-box">{erro}</p>}
 
@@ -324,7 +324,7 @@ export default function EditarMercearia() {
           )}
 
           <div className="logo-area">
-            <h3>Logo da Mercearia</h3>
+            <h3>Logo do Estabelecimento</h3>
 
             {form.logo_url ? (
               <img src={form.logo_url} alt="Logo" className="logo-preview-box" />

@@ -13,7 +13,7 @@ const Auth = ({ supabaseProp, BACKEND_BASE_URL }) => {
     const [message, setMessage] = useState('');
     const [isSignUp, setIsSignUp] = useState(true);
 
-    // Cadastro da mercearia
+    // Cadastro de estabelecimento
     const [userId, setUserId] = useState(null);
     const [showNomeFantasiaInput, setShowNomeFantasiaInput] = useState(false);
     const [nomeFantasia, setNomeFantasia] = useState('');
@@ -66,7 +66,7 @@ const Auth = ({ supabaseProp, BACKEND_BASE_URL }) => {
     };
 
     // ---------------------------------------------------------
-    // 2. REGISTRO DA MERCEARIA NO BACKEND NODE.JS
+    // 2. REGISTRO DO ESTABELECIMENTO NO BACKEND NODE.JS
     // ---------------------------------------------------------
     const handleRegisterMercearia = async (e) => {
         e.preventDefault();
@@ -80,7 +80,7 @@ const Auth = ({ supabaseProp, BACKEND_BASE_URL }) => {
         setLoading(true);
 
         try {
-            const response = await fetch(`${BACKEND_BASE_URL}/api/mercearias/register`, {
+            const response = await fetch(`${BACKEND_BASE_URL}/api/estabelecimentos/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

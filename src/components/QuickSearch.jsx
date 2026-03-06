@@ -6,9 +6,9 @@ import './QuickSearch.css';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
-const QuickSearch = ({ merceariaId, onProdutoSelecionado, onClose }) => {
+const QuickSearch = ({ estabelecimentoId, onProdutoSelecionado, onClose }) => {
 
     const [termo, setTermo] = useState('');
     const [resultados, setResultados] = useState([]);
@@ -99,8 +99,8 @@ const QuickSearch = ({ merceariaId, onProdutoSelecionado, onClose }) => {
         debounceTimeout.current = setTimeout(async () => {
             try {
                 const response = await fetch(
-                    `${BACKEND_BASE_URL}/api/mercearias/${encodeURIComponent(
-                        merceariaId
+                    `${BACKEND_BASE_URL}/api/estabelecimentoss/${encodeURIComponent(
+                        estabelecimentoId
                     )}/produtos/buscar-global?termo=${encodeURIComponent(valorBusca)}`
                 );
 

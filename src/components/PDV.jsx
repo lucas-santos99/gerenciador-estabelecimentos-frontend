@@ -8,7 +8,7 @@ import './PDV.css';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // ============================================================================
 // HELPER: FORMATAR MOEDA
@@ -24,7 +24,7 @@ const formatCurrency = (value) => {
 // ============================================================================
 // MODAL DE PAGAMENTO
 // ============================================================================
-const PagamentoModal = ({ total, onFinalizar, onCancelar, loading, merceariaId }) => {
+const PagamentoModal = ({ total, onFinalizar, onCancelar, loading, estabelecimentoId }) => {
 
     const paymentMethods = [
         { key: 'Dinheiro', label: 'Dinheiro' },
@@ -141,7 +141,7 @@ const PagamentoModal = ({ total, onFinalizar, onCancelar, loading, merceariaId }
         setClienteIndex(-1);
         setErrorCliente(null);
 
-        if (!merceariaId) return;
+        if (!estabelecimentoId) return;
         if (termo.length < 2) {
             setResultadosCliente([]);
             return;
@@ -151,7 +151,7 @@ const PagamentoModal = ({ total, onFinalizar, onCancelar, loading, merceariaId }
 
         try {
             const response = await fetch(
-                `${BACKEND_BASE_URL}/api/clientes/buscar/${merceariaId}?termo=${encodeURIComponent(termo)}`
+                `${BACKEND_BASE_URL}/api/clientes/buscar/${estabelecimentoId}?termo=${encodeURIComponent(termo)}`
             );
 
             if (!response.ok) throw new Error("Erro ao buscar clientes");
@@ -418,7 +418,7 @@ const PagamentoModal = ({ total, onFinalizar, onCancelar, loading, merceariaId }
 // ============================================================================
 // COMPONENTE PRINCIPAL DO PDV
 // ============================================================================
-const PDV = ({ merceariaId, supabaseProp }) => {
+const PDV = ({ estabelecimentoId, supabaseProp }) => {
 
     // -------------------------------
     // ESTADOS PRINCIPAIS
@@ -491,7 +491,7 @@ const PDV = ({ merceariaId, supabaseProp }) => {
         setTermoBusca(termo);
         setBuscaIndex(-1);
 
-        if (!merceariaId) return;
+        if (!estabelecimentoId) return;
 
         if (termo.length < 2) {
             setResultadosBusca([]);
@@ -502,7 +502,7 @@ const PDV = ({ merceariaId, supabaseProp }) => {
 
         try {
             const response = await fetch(
-                `${BACKEND_BASE_URL}/api/mercearias/${merceariaId}/produtos/buscar-global?termo=${encodeURIComponent(termo)}`
+                `${BACKEND_BASE_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(termo)}`
             );
 
             if (!response.ok) throw new Error("Erro ao buscar produtos");
@@ -713,7 +713,7 @@ const PDV = ({ merceariaId, supabaseProp }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    merceariaId: merceariaId,
+                    estabelecimentoId: estabelecimentoId,
                     valor_total: total,
                     meio_pagamento: meioPagamento,
                     carrinho: carrinhoMapeado,
@@ -818,7 +818,7 @@ const PDV = ({ merceariaId, supabaseProp }) => {
                     onCancelar={() => setShowPagamentoModal(false)}
                     onFinalizar={handleFinalizarVenda}
                     loading={loadingVenda}
-                    merceariaId={merceariaId}
+                    estabelecimentoId={estabelecimentoId}
                 />
             )}
 

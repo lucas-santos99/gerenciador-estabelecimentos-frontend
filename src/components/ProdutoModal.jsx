@@ -6,9 +6,9 @@ import './ProdutoModal.css';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
-const ProdutoModal = ({ merceariaId, onClose, onProdutoSalvo, produtoParaEditar }) => {
+const ProdutoModal = ({ estabelecimentoId, onClose, onProdutoSalvo, produtoParaEditar }) => {
     
     const [formData, setFormData] = useState({
         nome: '',
@@ -39,7 +39,7 @@ const ProdutoModal = ({ merceariaId, onClose, onProdutoSalvo, produtoParaEditar 
         const fetchCategorias = async () => {
             try {
                 const response = await fetch(
-                    `${BACKEND_BASE_URL}/api/categorias/${merceariaId}`
+                    `${BACKEND_BASE_URL}/api/categorias/${estabelecimentoId}`
                 );
                 if (!response.ok) throw new Error("Erro ao buscar categorias");
 
@@ -70,7 +70,7 @@ const ProdutoModal = ({ merceariaId, onClose, onProdutoSalvo, produtoParaEditar 
         }
 
         nomeInputRef.current?.focus();
-    }, [merceariaId, isEditMode, produtoParaEditar]);
+    }, [estabelecimentoId, isEditMode, produtoParaEditar]);
 
     // ESC FECHA O MODAL
     useEffect(() => {
@@ -115,7 +115,7 @@ const ProdutoModal = ({ merceariaId, onClose, onProdutoSalvo, produtoParaEditar 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    merceariaId: merceariaId,
+                    estabelecimentoId: estabelecimentoId,
                     nome: novaCategoriaNome
                 })
             });
@@ -147,8 +147,8 @@ const ProdutoModal = ({ merceariaId, onClose, onProdutoSalvo, produtoParaEditar 
         const method = isEditMode ? "PUT" : "POST";
 
         const url = isEditMode
-            ? `${BACKEND_BASE_URL}/api/mercearias/${merceariaId}/produtos/${produtoParaEditar.id}`
-            : `${BACKEND_BASE_URL}/api/mercearias/${merceariaId}/produtos`;
+            ? `${BACKEND_BASE_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos/${produtoParaEditar.id}`
+            : `${BACKEND_BASE_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos`;
 
         try {
             const response = await fetch(url, {

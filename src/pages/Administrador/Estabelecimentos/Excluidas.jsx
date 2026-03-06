@@ -1,8 +1,8 @@
-// src/pages/Administrador/Mercearias/Excluidas.jsx
+// src/pages/Administrador/Estabelecimentos/Excluidas.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "./Mercearias.css";
+import "./Estabelecimentos.css";
 
 export default function Excluidas() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -24,7 +24,7 @@ export default function Excluidas() {
       }
 
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/excluidas`,
+        `${API_URL}/admin/estabelecimentos/excluidas`,
         { credentials: "include" }
       );
 
@@ -47,11 +47,11 @@ export default function Excluidas() {
   }, []);
 
   async function restaurar(id) {
-    if (!window.confirm("Restaurar esta mercearia?")) return;
+    if (!window.confirm("Restaurar este estabelecimento?")) return;
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}/restaurar`,
+        `${API_URL}/admin/estabelecimentos/${id}/restaurar`,
         {
           method: "PUT",
           credentials: "include",
@@ -59,7 +59,7 @@ export default function Excluidas() {
       );
 
       if (resp.ok) {
-        alert("Mercearia restaurada!");
+        alert("Estabelecimento restaurado!");
         carregar();
       } else {
         const json = await resp.json();
@@ -67,7 +67,7 @@ export default function Excluidas() {
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao restaurar mercearia.");
+      alert("Erro ao restaurar estabelecimento.");
     }
   }
 
@@ -76,7 +76,7 @@ export default function Excluidas() {
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${idSelecionado}/apagar-definitivo`,
+        `${API_URL}/admin/estabelecimentos/${idSelecionado}/apagar-definitivo`,
         {
           method: "DELETE",
           credentials: "include",
@@ -84,7 +84,7 @@ export default function Excluidas() {
       );
 
       if (resp.ok) {
-        alert("Mercearia removida definitivamente!");
+        alert("Estabelecimento removido definitivamente!");
         setModalAtivo(false);
         carregar();
       } else {
@@ -107,7 +107,7 @@ export default function Excluidas() {
     <LayoutAdmin>
       <div className="merc-wrapper">
         <div className="merc-topo-excluidas">
-          <h1>Mercearias Excluídas</h1>
+          <h1>Estabelecimentos Excluídos</h1>
 
           <Link className="btn-voltar" to="/admin">
             ← Voltar
@@ -117,7 +117,7 @@ export default function Excluidas() {
         {loading ? (
           <p className="carregando">Carregando...</p>
         ) : lista.length === 0 ? (
-          <p className="sem-registro">Nenhuma mercearia excluída.</p>
+          <p className="sem-registro">Nenhum estabelecimento excluída.</p>
         ) : (
           <div className="cards-container">
             {lista.map((m) => (

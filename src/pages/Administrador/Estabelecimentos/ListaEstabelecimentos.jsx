@@ -1,16 +1,16 @@
-// src/pages/Administrador/Mercearias/ListaMercearias.jsx
+// src/pages/Administrador/Estabelecimentos/ListaEstabelecimentos.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "./Mercearias.css";
+import "./Estabelecimentos.css";
 
-export default function ListaMercearias() {
+export default function ListaEstabelecimentos() {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  async function carregarMercearias() {
+  async function carregarEstabelecimentos() {
     setLoading(true);
 
     try {
@@ -19,13 +19,13 @@ export default function ListaMercearias() {
       }
 
       const resposta = await fetch(
-        `${API_URL}/admin/mercearias/listar`,
+        `${API_URL}/admin/estabelecimentos/listar`,
         { credentials: "include" }
       );
 
       const data = await resposta.json();
 
-      console.log("📌 MERCEARIAS DO BACKEND:", data);
+      console.log("📌 ESTABELECIMENTOS DO BACKEND:", data);
 
       // Filtro simples: remove somente as excluídas
       const filtradas = data.filter(
@@ -34,22 +34,22 @@ export default function ListaMercearias() {
 
       setLista(filtradas);
     } catch (error) {
-      console.error("Erro ao carregar mercearias:", error);
+      console.error("Erro ao carregar estabelecimento:", error);
     }
 
     setLoading(false);
   }
 
   useEffect(() => {
-    carregarMercearias();
+    carregarEstabelecimentos();
   }, []);
 
-  async function excluirMercearia(id) {
-    if (!window.confirm("Excluir esta mercearia?")) return;
+  async function excluirEstabelecimento(id) {
+    if (!window.confirm("Excluir este estabelecimento?")) return;
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -57,8 +57,8 @@ export default function ListaMercearias() {
       );
 
       if (resp.ok) {
-        alert("Mercearia excluída com sucesso.");
-        carregarMercearias();
+        alert("Estabelecimento excluído com sucesso.");
+        carregarEstabelecimentos();
       } else {
         const json = await resp.json();
         alert("Erro: " + json.error);
@@ -72,22 +72,22 @@ export default function ListaMercearias() {
   return (
     <LayoutAdmin>
       <div className="merc-wrapper">
-        <h1>Mercearias</h1>
+        <h1>Estabelecimentos</h1>
 
         <div className="merc-top">
-          <Link className="btn-primary" to="/admin/mercearias/nova">
-            + Nova Mercearia
+          <Link className="btn-primary" to="/admin/estabelecimentos/nova">
+            + Novo Estabelecimento
           </Link>
         </div>
 
-        <Link className="btn-secondary" to="/admin/mercearias/excluidas">
+        <Link className="btn-secondary" to="/admin/estabelecimentos/excluidas">
           Ver Excluídas
         </Link>
 
         {loading ? (
           <p>Carregando...</p>
         ) : lista.length === 0 ? (
-          <p>Nenhuma mercearia cadastrada.</p>
+          <p>Nenhum estabelecimento cadastrado.</p>
         ) : (
           <table className="merc-table">
             <thead>
@@ -129,7 +129,7 @@ export default function ListaMercearias() {
                     {/* 🔹 Detalhes */}
                     <Link
                       className="btn-secondary"
-                      to={`/admin/mercearias/${m.id}?view=details`}
+                      to={`/admin/estabelecimentos/${m.id}?view=details`}
                       style={{ marginRight: 10 }}
                     >
                       Detalhes
@@ -138,7 +138,7 @@ export default function ListaMercearias() {
                     {/* 🔹 Editar */}
                     <Link
                       className="btn-edit"
-                      to={`/admin/mercearias/${m.id}`}
+                      to={`/admin/estabelecimentos/${m.id}`}
                     >
                       Editar
                     </Link>
@@ -146,7 +146,7 @@ export default function ListaMercearias() {
                     {/* 🔹 Excluir */}
                     <button
                       className="btn-delete"
-                      onClick={() => excluirMercearia(m.id)}
+                      onClick={() => excluirEstabelecimento(m.id)}
                       style={{ marginLeft: 10 }}
                     >
                       Excluir

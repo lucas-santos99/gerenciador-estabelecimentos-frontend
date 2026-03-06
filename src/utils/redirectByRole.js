@@ -7,10 +7,10 @@ export function redirectByRole(profile) {
       return "/admin";
 
     case "merchant":
-      return `/mercearia/${profile.mercearia_id}`;
+      return `/estabelecimentos/${profile.mercearia_id}`;
 
     case "operator":
-      return `/mercearia/${profile.mercearia_id}`;
+      return `/estabelecimentos/${profile.mercearia_id}`;
 
     default:
       return "/";

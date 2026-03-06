@@ -5,17 +5,17 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 
 export default function ListaOperadores() {
-  const { id: merceariaId } = useParams();
+  const { id: estabelecimentoId } = useParams();
   const navigate = useNavigate();
 
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [operadores, setOperadores] = useState([]);
-  const [mercearia, setMercearia] = useState(null);
+  const [estabelecimento, setEstabelecimento] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // =============================
-  // CARREGAR OPERADORES + MERCEARIA
+  // CARREGAR OPERADORES + estabelecimento
   // =============================
   async function carregar() {
     setLoading(true);
@@ -25,17 +25,17 @@ export default function ListaOperadores() {
         throw new Error("VITE_API_URL não definida");
       }
 
-      // Buscar dados da mercearia
+      // Buscar dados do estabelecimento
       const respM = await fetch(
-        `${API_URL}/admin/mercearias/${merceariaId}`,
+        `${API_URL}/admin/estabelecimentos/${estabelecimentoId}`,
         { credentials: "include" }
       );
       const dataM = await respM.json();
-      if (respM.ok) setMercearia(dataM);
+      if (respM.ok) setEstabelecimento(dataM);
 
       // Buscar operadores
       const resp = await fetch(
-        `${API_URL}/admin/operadores/${merceariaId}`,
+        `${API_URL}/admin/operadores/${estabelecimentoId}`,
         { credentials: "include" }
       );
       const data = await resp.json();
@@ -51,7 +51,7 @@ export default function ListaOperadores() {
 
   useEffect(() => {
     carregar();
-  }, [merceariaId]);
+  }, [estabelecimentoId]);
 
   // =============================
   // EXCLUIR OPERADOR
@@ -90,17 +90,17 @@ export default function ListaOperadores() {
           <div>
             <h1>
               Operadores{" "}
-              {mercearia ? `— ${mercearia.nome_fantasia}` : ""}
+              {estabelecimento ? `— ${estabelecimento.nome_fantasia}` : ""}
             </h1>
             <p className="op-subtitle">
-              Gerencie os operadores desta mercearia
+              Gerencie os operadores deste estabelecimento
             </p>
           </div>
 
           <button
             className="btn-primary"
             onClick={() =>
-              navigate(`/admin/operadores/novo?mercearia=${merceariaId}`)
+              navigate(`/admin/operadores/novo?estabelecimento=${estabelecimentoId}`)
             }
           >
             + Novo Operador

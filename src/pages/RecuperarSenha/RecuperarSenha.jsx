@@ -18,7 +18,7 @@ export default function RecuperarSenha() {
       console.log("Tentando enviar reset para:", email);
 
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://gerenciador-mercearia-frontend.onrender.com/auth/callback",
+          redirectTo: "https://gerenciador-estabelecimentos-frontend.onrender.com/auth/callback",
 
       });
 

@@ -6,9 +6,9 @@ import './CategoriaModal.css';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
-const CategoriaModal = ({ merceariaId, onClose, onCategoriaSalva }) => {
+const CategoriaModal = ({ estabelecimentoId, onClose, onCategoriaSalva }) => {
     
     const [nome, setNome] = useState('');
     const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ const CategoriaModal = ({ merceariaId, onClose, onCategoriaSalva }) => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    merceariaId,
+                    estabelecimentoId,
                     nome: nome.trim()
                 })
             });

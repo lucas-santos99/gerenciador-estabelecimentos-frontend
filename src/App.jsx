@@ -16,17 +16,17 @@ import DashboardAdmin from "./pages/Administrador/DashboardAdmin";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
-import PainelMercearia from "./pages/Mercearia/PainelMercearia";
+import PainelEstabelecimento from "./pages/Estabelecimento/PainelEstabelecimento";
 
 import NovaSenha from "./pages/NovaSenha/NovaSenha";
 
 import AuthCallback from "./pages/AuthCallback/AuthCallback";
 
-// Módulo de Mercearias
-import ListaMercearias from "./pages/Administrador/Mercearias/ListaMercearias";
-import NovaMercearia from "./pages/Administrador/Mercearias/NovaMercearia";
-import EditarMercearia from "./pages/Administrador/Mercearias/EditarMercearia";
-import Excluidas from "./pages/Administrador/Mercearias/Excluidas";
+// Módulo de Estabelecimentos
+import ListaEstabelecimentos from "./pages/Administrador/Estabelecimentos/ListaEstabelecimentos";
+import NovoEstabelecimento from "./pages/Administrador/Estabelecimentos/NovoEstabelecimento";
+import EditarEstabelecimento from "./pages/Administrador/Estabelecimentos/EditarEstabelecimento";
+import Excluidas from "./pages/Administrador/Estabelecimentos/Excluidas";
 
 // Módulo de Operadores (Admin)
 import ListaOperadores from "./pages/Administrador/Operadores/ListaOperadores";
@@ -81,18 +81,18 @@ function App() {
         }
       />
 
-      {/* CRUD DE MERCEARIAS */}
+      {/* CRUD DE ESTABELECIMENTOS */}
       <Route
-        path="/admin/mercearias/nova"
+        path="/admin/estabelecimentos/nova"
         element={
           <RoleRoute allowedRoles={["super_admin"]}>
-            <NovaMercearia />
+            <NovoEstabelecimento />
           </RoleRoute>
         }
       />
 
       <Route
-        path="/admin/mercearias/excluidas"
+        path="/admin/estabelecimentos/excluidas"
         element={
           <RoleRoute allowedRoles={["super_admin"]}>
             <Excluidas />
@@ -101,7 +101,7 @@ function App() {
       />
 
       <Route
-        path="/admin/mercearias/:id/operadores"
+        path="/admin/estabelecimentos/:id/operadores"
         element={
           <RoleRoute allowedRoles={["super_admin"]}>
             <ListaOperadores />
@@ -137,22 +137,22 @@ function App() {
       />
 
       <Route
-        path="/admin/mercearias/:id"
+        path="/admin/estabelecimentos/:id"
         element={
           <RoleRoute allowedRoles={["super_admin"]}>
-            <EditarMercearia />
+            <EditarEstabelecimento />
           </RoleRoute>
         }
       />
 
       {/* ============================ */}
-      {/* PAINEL MERCEARIA (merchant/operator) */}
+      {/* PAINEL ESTABELECIMENTO (merchant/operator) */}
       {/* ============================ */}
       <Route
-        path="/mercearia/:id"
+        path="/estabelecimentos/:id"
         element={
           <RoleRoute allowedRoles={["merchant", "operator"]}>
-            <PainelMercearia />
+            <PainelEstabelecimento />
           </RoleRoute>
         }
       />

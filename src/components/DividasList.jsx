@@ -8,7 +8,7 @@ import ModalRecebimento from './ModalRecebimento';
 const BACKEND_BASE_URL =
   window.location.hostname === 'localhost'
     ? 'http://localhost:3001'
-    : 'https://mercearia-api.onrender.com';
+    : 'https://estabelecimentos-api.onrender.com';
 
 // --- Helpers ---
 const formatCurrency = (value) => {
@@ -109,7 +109,7 @@ const DetalhesFiado = ({ cliente, onFechar }) => {
 };
 
 // COMPONENTE PRINCIPAL
-const DividasList = ({ merceariaId }) => {
+const DividasList = ({ estabelecimentoId }) => {
   const [viewMode, setViewMode] = useState('devedores');
   const [dividas, setDividas] = useState([]);
   const [allClients, setAllClients] = useState([]);
@@ -125,7 +125,7 @@ const DividasList = ({ merceariaId }) => {
   // Fetch dívidas (somente devedores) e todos os clientes
   const fetchDividas = async () => {
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/clientes/${merceariaId}/dividas`);
+      const response = await fetch(`${BACKEND_BASE_URL}/api/clientes/${estabelecimentoId}/dividas`);
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || `Erro HTTP: ${response.status}`);
@@ -139,7 +139,7 @@ const DividasList = ({ merceariaId }) => {
   };
   const fetchAllClients = async () => {
     try {
-      const response = await fetch(`${BACKEND_BASE_URL}/api/clientes/${merceariaId}/todos-clientes`);
+      const response = await fetch(`${BACKEND_BASE_URL}/api/clientes/${estabelecimentoId}/todos-clientes`);
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || `Erro HTTP: ${response.status}`);
@@ -159,8 +159,8 @@ const DividasList = ({ merceariaId }) => {
       await Promise.all([fetchDividas(), fetchAllClients()]);
       setLoading(false);
     };
-    if (merceariaId) carregarDados();
-  }, [merceariaId]);
+    if (estabelecimentoId) carregarDados();
+  }, [estabelecimentoId]);
 
   const handleAbrirModalRecebimento = (cliente) => {
     setClienteParaReceber(cliente);
@@ -174,7 +174,7 @@ const DividasList = ({ merceariaId }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clienteId: clienteParaReceber.id,
-          merceariaId,
+          estabelecimentoId,
           valorPago,
           meioPagamento,
         }),
@@ -195,7 +195,7 @@ const DividasList = ({ merceariaId }) => {
     if (!window.confirm(`Tem certeza que deseja EXCLUIR o cliente ${cliente.nome}? Esta ação é irreversível.`)) return;
     setLoading(true);
     try {
-      const url = `${BACKEND_BASE_URL}/api/clientes/deletar/${cliente.id}?merceariaId=${merceariaId}`;
+      const url = `${BACKEND_BASE_URL}/api/clientes/deletar/${cliente.id}?estabelecimentoId=${estabelecimentoId}`;
       const response = await fetch(url, { method: 'DELETE' });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Falha ao excluir cliente.');
@@ -241,7 +241,7 @@ const DividasList = ({ merceariaId }) => {
     <div className="dividas-container">
       {showClienteModal && (
         <ClienteModal
-          merceariaId={merceariaId}
+          estabelecimentoId={estabelecimentoId}
           cliente={clienteParaEditar}
           onClose={() => setShowClienteModal(false)}
           onSave={handleSaveCliente}

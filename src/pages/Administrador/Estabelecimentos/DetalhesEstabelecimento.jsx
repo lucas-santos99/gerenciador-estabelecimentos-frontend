@@ -1,10 +1,10 @@
-// src/pages/Administrador/Mercearias/DetalhesMercearia.jsx
+// src/pages/Administrador/Estabelecimentoss/DetalhesEstabelecimento.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "./Mercearias.css";
+import "./Estabelecimentos.css";
 
-export default function DetalhesMercearia() {
+export default function DetalhesEstabelecimento() {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -21,7 +21,7 @@ export default function DetalhesMercearia() {
       }
 
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         { credentials: "include" }
       );
 
@@ -46,11 +46,11 @@ export default function DetalhesMercearia() {
 
   // Restaurar (se estiver excluída)
   async function restaurar() {
-    if (!window.confirm("Restaurar esta mercearia?")) return;
+    if (!window.confirm("Restaurar este estabelecimento?")) return;
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}/restaurar`,
+        `${API_URL}/admin/estabelecimentos/${id}/restaurar`,
         {
           method: "PUT",
           credentials: "include",
@@ -71,11 +71,11 @@ export default function DetalhesMercearia() {
 
   // Soft delete
   async function excluir() {
-    if (!window.confirm("Tem certeza que quer excluir esta mercearia?")) return;
+    if (!window.confirm("Tem certeza que quer excluir este estabelecimento?")) return;
 
     try {
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/${id}`,
+        `${API_URL}/admin/estabelecimentos/${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -109,7 +109,7 @@ export default function DetalhesMercearia() {
       <LayoutAdmin>
         <div className="merc-wrapper">
           <p>Erro ao carregar informações.</p>
-          <Link to="/admin/mercearias" className="btn-voltar">
+          <Link to="/admin/estabelecimentos" className="btn-voltar">
             Voltar
           </Link>
         </div>
@@ -121,8 +121,8 @@ export default function DetalhesMercearia() {
     <LayoutAdmin>
       <div className="merc-wrapper">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h1>Detalhes da Mercearia</h1>
-          <Link to="/admin/mercearias" className="btn-voltar">← Voltar</Link>
+          <h1>Detalhes do Estabelecimento</h1>
+          <Link to="/admin/estabelecimentos" className="btn-voltar">← Voltar</Link>
         </div>
 
         <div className="premium-card" style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
@@ -172,7 +172,7 @@ export default function DetalhesMercearia() {
             </div>
 
             <div className="premium-actions" style={{ marginTop: 22 }}>
-              <Link to={`/admin/mercearias/${dados.id}`} className="btn-edit">
+              <Link to={`/admin/estabelecimentos/${dados.id}`} className="btn-edit">
                 Editar Dados
               </Link>
 
@@ -188,10 +188,10 @@ export default function DetalhesMercearia() {
 
               <button
                 className="btn-primary"
-                onClick={() => navigate(`/admin/mercearias/${dados.id}/operadores`)}
+                onClick={() => navigate(`/admin/estabelecimentos/${dados.id}/operadores`)}
                 style={{ marginLeft: 6 }}
               >
-                Operadores da Mercearia
+                Operadores do Estabelecimento
               </button>
             </div>
           </div>

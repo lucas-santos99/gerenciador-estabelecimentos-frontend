@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import "../Mercearias/Mercearias.css";
+import "../Estabelecimentos/Estabelecimentos.css";
 
 export default function NovoOperador() {
   const navigate = useNavigate();
@@ -10,8 +10,8 @@ export default function NovoOperador() {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Captura ?mercearia=ID se existir
-  const merceariaFromQuery =
+  // Captura ? estabelecimento=ID se existir
+  const estabelecimentoFromQuery =
     new URLSearchParams(location.search).get("mercearia") || "";
 
   const [form, setForm] = useState({
@@ -22,31 +22,31 @@ export default function NovoOperador() {
     mercearia_id: merceariaFromQuery,
   });
 
-  const [mercearias, setMercearias] = useState([]);
+  const [estabelecimentos, setEstabelecimentos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
   // ============================
-  // CARREGAR MERCEARIAS ATIVAS
+  // CARREGAR ESTABELECIMENTOS ATIVOS
   // ============================
-  async function carregarMercearias() {
+  async function carregarEstabelecimentos() {
     try {
       if (!API_URL) throw new Error("VITE_API_URL não definida");
 
       const resp = await fetch(
-        `${API_URL}/admin/mercearias/listar`,
+        `${API_URL}/admin/estabelecimentos/listar`,
         { credentials: "include" }
       );
       const data = await resp.json();
-      setMercearias(data || []);
+      setEstabelecimentos(data || []);
     } catch (err) {
-      console.error("Erro ao carregar mercearias:", err);
-      setErro("Erro ao carregar mercearias.");
+      console.error("Erro ao carregar estabelecimentos:", err);
+      setErro("Erro ao carregar estabelecimentos.");
     }
   }
 
   useEffect(() => {
-    carregarMercearias();
+    carregarEstabelecimentos();
   }, []);
 
   // ============================
@@ -89,7 +89,7 @@ export default function NovoOperador() {
         setErro(json.error || "Erro ao criar operador.");
       } else {
         alert("Operador criado com sucesso!");
-        navigate(`/admin/mercearias/${form.mercearia_id}/operadores`);
+        navigate(`/admin/estabelecimentos/${form.mercearia_id}/operadores`);
       }
     } catch (err) {
       console.error("Erro salvar operador:", err);
@@ -107,8 +107,8 @@ export default function NovoOperador() {
         {erro && <p className="erro-box">{erro}</p>}
 
         <form className="merc-form" onSubmit={salvar}>
-          {/* MERCEARIA */}
-          <label>Mercearia</label>
+          {/* ESTABELECIMENTO */}
+          <label>Estabelecimento</label>
           <select
             name="mercearia_id"
             value={form.mercearia_id}
@@ -116,7 +116,7 @@ export default function NovoOperador() {
             required
           >
             <option value="">Selecione...</option>
-            {mercearias.map((m) => (
+            {estabelecimentos.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nome_fantasia}
               </option>

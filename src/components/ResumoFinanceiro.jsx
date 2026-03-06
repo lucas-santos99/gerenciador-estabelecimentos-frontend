@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 const BACKEND_BASE_URL =
     window.location.hostname === "localhost"
         ? "http://localhost:3001"
-        : "https://mercearia-api.onrender.com";
+        : "https://estabelecimentos-api.onrender.com";
 
 // Formata moeda brasileira
 const formatCurrency = (value) => {
@@ -14,7 +14,7 @@ const formatCurrency = (value) => {
     });
 };
 
-const ResumoFinanceiro = ({ merceariaId }) => {
+const ResumoFinanceiro = ({ estabelecimentoId }) => {
 
     const [resumo, setResumo] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ const ResumoFinanceiro = ({ merceariaId }) => {
 
             try {
                 const response = await fetch(
-                    `${BACKEND_BASE_URL}/api/financeiro/resumo/${encodeURIComponent(merceariaId)}`
+                    `${BACKEND_BASE_URL}/api/financeiro/resumo/${encodeURIComponent(estabelecimentoId)}`
                 );
 
                 if (!response.ok) {
@@ -46,9 +46,9 @@ const ResumoFinanceiro = ({ merceariaId }) => {
             }
         };
 
-        if (merceariaId) fetchResumo();
+        if (estabelecimentoId) fetchResumo();
 
-    }, [merceariaId]);
+    }, [estabelecimentoId]);
 
     // ======== RENDER =========
 

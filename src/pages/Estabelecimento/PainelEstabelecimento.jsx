@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 
-export default function PainelMercearia() {
+export default function PainelEstabelecimento() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, profile, logout } = useAuth();
@@ -27,7 +27,7 @@ export default function PainelMercearia() {
           alignItems: "center",
         }}
       >
-        <h1>Painel da Mercearia</h1>
+        <h1>Painel do Estabelecimento</h1>
 
         <button
           onClick={handleLogout}

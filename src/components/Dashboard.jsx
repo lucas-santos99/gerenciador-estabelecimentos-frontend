@@ -10,7 +10,7 @@ import Configuracoes from './Configuracoes';
 const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, nomeFantasia }) => {
 
     const supabase = supabaseProp;
-    const merceariaId = session?.user?.id; // VALIDADO ANTES DA RENDERIZAÇÃO
+    const estabelecimentoId = session?.user?.id; // VALIDADO ANTES DA RENDERIZAÇÃO
 
     const [paginaAtiva, setPaginaAtiva] = useState('pdv'); 
     const [produtoFocadoId, setProdutoFocadoId] = useState(null);
@@ -116,7 +116,7 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
     // === RENDERIZAÇÃO DAS PÁGINAS ===
     const renderizarPagina = () => {
 
-        if (!merceariaId) {
+        if (!estabelecimentoId) {
             return <div>Carregando dados da mercearia...</div>;
         }
 
@@ -124,7 +124,7 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
             case 'pdv':
                 return (
                     <PDV 
-                        merceariaId={merceariaId} 
+                        estabelecimentoId={estabelecimentoId} 
                         supabaseProp={supabase} 
                     />
                 );
@@ -132,7 +132,7 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
             case 'estoque':
                 return (
                     <ProdutoList 
-                        merceariaId={merceariaId}
+                        estabelecimentoId={estabelecimentoId}
                         produtoFocadoId={produtoFocadoId}
                         setProdutoFocadoId={setProdutoFocadoId}
                         shouldFocusSearch={shouldFocusSearch}
@@ -142,14 +142,14 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
 
             case 'fiado':
                 return (
-                    <DividasList merceariaId={merceariaId} />
+                    <DividasList estabelecimentoId={estabelecimentoId} />
                 );
 
             case 'financeiro':
                 return (
                     <Financeiro 
                         key="financeiro-reset-001"
-                        merceariaId={merceariaId}
+                        estabelecimentoId={estabelecimentoId}
                         logoUrl={logoUrl}
                         nomeFantasia={nomeFantasia}
                     />
@@ -158,7 +158,7 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
             case 'config':
                 return (
                     <Configuracoes 
-                        merceariaId={merceariaId}
+                        estabelecimentoId={estabelecimentoId}
                         supabaseProp={supabase}
                         onLogoUpdated={onLogoUpdated}
                         logoUrl={logoUrl}
@@ -168,7 +168,7 @@ const Dashboard = ({ session, supabaseProp, onLogout, logoUrl, onLogoUpdated, no
             default:
                 return (
                     <PDV 
-                        merceariaId={merceariaId}
+                        estabelecimentoId={estabelecimentoId}
                         supabaseProp={supabase}
                     />
                 );

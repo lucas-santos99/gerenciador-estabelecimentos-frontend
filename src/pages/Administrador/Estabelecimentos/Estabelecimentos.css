@@ -1,4 +1,4 @@
-/* ===== Mercearias.css (consolidado e seguro) ===== */
+/* ===== Estabelecimentos.css (consolidado e seguro) ===== */
 
 .merc-wrapper {
   padding: 18px;
@@ -231,7 +231,7 @@
   .det-head-actions { width:100%; justify-content:flex-start; }
 }
 /* ============================ */
-/*  MERCEARIAS EXCLUÍDAS - CARDS */
+/*  ESTABELECIMENTOS EXCLUÍDOS - CARDS */
 /* ============================ */
 
 .cards-container {
@@ -241,7 +241,7 @@
   margin-top: 20px;
 }
 
-.card-mercearia-excluida {
+.card-estabelecimento-excluida {
   background: white;
   padding: 20px;
   border-radius: 12px;
@@ -250,7 +250,7 @@
   border-left: 6px solid #dc3545; /* vermelho elegante */
 }
 
-.card-mercearia-excluida:hover {
+.card-estabelecimento-excluida:hover {
   transform: translateY(-3px);
   box-shadow: 0px 4px 14px rgba(0,0,0,0.12);
 }
@@ -270,12 +270,12 @@
   font-weight: bold;
 }
 
-.card-mercearia-excluida h3 {
+.card-estabelecimento-excluida h3 {
   margin: 0;
   font-size: 18px;
 }
 
-.card-mercearia-excluida p {
+.card-estabelecimento-excluida p {
   margin-top: 12px;
   margin-bottom: 4px;
   line-height: 1.4;
