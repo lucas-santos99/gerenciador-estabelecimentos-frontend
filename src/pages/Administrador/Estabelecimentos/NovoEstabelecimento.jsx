@@ -15,6 +15,7 @@ export default function NovoEstabelecimento() {
     telefone: "",
     email_contato: "",
     endereco_completo: "",
+    senha: "", // ✅ NOVO CAMPO
     status_assinatura: "ativa",
     data_vencimento: "",
     tipo_estabelecimento: "mercearia",
@@ -30,6 +31,11 @@ export default function NovoEstabelecimento() {
   async function salvar(e) {
     e.preventDefault();
     setErro("");
+
+    if (!form.senha) {
+      setErro("A senha inicial é obrigatória.");
+      return;
+    }
 
     // Regra: exigido somente se ativa
     if (form.status_assinatura === "ativa" && !form.data_vencimento) {
@@ -121,6 +127,16 @@ export default function NovoEstabelecimento() {
             type="email"
             value={form.email_contato}
             onChange={atualizar}
+          />
+
+          {/* 🔐 NOVO CAMPO */}
+          <label>Senha inicial do proprietário</label>
+          <input
+            type="password"
+            name="senha"
+            value={form.senha}
+            onChange={atualizar}
+            required
           />
 
           <label>Endereço Completo</label>
