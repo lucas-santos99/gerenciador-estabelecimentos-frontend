@@ -363,3 +363,12 @@
   color: white;
   border: none;
 }
+
+.badge-tipo {
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}

@@ -149,3 +149,15 @@
 .btn-operators:hover {
   background-color: #0066d6;
 }
+
+/* NOVO */
+.badge-tipo {
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* já existentes mantidos abaixo */

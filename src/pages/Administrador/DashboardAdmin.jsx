@@ -12,13 +12,11 @@ export default function DashboardAdmin() {
     ativas: 0,
     inativas: 0,
     excluidas: 0,
-    ultimas: [],
     todas: [],
   });
 
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
-  const [apenasAtivas, setApenasAtivas] = useState(false);
 
   const navigate = useNavigate();
 
@@ -26,28 +24,16 @@ export default function DashboardAdmin() {
     try {
       setLoading(true);
 
-      if (!API_URL) {
-        throw new Error("VITE_API_URL não definida");
-      }
-
-      const resp1 = await fetch(
-        `${API_URL}/admin/estabelecimentos/listar`
-      );
+      const resp1 = await fetch(`${API_URL}/admin/estabelecimentos/listar`);
       const lista = (await resp1.json()) || [];
 
-      const resp2 = await fetch(
-        `${API_URL}/admin/estabelecimentos/excluidas`
-      );
+      const resp2 = await fetch(`${API_URL}/admin/estabelecimentos/excluidas`);
       const excluidas = (await resp2.json()) || [];
 
-      const ativas = lista.filter(
-        (m) => m.status_assinatura === "ativa"
-      ).length;
+      const ativas = lista.filter(m => m.status_assinatura === "ativa").length;
 
       const inativas = lista.filter(
-        (m) =>
-          m.status_assinatura === "inativa" ||
-          m.status_assinatura === "bloqueada"
+        m => m.status_assinatura === "inativa" || m.status_assinatura === "bloqueada"
       ).length;
 
       setStats({
@@ -55,12 +41,11 @@ export default function DashboardAdmin() {
         ativas,
         inativas,
         excluidas: excluidas.length,
-        ultimas: lista.slice(0, 5),
         todas: lista,
       });
+
     } catch (err) {
-      console.error("Erro ao carregar dashboard admin:", err);
-      alert("Erro ao carregar dados do dashboard.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -70,8 +55,17 @@ export default function DashboardAdmin() {
     carregarDados();
   }, []);
 
+  function ordenarPorVencimento() {
+    const ordenada = [...stats.todas].sort((a, b) => {
+      const da = a.data_vencimento ? new Date(a.data_vencimento) : new Date(0);
+      const db = b.data_vencimento ? new Date(b.data_vencimento) : new Date(0);
+      return da - db;
+    });
+
+    setStats(prev => ({ ...prev, todas: ordenada }));
+  }
+
   const listaFiltrada = stats.todas.filter((m) => {
-    if (apenasAtivas && m.status_assinatura !== "ativa") return false;
     if (filtro && m.status_assinatura !== filtro) return false;
     if (!busca) return true;
 
@@ -83,40 +77,21 @@ export default function DashboardAdmin() {
   });
 
   async function excluir(id) {
-    if (!window.confirm("Tem certeza que deseja excluir este estabelecimento?")) return;
+    if (!window.confirm("Excluir este estabelecimento?")) return;
 
-    try {
-      const resp = await fetch(
-        `${API_URL}/admin/estabelecimentos/${id}`,
-        { method: "DELETE" }
-      );
+    await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
+      method: "DELETE",
+    });
 
-      if (resp.ok) {
-        alert("Estabelecimento excluído.");
-        carregarDados();
-      } else {
-        alert("Erro ao excluir.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao excluir.");
-    }
+    carregarDados();
   }
 
-  if (loading) {
-    return (
-      <LayoutAdmin>
-        <div className="dash-wrapper">
-          <h1>Dashboard</h1>
-          <p>Carregando dados...</p>
-        </div>
-      </LayoutAdmin>
-    );
-  }
+  if (loading) return <div>Carregando...</div>;
 
   return (
     <LayoutAdmin>
       <div className="dash-wrapper">
+
         <div className="dash-header">
           <h1>Dashboard</h1>
 
@@ -141,7 +116,7 @@ export default function DashboardAdmin() {
         <div className="dash-cards">
           <div className="dash-card green">
             <h2>{stats.total}</h2>
-            <p>Total de Estabelecimentos</p>
+            <p>Total</p>
           </div>
 
           <div className="dash-card blue">
@@ -151,7 +126,7 @@ export default function DashboardAdmin() {
 
           <div className="dash-card yellow">
             <h2>{stats.inativas}</h2>
-            <p>Inativas / Bloqueadas</p>
+            <p>Inativas</p>
           </div>
 
           <div className="dash-card red">
@@ -163,29 +138,20 @@ export default function DashboardAdmin() {
         {/* FILTROS */}
         <div className="dash-filters">
           <input
-            placeholder="Buscar por nome ou CNPJ..."
+            placeholder="Buscar..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
 
           <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos os status</option>
+            <option value="">Todos</option>
             <option value="ativa">Ativa</option>
             <option value="inativa">Inativa</option>
             <option value="bloqueada">Bloqueada</option>
           </select>
-
-          <label className="checkbox-inline">
-            <input
-              type="checkbox"
-              checked={apenasAtivas}
-              onChange={() => setApenasAtivas((s) => !s)}
-            />
-            Apenas ativas
-          </label>
         </div>
 
-        {/* LISTA */}
+        {/* TABELA */}
         <div className="dash-box">
           <h3>Estabelecimentos</h3>
 
@@ -194,90 +160,76 @@ export default function DashboardAdmin() {
               <tr>
                 <th>Logo</th>
                 <th>Nome</th>
+                <th>Tipo</th>
                 <th>CNPJ</th>
                 <th>Telefone</th>
+                <th onClick={ordenarPorVencimento} style={{ cursor: "pointer" }}>
+                  Vencimento ⬍
+                </th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
 
             <tbody>
-              {listaFiltrada.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    {m.logo_url ? (
-                      <img
-                        src={m.logo_url}
-                        alt="logo"
-                        style={{ width: 46, height: 46, borderRadius: 8 }}
-                      />
-                    ) : (
-                      <div className="dash-logo-placeholder">
-                        {m.nome_fantasia.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </td>
+              {listaFiltrada.map((m) => {
+                const hoje = new Date();
+                const venc = m.data_vencimento ? new Date(m.data_vencimento) : null;
 
-                  <td>{m.nome_fantasia}</td>
-                  <td>{m.cnpj}</td>
-                  <td>{m.telefone || "-"}</td>
+                let cor = "#999";
+                if (venc) {
+                  const diff = (venc - hoje) / (1000 * 60 * 60 * 24);
+                  if (diff < 0) cor = "#dc2626";
+                  else if (diff <= 5) cor = "#f59e0b";
+                  else cor = "#16a34a";
+                }
 
-                  <td>
-                    <span
-                      className={`badge-status status-${m.status_assinatura}`}
-                    >
-                      {m.status_assinatura}
-                    </span>
-                  </td>
+                return (
+                  <tr key={m.id}>
+                    <td>{m.logo_url ? <img src={m.logo_url} width={40}/> : "-"}</td>
+                    <td>{m.nome_fantasia}</td>
 
-                  <td className="acoes-col">
-                    <button
-                      className="btn-secondary"
-                      onClick={() =>
-                        navigate(`/admin/estabelecimentos/${m.id}?view=details`)
-                      }
-                    >
-                      Detalhes
-                    </button>
+                    <td>
+                      <span className="badge-tipo">
+                        {m.tipo_estabelecimento || "-"}
+                      </span>
+                    </td>
 
-                    <button
-                      className="btn-primary"
-                      onClick={() =>
-                        navigate(`/admin/estabelecimentos/${m.id}`)
-                      }
-                    >
-                      Editar
-                    </button>
+                    <td>{m.cnpj}</td>
+                    <td>{m.telefone || "-"}</td>
 
-                    <button
-                      className="btn-danger"
-                      onClick={() => excluir(m.id)}
-                    >
-                      Excluir
-                    </button>
+                    <td style={{ color: cor, fontWeight: "bold" }}>
+                      {m.data_vencimento
+                        ? new Date(m.data_vencimento).toLocaleDateString("pt-BR")
+                        : "-"}
+                    </td>
 
-                    <button
-                      className="btn-operators"
-                      onClick={() =>
-                        navigate(`/admin/estabelecimentos/${m.id}/operadores`)
-                      }
-                    >
-                      Operadores
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    <td>
+                      <span className={`badge-status status-${m.status_assinatura}`}>
+                        {m.status_assinatura}
+                      </span>
+                    </td>
 
-              {listaFiltrada.length === 0 && (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: 20 }}>
-                    Nenhum estabelecimento encontrado.
-                  </td>
-                </tr>
-              )}
+                    <td>
+                      <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>
+                        Detalhes
+                      </button>
+
+                      <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>
+                        Editar
+                      </button>
+
+                      <button className="btn-danger" onClick={() => excluir(m.id)}>
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
       </div>
     </LayoutAdmin>
   );

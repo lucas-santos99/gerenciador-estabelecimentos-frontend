@@ -96,6 +96,7 @@ export default function ListaEstabelecimentos() {
                 <th>Nome</th>
                 <th>CNPJ</th>
                 <th>Telefone</th>
+                <th>Tipo</th> {/* ✅ NOVA COLUNA */}
                 <th>Ações</th>
               </tr>
             </thead>
@@ -124,6 +125,16 @@ export default function ListaEstabelecimentos() {
                   <td>{m.nome_fantasia}</td>
                   <td>{m.cnpj || "-"}</td>
                   <td>{m.telefone || "-"}</td>
+
+                  {/* ✅ TIPO DE ESTABELECIMENTO */}
+                  <td>
+                    <span className="badge-tipo">
+                      {m.tipo_estabelecimento
+                        ? m.tipo_estabelecimento.charAt(0).toUpperCase() +
+                          m.tipo_estabelecimento.slice(1)
+                        : "-"}
+                    </span>
+                  </td>
 
                   <td>
                     {/* 🔹 Detalhes */}
