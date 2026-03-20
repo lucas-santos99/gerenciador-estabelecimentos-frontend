@@ -186,7 +186,14 @@ export default function DashboardAdmin() {
 
                 return (
                   <tr key={m.id}>
-                    <td>{m.logo_url ? <img src={m.logo_url} width={40}/> : "-"}</td>
+                    <td>
+                      {m.logo_url ? (
+                        <img src={m.logo_url} width={40} />
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
                     <td>{m.nome_fantasia}</td>
 
                     <td>
@@ -210,17 +217,40 @@ export default function DashboardAdmin() {
                       </span>
                     </td>
 
-                    <td>
-                      <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>
+                    <td className="acoes-col">
+                      <button
+                        className="btn-secondary"
+                        onClick={() =>
+                          navigate(`/admin/estabelecimentos/${m.id}?view=details`)
+                        }
+                      >
                         Detalhes
                       </button>
 
-                      <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>
+                      <button
+                        className="btn-primary"
+                        onClick={() =>
+                          navigate(`/admin/estabelecimentos/${m.id}`)
+                        }
+                      >
                         Editar
                       </button>
 
-                      <button className="btn-danger" onClick={() => excluir(m.id)}>
+                      <button
+                        className="btn-danger"
+                        onClick={() => excluir(m.id)}
+                      >
                         Excluir
+                      </button>
+
+                      {/* ✅ RESTAURADO */}
+                      <button
+                        className="btn-operators"
+                        onClick={() =>
+                          navigate(`/admin/estabelecimentos/${m.id}/operadores`)
+                        }
+                      >
+                        Operadores
                       </button>
                     </td>
                   </tr>
