@@ -65,8 +65,38 @@ export default function DashboardAdmin() {
     setStats(prev => ({ ...prev, todas: ordenada }));
   }
 
+  // 🔥 ALERTAS
+  function calcularAlertas() {
+    const hoje = new Date();
+
+    let vencidos = 0;
+    let proximos = 0;
+
+    stats.todas.forEach(m => {
+      if (!m.data_vencimento) return;
+
+      const venc = new Date(m.data_vencimento);
+      const diff = (venc - hoje) / (1000 * 60 * 60 * 24);
+
+      if (diff < 0) vencidos++;
+      else if (diff <= 5) proximos++;
+    });
+
+    return { vencidos, proximos };
+  }
+
+  const { vencidos, proximos } = calcularAlertas();
+
   const listaFiltrada = stats.todas.filter((m) => {
+    const hoje = new Date();
+
+    if (filtro === "vencidas") {
+      if (!m.data_vencimento) return false;
+      return new Date(m.data_vencimento) < hoje;
+    }
+
     if (filtro && m.status_assinatura !== filtro) return false;
+
     if (!busca) return true;
 
     const q = busca.toLowerCase();
@@ -112,6 +142,23 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
+        {/* 🔴 ALERTAS */}
+        {(vencidos > 0 || proximos > 0) && (
+          <div style={{ marginTop: 16 }}>
+            {vencidos > 0 && (
+              <div style={{ color: "#dc2626", fontWeight: "bold" }}>
+                🔴 {vencidos} estabelecimento(s) vencido(s)
+              </div>
+            )}
+
+            {proximos > 0 && (
+              <div style={{ color: "#f59e0b", fontWeight: "bold" }}>
+                🟡 {proximos} vencendo nos próximos 5 dias
+              </div>
+            )}
+          </div>
+        )}
+
         {/* CARDS */}
         <div className="dash-cards">
           <div className="dash-card green">
@@ -148,6 +195,7 @@ export default function DashboardAdmin() {
             <option value="ativa">Ativa</option>
             <option value="inativa">Inativa</option>
             <option value="bloqueada">Bloqueada</option>
+            <option value="vencidas">Vencidas 🔴</option>
           </select>
         </div>
 
@@ -243,7 +291,6 @@ export default function DashboardAdmin() {
                         Excluir
                       </button>
 
-                      {/* ✅ RESTAURADO */}
                       <button
                         className="btn-operators"
                         onClick={() =>
