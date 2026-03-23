@@ -273,18 +273,42 @@ export default function DashboardAdmin() {
                     </td>
                     <td><span className={`badge-status status-${m.status_assinatura}`}>{m.status_assinatura}</span></td>
 
-                    <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
-                      <button className="btn-secondary">Detalhes</button>
-                      <button className="btn-primary">Editar</button>
-                      <button className="btn-danger">Excluir</button>
+        <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+  <button
+    className="btn-secondary"
+    onClick={() =>
+      navigate(`/admin/estabelecimentos/${m.id}?view=details`)
+    }
+  >
+    Detalhes
+  </button>
 
-                      <button
-                        className="btn-operators"
-                        style={{ padding: "4px 8px", fontSize: 12, whiteSpace: "nowrap" }}
-                      >
-                        Operadores
-                      </button>
-                    </td>
+  <button
+    className="btn-primary"
+    onClick={() =>
+      navigate(`/admin/estabelecimentos/${m.id}`)
+    }
+  >
+    Editar
+  </button>
+
+  <button
+    className="btn-danger"
+    onClick={() => excluir(m.id)}
+  >
+    Excluir
+  </button>
+
+  <button
+    className="btn-operators"
+    style={{ padding: "4px 8px", fontSize: 12, whiteSpace: "nowrap" }}
+    onClick={() =>
+      navigate(`/admin/estabelecimentos/${m.id}/operadores`)
+    }
+  >
+    Operadores
+  </button>
+</td>
                   </tr>
                 );
               })}
