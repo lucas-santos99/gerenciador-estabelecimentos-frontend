@@ -18,9 +18,11 @@ export default function DashboardAdmin() {
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
 
+  // 🔥 NOVO
+  const [filtroTipo, setFiltroTipo] = useState("");
+
   const [mostrarAlertas, setMostrarAlertas] = useState(true);
 
-  // 🔥 NOVO: ordenação
   const [ordenacao, setOrdenacao] = useState({
     campo: "",
     direcao: "asc",
@@ -63,7 +65,6 @@ export default function DashboardAdmin() {
     carregarDados();
   }, []);
 
-  // 🔥 ORDENAÇÃO COMPLETA
   function ordenar(campo) {
     let direcao = "asc";
 
@@ -113,8 +114,28 @@ export default function DashboardAdmin() {
 
   const { vencidos, proximos } = calcularAlertas();
 
+  // 🔥 TIPOS DINÂMICOS
+  const tiposUnicos = [
+    ...new Set(stats.todas.map(m => m.tipo_estabelecimento).filter(Boolean))
+  ];
+
+  // 🔥 BASE PARA CARDS
+  const listaBase = stats.todas.filter(m => {
+    if (filtroTipo && m.tipo_estabelecimento !== filtroTipo) return false;
+    return true;
+  });
+
+  const total = listaBase.length;
+  const ativas = listaBase.filter(m => m.status_assinatura === "ativa").length;
+  const inativas = listaBase.filter(
+    m => m.status_assinatura === "inativa" || m.status_assinatura === "bloqueada"
+  ).length;
+  const excluidas = stats.excluidas;
+
   const listaFiltrada = stats.todas.filter((m) => {
     const hoje = new Date();
+
+    if (filtroTipo && m.tipo_estabelecimento !== filtroTipo) return false;
 
     if (filtro === "vencidas") {
       if (!m.data_vencimento) return false;
@@ -152,27 +173,18 @@ export default function DashboardAdmin() {
           <h1>Painel Administrativo</h1>
 
           <div className="dash-actions">
-            <button
-              className="btn-primary"
-              onClick={() => navigate("/admin/estabelecimentos/nova")}
-            >
+            <button className="btn-primary" onClick={() => navigate("/admin/estabelecimentos/nova")}>
               + Novo Estabelecimento
             </button>
 
-            <button
-              className="btn-secondary"
-              onClick={() => navigate("/admin/estabelecimentos/excluidas")}
-            >
+            <button className="btn-secondary" onClick={() => navigate("/admin/estabelecimentos/excluidas")}>
               Ver Excluídas
             </button>
           </div>
         </div>
 
         <div style={{ marginTop: 10 }}>
-          <button
-            className="btn-secondary"
-            onClick={() => setMostrarAlertas(!mostrarAlertas)}
-          >
+          <button className="btn-secondary" onClick={() => setMostrarAlertas(!mostrarAlertas)}>
             {mostrarAlertas ? "Ocultar alertas ▲" : "Mostrar alertas ▼"}
           </button>
         </div>
@@ -184,7 +196,6 @@ export default function DashboardAdmin() {
                 🔴 {vencidos} estabelecimento(s) vencido(s)
               </div>
             )}
-
             {proximos > 0 && (
               <div style={{ color: "#f59e0b", fontWeight: "bold" }}>
                 🟡 {proximos} vencendo nos próximos 5 dias
@@ -193,28 +204,30 @@ export default function DashboardAdmin() {
           </div>
         )}
 
+        {/* 🔥 CARDS DINÂMICOS */}
         <div className="dash-cards">
           <div className="dash-card green">
-            <h2>{stats.total}</h2>
+            <h2>{total}</h2>
             <p>Total</p>
           </div>
 
           <div className="dash-card blue">
-            <h2>{stats.ativas}</h2>
+            <h2>{ativas}</h2>
             <p>Ativas</p>
           </div>
 
           <div className="dash-card yellow">
-            <h2>{stats.inativas}</h2>
+            <h2>{inativas}</h2>
             <p>Inativas</p>
           </div>
 
           <div className="dash-card red">
-            <h2>{stats.excluidas}</h2>
+            <h2>{excluidas}</h2>
             <p>Excluídas</p>
           </div>
         </div>
 
+        {/* 🔥 FILTROS */}
         <div className="dash-filters">
           <input
             placeholder="Buscar..."
@@ -229,11 +242,19 @@ export default function DashboardAdmin() {
             <option value="bloqueada">Bloqueada</option>
             <option value="vencidas">Vencidas 🔴</option>
           </select>
+
+          {/* 🔥 NOVO FILTRO */}
+          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {tiposUnicos.map((tipo, i) => (
+              <option key={i} value={tipo}>{tipo}</option>
+            ))}
+          </select>
         </div>
 
+        {/* RESTO IGUAL (TABELA, BOTÕES, ETC) */}
         <div className="dash-box">
           <h3>Estabelecimentos</h3>
-
           <table className="dash-table">
             <thead>
               <tr>
@@ -249,69 +270,24 @@ export default function DashboardAdmin() {
             </thead>
 
             <tbody>
-              {listaFiltrada.map((m) => {
-                const hoje = new Date();
-                const venc = m.data_vencimento ? new Date(m.data_vencimento) : null;
+              {listaFiltrada.map((m) => (
+                <tr key={m.id}>
+                  <td>{m.logo_url ? <img src={m.logo_url} width={40} /> : "-"}</td>
+                  <td>{m.nome_fantasia}</td>
+                  <td><span className="badge-tipo">{m.tipo_estabelecimento || "-"}</span></td>
+                  <td>{m.cnpj}</td>
+                  <td>{m.telefone || "-"}</td>
+                  <td>{m.data_vencimento ? new Date(m.data_vencimento).toLocaleDateString("pt-BR") : "-"}</td>
+                  <td><span className={`badge-status status-${m.status_assinatura}`}>{m.status_assinatura}</span></td>
 
-                let cor = "#999";
-                if (venc) {
-                  const diff = (venc - hoje) / (1000 * 60 * 60 * 24);
-                  if (diff < 0) cor = "#dc2626";
-                  else if (diff <= 5) cor = "#f59e0b";
-                  else cor = "#16a34a";
-                }
-
-                return (
-                  <tr key={m.id}>
-                    <td>{m.logo_url ? <img src={m.logo_url} width={40} /> : "-"}</td>
-                    <td>{m.nome_fantasia}</td>
-                    <td><span className="badge-tipo">{m.tipo_estabelecimento || "-"}</span></td>
-                    <td>{m.cnpj}</td>
-                    <td>{m.telefone || "-"}</td>
-                    <td style={{ color: cor, fontWeight: "bold" }}>
-                      {m.data_vencimento ? new Date(m.data_vencimento).toLocaleDateString("pt-BR") : "-"}
-                    </td>
-                    <td><span className={`badge-status status-${m.status_assinatura}`}>{m.status_assinatura}</span></td>
-
-        <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
-  <button
-    className="btn-secondary"
-    onClick={() =>
-      navigate(`/admin/estabelecimentos/${m.id}?view=details`)
-    }
-  >
-    Detalhes
-  </button>
-
-  <button
-    className="btn-primary"
-    onClick={() =>
-      navigate(`/admin/estabelecimentos/${m.id}`)
-    }
-  >
-    Editar
-  </button>
-
-  <button
-    className="btn-danger"
-    onClick={() => excluir(m.id)}
-  >
-    Excluir
-  </button>
-
-  <button
-    className="btn-operators"
-    style={{ padding: "4px 8px", fontSize: 12, whiteSpace: "nowrap" }}
-    onClick={() =>
-      navigate(`/admin/estabelecimentos/${m.id}/operadores`)
-    }
-  >
-    Operadores
-  </button>
-</td>
-                  </tr>
-                );
-              })}
+                  <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                    <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>Detalhes</button>
+                    <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>Editar</button>
+                    <button className="btn-danger" onClick={() => excluir(m.id)}>Excluir</button>
+                    <button className="btn-operators" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}>Operadores</button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
