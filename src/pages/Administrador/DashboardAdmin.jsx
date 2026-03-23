@@ -18,8 +18,13 @@ export default function DashboardAdmin() {
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
 
-  // 🔥 NOVO: controle de exibição dos alertas
   const [mostrarAlertas, setMostrarAlertas] = useState(true);
+
+  // 🔥 NOVO: ordenação
+  const [ordenacao, setOrdenacao] = useState({
+    campo: "",
+    direcao: "asc",
+  });
 
   const navigate = useNavigate();
 
@@ -58,17 +63,35 @@ export default function DashboardAdmin() {
     carregarDados();
   }, []);
 
-  function ordenarPorVencimento() {
+  // 🔥 ORDENAÇÃO COMPLETA
+  function ordenar(campo) {
+    let direcao = "asc";
+
+    if (ordenacao.campo === campo && ordenacao.direcao === "asc") {
+      direcao = "desc";
+    }
+
+    setOrdenacao({ campo, direcao });
+
     const ordenada = [...stats.todas].sort((a, b) => {
-      const da = a.data_vencimento ? new Date(a.data_vencimento) : new Date(0);
-      const db = b.data_vencimento ? new Date(b.data_vencimento) : new Date(0);
-      return da - db;
+      let valorA, valorB;
+
+      if (campo === "vencimento") {
+        valorA = a.data_vencimento ? new Date(a.data_vencimento) : new Date(0);
+        valorB = b.data_vencimento ? new Date(b.data_vencimento) : new Date(0);
+      } else {
+        valorA = (a[campo] || "").toString().toLowerCase();
+        valorB = (b[campo] || "").toString().toLowerCase();
+      }
+
+      if (valorA < valorB) return direcao === "asc" ? -1 : 1;
+      if (valorA > valorB) return direcao === "asc" ? 1 : -1;
+      return 0;
     });
 
     setStats(prev => ({ ...prev, todas: ordenada }));
   }
 
-  // 🔥 ALERTAS
   function calcularAlertas() {
     const hoje = new Date();
 
@@ -126,7 +149,7 @@ export default function DashboardAdmin() {
       <div className="dash-wrapper">
 
         <div className="dash-header">
-          <h1>Dashboard</h1>
+          <h1>Painel Administrativo</h1>
 
           <div className="dash-actions">
             <button
@@ -145,7 +168,6 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
-        {/* 🔽 BOTÃO DE ALERTAS */}
         <div style={{ marginTop: 10 }}>
           <button
             className="btn-secondary"
@@ -155,7 +177,6 @@ export default function DashboardAdmin() {
           </button>
         </div>
 
-        {/* 🔴 ALERTAS */}
         {mostrarAlertas && (vencidos > 0 || proximos > 0) && (
           <div style={{ marginTop: 16 }}>
             {vencidos > 0 && (
@@ -172,7 +193,6 @@ export default function DashboardAdmin() {
           </div>
         )}
 
-        {/* CARDS */}
         <div className="dash-cards">
           <div className="dash-card green">
             <h2>{stats.total}</h2>
@@ -195,7 +215,6 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
-        {/* FILTROS */}
         <div className="dash-filters">
           <input
             placeholder="Buscar..."
@@ -212,7 +231,6 @@ export default function DashboardAdmin() {
           </select>
         </div>
 
-        {/* TABELA */}
         <div className="dash-box">
           <h3>Estabelecimentos</h3>
 
@@ -220,14 +238,12 @@ export default function DashboardAdmin() {
             <thead>
               <tr>
                 <th>Logo</th>
-                <th>Nome</th>
-                <th>Tipo</th>
+                <th onClick={() => ordenar("nome_fantasia")} style={{ cursor: "pointer" }}>Nome ⬍</th>
+                <th onClick={() => ordenar("tipo_estabelecimento")} style={{ cursor: "pointer" }}>Tipo ⬍</th>
                 <th>CNPJ</th>
                 <th>Telefone</th>
-                <th onClick={ordenarPorVencimento} style={{ cursor: "pointer" }}>
-                  Vencimento ⬍
-                </th>
-                <th>Status</th>
+                <th onClick={() => ordenar("vencimento")} style={{ cursor: "pointer" }}>Vencimento ⬍</th>
+                <th onClick={() => ordenar("status_assinatura")} style={{ cursor: "pointer" }}>Status ⬍</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -247,68 +263,24 @@ export default function DashboardAdmin() {
 
                 return (
                   <tr key={m.id}>
-                    <td>
-                      {m.logo_url ? (
-                        <img src={m.logo_url} width={40} />
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-
+                    <td>{m.logo_url ? <img src={m.logo_url} width={40} /> : "-"}</td>
                     <td>{m.nome_fantasia}</td>
-
-                    <td>
-                      <span className="badge-tipo">
-                        {m.tipo_estabelecimento || "-"}
-                      </span>
-                    </td>
-
+                    <td><span className="badge-tipo">{m.tipo_estabelecimento || "-"}</span></td>
                     <td>{m.cnpj}</td>
                     <td>{m.telefone || "-"}</td>
-
                     <td style={{ color: cor, fontWeight: "bold" }}>
-                      {m.data_vencimento
-                        ? new Date(m.data_vencimento).toLocaleDateString("pt-BR")
-                        : "-"}
+                      {m.data_vencimento ? new Date(m.data_vencimento).toLocaleDateString("pt-BR") : "-"}
                     </td>
+                    <td><span className={`badge-status status-${m.status_assinatura}`}>{m.status_assinatura}</span></td>
 
-                    <td>
-                      <span className={`badge-status status-${m.status_assinatura}`}>
-                        {m.status_assinatura}
-                      </span>
-                    </td>
-
-                    <td className="acoes-col">
-                      <button
-                        className="btn-secondary"
-                        onClick={() =>
-                          navigate(`/admin/estabelecimentos/${m.id}?view=details`)
-                        }
-                      >
-                        Detalhes
-                      </button>
-
-                      <button
-                        className="btn-primary"
-                        onClick={() =>
-                          navigate(`/admin/estabelecimentos/${m.id}`)
-                        }
-                      >
-                        Editar
-                      </button>
-
-                      <button
-                        className="btn-danger"
-                        onClick={() => excluir(m.id)}
-                      >
-                        Excluir
-                      </button>
+                    <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                      <button className="btn-secondary">Detalhes</button>
+                      <button className="btn-primary">Editar</button>
+                      <button className="btn-danger">Excluir</button>
 
                       <button
                         className="btn-operators"
-                        onClick={() =>
-                          navigate(`/admin/estabelecimentos/${m.id}/operadores`)
-                        }
+                        style={{ padding: "4px 8px", fontSize: 12, whiteSpace: "nowrap" }}
                       >
                         Operadores
                       </button>
