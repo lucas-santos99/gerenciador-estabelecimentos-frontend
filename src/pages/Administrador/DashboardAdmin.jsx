@@ -18,6 +18,9 @@ export default function DashboardAdmin() {
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
 
+  // 🔥 NOVO: controle de exibição dos alertas
+  const [mostrarAlertas, setMostrarAlertas] = useState(true);
+
   const navigate = useNavigate();
 
   async function carregarDados() {
@@ -142,8 +145,18 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
+        {/* 🔽 BOTÃO DE ALERTAS */}
+        <div style={{ marginTop: 10 }}>
+          <button
+            className="btn-secondary"
+            onClick={() => setMostrarAlertas(!mostrarAlertas)}
+          >
+            {mostrarAlertas ? "Ocultar alertas ▲" : "Mostrar alertas ▼"}
+          </button>
+        </div>
+
         {/* 🔴 ALERTAS */}
-        {(vencidos > 0 || proximos > 0) && (
+        {mostrarAlertas && (vencidos > 0 || proximos > 0) && (
           <div style={{ marginTop: 16 }}>
             {vencidos > 0 && (
               <div style={{ color: "#dc2626", fontWeight: "bold" }}>

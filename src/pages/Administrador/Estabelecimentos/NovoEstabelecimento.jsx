@@ -15,11 +15,14 @@ export default function NovoEstabelecimento() {
     telefone: "",
     email_contato: "",
     endereco_completo: "",
-    senha: "", // ✅ NOVO CAMPO
+    senha: "",
     status_assinatura: "ativa",
     data_vencimento: "",
     tipo_estabelecimento: "mercearia",
   });
+
+  // 🔥 NOVO: tipo personalizado
+  const [tipoCustomizado, setTipoCustomizado] = useState("");
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -37,10 +40,20 @@ export default function NovoEstabelecimento() {
       return;
     }
 
-    // Regra: exigido somente se ativa
     if (form.status_assinatura === "ativa" && !form.data_vencimento) {
       setErro("Data de vencimento é obrigatória para estabelecimentos ativos.");
       return;
+    }
+
+    // 🔥 AJUSTE DO TIPO
+    let tipoFinal = form.tipo_estabelecimento;
+
+    if (form.tipo_estabelecimento === "outro") {
+      if (!tipoCustomizado) {
+        setErro("Informe o tipo de estabelecimento.");
+        return;
+      }
+      tipoFinal = tipoCustomizado.toLowerCase();
     }
 
     setSalvando(true);
@@ -55,7 +68,10 @@ export default function NovoEstabelecimento() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            tipo_estabelecimento: tipoFinal,
+          }),
           credentials: "include",
         }
       );
@@ -107,6 +123,18 @@ export default function NovoEstabelecimento() {
             <option value="outro">Outro</option>
           </select>
 
+          {/* 🔥 CAMPO DINÂMICO */}
+          {form.tipo_estabelecimento === "outro" && (
+            <>
+              <label>Digite o tipo de estabelecimento</label>
+              <input
+                value={tipoCustomizado}
+                onChange={(e) => setTipoCustomizado(e.target.value)}
+                placeholder="Ex: Pet Shop, Oficina, Clínica..."
+              />
+            </>
+          )}
+
           <label>CNPJ</label>
           <input
             name="cnpj"
@@ -129,7 +157,6 @@ export default function NovoEstabelecimento() {
             onChange={atualizar}
           />
 
-          {/* 🔐 NOVO CAMPO */}
           <label>Senha inicial do proprietário</label>
           <input
             type="password"
