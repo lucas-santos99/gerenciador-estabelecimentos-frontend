@@ -1,5 +1,5 @@
 // src/pages/Administrador/Estabelecimentos/NovoEstabelecimento.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
@@ -21,14 +21,60 @@ export default function NovoEstabelecimento() {
     tipo_estabelecimento: "mercearia",
   });
 
-  // 🔥 NOVO: tipo personalizado
+  // 🔥 tipo personalizado
   const [tipoCustomizado, setTipoCustomizado] = useState("");
+
+  // 🔥 autocomplete
+  const [tiposExistentes, setTiposExistentes] = useState([]);
+  const [sugestoes, setSugestoes] = useState([]);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
   function atualizar(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  // 🔥 PADRONIZAÇÃO
+  function formatarTipo(texto) {
+    return texto
+      .toLowerCase()
+      .split(" ")
+      .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(" ");
+  }
+
+  // 🔥 carregar tipos existentes
+  async function carregarTipos() {
+    try {
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/listar`);
+      const lista = await resp.json();
+
+      const tipos = [
+        ...new Set(
+          lista.map(m => m.tipo_estabelecimento).filter(Boolean)
+        )
+      ];
+
+      setTiposExistentes(tipos);
+    } catch (e) {
+      console.error("Erro ao carregar tipos:", e);
+    }
+  }
+
+  useEffect(() => {
+    carregarTipos();
+  }, []);
+
+  // 🔥 filtro autocomplete
+  function filtrarSugestoes(valor) {
+    setTipoCustomizado(valor);
+
+    const filtrados = tiposExistentes.filter(tipo =>
+      tipo.toLowerCase().includes(valor.toLowerCase())
+    );
+
+    setSugestoes(filtrados);
   }
 
   async function salvar(e) {
@@ -45,7 +91,6 @@ export default function NovoEstabelecimento() {
       return;
     }
 
-    // 🔥 AJUSTE DO TIPO
     let tipoFinal = form.tipo_estabelecimento;
 
     if (form.tipo_estabelecimento === "outro") {
@@ -53,7 +98,9 @@ export default function NovoEstabelecimento() {
         setErro("Informe o tipo de estabelecimento.");
         return;
       }
-      tipoFinal = tipoCustomizado.toLowerCase();
+      tipoFinal = formatarTipo(tipoCustomizado);
+    } else {
+      tipoFinal = formatarTipo(tipoFinal);
     }
 
     setSalvando(true);
@@ -123,31 +170,40 @@ export default function NovoEstabelecimento() {
             <option value="outro">Outro</option>
           </select>
 
-          {/* 🔥 CAMPO DINÂMICO */}
+          {/* 🔥 CAMPO DINÂMICO COM AUTOCOMPLETE */}
           {form.tipo_estabelecimento === "outro" && (
             <>
               <label>Digite o tipo de estabelecimento</label>
               <input
                 value={tipoCustomizado}
-                onChange={(e) => setTipoCustomizado(e.target.value)}
+                onChange={(e) => filtrarSugestoes(e.target.value)}
                 placeholder="Ex: Pet Shop, Oficina, Clínica..."
               />
+
+              {sugestoes.length > 0 && (
+                <div className="sugestoes-box">
+                  {sugestoes.map((tipo, index) => (
+                    <div
+                      key={index}
+                      className="sugestao-item"
+                      onClick={() => {
+                        setTipoCustomizado(tipo);
+                        setSugestoes([]);
+                      }}
+                    >
+                      {tipo}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
           <label>CNPJ</label>
-          <input
-            name="cnpj"
-            value={form.cnpj}
-            onChange={atualizar}
-          />
+          <input name="cnpj" value={form.cnpj} onChange={atualizar} />
 
           <label>Telefone</label>
-          <input
-            name="telefone"
-            value={form.telefone}
-            onChange={atualizar}
-          />
+          <input name="telefone" value={form.telefone} onChange={atualizar} />
 
           <label>Email de Contato</label>
           <input
