@@ -18,9 +18,7 @@ export default function DashboardAdmin() {
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
 
-  // 🔥 NOVO
   const [filtroTipo, setFiltroTipo] = useState("");
-
   const [mostrarAlertas, setMostrarAlertas] = useState(true);
 
   const [ordenacao, setOrdenacao] = useState({
@@ -43,7 +41,9 @@ export default function DashboardAdmin() {
       const ativas = lista.filter(m => m.status_assinatura === "ativa").length;
 
       const inativas = lista.filter(
-        m => m.status_assinatura === "inativa" || m.status_assinatura === "bloqueada"
+        m =>
+          m.status_assinatura === "inativa" ||
+          m.status_assinatura === "bloqueada"
       ).length;
 
       setStats({
@@ -78,8 +78,13 @@ export default function DashboardAdmin() {
       let valorA, valorB;
 
       if (campo === "vencimento") {
-        valorA = a.data_vencimento ? new Date(a.data_vencimento) : new Date(0);
-        valorB = b.data_vencimento ? new Date(b.data_vencimento) : new Date(0);
+        valorA = a.data_vencimento
+          ? new Date(a.data_vencimento + "T12:00:00")
+          : new Date(0);
+
+        valorB = b.data_vencimento
+          ? new Date(b.data_vencimento + "T12:00:00")
+          : new Date(0);
       } else {
         valorA = (a[campo] || "").toString().toLowerCase();
         valorB = (b[campo] || "").toString().toLowerCase();
@@ -102,7 +107,8 @@ export default function DashboardAdmin() {
     stats.todas.forEach(m => {
       if (!m.data_vencimento) return;
 
-      const venc = new Date(m.data_vencimento);
+      const venc = new Date(m.data_vencimento + "T12:00:00");
+
       const diff = (venc - hoje) / (1000 * 60 * 60 * 24);
 
       if (diff < 0) vencidos++;
@@ -114,22 +120,29 @@ export default function DashboardAdmin() {
 
   const { vencidos, proximos } = calcularAlertas();
 
-  // 🔥 TIPOS DINÂMICOS
   const tiposUnicos = [
-    ...new Set(stats.todas.map(m => m.tipo_estabelecimento).filter(Boolean))
+    ...new Set(
+      stats.todas.map(m => m.tipo_estabelecimento).filter(Boolean)
+    ),
   ];
 
-  // 🔥 BASE PARA CARDS
   const listaBase = stats.todas.filter(m => {
     if (filtroTipo && m.tipo_estabelecimento !== filtroTipo) return false;
     return true;
   });
 
   const total = listaBase.length;
-  const ativas = listaBase.filter(m => m.status_assinatura === "ativa").length;
-  const inativas = listaBase.filter(
-    m => m.status_assinatura === "inativa" || m.status_assinatura === "bloqueada"
+
+  const ativas = listaBase.filter(
+    m => m.status_assinatura === "ativa"
   ).length;
+
+  const inativas = listaBase.filter(
+    m =>
+      m.status_assinatura === "inativa" ||
+      m.status_assinatura === "bloqueada"
+  ).length;
+
   const excluidas = stats.excluidas;
 
   const listaFiltrada = stats.todas.filter((m) => {
@@ -139,7 +152,8 @@ export default function DashboardAdmin() {
 
     if (filtro === "vencidas") {
       if (!m.data_vencimento) return false;
-      return new Date(m.data_vencimento) < hoje;
+
+      return new Date(m.data_vencimento + "T12:00:00") < hoje;
     }
 
     if (filtro && m.status_assinatura !== filtro) return false;
@@ -147,6 +161,7 @@ export default function DashboardAdmin() {
     if (!busca) return true;
 
     const q = busca.toLowerCase();
+
     return (
       (m.nome_fantasia || "").toLowerCase().includes(q) ||
       (m.cnpj || "").toLowerCase().includes(q)
@@ -173,19 +188,30 @@ export default function DashboardAdmin() {
           <h1>Painel Administrativo</h1>
 
           <div className="dash-actions">
-            <button className="btn-primary" onClick={() => navigate("/admin/estabelecimentos/nova")}>
+            <button
+              className="btn-primary"
+              onClick={() => navigate("/admin/estabelecimentos/nova")}
+            >
               + Novo Estabelecimento
             </button>
 
-            <button className="btn-secondary" onClick={() => navigate("/admin/estabelecimentos/excluidas")}>
+            <button
+              className="btn-secondary"
+              onClick={() => navigate("/admin/estabelecimentos/excluidas")}
+            >
               Ver Excluídas
             </button>
           </div>
         </div>
 
         <div style={{ marginTop: 10 }}>
-          <button className="btn-secondary" onClick={() => setMostrarAlertas(!mostrarAlertas)}>
-            {mostrarAlertas ? "Ocultar alertas ▲" : "Mostrar alertas ▼"}
+          <button
+            className="btn-secondary"
+            onClick={() => setMostrarAlertas(!mostrarAlertas)}
+          >
+            {mostrarAlertas
+              ? "Ocultar alertas ▲"
+              : "Mostrar alertas ▼"}
           </button>
         </div>
 
@@ -204,7 +230,6 @@ export default function DashboardAdmin() {
           </div>
         )}
 
-        {/* 🔥 CARDS DINÂMICOS */}
         <div className="dash-cards">
           <div className="dash-card green">
             <h2>{total}</h2>
@@ -227,7 +252,6 @@ export default function DashboardAdmin() {
           </div>
         </div>
 
-        {/* 🔥 FILTROS */}
         <div className="dash-filters">
           <input
             placeholder="Buscar..."
@@ -235,7 +259,10 @@ export default function DashboardAdmin() {
             onChange={(e) => setBusca(e.target.value)}
           />
 
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+          <select
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+          >
             <option value="">Todos</option>
             <option value="ativa">Ativa</option>
             <option value="inativa">Inativa</option>
@@ -243,8 +270,10 @@ export default function DashboardAdmin() {
             <option value="vencidas">Vencidas 🔴</option>
           </select>
 
-          {/* 🔥 NOVO FILTRO */}
-          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+          <select
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
             <option value="">Todos os tipos</option>
             {tiposUnicos.map((tipo, i) => (
               <option key={i} value={tipo}>{tipo}</option>
@@ -252,9 +281,9 @@ export default function DashboardAdmin() {
           </select>
         </div>
 
-        {/* RESTO IGUAL (TABELA, BOTÕES, ETC) */}
         <div className="dash-box">
           <h3>Estabelecimentos</h3>
+
           <table className="dash-table">
             <thead>
               <tr>
@@ -270,24 +299,86 @@ export default function DashboardAdmin() {
             </thead>
 
             <tbody>
-              {listaFiltrada.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.logo_url ? <img src={m.logo_url} width={40} /> : "-"}</td>
-                  <td>{m.nome_fantasia}</td>
-                  <td><span className="badge-tipo">{m.tipo_estabelecimento || "-"}</span></td>
-                  <td>{m.cnpj}</td>
-                  <td>{m.telefone || "-"}</td>
-                  <td>{m.data_vencimento ? new Date(m.data_vencimento).toLocaleDateString("pt-BR") : "-"}</td>
-                  <td><span className={`badge-status status-${m.status_assinatura}`}>{m.status_assinatura}</span></td>
+              {listaFiltrada.map((m) => {
+                const hoje = new Date();
 
-                  <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
-                    <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>Detalhes</button>
-                    <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>Editar</button>
-                    <button className="btn-danger" onClick={() => excluir(m.id)}>Excluir</button>
-                    <button className="btn-operators" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}>Operadores</button>
-                  </td>
-                </tr>
-              ))}
+                const venc = m.data_vencimento
+                  ? new Date(m.data_vencimento + "T12:00:00")
+                  : null;
+
+                let cor = "#999";
+
+                if (venc) {
+                  const diff =
+                    (venc - hoje) / (1000 * 60 * 60 * 24);
+
+                  if (diff < 0) cor = "#dc2626";
+                  else if (diff <= 5) cor = "#f59e0b";
+                  else cor = "#16a34a";
+                }
+
+                let dataFormatada = "-";
+
+                if (m.data_vencimento) {
+                  const [ano, mes, dia] = m.data_vencimento.split("-");
+                  dataFormatada = `${dia}/${mes}/${ano}`;
+                }
+
+                return (
+                  <tr key={m.id}>
+                    <td>
+                      {m.logo_url ? (
+                        <img src={m.logo_url} width={40} />
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+
+                    <td>{m.nome_fantasia}</td>
+
+                    <td>
+                      <span className="badge-tipo">
+                        {m.tipo_estabelecimento || "-"}
+                      </span>
+                    </td>
+
+                    <td>{m.cnpj}</td>
+                    <td>{m.telefone || "-"}</td>
+
+                    <td style={{ color: cor, fontWeight: "bold" }}>
+                      {dataFormatada}
+                    </td>
+
+                    <td>
+                      <span className={`badge-status status-${m.status_assinatura}`}>
+                        {m.status_assinatura}
+                      </span>
+                    </td>
+
+                    <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+                      <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>
+                        Detalhes
+                      </button>
+
+                      <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>
+                        Editar
+                      </button>
+
+                      <button className="btn-danger" onClick={() => excluir(m.id)}>
+                        Excluir
+                      </button>
+
+                      <button
+                        className="btn-operators"
+                        style={{ padding: "4px 8px", fontSize: 12 }}
+                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
+                      >
+                        Operadores
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
