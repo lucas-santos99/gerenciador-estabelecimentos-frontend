@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../utils/supabaseClient"; // 🔥 NOVO
+import { supabase } from "../../../utils/supabaseClient";
 
 export default function SuperAdmins() {
   const API_URL = import.meta.env.VITE_API_URL;
