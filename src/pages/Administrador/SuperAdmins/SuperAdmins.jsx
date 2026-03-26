@@ -11,6 +11,10 @@ export default function SuperAdmins() {
   const [loading, setLoading] = useState(false);
   const [lista, setLista] = useState([]);
 
+  const [modalSenha, setModalSenha] = useState(false);
+  const [userSelecionado, setUserSelecionado] = useState(null);
+  const [novaSenha, setNovaSenha] = useState("");
+
   const [form, setForm] = useState({
     nome: "",
     email: "",
@@ -21,13 +25,11 @@ export default function SuperAdmins() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  // 🔥 TOKEN CORRETO
   async function getToken() {
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token;
   }
 
-  // 🔥 CARREGAR LISTA
   useEffect(() => {
     carregarLista();
   }, []);
@@ -92,7 +94,6 @@ export default function SuperAdmins() {
     }
   }
 
-  // 🔥 EXCLUIR
   async function excluir(id) {
     if (!window.confirm("Deseja excluir este superadmin?")) return;
 
@@ -114,7 +115,6 @@ export default function SuperAdmins() {
     }
   }
 
-  // 🔥 ATIVAR / DESATIVAR
   async function toggleAtivo(id) {
     try {
       const token = await getToken();
@@ -131,6 +131,38 @@ export default function SuperAdmins() {
     } catch (err) {
       console.error(err);
       alert("Erro ao alterar status");
+    }
+  }
+
+  // 🔥 ALTERAR SENHA
+  async function alterarSenha() {
+    try {
+      const token = await getToken();
+
+      const resp = await fetch(
+        `${API_URL}/superadmin/${userSelecionado.id}/senha`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ senha: novaSenha })
+        }
+      );
+
+      if (!resp.ok) {
+        alert("Erro ao alterar senha");
+        return;
+      }
+
+      alert("Senha alterada com sucesso!");
+      setModalSenha(false);
+      setNovaSenha("");
+
+    } catch (err) {
+      console.error(err);
+      alert("Erro interno");
     }
   }
 
@@ -163,7 +195,7 @@ export default function SuperAdmins() {
           + Novo SuperAdmin
         </button>
 
-        {/* 🔥 LISTA REAL */}
+        {/* LISTA */}
         <div style={{
           marginTop: 20,
           padding: 20,
@@ -188,7 +220,6 @@ export default function SuperAdmins() {
                   <strong>{user.nome}</strong><br />
                   <span style={{ color: "#666" }}>{user.email}</span>
 
-                  {/* STATUS */}
                   <div style={{
                     marginTop: 5,
                     fontSize: 12,
@@ -219,6 +250,16 @@ export default function SuperAdmins() {
                       </button>
 
                       <button
+                        className="btn-primary"
+                        onClick={() => {
+                          setUserSelecionado(user);
+                          setModalSenha(true);
+                        }}
+                      >
+                        Alterar Senha
+                      </button>
+
+                      <button
                         className="btn-danger"
                         onClick={() => excluir(user.id)}
                       >
@@ -232,68 +273,50 @@ export default function SuperAdmins() {
           )}
         </div>
 
-        {/* MODAL */}
+        {/* MODAL CRIAR */}
         {mostrarModal && (
-          <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 999
-          }}>
-            <div style={{
-              background: "#fff",
-              padding: 25,
-              borderRadius: 12,
-              width: 380,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
-            }}>
-              <h2 style={{ marginBottom: 15 }}>Novo SuperAdmin</h2>
+          <div style={modalOverlay}>
+            <div style={modalBox}>
+              <h2>Novo SuperAdmin</h2>
+
+              <input name="nome" placeholder="Nome" value={form.nome} onChange={handleChange} style={inputStyle}/>
+              <input name="email" placeholder="Email" value={form.email} onChange={handleChange} style={inputStyle}/>
+              <input name="senha" type="password" placeholder="Senha" value={form.senha} onChange={handleChange} style={inputStyle}/>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn-primary" onClick={criarSuperAdmin}>
+                  Criar
+                </button>
+                <button className="btn-secondary" onClick={() => setMostrarModal(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL SENHA */}
+        {modalSenha && (
+          <div style={modalOverlay}>
+            <div style={modalBox}>
+              <h3>Alterar Senha</h3>
 
               <input
-                name="nome"
-                placeholder="Nome completo"
-                value={form.nome}
-                onChange={handleChange}
-                style={inputStyle}
-              />
-
-              <input
-                name="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                style={inputStyle}
-              />
-
-              <input
-                name="senha"
                 type="password"
-                placeholder="Senha"
-                value={form.senha}
-                onChange={handleChange}
+                placeholder="Nova senha"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
                 style={inputStyle}
               />
 
-              <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
-                <button
-                  className="btn-primary"
-                  onClick={criarSuperAdmin}
-                  disabled={loading}
-                  style={{ flex: 1 }}
-                >
-                  {loading ? "Criando..." : "Criar"}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn-primary" onClick={alterarSenha}>
+                  Salvar
                 </button>
 
                 <button
                   className="btn-secondary"
-                  onClick={() => setMostrarModal(false)}
-                  style={{ flex: 1 }}
+                  onClick={() => setModalSenha(false)}
                 >
                   Cancelar
                 </button>
@@ -313,4 +336,24 @@ const inputStyle = {
   marginBottom: "10px",
   borderRadius: "8px",
   border: "1px solid #ccc"
+};
+
+const modalOverlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 999
+};
+
+const modalBox = {
+  background: "#fff",
+  padding: 25,
+  borderRadius: 12,
+  width: 350
 };
