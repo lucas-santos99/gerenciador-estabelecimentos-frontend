@@ -34,7 +34,7 @@ export default function SuperAdmins() {
 
   async function carregarLista() {
     try {
-      const token = await getToken(); // 🔥 CORRIGIDO
+      const token = await getToken();
 
       const resp = await fetch(`${API_URL}/superadmin/listar`, {
         headers: {
@@ -59,7 +59,7 @@ export default function SuperAdmins() {
     try {
       setLoading(true);
 
-      const token = await getToken(); // 🔥 CORRIGIDO
+      const token = await getToken();
 
       const resp = await fetch(`${API_URL}/superadmin/criar`, {
         method: "POST",
@@ -97,7 +97,7 @@ export default function SuperAdmins() {
     if (!window.confirm("Deseja excluir este superadmin?")) return;
 
     try {
-      const token = await getToken(); // 🔥 CORRIGIDO
+      const token = await getToken();
 
       await fetch(`${API_URL}/superadmin/${id}`, {
         method: "DELETE",
@@ -111,6 +111,26 @@ export default function SuperAdmins() {
     } catch (err) {
       console.error(err);
       alert("Erro ao excluir");
+    }
+  }
+
+  // 🔥 ATIVAR / DESATIVAR
+  async function toggleAtivo(id) {
+    try {
+      const token = await getToken();
+
+      await fetch(`${API_URL}/superadmin/${id}/ativo`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      carregarLista();
+
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao alterar status");
     }
   }
 
@@ -168,6 +188,15 @@ export default function SuperAdmins() {
                   <strong>{user.nome}</strong><br />
                   <span style={{ color: "#666" }}>{user.email}</span>
 
+                  {/* STATUS */}
+                  <div style={{
+                    marginTop: 5,
+                    fontSize: 12,
+                    color: user.is_active === false ? "red" : "green"
+                  }}>
+                    {user.is_active === false ? "Inativo" : "Ativo"}
+                  </div>
+
                   {user.is_master && (
                     <span style={{
                       color: "red",
@@ -181,12 +210,21 @@ export default function SuperAdmins() {
 
                 <div style={{ display: "flex", gap: 8 }}>
                   {!user.is_master && (
-                    <button
-                      className="btn-danger"
-                      onClick={() => excluir(user.id)}
-                    >
-                      Excluir
-                    </button>
+                    <>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => toggleAtivo(user.id)}
+                      >
+                        {user.is_active === false ? "Ativar" : "Desativar"}
+                      </button>
+
+                      <button
+                        className="btn-danger"
+                        onClick={() => excluir(user.id)}
+                      >
+                        Excluir
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
