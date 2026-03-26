@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function SuperAdmins() {
   const API_URL = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lista, setLista] = useState([]);
 
   const [form, setForm] = useState({
     nome: "",
@@ -17,13 +21,41 @@ export default function SuperAdmins() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  function getToken() {
+    const session = JSON.parse(
+      localStorage.getItem("sb-mrdfbuijjgiaqutkpuch-auth-token")
+    );
+    return session?.access_token;
+  }
+
+  // 🔥 CARREGAR LISTA
+  useEffect(() => {
+    carregarLista();
+  }, []);
+
+  async function carregarLista() {
+    try {
+      const token = getToken();
+
+      const resp = await fetch(`${API_URL}/superadmin/listar`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await resp.json();
+      setLista(data);
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   async function criarSuperAdmin() {
     try {
       setLoading(true);
 
-      const token = JSON.parse(
-        localStorage.getItem("sb-mrdfbujijgiaqutkpuch-auth-token") // ⚠️ depois ajustamos se precisar
-      )?.access_token;
+      const token = getToken();
 
       const resp = await fetch(`${API_URL}/superadmin/criar`, {
         method: "POST",
@@ -46,6 +78,9 @@ export default function SuperAdmins() {
       setMostrarModal(false);
       setForm({ nome: "", email: "", senha: "" });
 
+      // 🔥 atualiza lista
+      carregarLista();
+
     } catch (err) {
       console.error(err);
       alert("Erro interno");
@@ -54,19 +89,107 @@ export default function SuperAdmins() {
     }
   }
 
+  // 🔥 EXCLUIR
+  async function excluir(id) {
+    if (!window.confirm("Deseja excluir este superadmin?")) return;
+
+    try {
+      const token = getToken();
+
+      await fetch(`${API_URL}/superadmin/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      carregarLista();
+
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao excluir");
+    }
+  }
+
   return (
     <LayoutAdmin>
       <div style={{ padding: 20 }}>
 
-        <h1>Super Administradores</h1>
+        {/* HEADER */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <h1>Super Administradores</h1>
 
+          <button
+            className="btn-secondary"
+            onClick={() => navigate("/admin")}
+          >
+            ← Voltar
+          </button>
+        </div>
+
+        {/* BOTÃO CRIAR */}
         <button
           className="btn-primary"
           onClick={() => setMostrarModal(true)}
-          style={{ marginTop: 10 }}
+          style={{ marginTop: 20 }}
         >
           + Novo SuperAdmin
         </button>
+
+        {/* 🔥 LISTA REAL */}
+        <div style={{
+          marginTop: 20,
+          padding: 20,
+          background: "#fff",
+          borderRadius: 12,
+          boxShadow: "0 2px 10px rgba(0,0,0,0.08)"
+        }}>
+          {lista.length === 0 ? (
+            <p style={{ color: "#666" }}>
+              Nenhum SuperAdmin encontrado.
+            </p>
+          ) : (
+            lista.map((user) => (
+              <div key={user.id} style={{
+                padding: 12,
+                borderBottom: "1px solid #eee",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <div>
+                  <strong>{user.nome}</strong><br />
+                  <span style={{ color: "#666" }}>{user.email}</span>
+
+                  {user.is_master && (
+                    <span style={{
+                      color: "red",
+                      marginLeft: 10,
+                      fontWeight: "bold"
+                    }}>
+                      (Master)
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  {!user.is_master && (
+                    <button
+                      className="btn-danger"
+                      onClick={() => excluir(user.id)}
+                    >
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
         {/* MODAL */}
         {mostrarModal && (
@@ -84,18 +207,19 @@ export default function SuperAdmins() {
           }}>
             <div style={{
               background: "#fff",
-              padding: 20,
-              borderRadius: 10,
-              width: 350
+              padding: 25,
+              borderRadius: 12,
+              width: 380,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
             }}>
-              <h2>Novo SuperAdmin</h2>
+              <h2 style={{ marginBottom: 15 }}>Novo SuperAdmin</h2>
 
               <input
                 name="nome"
-                placeholder="Nome"
+                placeholder="Nome completo"
                 value={form.nome}
                 onChange={handleChange}
-                style={{ width: "100%", marginBottom: 10 }}
+                style={inputStyle}
               />
 
               <input
@@ -103,7 +227,7 @@ export default function SuperAdmins() {
                 placeholder="Email"
                 value={form.email}
                 onChange={handleChange}
-                style={{ width: "100%", marginBottom: 10 }}
+                style={inputStyle}
               />
 
               <input
@@ -112,14 +236,15 @@ export default function SuperAdmins() {
                 placeholder="Senha"
                 value={form.senha}
                 onChange={handleChange}
-                style={{ width: "100%", marginBottom: 10 }}
+                style={inputStyle}
               />
 
-              <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
                 <button
                   className="btn-primary"
                   onClick={criarSuperAdmin}
                   disabled={loading}
+                  style={{ flex: 1 }}
                 >
                   {loading ? "Criando..." : "Criar"}
                 </button>
@@ -127,11 +252,11 @@ export default function SuperAdmins() {
                 <button
                   className="btn-secondary"
                   onClick={() => setMostrarModal(false)}
+                  style={{ flex: 1 }}
                 >
                   Cancelar
                 </button>
               </div>
-
             </div>
           </div>
         )}
@@ -140,3 +265,11 @@ export default function SuperAdmins() {
     </LayoutAdmin>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px",
+  marginBottom: "10px",
+  borderRadius: "8px",
+  border: "1px solid #ccc"
+};
