@@ -195,6 +195,15 @@ export default function DashboardAdmin() {
               + Novo Estabelecimento
             </button>
 
+            {/* 🔥 NOVO BOTÃO */}
+            <button
+               className="btn-primary"
+               style={{ backgroundColor: "#7c3aed" }}
+               onClick={() => navigate("/admin/superadmins")}
+           >
+             + Novo SuperAdmin
+           </button>
+
             <button
               className="btn-secondary"
               onClick={() => navigate("/admin/estabelecimentos/excluidas")}

@@ -13,6 +13,8 @@ import RoleRoute from "./components/RoleRoute";
 // Dashboard correto do Admin
 import DashboardAdmin from "./pages/Administrador/DashboardAdmin";
 
+import SuperAdmins from "./pages/Administrador/SuperAdmins/SuperAdmins";
+
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
@@ -80,6 +82,15 @@ function App() {
           </RoleRoute>
         }
       />
+
+      <Route
+  path="/admin/superadmins"
+  element={
+    <RoleRoute allowedRoles={["super_admin"]}>
+      <SuperAdmins />
+    </RoleRoute>
+  }
+/>
 
       {/* CRUD DE ESTABELECIMENTOS */}
       <Route
