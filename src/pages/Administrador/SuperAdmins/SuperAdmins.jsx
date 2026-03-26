@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { supabase } from "../../utils/supabaseClient"; // 🔥 NOVO
 
 export default function SuperAdmins() {
   const API_URL = import.meta.env.VITE_API_URL;
@@ -21,11 +21,10 @@ export default function SuperAdmins() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function getToken() {
-    const session = JSON.parse(
-      localStorage.getItem("sb-mrdfbuijjgiaqutkpuch-auth-token")
-    );
-    return session?.access_token;
+  // 🔥 TOKEN CORRETO
+  async function getToken() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token;
   }
 
   // 🔥 CARREGAR LISTA
@@ -35,13 +34,18 @@ export default function SuperAdmins() {
 
   async function carregarLista() {
     try {
-      const token = getToken();
+      const token = await getToken(); // 🔥 CORRIGIDO
 
       const resp = await fetch(`${API_URL}/superadmin/listar`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+
+      if (!resp.ok) {
+        console.error("Erro ao buscar lista");
+        return;
+      }
 
       const data = await resp.json();
       setLista(data);
@@ -55,7 +59,7 @@ export default function SuperAdmins() {
     try {
       setLoading(true);
 
-      const token = getToken();
+      const token = await getToken(); // 🔥 CORRIGIDO
 
       const resp = await fetch(`${API_URL}/superadmin/criar`, {
         method: "POST",
@@ -78,7 +82,6 @@ export default function SuperAdmins() {
       setMostrarModal(false);
       setForm({ nome: "", email: "", senha: "" });
 
-      // 🔥 atualiza lista
       carregarLista();
 
     } catch (err) {
@@ -94,7 +97,7 @@ export default function SuperAdmins() {
     if (!window.confirm("Deseja excluir este superadmin?")) return;
 
     try {
-      const token = getToken();
+      const token = await getToken(); // 🔥 CORRIGIDO
 
       await fetch(`${API_URL}/superadmin/${id}`, {
         method: "DELETE",
