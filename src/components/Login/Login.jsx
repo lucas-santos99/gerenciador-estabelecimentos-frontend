@@ -16,25 +16,55 @@ export default function Login() {
   const [error, setError] = useState("");
   
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
+async function handleSubmit(e) {
+  e.preventDefault();
+  setError("");
 
-    try {
-      const { user } = await login({ email, password: senha });
+  try {
+    // 🔥 LOGIN
+    const { user, session } = await login({ email, password: senha });
 
-      if (remember) {
-        localStorage.setItem("savedLogin", email);
-      } else {
-        localStorage.removeItem("savedLogin");
-      }
+    const token = session?.access_token;
 
-      navigate("/");
-    } catch (err) {
-      setError("Credenciais inválidas. Tente novamente.");
+    if (!token) {
+      setError("Erro ao autenticar.");
+      return;
     }
-  }
 
+    // 🔥 VALIDAR NO BACKEND
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/superadmin/perfil`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    // 🚨 BLOQUEIO
+    if (!response.ok || data.is_active === false) {
+
+      await supabase.auth.signOut(); // 🔥 ESSENCIAL
+
+      setError("Usuário desativado. Contate o administrador.");
+      return;
+    }
+
+    // 🔥 REMEMBER
+    if (remember) {
+      localStorage.setItem("savedLogin", email);
+    } else {
+      localStorage.removeItem("savedLogin");
+    }
+
+    navigate("/");
+
+  } catch (err) {
+    setError("Credenciais inválidas. Tente novamente.");
+  }
+}
   return (
     <div className="login-container">
       {/* Painel Esquerdo */}
