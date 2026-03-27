@@ -220,11 +220,22 @@ export default function SuperAdmins() {
           <h1>Super Administradores</h1>
 
           <button
+       className="btn-primary"
+        onClick={() => {
+        setUserSelecionado({ id: profile.id });
+        setModalSenha(true);
+       }}
+      >
+         Alterar Minha Senha
+      </button>
+
+          <button
             className="btn-secondary"
             onClick={() => navigate("/admin")}
           >
             ← Voltar
           </button>
+
         </div>
 
         {/* BOTÃO CRIAR */}
@@ -347,7 +358,11 @@ export default function SuperAdmins() {
         {modalSenha && (
           <div style={modalOverlay}>
             <div style={modalBox}>
-              <h3>Alterar Senha</h3>
+              <h3>
+  {userSelecionado?.id === profile.id
+    ? "Alterar Minha Senha"
+    : "Alterar Senha"}
+</h3>
 
               <input
                 type="password"
