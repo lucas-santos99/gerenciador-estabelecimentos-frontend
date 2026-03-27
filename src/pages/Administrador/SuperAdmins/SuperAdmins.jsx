@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "../../../utils/supabaseClient";
+import { useAuth } from "../../../contexts/AuthProvider";
 
 export default function SuperAdmins() {
+  const { profile } = useAuth();
+
+  // 🔒 BLOQUEIO DE ACESSO
+  if (!profile?.is_master) {
+    return <Navigate to="/admin" />;
+  }
+
   const API_URL = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
@@ -13,7 +21,7 @@ export default function SuperAdmins() {
 
   const [modalSenha, setModalSenha] = useState(false);
   const [userSelecionado, setUserSelecionado] = useState(null);
-  const [novaSenha, setNovaSenha] = useState("");
+  const [novaSenha, setNovaSenha] = "";
 
   const [form, setForm] = useState({
     nome: "",
@@ -30,9 +38,12 @@ export default function SuperAdmins() {
     return data.session?.access_token;
   }
 
+  // 🔥 CARREGAR LISTA SOMENTE SE FOR MASTER
   useEffect(() => {
-    carregarLista();
-  }, []);
+    if (profile?.is_master) {
+      carregarLista();
+    }
+  }, [profile]);
 
   async function carregarLista() {
     try {
@@ -131,6 +142,36 @@ export default function SuperAdmins() {
     } catch (err) {
       console.error(err);
       alert("Erro ao alterar status");
+    }
+  }
+
+  // 🔥 TORNAR MASTER
+  async function tornarMaster(id) {
+    if (!window.confirm("Deseja tornar este usuário um MASTER?")) return;
+
+    try {
+      const token = await getToken();
+
+      const resp = await fetch(`${API_URL}/superadmin/${id}/master`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        alert(data.error || "Erro ao tornar master");
+        return;
+      }
+
+      alert("Usuário agora é MASTER!");
+      carregarLista();
+
+    } catch (err) {
+      console.error(err);
+      alert("Erro interno");
     }
   }
 
@@ -257,6 +298,13 @@ export default function SuperAdmins() {
                         }}
                       >
                         Alterar Senha
+                      </button>
+
+                      <button
+                        className="btn-secondary"
+                        onClick={() => tornarMaster(user.id)}
+                      >
+                        Tornar Master
                       </button>
 
                       <button
