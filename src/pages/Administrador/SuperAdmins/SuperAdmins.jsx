@@ -192,10 +192,13 @@ export default function SuperAdmins() {
         }
       );
 
-      if (!resp.ok) {
-        alert("Erro ao alterar senha");
-        return;
-      }
+    const data = await resp.json();
+
+if (!resp.ok) {
+  console.log("ERRO BACKEND:", data);
+  alert(data.error || "Erro ao alterar senha");
+  return;
+}
 
       alert("Senha alterada com sucesso!");
       setModalSenha(false);
