@@ -180,6 +180,9 @@ export default function SuperAdmins() {
     try {
       const token = await getToken();
 
+      console.log("userSelecionado:", userSelecionado);
+      console.log("novaSenha:", novaSenha);
+
       const resp = await fetch(
         `${API_URL}/superadmin/${userSelecionado.id}/senha`,
         {
