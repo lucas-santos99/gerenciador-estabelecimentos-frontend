@@ -21,7 +21,7 @@ export default function SuperAdmins() {
 
   const [modalSenha, setModalSenha] = useState(false);
   const [userSelecionado, setUserSelecionado] = useState(null);
-  const [novaSenha, setNovaSenha] = "";
+  const [novaSenha, setNovaSenha] = useState("");
 
   const [form, setForm] = useState({
     nome: "",
@@ -228,9 +228,10 @@ if (!resp.ok) {
           <button
        className="btn-primary"
         onClick={() => {
-        setUserSelecionado({ id: profile.id });
-        setModalSenha(true);
-       }}
+  setNovaSenha(""); // 🔥 IMPORTANTE
+  setUserSelecionado({ id: profile.id });
+  setModalSenha(true);
+}}
       >
          Alterar Minha Senha
       </button>
@@ -309,10 +310,11 @@ if (!resp.ok) {
 
                       <button
                         className="btn-primary"
-                        onClick={() => {
-                          setUserSelecionado(user);
-                          setModalSenha(true);
-                        }}
+                    onClick={() => {
+                      setNovaSenha(""); // 🔥 IMPORTANTE
+                      setUserSelecionado(user);
+                      setModalSenha(true);
+                    }}
                       >
                         Alterar Senha
                       </button>
@@ -373,7 +375,7 @@ if (!resp.ok) {
               <input
                 type="password"
                 placeholder="Nova senha"
-                value={novaSenha}
+                value={novaSenha || ""}
                 onChange={(e) => setNovaSenha(e.target.value)}
                 style={inputStyle}
               />
