@@ -1,23 +1,20 @@
-// src/components/RoleRoute.jsx
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthProvider";
 
-export default function RoleRoute({ allowedRoles = [], children }) {
+export default function RoleRoute({ children, allowedRoles }) {
   const { profile, loading } = useAuth();
 
-  if (loading) return <div>Carregando...</div>;
+  // 🔒 ESPERA carregar tudo
+  if (loading) return null;
 
-  // Caso ainda não tenha perfil carregado → volta pro login
-  if (!profile) {
-    return <Navigate to="/login" replace />;
-  }
+  // 🔒 ainda não carregou profile → NÃO BLOQUEIA AINDA
+  if (!profile) return null;
 
-  // Permissão negada
+  // 🔒 sem permissão
   if (!allowedRoles.includes(profile.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Permitido
   return children;
 }
