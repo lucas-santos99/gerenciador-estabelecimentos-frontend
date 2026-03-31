@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
 useEffect(() => {
   let isMounted = true;
 
-  async function loadSession() {
+  async function init() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -23,19 +23,18 @@ useEffect(() => {
 
     setSession(session);
     setUser(session?.user ?? null);
-
-    // ⚠️ NÃO FINALIZA AQUI ainda!
   }
 
-  loadSession();
+  init();
 
-  // 🔥 CRÍTICO: escutar mudanças (isso resolve o F5)
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!isMounted) return;
+
     setSession(session);
     setUser(session?.user ?? null);
-    setLoading(false); // ✅ AGORA sim finaliza
+    setLoading(false); // 🔥 só libera aqui
   });
 
   return () => {
