@@ -64,113 +64,148 @@ function App() {
       {/* Tela de Login */}
       <Route path="/login" element={<Login />} />
 
+      {/* Recuperação de senha */}
+      <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/nova-senha" element={<NovaSenha />} />
+
       {/* ============================ */}
       {/* PAINEL ADMINISTRADOR */}
       {/* ============================ */}
-      
-      <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-
-      <Route path="/auth/callback" element={<AuthCallback />} />
-
-      <Route path="/nova-senha" element={<NovaSenha />} />
 
       <Route
         path="/admin"
         element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <DashboardAdmin />
-          </RoleRoute>
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <DashboardAdmin />
+            </RoleRoute>
+          </ProtectedRoute>
         }
       />
 
       <Route
-  path="/admin/superadmins"
-  element={
-    <RoleRoute allowedRoles={["super_admin"]}>
-      <SuperAdmins />
-    </RoleRoute>
-  }
-/>
+        path="/admin/superadmins"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <SuperAdmins />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
 
       {/* CRUD DE ESTABELECIMENTOS */}
+
+      <Route
+        path="/admin/estabelecimentos"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <ListaEstabelecimentos />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/admin/estabelecimentos/nova"
         element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <NovoEstabelecimento />
-          </RoleRoute>
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <NovoEstabelecimento />
+            </RoleRoute>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/admin/estabelecimentos/excluidas"
         element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <Excluidas />
-          </RoleRoute>
-        }
-      />
-
-      <Route
-        path="/admin/estabelecimentos/:id/operadores"
-        element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <ListaOperadores />
-          </RoleRoute>
-        }
-      />
-
-      <Route
-        path="/admin/operadores/novo"
-        element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <NovoOperador />
-          </RoleRoute>
-        }
-      />
-
-      <Route
-        path="/admin/operadores/:id"
-        element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <DetalhesOperador />
-          </RoleRoute>
-        }
-      />
-
-      <Route
-        path="/admin/operadores/editar/:id"
-        element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <EditarOperador />
-          </RoleRoute>
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <Excluidas />
+            </RoleRoute>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/admin/estabelecimentos/:id"
         element={
-          <RoleRoute allowedRoles={["super_admin"]}>
-            <EditarEstabelecimento />
-          </RoleRoute>
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <EditarEstabelecimento />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* OPERADORES */}
+
+      <Route
+        path="/admin/estabelecimentos/:id/operadores"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <ListaOperadores />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/operadores/novo"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <NovoOperador />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/operadores/:id"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <DetalhesOperador />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/operadores/editar/:id"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["super_admin"]}>
+              <EditarOperador />
+            </RoleRoute>
+          </ProtectedRoute>
         }
       />
 
       {/* ============================ */}
-      {/* PAINEL ESTABELECIMENTO (merchant/operator) */}
+      {/* PAINEL ESTABELECIMENTO */}
       {/* ============================ */}
+
       <Route
         path="/estabelecimentos/:id"
         element={
-          <RoleRoute allowedRoles={["merchant", "operator"]}>
-            <PainelEstabelecimento />
-          </RoleRoute>
+          <ProtectedRoute>
+            <RoleRoute allowedRoles={["merchant", "operator"]}>
+              <PainelEstabelecimento />
+            </RoleRoute>
+          </ProtectedRoute>
         }
       />
 
       {/* ============================ */}
-      {/* Rota Raiz → redirecionamento automático */}
+      {/* ROTA RAIZ */}
       {/* ============================ */}
+
       <Route
         path="/"
         element={
@@ -190,6 +225,7 @@ function App() {
 
       {/* 404 */}
       <Route path="*" element={<div>Página não encontrada</div>} />
+
     </Routes>
   );
 }
