@@ -10,9 +10,16 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+  return localStorage.getItem("savedLogin") || "";
+});
+
   const [senha, setSenha] = useState("");
-  const [remember, setRemember] = useState(false);
+
+  const [remember, setRemember] = useState(() => {
+  return !!localStorage.getItem("savedLogin");
+});
+
   const [error, setError] = useState("");
   
 
@@ -118,7 +125,14 @@ async function handleSubmit(e) {
     <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <input type="checkbox"
             checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
+            onChange={(e) => {
+  const checked = e.target.checked;
+  setRemember(checked);
+
+  if (!checked) {
+    localStorage.removeItem("savedLogin");
+  }
+}}
         />
         Lembrar no dispositivo
     </label>
