@@ -12,40 +12,37 @@ export function AuthProvider({ children }) {
 
   // --- 1) Carregar sessão inicial ---
 useEffect(() => {
-  let active = true;
+  let isMounted = true;
 
-  async function load() {
+  async function loadSession() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!active) return;
+    if (!isMounted) return;
 
     setSession(session);
     setUser(session?.user ?? null);
 
-    // 🔥 IMPORTANTE: só libera depois de tudo
-    setLoading(false);
+    // ⚠️ NÃO FINALIZA AQUI ainda!
   }
 
-  load();
+  loadSession();
+
+  // 🔥 CRÍTICO: escutar mudanças (isso resolve o F5)
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+    setUser(session?.user ?? null);
+    setLoading(false); // ✅ AGORA sim finaliza
+  });
 
   return () => {
-    active = false;
+    isMounted = false;
+    subscription.unsubscribe();
   };
 }, []);
-
-  // --- 2) Listener de autenticação ---
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user || null);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
 
   // --- 3) Carregar perfil do banco ---
   useEffect(() => {

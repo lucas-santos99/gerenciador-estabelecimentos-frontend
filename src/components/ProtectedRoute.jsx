@@ -6,12 +6,13 @@ import { useAuth } from "../contexts/AuthProvider";
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+// 🔒 SEGURA enquanto ainda está carregando sessão
+if (loading) return null;
 
-  // Não está logado? → Volta para login
-if (!user && !loading) {
+// 🔒 SÓ redireciona se tiver CERTEZA que não tem usuário
+if (!user) {
   return <Navigate to="/login" replace />;
 }
 
-  return children;
+return children;
 }
