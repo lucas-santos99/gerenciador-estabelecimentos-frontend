@@ -6,8 +6,9 @@ import { useAuth } from "../../contexts/AuthProvider";
 
 export default function DashboardAdmin() {
   const { user } = useAuth();
-  const nomeUsuario =
+const nomeUsuario =
   user?.user_metadata?.nome ||
+  user?.user_metadata?.full_name ||
   user?.email ||
   "Usuário";
 
@@ -192,11 +193,11 @@ export default function DashboardAdmin() {
       <div className="dash-wrapper">
 
         <div className="dash-header">
-          <div>
-  <h1>Painel Administrativo</h1>
+<div>
   <span className="saudacao">
     👋 Olá, {nomeUsuario}
   </span>
+  <h1>Painel Administrativo</h1>
 </div>
 
           <div className="dash-actions">

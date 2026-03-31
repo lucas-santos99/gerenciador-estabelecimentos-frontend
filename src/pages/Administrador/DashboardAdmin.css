@@ -162,8 +162,8 @@
 
 .saudacao {
   display: block;
-  margin-top: 4px;
-  font-size: 14px;
-  color: #555;
-  font-weight: 500;
+  margin-bottom: 6px;
+  font-size: 15px;
+  color: #0adfc4;
+  font-weight: 600;
 }
