@@ -45,7 +45,7 @@
 }
 
 .login-heading span {
-  color: #a855f7;
+  color: #14b8a6;
 }
 
 /* DESCRIÇÃO */
@@ -183,6 +183,14 @@
   text-align: center;
   max-width: 400px;
   color: white;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 12px;
+  margin-top: -60px; /* 🔥 sobe tudo */
 }
 
 /* LOGO */
