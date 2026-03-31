@@ -181,13 +181,13 @@
   color: white;
 
   /* 🔥 CONTROLE PRINCIPAL DE POSIÇÃO */
-  margin-top: -80px; /* <-- AJUSTE AQUI SEMPRE QUE QUISER SUBIR */
+  margin-top: -60px; /* <-- AJUSTE AQUI SEMPRE QUE QUISER SUBIR */
 }
 
 /* LOGO */
 
 .login-brand-logo {
-  width: 300px;
+  width: 380x;
   margin-bottom: 10px;
   filter: drop-shadow(0 0 25px rgba(20, 184, 166, 0.4));
   transition: 0.3s;
