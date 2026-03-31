@@ -160,4 +160,10 @@
   font-weight: 600;
 }
 
-/* já existentes mantidos abaixo */
+.saudacao {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}

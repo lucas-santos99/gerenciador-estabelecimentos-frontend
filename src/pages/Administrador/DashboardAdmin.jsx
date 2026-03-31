@@ -2,8 +2,15 @@ import React, { useEffect, useState } from "react";
 import LayoutAdmin from "./Painel/LayoutAdmin";
 import "./DashboardAdmin.css";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthProvider";
 
 export default function DashboardAdmin() {
+  const { user } = useAuth();
+  const nomeUsuario =
+  user?.user_metadata?.nome ||
+  user?.email ||
+  "Usuário";
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [loading, setLoading] = useState(true);
@@ -185,7 +192,12 @@ export default function DashboardAdmin() {
       <div className="dash-wrapper">
 
         <div className="dash-header">
-          <h1>Painel Administrativo</h1>
+          <div>
+  <h1>Painel Administrativo</h1>
+  <span className="saudacao">
+    👋 Olá, {nomeUsuario}
+  </span>
+</div>
 
           <div className="dash-actions">
             <button
