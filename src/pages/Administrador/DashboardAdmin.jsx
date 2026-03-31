@@ -216,9 +216,6 @@ useEffect(() => {
     👋 Olá, {nomeUsuario}
   </span>
   <div>
-  <span className="saudacao">
-    👋 Olá, {nomeUsuario}
-  </span>
   <h1>Painel Administrativo</h1>
 </div>
 </div>
