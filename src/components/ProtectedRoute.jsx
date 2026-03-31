@@ -9,9 +9,9 @@ export default function ProtectedRoute({ children }) {
   if (loading) return null;
 
   // Não está logado? → Volta para login
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+if (!user && !loading) {
+  return <Navigate to="/login" replace />;
+}
 
   return children;
 }

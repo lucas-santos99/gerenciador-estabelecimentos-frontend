@@ -11,20 +11,29 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // --- 1) Carregar sessão inicial ---
-  useEffect(() => {
-    let active = true;
+useEffect(() => {
+  let active = true;
 
-    async function load() {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
-      setSession(data.session);
-      setUser(data.session?.user || null);
-      setLoading(false);
-    }
+  async function load() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    load();
-    return () => { active = false; };
-  }, []);
+    if (!active) return;
+
+    setSession(session);
+    setUser(session?.user ?? null);
+
+    // 🔥 IMPORTANTE: só libera depois de tudo
+    setLoading(false);
+  }
+
+  load();
+
+  return () => {
+    active = false;
+  };
+}, []);
 
   // --- 2) Listener de autenticação ---
   useEffect(() => {
@@ -78,12 +87,8 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }, []);
 
-  if (loading) {
-  return (
-    <div style={{ padding: 20 }}>
-      🔄 Carregando sistema...
-    </div>
-  );
+ if (loading) {
+  return <div>Carregando sistema...</div>;
 }
 
 return (
