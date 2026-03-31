@@ -226,17 +226,6 @@ if (!resp.ok) {
           <h1>Super Administradores</h1>
 
           <button
-       className="btn-primary"
-        onClick={() => {
-  setNovaSenha(""); // 🔥 IMPORTANTE
-  setUserSelecionado({ id: profile.id });
-  setModalSenha(true);
-}}
-      >
-         Alterar Minha Senha
-      </button>
-
-          <button
             className="btn-secondary"
             onClick={() => navigate("/admin")}
           >
@@ -299,41 +288,44 @@ if (!resp.ok) {
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  {!user.is_master && (
-                    <>
-                      <button
-                        className="btn-secondary"
-                        onClick={() => toggleAtivo(user.id)}
-                      >
-                        {user.is_active === false ? "Ativar" : "Desativar"}
-                      </button>
+                  
+<button
+  className="btn-primary"
+  onClick={() => {
+    setNovaSenha("");
+    setUserSelecionado(user);
+    setModalSenha(true);
+  }}
+>
+  {user.id === profile.id ? "Alterar Minha Senha" : "Alterar Senha"}
+</button>
 
-                      <button
-                        className="btn-primary"
-                    onClick={() => {
-                      setNovaSenha(""); // 🔥 IMPORTANTE
-                      setUserSelecionado(user);
-                      setModalSenha(true);
-                    }}
-                      >
-                        Alterar Senha
-                      </button>
+{/* 🚨 AÇÕES SOMENTE PARA OUTROS USUÁRIOS */}
+{user.id !== profile.id && (
+  <>
+    <button
+      className="btn-secondary"
+      onClick={() => toggleAtivo(user.id)}
+    >
+      {user.is_active === false ? "Ativar" : "Desativar"}
+    </button>
 
-                      <button
-                        className="btn-secondary"
-                        onClick={() => tornarMaster(user.id)}
-                      >
-                        Tornar Master
-                      </button>
+    <button
+      className="btn-secondary"
+      onClick={() => tornarMaster(user.id)}
+    >
+      Tornar Master
+    </button>
 
-                      <button
-                        className="btn-danger"
-                        onClick={() => excluir(user.id)}
-                      >
-                        Excluir
-                      </button>
-                    </>
-                  )}
+    <button
+      className="btn-danger"
+      onClick={() => excluir(user.id)}
+    >
+      Excluir
+    </button>
+  </>
+)}
+                  
                 </div>
               </div>
             ))
