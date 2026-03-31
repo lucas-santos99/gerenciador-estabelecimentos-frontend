@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthProvider";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
-import { Link } from "react-router-dom";
 
 import logo from "../../assets/logo-lucasjsystems.png";
 
@@ -11,102 +10,86 @@ export default function Login() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState(() => {
-  return localStorage.getItem("savedLogin") || "";
-});
+    return localStorage.getItem("savedLogin") || "";
+  });
 
   const [senha, setSenha] = useState("");
 
   const [remember, setRemember] = useState(() => {
-  return !!localStorage.getItem("savedLogin");
-});
+    return !!localStorage.getItem("savedLogin");
+  });
 
   const [error, setError] = useState("");
-  
 
-async function handleSubmit(e) {
-  e.preventDefault();
-  setError("");
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
 
-  try {
-    // 🔥 LOGIN
-    const { user, session } = await login({ email, password: senha });
+    try {
+      const { session } = await login({ email, password: senha });
 
-    const token = session?.access_token;
+      const token = session?.access_token;
 
-    if (!token) {
-      setError("Erro ao autenticar.");
-      return;
-    }
-
-    // 🔥 VALIDAR NO BACKEND
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/superadmin/perfil`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      if (!token) {
+        setError("Erro ao autenticar.");
+        return;
       }
-    );
 
-    const data = await response.json();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/superadmin/perfil`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-    // 🚨 BLOQUEIO
-    if (!response.ok || data.is_active === false) {
+      const data = await response.json();
 
-      await supabase.auth.signOut(); // 🔥 ESSENCIAL
+      if (!response.ok || data.is_active === false) {
+        setError("Usuário desativado. Contate o administrador.");
+        return;
+      }
 
-      setError("Usuário desativado. Contate o administrador.");
-      return;
+      if (remember) {
+        localStorage.setItem("savedLogin", email);
+      } else {
+        localStorage.removeItem("savedLogin");
+      }
+
+      navigate("/");
+
+    } catch (err) {
+      setError("Credenciais inválidas. Tente novamente.");
     }
-
-    // 🔥 REMEMBER
-    if (remember) {
-      localStorage.setItem("savedLogin", email);
-    } else {
-      localStorage.removeItem("savedLogin");
-    }
-
-    navigate("/");
-
-  } catch (err) {
-    setError("Credenciais inválidas. Tente novamente.");
   }
-}
+
   return (
     <div className="login-container">
-      {/* Painel Esquerdo */}
-<div className="login-left">
-    <div className="login-left-content">
-        <img src={logo} className="login-logo" alt="Logo" />
 
-        <h1 className="login-title">Gerenciador de Estabelecimentos</h1>
+      {/* ========================= */}
+      {/* LADO ESQUERDO - LOGIN */}
+      {/* ========================= */}
+      <div className="login-left">
 
-        <p className="login-subtitle">
-            Plataforma completa para controle, gestão interna,
-            operações financeiras e muito mais — tudo em um só lugar.
-        </p>
+        <div className="login-card">
 
-        <div className="login-left-footer">
-     © 2025 Lucas J. Systems
-</div>
+          <h1 className="login-heading">
+            Faça seu login<span>.</span>
+          </h1>
 
-    </div>
-</div>
-
-      {/* Painel Direito */}
-      <div className="login-right">
-        <div className="login-box">
-
-          <h2>Entrar</h2>
+          <p className="login-desc">
+            Acesse sua plataforma de gestão e controle completo do seu negócio.
+          </p>
 
           {error && <p className="login-error">{error}</p>}
 
           <form onSubmit={handleSubmit} className="login-form">
 
-            <label>E-mail ou Telefone</label>
+            <label>Email</label>
             <input
               type="text"
-              placeholder="Digite seu e-mail ou telefone"
+              placeholder="Digite seu e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -121,27 +104,29 @@ async function handleSubmit(e) {
               required
             />
 
-           <div className="login-remember">
-    <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <input type="checkbox"
-            checked={remember}
-            onChange={(e) => {
-  const checked = e.target.checked;
-  setRemember(checked);
+            <div className="login-remember">
 
-  if (!checked) {
-    localStorage.removeItem("savedLogin");
-  }
-}}
-        />
-        Lembrar no dispositivo
-    </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setRemember(checked);
 
-   <Link to="/recuperar-senha" className="login-forgot">
-  Esqueci a senha
-</Link>
-</div>
+                    if (!checked) {
+                      localStorage.removeItem("savedLogin");
+                    }
+                  }}
+                />
+                Lembrar no dispositivo
+              </label>
 
+              <Link to="/recuperar-senha" className="login-forgot">
+                Esqueci minha senha
+              </Link>
+
+            </div>
 
             <button type="submit" className="login-btn">
               Entrar
@@ -150,7 +135,39 @@ async function handleSubmit(e) {
           </form>
 
         </div>
+
       </div>
+
+      {/* ========================= */}
+      {/* LADO DIREITO - BRANDING */}
+      {/* ========================= */}
+      <div className="login-right">
+
+        <div className="login-brand">
+
+          <img src={logo} alt="Logo" className="login-brand-logo" />
+
+          <h2>Gerenciador de Estabelecimentos</h2>
+
+          <p>
+            Controle total do seu negócio em um só lugar.  
+            Gestão, financeiro, PDV e muito mais.
+          </p>
+
+          <div className="login-socials">
+            <span>🌐</span>
+            <span>📱</span>
+            <span>📷</span>
+          </div>
+
+          <div className="login-footer">
+            © 2025 Lucas J. Systems
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
