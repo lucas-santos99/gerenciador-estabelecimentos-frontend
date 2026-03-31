@@ -6,7 +6,7 @@
   display: flex;
   height: 100vh;
   width: 100%;
-  background: linear-gradient(135deg, #0f172a, #0b0f1a, #020617);
+  background: linear-gradient(135deg, #020617, #020617, #0a1a2f);
   font-family: "Inter", sans-serif;
   overflow: hidden;
 }
@@ -85,8 +85,8 @@
 
 .login-form input:focus {
   outline: none;
-  border-color: #a855f7;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  bborder-color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
   background: rgba(255,255,255,0.05);
 }
 
@@ -107,7 +107,7 @@
 }
 
 .login-remember input {
-  accent-color: #a855f7;
+  accent-color: #2563eb;
 }
 
 .login-forgot {
@@ -131,13 +131,13 @@
   cursor: pointer;
   color: white;
 
-  background: linear-gradient(90deg, #9333ea, #ec4899);
+  background: linear-gradient(90deg, #1e3a8a, #2563eb);
   transition: 0.25s;
 }
 
 .login-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
 }
 
 /* ERRO */
@@ -169,7 +169,7 @@
   position: absolute;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(168,85,247,0.3), transparent);
+  background: radial-gradient(circle, rgba(37,99,235,0.25), transparent);
   filter: blur(120px);
   z-index: 0;
 }
@@ -187,9 +187,14 @@
 /* LOGO */
 
 .login-brand-logo {
-  width: 140px;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 0 20px rgba(168,85,247,0.4));
+  width: 200px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 25px rgba(37, 99, 235, 0.5));
+  transition: 0.3s;
+}
+
+.login-brand-logo:hover {
+  transform: scale(1.05);
 }
 
 /* TÍTULO */

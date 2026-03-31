@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthProvider";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
+import { FaWhatsapp, FaInstagram, FaFacebook } from "react-icons/fa";
 
 import logo from "../../assets/logo-lucasjsystems.png";
 
@@ -78,10 +79,6 @@ export default function Login() {
             Faça seu login<span>.</span>
           </h1>
 
-          <p className="login-desc">
-            Acesse sua plataforma de gestão e controle completo do seu negócio.
-          </p>
-
           {error && <p className="login-error">{error}</p>}
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -150,18 +147,17 @@ export default function Login() {
           <h2>Gerenciador de Estabelecimentos</h2>
 
           <p>
-            Controle total do seu negócio em um só lugar.  
-            Gestão, financeiro, PDV e muito mais.
+              Controle total do seu negócio em um só lugar.
           </p>
 
           <div className="login-socials">
-            <span>🌐</span>
-            <span>📱</span>
-            <span>📷</span>
-          </div>
+  <FaWhatsapp />
+  <FaInstagram />
+  <FaFacebook />
+</div>
 
           <div className="login-footer">
-            © 2025 Lucas J. Systems
+            © 2026 Lucas J. Systems
           </div>
 
         </div>
