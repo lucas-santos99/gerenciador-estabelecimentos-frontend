@@ -6,7 +6,7 @@ import { useAuth } from "../contexts/AuthProvider";
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return null;
 
   // Não está logado? → Volta para login
   if (!user) {

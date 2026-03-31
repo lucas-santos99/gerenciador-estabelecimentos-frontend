@@ -78,13 +78,21 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }, []);
 
+  if (loading) {
   return (
-    <AuthContext.Provider
-      value={{ session, user, profile, loading, login, logout }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <div style={{ padding: 20 }}>
+      🔄 Carregando sistema...
+    </div>
   );
+}
+
+return (
+  <AuthContext.Provider
+    value={{ session, user, profile, loading, login, logout }}
+  >
+    {children}
+  </AuthContext.Provider>
+);
 }
 
 export function useAuth() {
