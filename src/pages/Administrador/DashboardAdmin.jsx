@@ -3,18 +3,15 @@ import LayoutAdmin from "./Painel/LayoutAdmin";
 import "./DashboardAdmin.css";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
+import { supabase } from "../../utils/supabaseClient";
 
 export default function DashboardAdmin() {
   const { user } = useAuth();
-const nomeUsuario =
-  user?.user_metadata?.nome ||
-  user?.user_metadata?.full_name ||
-  user?.email ||
-  "Usuário";
 
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [loading, setLoading] = useState(true);
+  const [nomeUsuario, setNomeUsuario] = useState("");
   const [stats, setStats] = useState({
     total: 0,
     ativas: 0,
@@ -23,6 +20,7 @@ const nomeUsuario =
     todas: [],
   });
 
+  
   const [filtro, setFiltro] = useState("");
   const [busca, setBusca] = useState("");
 
@@ -69,9 +67,29 @@ const nomeUsuario =
     }
   }
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+useEffect(() => {
+  carregarDados();
+}, []);
+
+useEffect(() => {
+  async function buscarNome() {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("nome")
+      .eq("id", user.id)
+      .single();
+
+    if (data) {
+      setNomeUsuario(data.nome);
+    } else {
+      setNomeUsuario(user.email);
+    }
+  }
+
+  buscarNome();
+}, [user]);
 
   function ordenar(campo) {
     let direcao = "asc";
@@ -197,7 +215,12 @@ const nomeUsuario =
   <span className="saudacao">
     👋 Olá, {nomeUsuario}
   </span>
+  <div>
+  <span className="saudacao">
+    👋 Olá, {nomeUsuario}
+  </span>
   <h1>Painel Administrativo</h1>
+</div>
 </div>
 
           <div className="dash-actions">
