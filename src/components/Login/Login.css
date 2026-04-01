@@ -204,6 +204,7 @@ body.light {
   height: 600px;
   background: radial-gradient(circle, rgba(20,184,166,0.25), transparent);
   filter: blur(120px);
+  pointer-events: none; /* 🔥 ESSA LINHA RESOLVE */
 }
 
 /* BRAND */
@@ -261,4 +262,12 @@ body.light {
   .login-right {
     display: none;
   }
+}
+
+body.light .login-brand-logo {
+  filter: brightness(0);
+}
+
+body.light .login-brand-logo {
+  filter: brightness(0);
 }
