@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthProvider";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
-import { FaWhatsapp, FaInstagram, FaFacebook } from "react-icons/fa";
+import { FaWhatsapp, FaInstagram, FaFacebook, FaMoon, FaSun } from "react-icons/fa";
 
 import logo from "../../assets/logo-lucasjsystems.png";
 
@@ -15,12 +15,25 @@ export default function Login() {
   });
 
   const [senha, setSenha] = useState("");
-
   const [remember, setRemember] = useState(() => {
     return !!localStorage.getItem("savedLogin");
   });
 
   const [error, setError] = useState("");
+
+  // 🔥 TEMA
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  useEffect(() => {
+    document.body.className = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,7 +41,6 @@ export default function Login() {
 
     try {
       const { session } = await login({ email, password: senha });
-
       const token = session?.access_token;
 
       if (!token) {
@@ -60,7 +72,7 @@ export default function Login() {
 
       navigate("/");
 
-    } catch (err) {
+    } catch {
       setError("Credenciais inválidas. Tente novamente.");
     }
   }
@@ -68,9 +80,12 @@ export default function Login() {
   return (
     <div className="login-container">
 
-      {/* ========================= */}
-      {/* LADO ESQUERDO - LOGIN */}
-      {/* ========================= */}
+      {/* 🔥 BOTÃO DE TEMA */}
+      <button className="theme-toggle" onClick={toggleTheme}>
+        {theme === "dark" ? <FaSun /> : <FaMoon />}
+      </button>
+
+      {/* LADO ESQUERDO */}
       <div className="login-left">
 
         <div className="login-card">
@@ -135,9 +150,7 @@ export default function Login() {
 
       </div>
 
-      {/* ========================= */}
-      {/* LADO DIREITO - BRANDING */}
-      {/* ========================= */}
+      {/* LADO DIREITO */}
       <div className="login-right">
 
         <div className="login-brand">
@@ -147,22 +160,22 @@ export default function Login() {
           <h2>Gerenciador de Estabelecimentos</h2>
 
           <p>
-              Controle total do seu negócio em um só lugar.
+            Controle total do seu negócio em um só lugar.
           </p>
 
-         <div className="login-socials">
-  <a href="https://wa.me/5553991947320" target="_blank" rel="noopener noreferrer">
-    <FaWhatsapp />
-  </a>
+          <div className="login-socials">
+            <a href="https://wa.me/5553991947320" target="_blank" rel="noopener noreferrer">
+              <FaWhatsapp />
+            </a>
 
-  <a href="https://instagram.com/llucas.sj" target="_blank" rel="noopener noreferrer">
-    <FaInstagram />
-  </a>
+            <a href="https://instagram.com/llucas.sj" target="_blank" rel="noopener noreferrer">
+              <FaInstagram />
+            </a>
 
-  <a href="https://facebook.com/luckassanttos18" target="_blank" rel="noopener noreferrer">
-    <FaFacebook />
-  </a>
-</div>
+            <a href="https://facebook.com/luckassanttos18" target="_blank" rel="noopener noreferrer">
+              <FaFacebook />
+            </a>
+          </div>
 
           <div className="login-footer">
             © 2026 Lucas J. Systems

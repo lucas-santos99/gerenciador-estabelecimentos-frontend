@@ -1,4 +1,26 @@
 /* ========================= */
+/* VARIÁVEIS DE TEMA */
+/* ========================= */
+
+body.dark {
+  --bg-gradient: linear-gradient(135deg, #020617, #031726, #0f3d3e);
+  --card-bg: rgba(15, 23, 42, 0.65);
+  --text: #ffffff;
+  --text-soft: rgba(255,255,255,0.7);
+  --input-bg: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.1);
+}
+
+body.light {
+  --bg-gradient: linear-gradient(135deg, #f1f5f9, #e2e8f0, #dbeafe);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --text: #0f172a;
+  --text-soft: rgba(15,23,42,0.7);
+  --input-bg: rgba(0,0,0,0.03);
+  --border: rgba(0,0,0,0.1);
+}
+
+/* ========================= */
 /* BASE */
 /* ========================= */
 
@@ -6,13 +28,34 @@
   display: flex;
   height: 100vh;
   width: 100%;
-  background: linear-gradient(135deg, #020617, #031726, #0f3d3e);
+  background: var(--bg-gradient);
   font-family: "Inter", sans-serif;
   overflow: hidden;
+  color: var(--text);
+}
+
+/* BOTÃO TEMA */
+
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  transition: 0.3s;
+}
+
+.theme-toggle:hover {
+  background: rgba(20,184,166,0.2);
 }
 
 /* ========================= */
-/* LADO ESQUERDO - LOGIN */
+/* LADO ESQUERDO */
 /* ========================= */
 
 .login-left {
@@ -23,17 +66,16 @@
   padding: 40px;
 }
 
-/* CARD LOGIN */
+/* CARD */
 
 .login-card {
   width: 100%;
   max-width: 420px;
   padding: 40px;
   border-radius: 20px;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--card-bg);
   backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  color: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
 
 /* TÍTULO */
@@ -58,7 +100,7 @@
 
 .login-form label {
   font-size: 0.85rem;
-  color: rgba(255,255,255,0.8);
+  color: var(--text-soft);
 }
 
 /* INPUT */
@@ -66,9 +108,9 @@
 .login-form input {
   padding: 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.03);
-  color: white;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
   font-size: 0.95rem;
   transition: 0.25s;
 }
@@ -79,10 +121,9 @@
   outline: none;
   border-color: #14b8a6;
   box-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
-  background: rgba(255,255,255,0.05);
 }
 
-/* CHECKBOX + LINK */
+/* CHECKBOX */
 
 .login-remember {
   display: flex;
@@ -95,25 +136,21 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  cursor: pointer;
 }
 
 .login-remember input {
   accent-color: #14b8a6;
 }
 
-/* 🔥 LINK AJUSTADO (ESQUECI SENHA) */
+/* LINK */
 
 .login-forgot {
   text-decoration: none;
   color: #14b8a6;
-  font-weight: 500;
-  transition: 0.2s;
 }
 
 .login-forgot:hover {
   text-decoration: underline;
-  opacity: 0.8;
 }
 
 /* BOTÃO */
@@ -127,7 +164,6 @@
   font-weight: 700;
   cursor: pointer;
   color: white;
-
   background: linear-gradient(90deg, #0f766e, #14b8a6);
   transition: 0.25s;
 }
@@ -148,7 +184,7 @@
 }
 
 /* ========================= */
-/* LADO DIREITO - BRANDING */
+/* LADO DIREITO */
 /* ========================= */
 
 .login-right {
@@ -168,20 +204,14 @@
   height: 600px;
   background: radial-gradient(circle, rgba(20,184,166,0.25), transparent);
   filter: blur(120px);
-  z-index: 0;
 }
 
-/* CONTEÚDO */
+/* BRAND */
 
 .login-brand {
-  position: relative;
-  z-index: 2;
   text-align: center;
   max-width: 400px;
-  color: white;
-
-  /* 🔥 CONTROLE PRINCIPAL DE POSIÇÃO */
-  margin-top: -100px; /* <-- AJUSTE AQUI SEMPRE QUE QUISER SUBIR */
+  margin-top: -100px;
 }
 
 /* LOGO */
@@ -190,26 +220,12 @@
   width: 300px;
   margin-bottom: 10px;
   filter: drop-shadow(0 0 25px rgba(20, 184, 166, 0.4));
-  transition: 0.3s;
-}
-
-.login-brand-logo:hover {
-  transform: scale(1.05);
-}
-
-/* TÍTULO */
-
-.login-brand h2 {
-  font-size: 1.8rem;
-  margin-bottom: 10px;
 }
 
 /* TEXTO */
 
 .login-brand p {
-  font-size: 0.95rem;
-  color: rgba(255,255,255,0.7);
-  margin-bottom: 25px;
+  color: var(--text-soft);
 }
 
 /* REDES */
@@ -219,17 +235,16 @@
   justify-content: center;
   gap: 15px;
   font-size: 1.3rem;
-  opacity: 0.7;
 }
 
-.login-socials span {
-  cursor: pointer;
+.login-socials a {
+  color: var(--text-soft);
   transition: 0.2s;
 }
 
-.login-socials span:hover {
+.login-socials a:hover {
+  color: #14b8a6;
   transform: scale(1.2);
-  opacity: 1;
 }
 
 /* RODAPÉ */
@@ -237,7 +252,7 @@
 .login-footer {
   margin-top: 30px;
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-soft);
 }
 
 /* RESPONSIVO */
@@ -246,22 +261,4 @@
   .login-right {
     display: none;
   }
-
-  .login-left {
-    flex: 1;
-    padding: 20px;
-  }
-
-  .login-card {
-    padding: 30px;
-  }
-}
-.login-socials a {
-  color: rgba(255,255,255,0.7);
-  transition: 0.2s;
-}
-
-.login-socials a:hover {
-  color: #14b8a6;
-  transform: scale(1.2);
 }

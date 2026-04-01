@@ -60,7 +60,7 @@ export default function RecuperarSenha() {
           ) : (
             <form onSubmit={handleSubmit} className="recover-form">
 
-              <label>Email cadastrado</label>
+              <label>E-mail cadastrado</label>
               <input
                 type="email"
                 placeholder="Digite seu e-mail"
