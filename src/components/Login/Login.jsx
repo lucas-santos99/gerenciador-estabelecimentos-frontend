@@ -83,7 +83,7 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="login-form">
 
-            <label>Email</label>
+            <label>E-mail</label>
             <input
               type="text"
               placeholder="Digite seu e-mail"
@@ -150,10 +150,18 @@ export default function Login() {
               Controle total do seu negócio em um só lugar.
           </p>
 
-          <div className="login-socials">
-  <FaWhatsapp />
-  <FaInstagram />
-  <FaFacebook />
+         <div className="login-socials">
+  <a href="https://wa.me/5553991947320" target="_blank" rel="noopener noreferrer">
+    <FaWhatsapp />
+  </a>
+
+  <a href="https://instagram.com/llucas.sj" target="_blank" rel="noopener noreferrer">
+    <FaInstagram />
+  </a>
+
+  <a href="https://facebook.com/luckassanttos18" target="_blank" rel="noopener noreferrer">
+    <FaFacebook />
+  </a>
 </div>
 
           <div className="login-footer">

@@ -256,3 +256,12 @@
     padding: 30px;
   }
 }
+.login-socials a {
+  color: rgba(255,255,255,0.7);
+  transition: 0.2s;
+}
+
+.login-socials a:hover {
+  color: #14b8a6;
+  transform: scale(1.2);
+}
