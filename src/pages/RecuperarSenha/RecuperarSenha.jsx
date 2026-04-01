@@ -1,39 +1,36 @@
-// src/pages/RecuperarSenha/RecuperarSenha.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../../utils/supabaseClient"; // verifique o caminho
+import { supabase } from "../../utils/supabaseClient";
 import "./RecuperarSenha.css";
+
+import logo from "../../assets/logo-lucasjsystems.png";
 
 export default function RecuperarSenha() {
   const [email, setEmail] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
+    setErro("");
     setEnviado(false);
 
     try {
-      console.log("Tentando enviar reset para:", email);
-
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://gerenciador-estabelecimentos-frontend.onrender.com/auth/callback",
-
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          "https://gerenciador-mercearia-frontend.onrender.com/auth/callback",
       });
 
       if (error) {
-        console.error("Supabase error:", error);
-        alert("Não foi possível enviar o e-mail. Verifique o endereço e tente novamente.");
-        setLoading(false);
+        setErro("Não foi possível enviar o e-mail. Verifique e tente novamente.");
         return;
       }
 
-      console.log("Reset request data:", data);
       setEnviado(true);
     } catch (err) {
-      console.error("Erro inesperado:", err);
-      alert("Erro inesperado. Veja console.");
+      setErro("Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -41,32 +38,76 @@ export default function RecuperarSenha() {
 
   return (
     <div className="recover-container">
-      <div className="recover-box">
-        <h2>Recuperar Senha</h2>
 
-        {enviado ? (
-          <p className="recover-success">
-            Se o e-mail informado estiver cadastrado, você receberá instruções para redefinir sua senha em alguns minutos. Verifique também sua caixa de spam.
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="recover-form">
-            <label>Email cadastrado</label>
-            <input
-              type="email"
-              placeholder="Digite seu email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+      {/* ========================= */}
+      {/* LADO ESQUERDO */}
+      {/* ========================= */}
 
-            <button type="submit" className="recover-btn" disabled={loading}>
-              {loading ? "Enviando..." : "Enviar"}
-            </button>
-          </form>
-        )}
+      <div className="recover-left">
 
-        <Link to="/login" className="recover-back">Voltar ao login</Link>
+        <div className="recover-card">
+
+          <h1 className="recover-title">
+            Recuperar senha<span>.</span>
+          </h1>
+
+          {erro && <p className="recover-error">{erro}</p>}
+
+          {enviado ? (
+            <p className="recover-success">
+              Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha em alguns minutos.
+            </p>
+          ) : (
+            <form onSubmit={handleSubmit} className="recover-form">
+
+              <label>Email cadastrado</label>
+              <input
+                type="email"
+                placeholder="Digite seu e-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+
+              <button type="submit" className="recover-btn" disabled={loading}>
+                {loading ? "Enviando..." : "Enviar instruções"}
+              </button>
+
+            </form>
+          )}
+
+          <Link to="/login" className="recover-back">
+            Voltar ao login
+          </Link>
+
+        </div>
+
       </div>
+
+      {/* ========================= */}
+      {/* LADO DIREITO - BRANDING */}
+      {/* ========================= */}
+
+      <div className="recover-right">
+
+        <div className="recover-brand">
+
+          <img src={logo} alt="Logo" className="recover-logo" />
+
+          <h2>Gerenciador de Estabelecimentos</h2>
+
+          <p>
+            Controle total do seu negócio em um só lugar.
+          </p>
+
+          <div className="recover-footer">
+            © 2026 Lucas J. Systems
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }

@@ -1,83 +1,227 @@
+/* ========================= */
+/* BASE */
+/* ========================= */
+
 .recover-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: white;
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #020617, #031726, #0f3d3e);
+  font-family: "Inter", sans-serif;
+  overflow: hidden;
 }
 
-.recover-box {
-    width: 420px;
-    padding: 40px;
-    border-radius: 20px;
-    background: white;
-    box-shadow: 0px 8px 40px rgba(0,0,0,0.1);
-    text-align: center;
+/* ========================= */
+/* LADO ESQUERDO */
+/* ========================= */
+
+.recover-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
 }
 
-.recover-box h2 {
-    margin-bottom: 20px;
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #333;
+/* CARD */
+
+.recover-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  color: white;
 }
+
+/* TÍTULO */
+
+.recover-title {
+  font-size: 2.1rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.recover-title span {
+  color: #14b8a6;
+}
+
+/* FORM */
 
 .recover-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .recover-form label {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #444;
-    text-align: left;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
 }
+
+/* INPUT */
 
 .recover-form input {
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  color: white;
+  font-size: 0.95rem;
+  transition: 0.25s;
 }
+
+/* FOCUS */
 
 .recover-form input:focus {
-    border-color: #0f2133;
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(15, 33, 51, 0.25);
+  outline: none;
+  border-color: #14b8a6;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
+  background: rgba(255,255,255,0.05);
 }
+
+/* BOTÃO */
 
 .recover-btn {
-    margin-top: 10px;
-    background: linear-gradient(90deg, #0b121c, #0f2133);
-    padding: 14px;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: 0.25s;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: white;
+
+  background: linear-gradient(90deg, #0f766e, #14b8a6);
+  transition: 0.25s;
 }
+
 .recover-btn:hover {
-    filter: brightness(1.15);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(20, 184, 166, 0.4);
 }
+
+/* ERRO */
+
+.recover-error {
+  background: rgba(255, 0, 0, 0.12);
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #ff6b6b;
+  margin-bottom: 15px;
+}
+
+/* SUCESSO */
 
 .recover-success {
-    color: #0f2133;
-    font-size: 1rem;
-    margin-bottom: 20px;
-    font-weight: 600;
+  color: #14b8a6;
+  font-size: 0.95rem;
+  margin-bottom: 15px;
+  font-weight: 500;
 }
 
+/* VOLTAR */
+
 .recover-back {
-    display: inline-block;
-    margin-top: 20px;
-    color: #0f2133;
-    text-decoration: none;
-    font-weight: 600;
+  display: inline-block;
+  margin-top: 20px;
+  color: #14b8a6;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.2s;
 }
+
 .recover-back:hover {
-    text-decoration: underline;
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+/* ========================= */
+/* LADO DIREITO */
+/* ========================= */
+
+.recover-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* GLOW */
+
+.recover-right::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(20,184,166,0.25), transparent);
+  filter: blur(120px);
+  z-index: 0;
+}
+
+/* BRAND */
+
+.recover-brand {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 400px;
+  color: white;
+
+  /* 🔥 MESMO CONTROLE DO LOGIN */
+  margin-top: -80px;
+}
+
+/* LOGO */
+
+.recover-logo {
+  width: 280px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 25px rgba(20, 184, 166, 0.4));
+}
+
+/* TÍTULO */
+
+.recover-brand h2 {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+/* TEXTO */
+
+.recover-brand p {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 25px;
+}
+
+/* RODAPÉ */
+
+.recover-footer {
+  margin-top: 30px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ========================= */
+/* RESPONSIVO */
+/* ========================= */
+
+@media (max-width: 900px) {
+  .recover-right {
+    display: none;
+  }
+
+  .recover-left {
+    flex: 1;
+    padding: 20px;
+  }
+
+  .recover-card {
+    padding: 30px;
+  }
 }
