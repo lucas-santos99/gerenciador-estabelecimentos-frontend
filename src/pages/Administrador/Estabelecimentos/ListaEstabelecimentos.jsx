@@ -1,173 +1,180 @@
 // src/pages/Administrador/Estabelecimentos/ListaEstabelecimentos.jsx
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 
-export default function ListaEstabelecimentos() {
-  const API_URL = import.meta.env.VITE_API_URL;
+function iniciais(nome) {
+  if (!nome) return "?";
+  return nome.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
+}
 
-  const [lista, setLista] = useState([]);
+export default function ListaEstabelecimentos() {
+  const API_URL  = import.meta.env.VITE_API_URL;
+  const navigate = useNavigate();
+
+  const [lista,   setLista]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busca,   setBusca]   = useState("");
 
   async function carregarEstabelecimentos() {
     setLoading(true);
-
     try {
-      if (!API_URL) {
-        throw new Error("VITE_API_URL não definida");
-      }
-
-      const resposta = await fetch(
-        `${API_URL}/admin/estabelecimentos/listar`,
-        { credentials: "include" }
-      );
-
-      const data = await resposta.json();
-
-      console.log("📌 ESTABELECIMENTOS DO BACKEND:", data);
-
-      // Filtro simples: remove somente as excluídas
-      const filtradas = data.filter(
-        (m) => m.status_assinatura !== "excluida"
-      );
-
-      setLista(filtradas);
-    } catch (error) {
-      console.error("Erro ao carregar estabelecimento:", error);
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/listar`, {
+        credentials: "include",
+      });
+      const data = await resp.json();
+      setLista(data.filter(m => m.status_assinatura !== "excluida"));
+    } catch (err) {
+      console.error("Erro ao carregar:", err);
     }
-
     setLoading(false);
   }
 
-  useEffect(() => {
-    carregarEstabelecimentos();
-  }, []);
+  useEffect(() => { carregarEstabelecimentos(); }, []);
 
-  async function excluirEstabelecimento(id) {
-    if (!window.confirm("Excluir este estabelecimento?")) return;
-
+  async function excluirEstabelecimento(id, nome) {
+    if (!window.confirm(`Excluir "${nome}"?`)) return;
     try {
-      const resp = await fetch(
-        `${API_URL}/admin/estabelecimentos/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        }
-      );
-
-      if (resp.ok) {
-        alert("Estabelecimento excluído com sucesso.");
-        carregarEstabelecimentos();
-      } else {
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
+        method: "DELETE", credentials: "include",
+      });
+      if (resp.ok) carregarEstabelecimentos();
+      else {
         const json = await resp.json();
         alert("Erro: " + json.error);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao excluir.");
-    }
+    } catch { alert("Erro ao excluir."); }
   }
 
+  const listaFiltrada = busca
+    ? lista.filter(m =>
+        (m.nome_fantasia || "").toLowerCase().includes(busca.toLowerCase()) ||
+        (m.cnpj || "").toLowerCase().includes(busca.toLowerCase())
+      )
+    : lista;
+
+  /* ════════════════════════════════════════════════════════ */
   return (
     <LayoutAdmin>
-      <div className="merc-wrapper">
-        <h1>Estabelecimentos</h1>
+      <div className="est-wrapper">
 
-        <div className="merc-top">
-          <Link className="btn-primary" to="/admin/estabelecimentos/nova">
-            + Novo Estabelecimento
-          </Link>
+        {/* HEADER */}
+        <div className="est-page-header">
+          <div className="est-page-header-left">
+            <span className="est-breadcrumb">🏢 Administração</span>
+            <h1 className="est-page-title">Estabelecimentos</h1>
+          </div>
+          <div className="est-page-actions">
+            <Link
+              className="est-btn est-btn-ghost"
+              to="/admin/estabelecimentos/excluidas"
+            >
+              🗑 Ver Excluídas
+            </Link>
+            <Link
+              className="est-btn est-btn-primary"
+              to="/admin/estabelecimentos/nova"
+            >
+              + Novo Estabelecimento
+            </Link>
+          </div>
         </div>
 
-        <Link className="btn-secondary" to="/admin/estabelecimentos/excluidas">
-          Ver Excluídas
-        </Link>
+        {/* BUSCA */}
+        <div style={{ marginBottom: 12, maxWidth: 340 }}>
+          <div className="search-wrap" style={{ maxWidth: "100%" }}>
+            <span className="search-icon">🔍</span>
+            <input
+              className="dash-input"
+              placeholder="Buscar por nome ou CNPJ…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+          </div>
+        </div>
 
-        {loading ? (
-          <p>Carregando...</p>
-        ) : lista.length === 0 ? (
-          <p>Nenhum estabelecimento cadastrado.</p>
-        ) : (
-          <table className="merc-table">
-            <thead>
-              <tr>
-                <th>Logo</th>
-                <th>Nome</th>
-                <th>CNPJ</th>
-                <th>Telefone</th>
-                <th>Tipo</th> {/* ✅ NOVA COLUNA */}
-                <th>Ações</th>
-              </tr>
-            </thead>
+        {/* TABELA */}
+        <div className="est-table-box">
+          <div className="est-table-box-header">
+            <span className="est-table-box-title">Lista de Estabelecimentos</span>
+            <span className="est-count-badge">{listaFiltrada.length}</span>
+          </div>
 
-            <tbody>
-              {lista.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    {m.logo_url ? (
-                      <img
-                        src={m.logo_url}
-                        alt="Logo"
-                        style={{
-                          width: 50,
-                          height: 50,
-                          objectFit: "cover",
-                          borderRadius: 6,
-                          border: "1px solid #ccc",
-                        }}
-                      />
-                    ) : (
-                      <span style={{ opacity: 0.5 }}>Sem logo</span>
-                    )}
-                  </td>
+          {loading ? (
+            <div className="est-loading">
+              <div className="est-spinner" />
+              Carregando...
+            </div>
+          ) : listaFiltrada.length === 0 ? (
+            <div className="est-empty">
+              <span className="est-empty-icon">🏢</span>
+              {busca
+                ? "Nenhum resultado para a busca."
+                : "Nenhum estabelecimento cadastrado."}
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="est-table">
+                <thead>
+                  <tr>
+                    <th>Logo</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>CNPJ</th>
+                    <th>Telefone</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listaFiltrada.map(m => (
+                    <tr key={m.id}>
+                      <td>
+                        {m.logo_url
+                          ? <img src={m.logo_url} alt="Logo" className="est-logo-mini" />
+                          : <div className="est-logo-placeholder-mini">{iniciais(m.nome_fantasia)}</div>
+                        }
+                      </td>
+                      <td className="est-td-nome">{m.nome_fantasia}</td>
+                      <td>
+                        <span className="est-badge-tipo">
+                          {m.tipo_estabelecimento
+                            ? m.tipo_estabelecimento.charAt(0).toUpperCase() + m.tipo_estabelecimento.slice(1)
+                            : "—"}
+                        </span>
+                      </td>
+                      <td className="est-td-mono">{m.cnpj || "—"}</td>
+                      <td>{m.telefone || "—"}</td>
+                      <td>
+                        <div className="est-acoes">
+                          <Link
+                            className="est-btn est-btn-ghost est-btn-sm"
+                            to={`/admin/estabelecimentos/${m.id}?view=details`}
+                          >
+                            👁 Detalhes
+                          </Link>
+                          <Link
+                            className="est-btn est-btn-outline est-btn-sm"
+                            to={`/admin/estabelecimentos/${m.id}`}
+                          >
+                            ✏️ Editar
+                          </Link>
+                          <button
+                            className="est-btn est-btn-danger est-btn-sm"
+                            onClick={() => excluirEstabelecimento(m.id, m.nome_fantasia)}
+                          >
+                            🗑 Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
-                  <td>{m.nome_fantasia}</td>
-                  <td>{m.cnpj || "-"}</td>
-                  <td>{m.telefone || "-"}</td>
-
-                  {/* ✅ TIPO DE ESTABELECIMENTO */}
-                  <td>
-                    <span className="badge-tipo">
-                      {m.tipo_estabelecimento
-                        ? m.tipo_estabelecimento.charAt(0).toUpperCase() +
-                          m.tipo_estabelecimento.slice(1)
-                        : "-"}
-                    </span>
-                  </td>
-
-                  <td>
-                    {/* 🔹 Detalhes */}
-                    <Link
-                      className="btn-secondary"
-                      to={`/admin/estabelecimentos/${m.id}?view=details`}
-                      style={{ marginRight: 10 }}
-                    >
-                      Detalhes
-                    </Link>
-
-                    {/* 🔹 Editar */}
-                    <Link
-                      className="btn-edit"
-                      to={`/admin/estabelecimentos/${m.id}`}
-                    >
-                      Editar
-                    </Link>
-
-                    {/* 🔹 Excluir */}
-                    <button
-                      className="btn-delete"
-                      onClick={() => excluirEstabelecimento(m.id)}
-                      style={{ marginLeft: 10 }}
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </div>
     </LayoutAdmin>
   );

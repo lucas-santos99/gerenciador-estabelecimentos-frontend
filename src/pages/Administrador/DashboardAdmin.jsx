@@ -5,61 +5,71 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { supabase } from "../../utils/supabaseClient";
 
+/* ── ícones inline leves (sem dep. extra) ─────────────────── */
+const Icon = {
+  Building:    () => <span>🏢</span>,
+  Check:       () => <span>✓</span>,
+  Pause:       () => <span>⏸</span>,
+  Trash:       () => <span>🗑</span>,
+  Plus:        () => <span>+</span>,
+  Crown:       () => <span>👑</span>,
+  Eye:         () => <span>👁</span>,
+  Search:      () => <span style={{ fontSize:"0.8rem" }}>🔍</span>,
+  Bell:        () => <span>🔔</span>,
+  ChevronUp:   () => <span style={{ fontSize:"0.7rem" }}>▲</span>,
+  ChevronDown: () => <span style={{ fontSize:"0.7rem" }}>▼</span>,
+  Sort:        () => <span style={{ fontSize:"0.65rem", opacity:0.6 }}>⬍</span>,
+  Edit:        () => <span>✏️</span>,
+  Users:       () => <span>👥</span>,
+};
+
+/* ── helpers ──────────────────────────────────────────────── */
+function formatarData(dataStr) {
+  if (!dataStr) return null;
+  const [ano, mes, dia] = dataStr.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function calcularDiff(dataStr) {
+  if (!dataStr) return null;
+  const venc = new Date(dataStr + "T12:00:00");
+  return (venc - new Date()) / (1000 * 60 * 60 * 24);
+}
+
+function iniciais(nome) {
+  if (!nome) return "?";
+  return nome.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
+}
+
+/* ═══════════════════════════════════════════════════════════ */
 export default function DashboardAdmin() {
-  const { user } = useAuth();
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
+  const API_URL    = import.meta.env.VITE_API_URL;
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  /* ── state ─────────────────────────────────────────────── */
+  const [loading,        setLoading]        = useState(true);
+  const [nomeUsuario,    setNomeUsuario]     = useState("");
+  const [todasLista,     setTodasLista]      = useState([]);
+  const [qtdExcluidas,   setQtdExcluidas]    = useState(0);
+  const [filtro,         setFiltro]          = useState("");
+  const [busca,          setBusca]           = useState("");
+  const [filtroTipo,     setFiltroTipo]      = useState("");
+  const [mostrarAlertas, setMostrarAlertas]  = useState(true);
+  const [ordenacao,      setOrdenacao]       = useState({ campo: "", direcao: "asc" });
 
-  const [loading, setLoading] = useState(true);
-  const [nomeUsuario, setNomeUsuario] = useState("");
-  const [stats, setStats] = useState({
-    total: 0,
-    ativas: 0,
-    inativas: 0,
-    excluidas: 0,
-    todas: [],
-  });
-
-  
-  const [filtro, setFiltro] = useState("");
-  const [busca, setBusca] = useState("");
-
-  const [filtroTipo, setFiltroTipo] = useState("");
-  const [mostrarAlertas, setMostrarAlertas] = useState(true);
-
-  const [ordenacao, setOrdenacao] = useState({
-    campo: "",
-    direcao: "asc",
-  });
-
-  const navigate = useNavigate();
-
+  /* ── carregar dados ─────────────────────────────────────── */
   async function carregarDados() {
     try {
       setLoading(true);
-
-      const resp1 = await fetch(`${API_URL}/admin/estabelecimentos/listar`);
-      const lista = (await resp1.json()) || [];
-
-      const resp2 = await fetch(`${API_URL}/admin/estabelecimentos/excluidas`);
-      const excluidas = (await resp2.json()) || [];
-
-      const ativas = lista.filter(m => m.status_assinatura === "ativa").length;
-
-      const inativas = lista.filter(
-        m =>
-          m.status_assinatura === "inativa" ||
-          m.status_assinatura === "bloqueada"
-      ).length;
-
-      setStats({
-        total: lista.length,
-        ativas,
-        inativas,
-        excluidas: excluidas.length,
-        todas: lista,
-      });
-
+      const [r1, r2] = await Promise.all([
+        fetch(`${API_URL}/admin/estabelecimentos/listar`),
+        fetch(`${API_URL}/admin/estabelecimentos/excluidas`),
+      ]);
+      const lista    = (await r1.json()) || [];
+      const excluidas = (await r2.json()) || [];
+      setTodasLista(lista);
+      setQtdExcluidas(excluidas.length);
     } catch (err) {
       console.error(err);
     } finally {
@@ -67,245 +77,247 @@ export default function DashboardAdmin() {
     }
   }
 
-useEffect(() => {
-  carregarDados();
-}, []);
+  useEffect(() => { carregarDados(); }, []);
 
-useEffect(() => {
-  async function buscarNome() {
-    if (!user?.id) return;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("nome")
-      .eq("id", user.id)
-      .single();
-
-    if (data) {
-      setNomeUsuario(data.nome);
-    } else {
-      setNomeUsuario(user.email);
+  useEffect(() => {
+    async function buscarNome() {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from("profiles").select("nome").eq("id", user.id).single();
+      setNomeUsuario(data?.nome || user.email);
     }
-  }
+    buscarNome();
+  }, [user]);
 
-  buscarNome();
-}, [user]);
-
+  /* ── ordenação ──────────────────────────────────────────── */
   function ordenar(campo) {
-    let direcao = "asc";
-
-    if (ordenacao.campo === campo && ordenacao.direcao === "asc") {
-      direcao = "desc";
-    }
-
+    const direcao =
+      ordenacao.campo === campo && ordenacao.direcao === "asc" ? "desc" : "asc";
     setOrdenacao({ campo, direcao });
 
-    const ordenada = [...stats.todas].sort((a, b) => {
-      let valorA, valorB;
-
+    const sorted = [...todasLista].sort((a, b) => {
+      let vA, vB;
       if (campo === "vencimento") {
-        valorA = a.data_vencimento
-          ? new Date(a.data_vencimento + "T12:00:00")
-          : new Date(0);
-
-        valorB = b.data_vencimento
-          ? new Date(b.data_vencimento + "T12:00:00")
-          : new Date(0);
+        vA = a.data_vencimento ? new Date(a.data_vencimento + "T12:00:00") : new Date(0);
+        vB = b.data_vencimento ? new Date(b.data_vencimento + "T12:00:00") : new Date(0);
       } else {
-        valorA = (a[campo] || "").toString().toLowerCase();
-        valorB = (b[campo] || "").toString().toLowerCase();
+        vA = (a[campo] || "").toString().toLowerCase();
+        vB = (b[campo] || "").toString().toLowerCase();
       }
-
-      if (valorA < valorB) return direcao === "asc" ? -1 : 1;
-      if (valorA > valorB) return direcao === "asc" ? 1 : -1;
+      if (vA < vB) return direcao === "asc" ? -1 : 1;
+      if (vA > vB) return direcao === "asc" ? 1  : -1;
       return 0;
     });
-
-    setStats(prev => ({ ...prev, todas: ordenada }));
+    setTodasLista(sorted);
   }
 
-  function calcularAlertas() {
-    const hoje = new Date();
-
-    let vencidos = 0;
-    let proximos = 0;
-
-    stats.todas.forEach(m => {
-      if (!m.data_vencimento) return;
-
-      const venc = new Date(m.data_vencimento + "T12:00:00");
-
-      const diff = (venc - hoje) / (1000 * 60 * 60 * 24);
-
-      if (diff < 0) vencidos++;
-      else if (diff <= 5) proximos++;
-    });
-
-    return { vencidos, proximos };
+  function iconSort(campo) {
+    if (ordenacao.campo !== campo) return <Icon.Sort />;
+    return ordenacao.direcao === "asc"
+      ? <Icon.ChevronUp />
+      : <Icon.ChevronDown />;
   }
 
-  const { vencidos, proximos } = calcularAlertas();
+  /* ── alertas ────────────────────────────────────────────── */
+  const alertas = todasLista.reduce(
+    (acc, m) => {
+      const diff = calcularDiff(m.data_vencimento);
+      if (diff === null) return acc;
+      if (diff < 0)      acc.vencidos++;
+      else if (diff <= 5) acc.proximos++;
+      return acc;
+    },
+    { vencidos: 0, proximos: 0 }
+  );
 
-  const tiposUnicos = [
-    ...new Set(
-      stats.todas.map(m => m.tipo_estabelecimento).filter(Boolean)
-    ),
-  ];
+  /* ── stats ──────────────────────────────────────────────── */
+  const base = filtroTipo
+    ? todasLista.filter(m => m.tipo_estabelecimento === filtroTipo)
+    : todasLista;
 
-  const listaBase = stats.todas.filter(m => {
+  const stats = {
+    total:     base.length,
+    ativas:    base.filter(m => m.status_assinatura === "ativa").length,
+    inativas:  base.filter(m => ["inativa","bloqueada"].includes(m.status_assinatura)).length,
+    excluidas: qtdExcluidas,
+  };
+
+  /* ── lista filtrada ─────────────────────────────────────── */
+  const listaFiltrada = todasLista.filter(m => {
     if (filtroTipo && m.tipo_estabelecimento !== filtroTipo) return false;
-    return true;
-  });
-
-  const total = listaBase.length;
-
-  const ativas = listaBase.filter(
-    m => m.status_assinatura === "ativa"
-  ).length;
-
-  const inativas = listaBase.filter(
-    m =>
-      m.status_assinatura === "inativa" ||
-      m.status_assinatura === "bloqueada"
-  ).length;
-
-  const excluidas = stats.excluidas;
-
-  const listaFiltrada = stats.todas.filter((m) => {
-    const hoje = new Date();
-
-    if (filtroTipo && m.tipo_estabelecimento !== filtroTipo) return false;
-
     if (filtro === "vencidas") {
-      if (!m.data_vencimento) return false;
-
-      return new Date(m.data_vencimento + "T12:00:00") < hoje;
+      const diff = calcularDiff(m.data_vencimento);
+      return diff !== null && diff < 0;
     }
-
     if (filtro && m.status_assinatura !== filtro) return false;
-
     if (!busca) return true;
-
     const q = busca.toLowerCase();
-
     return (
       (m.nome_fantasia || "").toLowerCase().includes(q) ||
       (m.cnpj || "").toLowerCase().includes(q)
     );
   });
 
-  async function excluir(id) {
-    if (!window.confirm("Excluir este estabelecimento?")) return;
+  const tiposUnicos = [...new Set(todasLista.map(m => m.tipo_estabelecimento).filter(Boolean))];
 
-    await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-      method: "DELETE",
-    });
-
+  /* ── excluir ────────────────────────────────────────────── */
+  async function excluir(id, nome) {
+    if (!window.confirm(`Excluir "${nome}"?`)) return;
+    await fetch(`${API_URL}/admin/estabelecimentos/${id}`, { method: "DELETE" });
     carregarDados();
   }
 
-  if (loading) return <div>Carregando...</div>;
+  /* ── cor de vencimento ──────────────────────────────────── */
+  function classVenc(dataStr) {
+    const diff = calcularDiff(dataStr);
+    if (diff === null) return "venc-nd";
+    if (diff < 0)      return "venc-vencido";
+    if (diff <= 5)     return "venc-alerta";
+    return "venc-ok";
+  }
 
+  /* ── loading ────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <LayoutAdmin>
+        <div className="dash-loading">
+          <div className="spinner" />
+          <span>Carregando painel...</span>
+        </div>
+      </LayoutAdmin>
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════════ */
   return (
     <LayoutAdmin>
       <div className="dash-wrapper">
 
+        {/* ── HEADER ─────────────────────────────────────── */}
         <div className="dash-header">
-<div>
-  <span className="saudacao">
-    👋 Olá, {nomeUsuario}
-  </span>
-  <div>
-  <h1>Painel Administrativo</h1>
-</div>
-</div>
+          <div className="dash-header-left">
+            <span className="dash-saudacao">
+              👋 Olá, {nomeUsuario}
+            </span>
+            <h1 className="dash-title">
+              Painel <span>Administrativo</span>
+            </h1>
+          </div>
 
           <div className="dash-actions">
             <button
-              className="btn-primary"
+              className="btn btn-teal"
               onClick={() => navigate("/admin/estabelecimentos/nova")}
             >
-              + Novo Estabelecimento
+              <Icon.Plus /> Novo Estabelecimento
             </button>
 
-            {/* 🔥 NOVO BOTÃO */}
             <button
-               className="btn-primary"
-               style={{ backgroundColor: "#7c3aed" }}
-               onClick={() => navigate("/admin/superadmins")}
-           >
-             + Novo SuperAdmin
-           </button>
+              className="btn btn-purple"
+              onClick={() => navigate("/admin/superadmins")}
+            >
+              <Icon.Crown /> Novo SuperAdmin
+            </button>
 
             <button
-              className="btn-secondary"
+              className="btn btn-ghost"
               onClick={() => navigate("/admin/estabelecimentos/excluidas")}
             >
-              Ver Excluídas
+              <Icon.Trash /> Ver Excluídas
             </button>
           </div>
         </div>
 
-        <div style={{ marginTop: 10 }}>
+        {/* ── ALERTAS ────────────────────────────────────── */}
+        <div className="dash-alertas-toggle">
           <button
-            className="btn-secondary"
-            onClick={() => setMostrarAlertas(!mostrarAlertas)}
+            className="btn btn-ghost btn-sm"
+            onClick={() => setMostrarAlertas(p => !p)}
           >
-            {mostrarAlertas
-              ? "Ocultar alertas ▲"
-              : "Mostrar alertas ▼"}
+            <Icon.Bell />
+            {mostrarAlertas ? "Ocultar alertas" : "Mostrar alertas"}
+            {mostrarAlertas ? <Icon.ChevronUp /> : <Icon.ChevronDown />}
           </button>
         </div>
 
-        {mostrarAlertas && (vencidos > 0 || proximos > 0) && (
-          <div style={{ marginTop: 16 }}>
-            {vencidos > 0 && (
-              <div style={{ color: "#dc2626", fontWeight: "bold" }}>
-                🔴 {vencidos} estabelecimento(s) vencido(s)
+        {mostrarAlertas && (alertas.vencidos > 0 || alertas.proximos > 0) && (
+          <div className="dash-alertas-box">
+            {alertas.vencidos > 0 && (
+              <div className="alerta-item alerta-danger">
+                🔴 {alertas.vencidos} estabelecimento{alertas.vencidos > 1 ? "s" : ""} com assinatura vencida
               </div>
             )}
-            {proximos > 0 && (
-              <div style={{ color: "#f59e0b", fontWeight: "bold" }}>
-                🟡 {proximos} vencendo nos próximos 5 dias
+            {alertas.proximos > 0 && (
+              <div className="alerta-item alerta-warning">
+                🟡 {alertas.proximos} vencendo nos próximos 5 dias
               </div>
             )}
           </div>
         )}
 
+        {/* ── STAT CARDS ─────────────────────────────────── */}
         <div className="dash-cards">
-          <div className="dash-card green">
-            <h2>{total}</h2>
-            <p>Total</p>
+          <div className="dash-stat-card card-total">
+            <div className="stat-card-inner">
+              <div className="stat-info">
+                <span className="stat-label">Total</span>
+                <span className="stat-value">{stats.total}</span>
+              </div>
+              <div className="stat-icon"><Icon.Building /></div>
+            </div>
           </div>
 
-          <div className="dash-card blue">
-            <h2>{ativas}</h2>
-            <p>Ativas</p>
+          <div className="dash-stat-card card-ativas">
+            <div className="stat-card-inner">
+              <div className="stat-info">
+                <span className="stat-label">Ativas</span>
+                <span className="stat-value">{stats.ativas}</span>
+              </div>
+              <div className="stat-icon"><Icon.Check /></div>
+            </div>
           </div>
 
-          <div className="dash-card yellow">
-            <h2>{inativas}</h2>
-            <p>Inativas</p>
+          <div className="dash-stat-card card-inativas">
+            <div className="stat-card-inner">
+              <div className="stat-info">
+                <span className="stat-label">Inativas</span>
+                <span className="stat-value">{stats.inativas}</span>
+              </div>
+              <div className="stat-icon"><Icon.Pause /></div>
+            </div>
           </div>
 
-          <div className="dash-card red">
-            <h2>{excluidas}</h2>
-            <p>Excluídas</p>
+          <div className="dash-stat-card card-excluidas">
+            <div className="stat-card-inner">
+              <div className="stat-info">
+                <span className="stat-label">Excluídas</span>
+                <span className="stat-value">{stats.excluidas}</span>
+              </div>
+              <div className="stat-icon"><Icon.Trash /></div>
+            </div>
           </div>
         </div>
 
+        {/* ── FILTROS ────────────────────────────────────── */}
         <div className="dash-filters">
-          <input
-            placeholder="Buscar..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
+          <div className="search-wrap">
+            <span className="search-icon"><Icon.Search /></span>
+            <input
+              className="dash-input"
+              placeholder="Buscar por nome ou CNPJ..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+          </div>
 
           <select
+            className="dash-select"
             value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
+            onChange={e => setFiltro(e.target.value)}
           >
-            <option value="">Todos</option>
+            <option value="">Todos os status</option>
             <option value="ativa">Ativa</option>
             <option value="inativa">Inativa</option>
             <option value="bloqueada">Bloqueada</option>
@@ -313,8 +325,9 @@ useEffect(() => {
           </select>
 
           <select
+            className="dash-select"
             value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
+            onChange={e => setFiltroTipo(e.target.value)}
           >
             <option value="">Todos os tipos</option>
             {tiposUnicos.map((tipo, i) => (
@@ -323,106 +336,126 @@ useEffect(() => {
           </select>
         </div>
 
+        {/* ── TABELA ─────────────────────────────────────── */}
         <div className="dash-box">
-          <h3>Estabelecimentos</h3>
+          <div className="dash-box-header">
+            <span className="dash-box-title">Estabelecimentos</span>
+            <span className="dash-count-badge">{listaFiltrada.length}</span>
+          </div>
 
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Logo</th>
-                <th onClick={() => ordenar("nome_fantasia")} style={{ cursor: "pointer" }}>Nome ⬍</th>
-                <th onClick={() => ordenar("tipo_estabelecimento")} style={{ cursor: "pointer" }}>Tipo ⬍</th>
-                <th>CNPJ</th>
-                <th>Telefone</th>
-                <th onClick={() => ordenar("vencimento")} style={{ cursor: "pointer" }}>Vencimento ⬍</th>
-                <th onClick={() => ordenar("status_assinatura")} style={{ cursor: "pointer" }}>Status ⬍</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {listaFiltrada.map((m) => {
-                const hoje = new Date();
-
-                const venc = m.data_vencimento
-                  ? new Date(m.data_vencimento + "T12:00:00")
-                  : null;
-
-                let cor = "#999";
-
-                if (venc) {
-                  const diff =
-                    (venc - hoje) / (1000 * 60 * 60 * 24);
-
-                  if (diff < 0) cor = "#dc2626";
-                  else if (diff <= 5) cor = "#f59e0b";
-                  else cor = "#16a34a";
-                }
-
-                let dataFormatada = "-";
-
-                if (m.data_vencimento) {
-                  const [ano, mes, dia] = m.data_vencimento.split("-");
-                  dataFormatada = `${dia}/${mes}/${ano}`;
-                }
-
-                return (
-                  <tr key={m.id}>
-                    <td>
-                      {m.logo_url ? (
-                        <img src={m.logo_url} width={40} />
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-
-                    <td>{m.nome_fantasia}</td>
-
-                    <td>
-                      <span className="badge-tipo">
-                        {m.tipo_estabelecimento || "-"}
-                      </span>
-                    </td>
-
-                    <td>{m.cnpj}</td>
-                    <td>{m.telefone || "-"}</td>
-
-                    <td style={{ color: cor, fontWeight: "bold" }}>
-                      {dataFormatada}
-                    </td>
-
-                    <td>
-                      <span className={`badge-status status-${m.status_assinatura}`}>
-                        {m.status_assinatura}
-                      </span>
-                    </td>
-
-                    <td className="acoes-col" style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
-                      <button className="btn-secondary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}>
-                        Detalhes
-                      </button>
-
-                      <button className="btn-primary" onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}>
-                        Editar
-                      </button>
-
-                      <button className="btn-danger" onClick={() => excluir(m.id)}>
-                        Excluir
-                      </button>
-
-                      <button
-                        className="btn-operators"
-                        style={{ padding: "4px 8px", fontSize: 12 }}
-                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
-                      >
-                        Operadores
-                      </button>
-                    </td>
+          {listaFiltrada.length === 0 ? (
+            <div className="dash-empty">
+              Nenhum estabelecimento encontrado com os filtros aplicados.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="dash-table">
+                <thead>
+                  <tr>
+                    <th>Logo</th>
+                    <th className="sortable" onClick={() => ordenar("nome_fantasia")}>
+                      Nome {iconSort("nome_fantasia")}
+                    </th>
+                    <th className="sortable" onClick={() => ordenar("tipo_estabelecimento")}>
+                      Tipo {iconSort("tipo_estabelecimento")}
+                    </th>
+                    <th>CNPJ</th>
+                    <th>Telefone</th>
+                    <th className="sortable" onClick={() => ordenar("vencimento")}>
+                      Vencimento {iconSort("vencimento")}
+                    </th>
+                    <th className="sortable" onClick={() => ordenar("status_assinatura")}>
+                      Status {iconSort("status_assinatura")}
+                    </th>
+                    <th>Ações</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+
+                <tbody>
+                  {listaFiltrada.map(m => (
+                    <tr key={m.id}>
+                      {/* Logo */}
+                      <td>
+                        {m.logo_url
+                          ? <img src={m.logo_url} className="logo-mini" alt={m.nome_fantasia} />
+                          : <div className="logo-placeholder">{iniciais(m.nome_fantasia)}</div>
+                        }
+                      </td>
+
+                      {/* Nome */}
+                      <td className="td-nome">{m.nome_fantasia}</td>
+
+                      {/* Tipo */}
+                      <td>
+                        <span className="badge-tipo">
+                          {m.tipo_estabelecimento || "—"}
+                        </span>
+                      </td>
+
+                      {/* CNPJ */}
+                      <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem" }}>
+                        {m.cnpj || "—"}
+                      </td>
+
+                      {/* Telefone */}
+                      <td>{m.telefone || "—"}</td>
+
+                      {/* Vencimento */}
+                      <td>
+                        <span className={`venc-text ${classVenc(m.data_vencimento)}`}>
+                          {formatarData(m.data_vencimento) || "—"}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <span className={`badge badge-${m.status_assinatura}`}>
+                          {m.status_assinatura}
+                        </span>
+                      </td>
+
+                      {/* Ações */}
+                      <td>
+                        <div className="acoes-col">
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
+                            title="Detalhes"
+                          >
+                            <Icon.Eye /> Detalhes
+                          </button>
+
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
+                            title="Editar"
+                          >
+                            <Icon.Edit /> Editar
+                          </button>
+
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => excluir(m.id, m.nome_fantasia)}
+                            title="Excluir"
+                          >
+                            <Icon.Trash /> Excluir
+                          </button>
+
+                          <button
+                            className="btn btn-blue btn-sm"
+                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
+                            title="Operadores"
+                          >
+                            <Icon.Users /> Operadores
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>
