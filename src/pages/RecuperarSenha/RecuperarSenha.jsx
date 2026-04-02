@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../utils/supabaseClient";
 import "./RecuperarSenha.css";
+import { FaMoon, FaSun } from "react-icons/fa";
 
 import logo from "../../assets/logo-lucasjsystems.png";
 
@@ -10,6 +11,20 @@ export default function RecuperarSenha() {
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+
+  // 🔥 TEMA — lê o mesmo localStorage do Login
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  useEffect(() => {
+    document.body.className = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -38,6 +53,11 @@ export default function RecuperarSenha() {
 
   return (
     <div className="recover-container">
+
+      {/* 🔥 BOTÃO DE TEMA */}
+      <button className="theme-toggle" onClick={toggleTheme}>
+        {theme === "dark" ? <FaSun /> : <FaMoon />}
+      </button>
 
       {/* ========================= */}
       {/* LADO ESQUERDO */}
