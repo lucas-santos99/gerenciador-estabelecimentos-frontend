@@ -4,7 +4,7 @@
     "target": "es2020",
     "jsx": "react",
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     // 🎯 A REGRA QUE IGNORA A INCONSISTÊNCIA DE CAPITALIZAÇÃO
     "forceConsistentCasingInFileNames": false 
