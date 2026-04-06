@@ -1,115 +1,173 @@
-/* ====== App.css (COM VARIÁVEIS DE TEMA) ======== */
+/* ============================================================
+   App.css — Lucas J. Systems
+   Sistema de temas: body.dark / body.light
+   Sincronizado com DashboardAdmin.css, Estabelecimentos.css, etc.
+   ============================================================ */
 
-/* 1. Variáveis de Cores (Tema Claro - Padrão) */
-:root {
-  --bg-body: #f4f7fa;
-  --bg-sidebar: #2c3e50;
-  --bg-card: #ffffff;
-  --text-primary: #333333;
-  --text-secondary: #555555;
-  --text-sidebar: #ecf0f1;
-  --border-color: #e0e0e0;
-  --primary-color: #007bff;
-  --primary-hover: #0056b3;
-  --danger-color: #e74c3c;
-  --success-color: #28a745;
-  
+/* ========================= */
+/*  TOKENS GLOBAIS — DARK     */
+/* ========================= */
+
+body.dark {
+  /* Backgrounds */
+  --bg-page:          #070d14;
+  --bg-card:          rgba(13, 22, 38, 0.8);
+  --bg-card-solid:    #0d1626;
+  --bg-input:         rgba(255,255,255,0.04);
+  --bg-hover:         rgba(20, 184, 166, 0.06);
+  --bg-badge:         rgba(20, 184, 166, 0.12);
+  --bg-danger:        rgba(239, 68, 68, 0.12);
+  --bg-warning:       rgba(245, 158, 11, 0.12);
+  --bg-success:       rgba(34, 197, 94, 0.1);
+  --bg-purple:        rgba(139, 92, 246, 0.12);
+  --bg-blue:          rgba(59, 130, 246, 0.12);
+  --bg-overlay:       rgba(0,0,0,0.6);
+
+  /* Texto */
+  --text-primary:     #f0f6ff;
+  --text-secondary:   #7a90a8;
+  --text-muted:       rgba(120, 144, 168, 0.5);
+  --text-accent:      #14b8a6;
+  --text-danger:      #f87171;
+  --text-warning:     #fbbf24;
+  --text-success:     #4ade80;
+  --text-purple:      #a78bfa;
+  --text-blue:        #60a5fa;
+
+  /* Bordas */
+  --border:           rgba(255,255,255,0.06);
+  --border-accent:    rgba(20, 184, 166, 0.3);
+  --border-hover:     rgba(20, 184, 166, 0.5);
+  --border-focus:     #14b8a6;
+
+  /* Gradientes */
+  --gradient-brand:   linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  --gradient-page:    radial-gradient(ellipse at 20% 0%, rgba(20,184,166,0.07) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(59,130,246,0.05) 0%, transparent 60%),
+                      linear-gradient(180deg, #070d14 0%, #080f1a 100%);
+  --gradient-card-total:    linear-gradient(135deg, rgba(20,184,166,0.2),  rgba(20,184,166,0.05));
+  --gradient-card-ativas:   linear-gradient(135deg, rgba(34,197,94,0.2),   rgba(34,197,94,0.05));
+  --gradient-card-inativas: linear-gradient(135deg, rgba(245,158,11,0.2),  rgba(245,158,11,0.05));
+  --gradient-card-excluidas:linear-gradient(135deg, rgba(239,68,68,0.2),   rgba(239,68,68,0.05));
+  --gradient-danger:  linear-gradient(135deg, #991b1b, #ef4444);
+
   /* Sombras */
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+  --shadow-card:      0 1px 3px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.3);
+  --shadow-modal:     0 24px 80px rgba(0,0,0,0.7);
+  --shadow-btn:       0 4px 16px rgba(20,184,166,0.35);
+  --shadow-table:     0 1px 3px rgba(0,0,0,0.5), 0 12px 40px rgba(0,0,0,0.3);
+  --shadow-glow:      0 0 0 1px rgba(20,184,166,0.3), 0 8px 32px rgba(20,184,166,0.15);
 
-/* 2. Variáveis de Cores (Tema Escuro) */
-[data-theme="dark"] {
-  --bg-body: #1a1a1a;
-  --bg-sidebar: #121212;
-  --bg-card: #2d2d2d;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b0b0b0;
-  --text-sidebar: #e0e0e0; /* Sidebar pode manter ou mudar */
-  --border-color: #444444;
-  --primary-color: #3a8fdc; /* Um azul um pouco mais claro */
-  --primary-hover: #2c6ea8;
-  
-  /* Sombras mais sutis no escuro */
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* 3. Reset Global e Aplicação de Variáveis */
-body, html, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  overflow: hidden;
-  
-  /* Aplica a cor de fundo e texto base */
-  background-color: var(--bg-body);
+  /* Aplicar fundo e cor no body */
+  background: var(--gradient-page);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave */
 }
 
-/* 4. Box-sizing universal */
-*, *::before, *::after {
-  box-sizing: border-box;
+/* ========================= */
+/*  TOKENS GLOBAIS — LIGHT    */
+/* ========================= */
+
+body.light {
+  /* Backgrounds */
+  --bg-page:          #f0f4f8;
+  --bg-card:          rgba(255,255,255,0.9);
+  --bg-card-solid:    #ffffff;
+  --bg-input:         rgba(0,0,0,0.03);
+  --bg-hover:         rgba(15,118,110,0.04);
+  --bg-badge:         rgba(15,118,110,0.08);
+  --bg-danger:        rgba(220,38,38,0.07);
+  --bg-warning:       rgba(217,119,6,0.08);
+  --bg-success:       rgba(22,163,74,0.07);
+  --bg-purple:        rgba(109,40,217,0.08);
+  --bg-blue:          rgba(37,99,235,0.08);
+  --bg-overlay:       rgba(0,0,0,0.35);
+
+  /* Texto */
+  --text-primary:     #0f172a;
+  --text-secondary:   #475569;
+  --text-muted:       #94a3b8;
+  --text-accent:      #0f766e;
+  --text-danger:      #dc2626;
+  --text-warning:     #d97706;
+  --text-success:     #16a34a;
+  --text-purple:      #7c3aed;
+  --text-blue:        #2563eb;
+
+  /* Bordas */
+  --border:           rgba(0,0,0,0.07);
+  --border-accent:    rgba(15,118,110,0.25);
+  --border-hover:     rgba(15,118,110,0.45);
+  --border-focus:     #0f766e;
+
+  /* Gradientes */
+  --gradient-brand:   linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  --gradient-page:    radial-gradient(ellipse at 20% 0%, rgba(20,184,166,0.05) 0%, transparent 60%),
+                      linear-gradient(180deg, #f0f4f8 0%, #e8eef5 100%);
+  --gradient-card-total:    linear-gradient(135deg, rgba(20,184,166,0.12), rgba(20,184,166,0.03));
+  --gradient-card-ativas:   linear-gradient(135deg, rgba(34,197,94,0.12),  rgba(34,197,94,0.03));
+  --gradient-card-inativas: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.03));
+  --gradient-card-excluidas:linear-gradient(135deg, rgba(239,68,68,0.12),  rgba(239,68,68,0.03));
+  --gradient-danger:  linear-gradient(135deg, #dc2626, #ef4444);
+
+  /* Sombras */
+  --shadow-card:      0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+  --shadow-modal:     0 24px 80px rgba(0,0,0,0.2);
+  --shadow-btn:       0 4px 14px rgba(15,118,110,0.3);
+  --shadow-table:     0 1px 3px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.05);
+  --shadow-glow:      0 0 0 1px rgba(15,118,110,0.25), 0 8px 24px rgba(15,118,110,0.12);
+
+  /* Aplicar fundo e cor no body */
+  background: var(--gradient-page);
+  color: var(--text-primary);
 }
 
-/* ===== ESTILOS DE IMPRESSÃO INTELIGENTE (Mantido Igual) ===== */
+/* ========================= */
+/*  FALLBACK — sem classe     */
+/*  (antes do JS aplicar tema)*/
+/* ========================= */
+
+body:not(.dark):not(.light) {
+  background: #070d14;
+  color: #f0f6ff;
+}
+
+/* ========================= */
+/*  BASE GLOBAL               */
+/* ========================= */
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  min-height: 100vh;
+  /* SEM overflow: hidden — scroll livre */
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================= */
+/*  PRINT                     */
+/* ========================= */
+
 @media print {
-    .sidebar, 
-    .tabs-nav, 
-    .financeiro-controles button, 
-    .header-botoes, 
-    .estoque-busca-input,
-    .btn-pdf-relatorio,
-    .btn-gerar-relatorio,
-    .relatorio-form,
-    .estoque-sidebar-categorias,
-    .no-print,
-    .theme-toggle-btn { /* Esconde o botão de tema na impressão */
-        display: none !important;
-    }
+  .sidebar,
+  .sidebar-mobile-toggle,
+  .theme-toggle,
+  .no-print {
+    display: none !important;
+  }
 
-    .dashboard-container {
-        display: block;
-        background-color: white; /* Impressão sempre fundo branco */
-        height: auto;
-        color: black; /* Impressão sempre texto preto */
-    }
-    .main-content {
-        margin-left: 0;
-        height: auto;
-        overflow: visible;
-    }
-    .content-area {
-        padding: 0;
-        overflow: visible;
-    }
+  body {
+    background: white !important;
+    color: black !important;
+  }
 
-    .financeiro-container, .estoque-layout-container {
-        box-shadow: none;
-        padding: 0;
-        border: none;
-    }
-
-    .resumo-cards-container, 
-    .contas-card-container, 
-    .report-card-container,
-    .estoque-grid-produtos {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr) !important; 
-        gap: 15px;
-    }
-
-    body, #root {
-        height: auto;
-        overflow: visible;
-    }
-    
-    /* Força cores claras na impressão mesmo se estiver no modo escuro */
-    [data-theme="dark"] {
-        --bg-body: white;
-        --text-primary: black;
-        --border-color: #ccc;
-    }
+  .admin-content,
+  .admin-content.sidebar-collapsed {
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+  }
 }

@@ -1,4 +1,4 @@
-// ===== App.jsx — Rotas Reais + ProtectedRoute + RoleRoute + Redirecionamento Global =====
+// ===== App.jsx — Lucas J. Systems =====
 import React from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 
@@ -10,18 +10,14 @@ import TelaBloqueio from "./components/TelaBloqueio";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
 
-// Dashboard correto do Admin
+// Páginas Admin
 import DashboardAdmin from "./pages/Administrador/DashboardAdmin";
-
 import SuperAdmins from "./pages/Administrador/SuperAdmins/SuperAdmins";
-
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
 import PainelEstabelecimento from "./pages/Estabelecimento/PainelEstabelecimento";
-
 import NovaSenha from "./pages/NovaSenha/NovaSenha";
-
 import AuthCallback from "./pages/AuthCallback/AuthCallback";
 
 // Módulo de Estabelecimentos
@@ -30,201 +26,130 @@ import NovoEstabelecimento from "./pages/Administrador/Estabelecimentos/NovoEsta
 import EditarEstabelecimento from "./pages/Administrador/Estabelecimentos/EditarEstabelecimento";
 import Excluidas from "./pages/Administrador/Estabelecimentos/Excluidas";
 
-// Módulo de Operadores (Admin)
+// Módulo de Operadores
 import ListaOperadores from "./pages/Administrador/Operadores/ListaOperadores";
 import NovoOperador from "./pages/Administrador/Operadores/NovoOperador";
 import DetalhesOperador from "./pages/Administrador/Operadores/DetalhesOperador";
 import EditarOperador from "./pages/Administrador/Operadores/EditarOperador";
 
-// Contexto + Redirecionamento Automático
+// Contexto
 import { useAuth } from "./contexts/AuthProvider";
 import { redirectByRole } from "./utils/redirectByRole";
 
 import "./App.css";
 
+/* ── Aplica o tema ANTES do primeiro render ─────────────────
+   Evita o flash de tela branca / sem variáveis CSS           */
+const savedTheme = localStorage.getItem("theme") || "dark";
+document.body.className = savedTheme;
+
+/* ══════════════════════════════════════════════════════════ */
 function App() {
   const { profile, loading, user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  // Redirecionamento automático baseado na ROLE
+  // Redirecionamento automático baseado na role
   React.useEffect(() => {
-    if (loading) return;
-    if (!user || !profile) return;
-
+    if (loading || !user || !profile) return;
     if (location.pathname === "/") {
-      const destino = redirectByRole(profile);
-      navigate(destino, { replace: true });
+      navigate(redirectByRole(profile), { replace: true });
     }
   }, [profile, loading, user, location.pathname, navigate]);
 
   return (
     <Routes>
 
-      {/* Tela de Login */}
-      <Route path="/login" element={<Login />} />
-
-      {/* Recuperação de senha */}
+      {/* Públicas */}
+      <Route path="/login"           element={<Login />} />
       <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/nova-senha" element={<NovaSenha />} />
+      <Route path="/auth/callback"   element={<AuthCallback />} />
+      <Route path="/nova-senha"      element={<NovaSenha />} />
 
-      {/* ============================ */}
-      {/* PAINEL ADMINISTRADOR */}
-      {/* ============================ */}
+      {/* ── PAINEL ADMINISTRADOR ────────────────────────── */}
 
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <DashboardAdmin />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <DashboardAdmin />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/superadmins"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <SuperAdmins />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/superadmins" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <SuperAdmins />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      {/* CRUD DE ESTABELECIMENTOS */}
+      <Route path="/admin/estabelecimentos" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <ListaEstabelecimentos />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/estabelecimentos"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <ListaEstabelecimentos />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/estabelecimentos/nova" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <NovoEstabelecimento />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/estabelecimentos/nova"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <NovoEstabelecimento />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/estabelecimentos/excluidas" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <Excluidas />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/estabelecimentos/excluidas"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <Excluidas />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/estabelecimentos/:id" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <EditarEstabelecimento />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/estabelecimentos/:id"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <EditarEstabelecimento />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/estabelecimentos/:id/operadores" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <ListaOperadores />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      {/* OPERADORES */}
+      <Route path="/admin/operadores/novo" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <NovoOperador />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/estabelecimentos/:id/operadores"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <ListaOperadores />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/operadores/:id" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <DetalhesOperador />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/operadores/novo"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <NovoOperador />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin/operadores/editar/:id" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <EditarOperador />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      <Route
-        path="/admin/operadores/:id"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <DetalhesOperador />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      {/* ── PAINEL ESTABELECIMENTO ──────────────────────── */}
 
-      <Route
-        path="/admin/operadores/editar/:id"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["super_admin"]}>
-              <EditarOperador />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/estabelecimentos/:id" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["merchant", "operator"]}>
+          <PainelEstabelecimento />
+        </RoleRoute></ProtectedRoute>
+      }/>
 
-      {/* ============================ */}
-      {/* PAINEL ESTABELECIMENTO */}
-      {/* ============================ */}
+      {/* ── ROTA RAIZ ───────────────────────────────────── */}
 
-      <Route
-        path="/estabelecimentos/:id"
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={["merchant", "operator"]}>
-              <PainelEstabelecimento />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={
+        <ProtectedRoute>
+          <div style={{ padding: 20, color: "var(--text-secondary)" }}>
+            Redirecionando...
+          </div>
+        </ProtectedRoute>
+      }/>
 
-      {/* ============================ */}
-      {/* ROTA RAIZ */}
-      {/* ============================ */}
-
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <div style={{ padding: 20 }}>Redirecionando...</div>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Telas auxiliares */}
-      <Route path="/bloqueado" element={<TelaBloqueio />} />
-
-      <Route
-        path="/unauthorized"
-        element={<div>Sem permissão para acessar esta página.</div>}
-      />
-
-      {/* 404 */}
-      <Route path="*" element={<div>Página não encontrada</div>} />
+      {/* Auxiliares */}
+      <Route path="/bloqueado"     element={<TelaBloqueio />} />
+      <Route path="/unauthorized"  element={<div style={{ padding: 20 }}>Sem permissão.</div>} />
+      <Route path="*"              element={<div style={{ padding: 20 }}>Página não encontrada.</div>} />
 
     </Routes>
   );

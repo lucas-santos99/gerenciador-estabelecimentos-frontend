@@ -8,8 +8,11 @@ import { BrowserRouter } from "react-router-dom";
 
 import "./index.css";
 
-console.log("🌐 VITE_SUPABASE_URL:", import.meta.env.VITE_SUPABASE_URL);
-console.log("🔑 VITE_SUPABASE_ANON_KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
+/* ── Aplica o tema ANTES do React montar ────────────────────
+   Garante que body.dark ou body.light esteja ativo desde o
+   primeiro pixel renderizado — sem flash de tela branca.     */
+const tema = localStorage.getItem("theme") || "dark";
+document.body.className = tema;
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
