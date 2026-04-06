@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import "./Sidebar.css";
 
-/* ── Ícones SVG inline (sem dependência extra) ─────────────── */
+/* ── Ícones SVG inline ─────────────────────────────────────── */
 const Icons = {
   Dashboard: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,15 +46,44 @@ const Icons = {
       <line x1="6"  y1="6"  x2="18" y2="18"/>
     </svg>
   ),
+  Sun: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <line x1="12" y1="2"   x2="12" y2="4"/>
+      <line x1="12" y1="20"  x2="12" y2="22"/>
+      <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="2"  y1="12" x2="4"  y2="12"/>
+      <line x1="20" y1="12" x2="22" y2="12"/>
+      <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+      <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+    </svg>
+  ),
+  Moon: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  ),
 };
 
 const SIDEBAR_KEY = "sidebar_collapsed";
 
-/* ════════════════════════════════════════════════════════════ */
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+
+  /* ── tema ─────────────────────────────────────────────────── */
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.body.className = next;
+    localStorage.setItem("theme", next);
+  }
 
   /* ── colapso desktop ─────────────────────────────────────── */
   const [collapsed, setCollapsed] = useState(() => {
@@ -64,7 +93,7 @@ export default function Sidebar() {
   /* ── aberto mobile ───────────────────────────────────────── */
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* ── persiste preferência ────────────────────────────────── */
+  /* ── persiste preferência de colapso ────────────────────── */
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, collapsed);
   }, [collapsed]);
@@ -82,19 +111,20 @@ export default function Sidebar() {
     {
       section: "Menu",
       items: [
-        { label: "Dashboard", path: "/admin",              icon: Icons.Dashboard },
-        { label: "Configurações", path: "/admin/configuracoes", icon: Icons.Settings  },
+        { label: "Dashboard",     path: "/admin",                icon: Icons.Dashboard },
+        { label: "Configurações", path: "/admin/configuracoes",  icon: Icons.Settings  },
       ],
     },
   ];
 
   const sidebarClass = [
     "sidebar",
-    collapsed   ? "collapsed"    : "",
-    mobileOpen  ? "mobile-open"  : "",
+    collapsed  ? "collapsed"   : "",
+    mobileOpen ? "mobile-open" : "",
   ].filter(Boolean).join(" ");
 
-  /* ════════════════════════════════════════════════════════ */
+  const isDark = theme === "dark";
+
   return (
     <>
       {/* BOTÃO HAMBURGER — mobile */}
@@ -108,10 +138,7 @@ export default function Sidebar() {
 
       {/* OVERLAY — mobile */}
       {mobileOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* SIDEBAR */}
@@ -141,7 +168,8 @@ export default function Sidebar() {
             <React.Fragment key={group.section}>
               <div className="sb-section-label">{group.section}</div>
               {group.items.map(item => {
-                const isActive = location.pathname === item.path ||
+                const isActive =
+                  location.pathname === item.path ||
                   (item.path !== "/admin" && location.pathname.startsWith(item.path));
                 return (
                   <li key={item.path} className={isActive ? "active" : ""}>
@@ -149,7 +177,6 @@ export default function Sidebar() {
                       <span className="sb-icon"><item.icon /></span>
                       <span className="sb-label">{item.label}</span>
                     </Link>
-                    {/* tooltip no modo collapsed */}
                     <span className="sb-tooltip">{item.label}</span>
                   </li>
                 );
@@ -158,13 +185,33 @@ export default function Sidebar() {
           ))}
         </ul>
 
-        {/* FOOTER — SAIR */}
+        {/* FOOTER */}
         <div className="sidebar-footer">
+
+          {/* BOTÃO TEMA */}
+          <button
+            className="sidebar-theme-toggle"
+            onClick={toggleTheme}
+            aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+          >
+            <span className="sb-icon">
+              {isDark ? <Icons.Sun /> : <Icons.Moon />}
+            </span>
+            <span className="sb-label">
+              {isDark ? "Modo claro" : "Modo escuro"}
+            </span>
+          </button>
+          <span className="sb-theme-tooltip">
+            {isDark ? "Modo claro" : "Modo escuro"}
+          </span>
+
+          {/* BOTÃO SAIR */}
           <button className="sidebar-logout" onClick={handleLogout}>
             <span className="sb-icon"><Icons.Logout /></span>
             <span className="sb-label">Sair</span>
           </button>
           <span className="sb-logout-tooltip">Sair</span>
+
         </div>
 
       </div>

@@ -368,6 +368,59 @@ body.light {
   transition: opacity 0.2s, transform 0.2s;
 }
 
+/* ── BOTÃO DE TEMA ───────────────────────────────────────── */
+
+.sidebar-theme-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--sb-item-text);
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.18s;
+  white-space: nowrap;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.sidebar-theme-toggle:hover {
+  background: var(--sb-item-hover);
+  color: var(--sb-item-active);
+}
+
+/* Tooltip do tema no modo collapsed */
+.sb-theme-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 16px;                   /* alinha com o botão de tema */
+  transform: translateX(-4px);
+  background: var(--sb-tooltip-bg);
+  border: 1px solid var(--sb-tooltip-border);
+  color: var(--sb-item-active);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+
+.sidebar.collapsed .sidebar-footer:hover .sb-theme-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 /* Tooltip do logout */
 .sidebar-footer {
   position: relative;
