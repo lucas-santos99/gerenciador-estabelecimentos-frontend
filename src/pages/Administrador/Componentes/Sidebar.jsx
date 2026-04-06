@@ -93,7 +93,10 @@ export default function Sidebar() {
   /* ── aberto mobile ───────────────────────────────────────── */
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* ── persiste preferência de colapso ────────────────────── */
+  /* ── modal de confirmação de logout ─────────────────────── */
+  const [modalLogout, setModalLogout] = useState(false);
+
+  /* ── persiste preferência de colapso ─────────────────────── */
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, collapsed);
   }, [collapsed]);
@@ -101,8 +104,16 @@ export default function Sidebar() {
   /* ── fecha ao navegar (mobile) ───────────────────────────── */
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  /* ── logout ──────────────────────────────────────────────── */
-  async function handleLogout() {
+  /* ── toggle sidebar ao clicar no corpo dela (desktop) ───── */
+  function handleSidebarClick(e) {
+    // Ignora cliques em botões, links e no próprio toggle
+    const isInteractive = e.target.closest("a, button");
+    if (isInteractive) return;
+    setCollapsed(p => !p);
+  }
+
+  /* ── logout confirmado ───────────────────────────────────── */
+  async function confirmarLogout() {
     try { await logout(); navigate("/login"); }
     catch { alert("Erro ao encerrar sessão."); }
   }
@@ -111,8 +122,8 @@ export default function Sidebar() {
     {
       section: "Menu",
       items: [
-        { label: "Dashboard",     path: "/admin",                icon: Icons.Dashboard },
-        { label: "Configurações", path: "/admin/configuracoes",  icon: Icons.Settings  },
+        { label: "Dashboard",     path: "/admin",               icon: Icons.Dashboard },
+        { label: "Configurações", path: "/admin/configuracoes", icon: Icons.Settings  },
       ],
     },
   ];
@@ -142,12 +153,12 @@ export default function Sidebar() {
       )}
 
       {/* SIDEBAR */}
-      <div className={sidebarClass}>
+      <div className={sidebarClass} onClick={handleSidebarClick}>
 
         {/* Botão colapso — desktop */}
         <button
           className="sidebar-toggle"
-          onClick={() => setCollapsed(p => !p)}
+          onClick={e => { e.stopPropagation(); setCollapsed(p => !p); }}
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
         >
           <Icons.ChevronLeft />
@@ -188,6 +199,9 @@ export default function Sidebar() {
         {/* FOOTER */}
         <div className="sidebar-footer">
 
+          {/* SEPARADOR */}
+          <div className="sb-footer-divider" />
+
           {/* BOTÃO TEMA */}
           <button
             className="sidebar-theme-toggle"
@@ -205,8 +219,14 @@ export default function Sidebar() {
             {isDark ? "Modo claro" : "Modo escuro"}
           </span>
 
+          {/* SEPARADOR */}
+          <div className="sb-footer-divider" />
+
           {/* BOTÃO SAIR */}
-          <button className="sidebar-logout" onClick={handleLogout}>
+          <button
+            className="sidebar-logout"
+            onClick={() => setModalLogout(true)}
+          >
             <span className="sb-icon"><Icons.Logout /></span>
             <span className="sb-label">Sair</span>
           </button>
@@ -215,6 +235,39 @@ export default function Sidebar() {
         </div>
 
       </div>
+
+      {/* MODAL CONFIRMAÇÃO DE LOGOUT */}
+      {modalLogout && (
+        <div
+          className="sb-modal-overlay"
+          onClick={() => setModalLogout(false)}
+        >
+          <div
+            className="sb-modal"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="sb-modal-icon">🚪</div>
+            <div className="sb-modal-title">Sair do sistema</div>
+            <div className="sb-modal-desc">
+              Tem certeza que deseja encerrar sua sessão?
+            </div>
+            <div className="sb-modal-actions">
+              <button
+                className="sb-modal-btn-cancel"
+                onClick={() => setModalLogout(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="sb-modal-btn-confirm"
+                onClick={confirmarLogout}
+              >
+                Sim, sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
