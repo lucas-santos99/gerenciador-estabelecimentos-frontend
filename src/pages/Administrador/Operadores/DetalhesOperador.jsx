@@ -5,118 +5,68 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import ResetSenhaModal from "./ResetSenhaModal";
 import "./Operadores.css";
 
+function iniciais(nome) {
+  if (!nome) return "?";
+  return nome.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
+}
+
 export default function DetalhesOperador() {
-  const { id } = useParams();
+  const { id }   = useParams();
   const navigate = useNavigate();
+  const API_URL  = import.meta.env.VITE_API_URL;
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const [op,         setOp]         = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [showReset,  setShowReset]  = useState(false);
 
-  const [op, setOp] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showReset, setShowReset] = useState(false);
-
-  // -----------------------------------------------------
-  // CARREGAR OPERADOR
-  // -----------------------------------------------------
   async function carregar() {
     setLoading(true);
     try {
-      if (!API_URL) {
-        throw new Error("VITE_API_URL não definida");
-      }
-
-      const resp = await fetch(
-        `${API_URL}/admin/operadores/detalhes/${id}`,
-        { credentials: "include" }
-      );
-
+      const resp = await fetch(`${API_URL}/admin/operadores/detalhes/${id}`, {
+        credentials: "include",
+      });
       const data = await resp.json();
-
-      if (resp.ok) setOp(data);
-      else setOp(null);
-
-    } catch (error) {
-      console.error("Erro ao carregar operador:", error);
-      setOp(null);
-    }
+      setOp(resp.ok ? data : null);
+    } catch { setOp(null); }
     setLoading(false);
   }
 
-  useEffect(() => {
-    carregar();
-  }, [id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { carregar(); }, [id]);
 
-  // -----------------------------------------------------
-  // ALTERAR STATUS
-  // -----------------------------------------------------
   async function toggleStatus() {
     if (!op) return;
-
     const novoStatus = op.status === "ativo" ? "inativo" : "ativo";
-    if (!window.confirm(`Deseja alterar o status para "${novoStatus}"?`)) return;
-
+    if (!window.confirm(`Alterar status para "${novoStatus}"?`)) return;
     try {
-      const resp = await fetch(
-        `${API_URL}/admin/operadores/${id}/status`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: novoStatus }),
-          credentials: "include",
-        }
-      );
-
-      const json = await resp.json().catch(() => ({}));
-
-      if (resp.ok) {
-        alert("Status atualizado!");
-        carregar();
-      } else {
-        alert("Erro: " + (json.error || "Falha ao atualizar status"));
-      }
-
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao alterar status.");
-    }
+      const resp = await fetch(`${API_URL}/admin/operadores/${id}/status`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ status: novoStatus }),
+        credentials: "include",
+      });
+      if (resp.ok) carregar();
+      else alert("Erro ao alterar status.");
+    } catch { alert("Erro ao alterar status."); }
   }
 
-  // -----------------------------------------------------
-  // EXCLUIR
-  // -----------------------------------------------------
   async function excluir() {
-    if (!window.confirm("Excluir este operador?")) return;
-
+    if (!window.confirm(`Excluir operador "${op?.nome}"?`)) return;
     try {
-      const resp = await fetch(
-        `${API_URL}/admin/operadores/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        }
-      );
-
-      if (resp.ok) {
-        alert("Operador excluído!");
-        navigate(-1);
-      } else {
-        alert("Erro ao excluir operador.");
-      }
-
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao excluir operador.");
-    }
+      const resp = await fetch(`${API_URL}/admin/operadores/${id}`, {
+        method: "DELETE", credentials: "include",
+      });
+      if (resp.ok) navigate(-1);
+      else alert("Erro ao excluir operador.");
+    } catch { alert("Erro ao excluir operador."); }
   }
 
-  // -----------------------------------------------------
-  // TELAS DE CARREGAMENTO / ERRO
-  // -----------------------------------------------------
+  /* ── loading ────────────────────────────────────────────── */
   if (loading) {
     return (
       <LayoutAdmin>
         <div className="op-wrapper">
-          <p>Carregando operador...</p>
+          <div className="op-loading"><div className="op-spinner" /> Carregando operador...</div>
         </div>
       </LayoutAdmin>
     );
@@ -126,104 +76,119 @@ export default function DetalhesOperador() {
     return (
       <LayoutAdmin>
         <div className="op-wrapper">
-          <p>Operador não encontrado.</p>
-          <button className="btn-secondary" onClick={() => navigate(-1)}>
-            Voltar
+          <div className="op-empty">
+            <span className="op-empty-icon">⚠️</span>
+            Operador não encontrado.
+          </div>
+          <button className="op-btn op-btn-ghost" onClick={() => navigate(-1)}>
+            ← Voltar
           </button>
         </div>
       </LayoutAdmin>
     );
   }
 
-  // -----------------------------------------------------
-  // RENDER FINAL
-  // -----------------------------------------------------
+  const isAtivo = op.status === "ativo";
+
   return (
     <LayoutAdmin>
       <div className="op-wrapper">
 
-        {/* Título + Ações */}
-        <div className="op-top">
-          <h1>{op.nome}</h1>
+        {/* HEADER */}
+        <div className="op-page-header">
+          <div className="op-page-header-left">
+            <span className="op-breadcrumb">👥 Operadores</span>
+            <h1 className="op-page-title">Detalhes do <span>Operador</span></h1>
+          </div>
+          <div className="op-page-actions">
+            <button className="op-btn op-btn-ghost" onClick={() => navigate(-1)}>
+              ← Voltar
+            </button>
+          </div>
+        </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
+        {/* HERO CARD */}
+        <div className="op-detail-hero">
+          {/* Avatar / Foto */}
+          {op.foto_url
+            ? <img src={op.foto_url} alt="Foto" className="op-avatar-foto" />
+            : <div className="op-avatar-lg">{iniciais(op.nome)}</div>
+          }
+
+          {/* Info */}
+          <div className="op-detail-info">
+            <div className="op-detail-name">{op.nome}</div>
+            <div className="op-detail-email">{op.email}</div>
+            <div className="op-detail-meta">
+              <span className={`op-badge op-badge-${op.status}`}>
+                {op.status}
+              </span>
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="op-detail-actions">
             <button
-              className="btn-primary"
+              className="op-btn op-btn-outline op-btn-sm"
               onClick={() => navigate(`/admin/operadores/editar/${id}`)}
             >
-              Editar
+              ✏️ Editar
             </button>
-
             <button
-              className="btn-secondary"
+              className="op-btn op-btn-primary op-btn-sm"
               onClick={() => setShowReset(true)}
             >
-              Resetar Senha
+              🔑 Resetar Senha
             </button>
-
             <button
-              className="btn-primary"
+              className={`op-btn op-btn-sm ${isAtivo ? "op-btn-warning" : "op-btn-success"}`}
               onClick={toggleStatus}
             >
-              {op.status === "ativo" ? "Inativar" : "Ativar"}
+              {isAtivo ? "⏸ Inativar" : "▶ Ativar"}
             </button>
-
-            <button className="btn-danger" onClick={excluir}>
-              Excluir
+            <button
+              className="op-btn op-btn-danger op-btn-sm"
+              onClick={excluir}
+            >
+              🗑 Excluir
             </button>
           </div>
         </div>
 
-        {/* Card de Detalhes */}
-        <div className="op-detail-card">
-
-          {op.foto_url ? (
-            <img
-              src={op.foto_url}
-              alt="Foto"
-              className="op-detail-foto"
-            />
-          ) : (
-            <div className="op-detail-foto placeholder">
-              {op.nome.charAt(0).toUpperCase()}
+        {/* INFO GRID */}
+        <div className="op-info-grid">
+          <div className="op-info-block">
+            <div className="op-info-block-title">Contato</div>
+            <div className="op-info-row">
+              <span className="op-info-label">E-mail</span>
+              <span className="op-info-value mono">{op.email || "—"}</span>
             </div>
-          )}
-
-          <div className="op-detail-row">
-            <strong>Email:</strong> {op.email}
+            <div className="op-info-row">
+              <span className="op-info-label">Telefone</span>
+              <span className="op-info-value mono">{op.telefone || "—"}</span>
+            </div>
           </div>
 
-          <div className="op-detail-row">
-            <strong>Telefone:</strong> {op.telefone || "-"}
-          </div>
-
-          <div className="op-detail-row">
-            <strong>Status:</strong>
-            <span className={`badge-op status-${op.status}`}>
-              {op.status}
-            </span>
-          </div>
-
-          <div className="op-detail-row">
-            <strong>ID:</strong> {op.id}
+          <div className="op-info-block">
+            <div className="op-info-block-title">Situação</div>
+            <div className="op-info-row">
+              <span className="op-info-label">Status</span>
+              <span className={`op-badge op-badge-${op.status}`}>{op.status}</span>
+            </div>
+            <div className="op-info-row" style={{ marginTop: 10 }}>
+              <span className="op-info-label">ID do sistema</span>
+              <span className="op-info-value mono" style={{ fontSize: "0.72rem", wordBreak: "break-all" }}>
+                {op.id}
+              </span>
+            </div>
           </div>
         </div>
 
-        <button
-          className="btn-secondary"
-          style={{ marginTop: 12 }}
-          onClick={() => navigate(-1)}
-        >
-          Voltar
-        </button>
       </div>
 
-      {/* Modal Reset Senha */}
+      {/* MODAL RESET SENHA */}
       {showReset && (
-        <ResetSenhaModal
-          id={id}
-          onClose={() => setShowReset(false)}
-        />
+        <ResetSenhaModal id={id} onClose={() => setShowReset(false)} />
       )}
     </LayoutAdmin>
   );
