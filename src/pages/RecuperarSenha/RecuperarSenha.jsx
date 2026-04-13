@@ -35,7 +35,7 @@ export default function RecuperarSenha() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo:
-          "https://gerenciador-mercearia-frontend.onrender.com/auth/callback",
+          "https://gerenciador-estabelecimentos-fronte.vercel.app/auth/callback",
       });
 
       if (error) {
@@ -44,7 +44,7 @@ export default function RecuperarSenha() {
       }
 
       setEnviado(true);
-    } catch (err) {
+    } catch {
       setErro("Erro inesperado. Tente novamente.");
     } finally {
       setLoading(false);
