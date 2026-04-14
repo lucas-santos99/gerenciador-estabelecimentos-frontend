@@ -35,7 +35,7 @@ export default function ListaOperadores() {
     setLoading(false);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => { carregar(); }, [estabelecimentoId]);
 
   async function excluir(id, nome) {

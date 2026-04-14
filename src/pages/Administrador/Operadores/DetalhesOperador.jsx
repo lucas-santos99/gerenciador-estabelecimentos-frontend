@@ -31,7 +31,7 @@ export default function DetalhesOperador() {
     setLoading(false);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => { carregar(); }, [id]);
 
   async function toggleStatus() {

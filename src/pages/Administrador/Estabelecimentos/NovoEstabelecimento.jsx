@@ -50,7 +50,6 @@ export default function NovoEstabelecimento() {
     } catch {}
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { carregarTipos(); }, []);
 
   function filtrarSugestoes(valor) {

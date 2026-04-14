@@ -60,7 +60,7 @@ export default function EditarEstabelecimento() {
     setCarregando(false);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => { carregarDados(); }, [id]);
 
   function atualizar(e) {

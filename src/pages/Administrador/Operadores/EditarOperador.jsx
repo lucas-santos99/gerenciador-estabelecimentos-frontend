@@ -35,7 +35,7 @@ export default function EditarOperador() {
     setLoading(false);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => { carregar(); }, [id]);
 
   function change(e) {

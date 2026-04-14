@@ -34,7 +34,6 @@ export default function NovoOperador() {
     } catch { setErro("Erro ao carregar estabelecimentos."); }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { carregarEstabelecimentos(); }, []);
 
   function atualizar(e) {
