@@ -60,6 +60,7 @@ export default function EditarEstabelecimento() {
     setCarregando(false);
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { carregarDados(); }, [id]);
 
   function atualizar(e) {
@@ -292,9 +293,9 @@ export default function EditarEstabelecimento() {
           <div className="est-page-actions">
             <button
               className="est-btn est-btn-ghost"
-              onClick={() => navigate(`/admin/estabelecimentos/${id}?view=details`)}
+              onClick={() => navigate("/admin")}
             >
-              ← Voltar aos detalhes
+              ← Voltar ao painel
             </button>
           </div>
         </div>
@@ -423,7 +424,7 @@ export default function EditarEstabelecimento() {
             <button
               type="button"
               className="est-btn est-btn-ghost est-btn-lg"
-              onClick={() => navigate(`/admin/estabelecimentos/${id}?view=details`)}
+              onClick={() => navigate("/admin")}
             >
               Cancelar
             </button>

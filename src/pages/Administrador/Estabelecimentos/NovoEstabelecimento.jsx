@@ -25,6 +25,8 @@ export default function NovoEstabelecimento() {
   const [sugestoes,        setSugestoes]         = useState([]);
   const [salvando,         setSalvando]          = useState(false);
   const [erro,             setErro]              = useState("");
+  const [logoFile,         setLogoFile]          = useState(null);
+  const [logoPreview,      setLogoPreview]       = useState("");
 
   /* ── helpers ─────────────────────────────────────────────── */
   function atualizar(e) {
@@ -48,6 +50,7 @@ export default function NovoEstabelecimento() {
     } catch {}
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { carregarTipos(); }, []);
 
   function filtrarSugestoes(valor) {
@@ -57,6 +60,13 @@ export default function NovoEstabelecimento() {
         ? tiposExistentes.filter(t => t.toLowerCase().includes(valor.toLowerCase()))
         : []
     );
+  }
+
+  function selecionarLogo(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
   }
 
   /* ── submit ──────────────────────────────────────────────── */
@@ -93,6 +103,14 @@ export default function NovoEstabelecimento() {
       if (!resp.ok) {
         setErro(json.error || "Erro ao criar estabelecimento.");
       } else {
+        // Se tem logo, faz upload antes de navegar
+        if (logoFile && json.id) {
+          const fd = new FormData();
+          fd.append("logo", logoFile);
+          await fetch(`${API_URL}/admin/estabelecimentos/${json.id}/upload-logo`, {
+            method: "POST", body: fd, credentials: "include",
+          });
+        }
         navigate("/admin");
       }
     } catch {
@@ -299,6 +317,39 @@ export default function NovoEstabelecimento() {
                 </div>
               )}
 
+            </div>
+          </div>
+
+          {/* SEÇÃO 5 — Logo (opcional) */}
+          <div className="est-form-section">
+            <div className="est-form-section-title">🖼 Logo do Estabelecimento <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></div>
+            <div className="est-logo-area">
+              {logoPreview
+                ? <img src={logoPreview} alt="Preview" className="est-logo-preview" />
+                : (
+                  <div className="est-logo-placeholder">
+                    <span style={{ fontSize: "1.5rem" }}>🖼</span>
+                    Sem logo
+                  </div>
+                )
+              }
+              <div className="est-logo-upload-info">
+                <input
+                  className="est-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={selecionarLogo}
+                />
+                {logoPreview && (
+                  <button
+                    type="button"
+                    className="est-btn est-btn-danger est-btn-sm"
+                    onClick={() => { setLogoFile(null); setLogoPreview(""); }}
+                  >
+                    🗑 Remover
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
