@@ -1,61 +1,85 @@
-/* ========================= */
-/* VARIÁVEIS DE TEMA */
-/* ========================= */
+/* ============================================================
+   RecuperarSenha.css — Lucas J. Systems
+   Alinhado com Login.css — mesmo design system
+   ============================================================ */
 
-body.dark {
-  --bg-gradient: linear-gradient(135deg, #020617, #031726, #0f3d3e);
-  --card-bg: rgba(15, 23, 42, 0.65);
-  --text: #ffffff;
-  --text-soft: rgba(255,255,255,0.7);
-  --input-bg: rgba(255,255,255,0.03);
-  --border: rgba(255,255,255,0.1);
-}
-
-body.light {
-  --bg-gradient: linear-gradient(135deg, #f1f5f9, #e2e8f0, #dbeafe);
-  --card-bg: rgba(255, 255, 255, 0.8);
-  --text: #0f172a;
-  --text-soft: rgba(15,23,42,0.7);
-  --input-bg: rgba(0,0,0,0.03);
-  --border: rgba(0,0,0,0.1);
-}
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /* ========================= */
-/* BASE */
+/*  CONTAINER                 */
 /* ========================= */
 
 .recover-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
-  background: var(--bg-gradient);
-  font-family: "Inter", sans-serif;
+  background: var(--login-bg-grad);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--login-text);
   overflow: hidden;
-  color: var(--text);
+  position: relative;
 }
 
-/* BOTÃO TEMA */
-
-.theme-toggle {
+.recover-container::before {
+  content: '';
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 10px;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 10;
-  transition: 0.3s;
+  top: -200px;
+  left: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(20,184,166,0.06), transparent);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.theme-toggle:hover {
-  background: rgba(20,184,166,0.2);
+.recover-container::after {
+  content: '';
+  position: absolute;
+  bottom: -200px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(59,130,246,0.05), transparent);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ========================= */
-/* LADO ESQUERDO */
+/*  BOTÃO TEMA                */
+/* ========================= */
+
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: var(--login-card);
+  border: 1px solid var(--login-border);
+  color: var(--login-text-soft);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.theme-toggle:hover {
+  color: #14b8a6;
+  border-color: rgba(20,184,166,0.4);
+  background: rgba(20,184,166,0.1);
+  transform: rotate(15deg) scale(1.05);
+}
+
+/* ========================= */
+/*  LADO ESQUERDO             */
 /* ========================= */
 
 .recover-left {
@@ -64,123 +88,228 @@ body.light {
   align-items: center;
   justify-content: center;
   padding: 40px;
+  position: relative;
+  z-index: 1;
 }
 
-/* CARD */
+/* ========================= */
+/*  CARD                      */
+/* ========================= */
 
 .recover-card {
   width: 100%;
-  max-width: 420px;
-  padding: 40px;
-  border-radius: 20px;
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  max-width: 440px;
+  padding: 48px 44px;
+  border-radius: 24px;
+  background: var(--login-card);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--login-border);
+  box-shadow: var(--login-shadow);
+  animation: recoverSlideUp 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* TÍTULO */
+@keyframes recoverSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================= */
+/*  CABEÇALHO                 */
+/* ========================= */
+
+.recover-card-header { margin-bottom: 32px; }
+
+.recover-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #14b8a6;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recover-eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 2px;
+  background: #14b8a6;
+  border-radius: 2px;
+  display: inline-block;
+}
 
 .recover-title {
-  font-size: 2.1rem;
-  font-weight: 700;
-  margin-bottom: 20px;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--login-text);
+  margin: 0;
 }
 
-.recover-title span {
-  color: #14b8a6;
+.recover-title span { color: #14b8a6; }
+
+.recover-subtitle {
+  font-size: 0.875rem;
+  color: var(--login-text-soft);
+  margin-top: 8px;
+  line-height: 1.5;
 }
 
-/* FORM */
+/* ========================= */
+/*  FORMULÁRIO                */
+/* ========================= */
 
 .recover-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 18px;
 }
 
-.recover-form label {
-  font-size: 0.85rem;
-  color: var(--text-soft);
+.recover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* INPUT */
-
-.recover-form input {
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--text);
-  font-size: 0.95rem;
-  transition: 0.25s;
-}
-
-/* FOCUS */
-
-.recover-form input:focus {
-  outline: none;
-  border-color: #14b8a6;
-  box-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
-}
-
-/* BOTÃO */
-
-.recover-btn {
-  margin-top: 10px;
-  padding: 14px;
-  border-radius: 10px;
-  border: none;
-  font-size: 1.05rem;
+.recover-label {
+  font-size: 0.75rem;
   font-weight: 700;
-  cursor: pointer;
-  color: white;
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
-  transition: 0.25s;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--login-text-soft);
 }
 
-.recover-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(20, 184, 166, 0.4);
+.recover-input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--login-border);
+  background: var(--login-input-bg);
+  color: var(--login-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
 
-/* ERRO */
+.recover-input::placeholder { color: var(--login-text-soft); opacity: 0.6; }
 
-.recover-error {
-  background: rgba(255, 0, 0, 0.12);
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #ff6b6b;
-  margin-bottom: 15px;
-}
-
-/* SUCESSO */
-
-.recover-success {
-  color: #14b8a6;
-  font-size: 0.95rem;
-  margin-bottom: 15px;
-  font-weight: 500;
-}
-
-/* VOLTAR */
-
-.recover-back {
-  display: inline-block;
-  margin-top: 20px;
-  color: #14b8a6;
-  text-decoration: none;
-  font-weight: 500;
-  transition: 0.2s;
-}
-
-.recover-back:hover {
-  text-decoration: underline;
-  opacity: 0.8;
+.recover-input:focus {
+  outline: none;
+  border-color: var(--login-border-focus);
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.12);
 }
 
 /* ========================= */
-/* LADO DIREITO */
+/*  BOTÃO                     */
+/* ========================= */
+
+.recover-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  box-shadow: 0 4px 16px rgba(20,184,166,0.35);
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  margin-top: 4px;
+}
+
+.recover-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(20,184,166,0.45);
+}
+
+.recover-btn:active { transform: scale(0.98); }
+.recover-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ========================= */
+/*  ERRO / SUCESSO            */
+/* ========================= */
+
+.recover-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--login-error-bg);
+  border: 1px solid rgba(239,68,68,0.2);
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--login-error);
+  margin-bottom: 20px;
+  animation: recoverShake 0.3s ease;
+}
+
+@keyframes recoverShake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-6px); }
+  75%       { transform: translateX(6px); }
+}
+
+.recover-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0 28px;
+  gap: 12px;
+}
+
+.recover-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(20,184,166,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.recover-success-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--login-text);
+  letter-spacing: -0.02em;
+}
+
+.recover-success-text {
+  font-size: 0.875rem;
+  color: var(--login-text-soft);
+  line-height: 1.6;
+}
+
+/* ========================= */
+/*  LINK VOLTAR               */
+/* ========================= */
+
+.recover-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 22px;
+  color: var(--login-text-soft);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.recover-back:hover { color: #14b8a6; }
+
+/* ========================= */
+/*  LADO DIREITO — BRANDING   */
 /* ========================= */
 
 .recover-right {
@@ -189,81 +318,82 @@ body.light {
   align-items: center;
   justify-content: center;
   position: relative;
+  z-index: 1;
 }
 
-/* GLOW */
-
-.recover-right::before {
-  content: "";
+.recover-right-glow {
   position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(20,184,166,0.25), transparent);
-  filter: blur(120px);
-  z-index: 0;
+  width: 560px;
+  height: 560px;
+  background: var(--login-glow);
+  filter: blur(100px);
   pointer-events: none;
+  z-index: 0;
 }
-
-/* BRAND */
 
 .recover-brand {
   position: relative;
   z-index: 2;
   text-align: center;
-  max-width: 400px;
+  max-width: 380px;
   margin-top: -80px;
+  animation: recoverFadeIn 0.6s ease both;
+  animation-delay: 0.15s;
 }
 
-/* LOGO */
+@keyframes recoverFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .recover-logo {
   width: 280px;
-  margin-bottom: 10px;
-  filter: drop-shadow(0 0 25px rgba(20, 184, 166, 0.4));
+  margin: 0 auto 16px;
+  display: block;
+  filter: drop-shadow(0 0 28px rgba(20,184,166,0.35));
+  transition: filter 0.3s;
 }
 
-/* TÍTULO */
+.recover-logo:hover { filter: drop-shadow(0 0 40px rgba(20,184,166,0.55)); }
 
 .recover-brand h2 {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--login-text);
   margin-bottom: 10px;
 }
 
-/* TEXTO */
-
 .recover-brand p {
-  font-size: 0.95rem;
-  color: var(--text-soft);
-  margin-bottom: 25px;
+  font-size: 0.9rem;
+  color: var(--login-text-soft);
+  margin-bottom: 28px;
+  line-height: 1.6;
 }
 
-/* RODAPÉ */
+.recover-brand-divider {
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #14b8a6, transparent);
+  margin: 0 auto 24px;
+  border-radius: 2px;
+}
 
 .recover-footer {
-  margin-top: 30px;
-  font-size: 0.8rem;
-  color: var(--text-soft);
+  font-size: 0.75rem;
+  color: var(--login-text-soft);
+  opacity: 0.6;
 }
 
-/* ========================= */
-/* RESPONSIVO */
-/* ========================= */
+body.light .recover-logo { filter: brightness(0); }
 
 @media (max-width: 900px) {
-  .recover-right {
-    display: none;
-  }
-
-  .recover-left {
-    flex: 1;
-    padding: 20px;
-  }
-
-  .recover-card {
-    padding: 30px;
-  }
+  .recover-right { display: none; }
+  .recover-left  { padding: 24px 20px; }
+  .recover-card  { padding: 36px 28px; }
 }
 
-body.light .recover-logo {
-  filter: brightness(0);
+@media (max-width: 480px) {
+  .recover-card  { padding: 28px 20px; border-radius: 18px; }
+  .recover-title { font-size: 1.7rem; }
 }
