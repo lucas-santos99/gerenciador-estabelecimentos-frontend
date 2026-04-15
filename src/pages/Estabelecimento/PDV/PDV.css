@@ -1,0 +1,924 @@
+/* ============================================================
+   PDV.css — Lucas J. Systems
+   Módulo: Ponto de Venda (Caixa)
+   Prefixo: pdv-
+   ============================================================ */
+
+/* ========================= */
+/*  LAYOUT PRINCIPAL          */
+/* ========================= */
+
+.pdv-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+}
+
+/* ========================= */
+/*  PAINEL ESQUERDO — BUSCA   */
+/* ========================= */
+
+.pdv-busca {
+  flex: 5;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 14px;
+  overflow: hidden;
+  border-right: 1px solid var(--est-border);
+}
+
+/* Campo de busca */
+.pdv-busca-input {
+  width: 100%;
+  padding: 15px 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  background: var(--est-card);
+  color: var(--est-text);
+  box-shadow: var(--est-shadow);
+  box-sizing: border-box;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+
+.pdv-busca-input::placeholder {
+  color: var(--est-text-muted);
+  font-weight: 500;
+}
+
+.pdv-busca-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim), var(--est-shadow);
+}
+
+.pdv-busca-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Grid de resultados */
+.pdv-resultados {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  align-content: start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+
+.pdv-resultados::-webkit-scrollbar { width: 4px; }
+.pdv-resultados::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 4px; }
+
+/* Status (loading/vazio) */
+.pdv-resultados-status {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  color: var(--est-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.pdv-resultados-status span {
+  font-size: 2rem;
+}
+
+/* Card de produto na busca */
+.pdv-produto-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pdv-produto-card:hover {
+  border-color: var(--est-border-accent);
+  background: var(--est-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(20,184,166,0.12);
+}
+
+.pdv-produto-card.selecionado {
+  border-color: var(--est-accent);
+  background: var(--est-accent-dim);
+  box-shadow: 0 0 0 2px var(--est-accent);
+}
+
+.pdv-produto-card.selecionado::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--est-accent);
+  border-radius: 12px 0 0 12px;
+}
+
+.pdv-card-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  line-height: 1.3;
+}
+
+.pdv-card-preco {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.02em;
+}
+
+.pdv-card-estoque {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pdv-card-estoque.critico { color: var(--est-danger); }
+.pdv-card-estoque.baixo   { color: var(--est-warning); }
+
+/* ========================= */
+/*  PAINEL DIREITO — CARRINHO */
+/* ========================= */
+
+.pdv-carrinho {
+  flex: 4;
+  display: flex;
+  flex-direction: column;
+  background: var(--est-sidebar);
+  border-left: 1px solid var(--est-sidebar-border);
+  overflow: hidden;
+}
+
+/* Header carrinho */
+.pdv-carrinho-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--est-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.pdv-carrinho-titulo {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-soft);
+}
+
+.pdv-carrinho-count {
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* Status de venda */
+.pdv-status {
+  padding: 10px 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+  animation: pdvStatusIn 0.25s ease;
+}
+@keyframes pdvStatusIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pdv-status.erro {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+  border-bottom: 1px solid rgba(239,68,68,0.15);
+}
+
+.pdv-status.sucesso {
+  background: var(--est-success-dim);
+  color: var(--est-success);
+  border-bottom: 1px solid rgba(34,197,94,0.15);
+}
+
+/* Lista do carrinho */
+.pdv-carrinho-lista {
+  list-style: none;
+  padding: 8px 12px;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.pdv-carrinho-lista::-webkit-scrollbar { width: 3px; }
+.pdv-carrinho-lista::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 3px; }
+
+/* Vazio */
+.pdv-carrinho-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  color: var(--est-text-muted);
+  text-align: center;
+  padding: 32px;
+}
+
+.pdv-carrinho-vazio-icon {
+  font-size: 2.5rem;
+  opacity: 0.5;
+}
+
+.pdv-carrinho-vazio p {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  margin: 0;
+}
+
+.pdv-carrinho-vazio small {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+}
+
+/* Item do carrinho */
+.pdv-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 8px;
+  border-radius: 10px;
+  border-bottom: 1px solid var(--est-border);
+  transition: background 0.15s;
+}
+
+.pdv-item:last-child {
+  border-bottom: none;
+}
+
+.pdv-item:hover {
+  background: var(--est-hover);
+}
+
+.pdv-item-info {
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.pdv-item-nome {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdv-item-qtde {
+  font-size: 0.75rem;
+  color: var(--est-text-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+.pdv-item-total {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--est-text);
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+
+.pdv-item-remover {
+  background: none;
+  border: none;
+  color: var(--est-text-muted);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.pdv-item-remover:hover {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+}
+
+/* Footer — total e finalizar */
+.pdv-footer {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-top: 1px solid var(--est-border);
+  background: var(--est-sidebar);
+}
+
+.pdv-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.pdv-total-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-soft);
+}
+
+.pdv-total-valor {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.pdv-btn-finalizar {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  background: var(--est-gradient);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(20,184,166,0.35);
+  letter-spacing: 0.01em;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pdv-btn-finalizar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(20,184,166,0.45);
+}
+
+.pdv-btn-finalizar:active {
+  transform: scale(0.98);
+}
+
+.pdv-btn-finalizar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ========================= */
+/*  MODAL BASE                */
+/* ========================= */
+
+.pdv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--est-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+  animation: pdvOverlayIn 0.2s ease;
+}
+@keyframes pdvOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pdv-modal {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 420px;
+  margin: 16px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  animation: pdvModalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes pdvModalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ========================= */
+/*  MODAL QUANTIDADE          */
+/* ========================= */
+
+.pdv-modal-qtd-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--est-text);
+  margin-bottom: 4px;
+}
+
+.pdv-modal-qtd-produto {
+  font-size: 0.8rem;
+  color: var(--est-text-soft);
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.pdv-modal-qtd-produto strong {
+  color: var(--est-accent);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pdv-modal-qtd-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-soft);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pdv-modal-qtd-input {
+  width: 100%;
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  background: var(--est-input);
+  color: var(--est-text);
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.pdv-modal-qtd-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+.pdv-modal-acoes {
+  display: flex;
+  gap: 10px;
+}
+
+.pdv-modal-btn-cancelar {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.pdv-modal-btn-cancelar:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+
+.pdv-modal-btn-confirmar {
+  flex: 2;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+}
+.pdv-modal-btn-confirmar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.45);
+}
+
+/* ========================= */
+/*  MODAL PAGAMENTO           */
+/* ========================= */
+
+.pdv-pagamento-total {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--est-border);
+}
+
+.pdv-pagamento-total-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-soft);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.pdv-pagamento-total-valor {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  display: block;
+}
+
+/* Lista de meios de pagamento */
+.pdv-pagamento-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-soft);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pdv-meios-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pdv-meio-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--est-text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--est-border);
+  transition: background 0.12s;
+}
+
+.pdv-meio-item:last-child { border-bottom: none; }
+.pdv-meio-item:hover { background: var(--est-hover); }
+
+.pdv-meio-item.ativo {
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+}
+
+.pdv-meio-icone {
+  font-size: 1.1rem;
+}
+
+.pdv-meio-enter {
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+/* Área de conteúdo do pagamento */
+.pdv-pagamento-conteudo {
+  margin-bottom: 16px;
+}
+
+/* Dinheiro / troco */
+.pdv-troco-input-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-soft);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pdv-troco-input {
+  width: 100%;
+  padding: 13px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: right;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  background: var(--est-input);
+  color: var(--est-text);
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.pdv-troco-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+.pdv-troco-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--est-success-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 10px;
+}
+
+.pdv-troco-display span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-success);
+}
+
+.pdv-troco-display strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--est-success);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Digital/cartão */
+.pdv-pagamento-digital {
+  text-align: center;
+  padding: 20px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 12px;
+}
+
+.pdv-pagamento-digital-icone { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+.pdv-pagamento-digital-nome  {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  display: block;
+  margin-bottom: 4px;
+}
+.pdv-pagamento-digital-hint  { font-size: 0.78rem; color: var(--est-text-soft); }
+
+/* Fiado — busca de cliente */
+.pdv-cliente-busca-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  background: var(--est-input);
+  color: var(--est-text);
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+.pdv-cliente-busca-input::placeholder { color: var(--est-text-muted); }
+.pdv-cliente-busca-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+.pdv-cliente-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.pdv-cliente-item {
+  padding: 11px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--est-border);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--est-text);
+  transition: background 0.12s;
+}
+.pdv-cliente-item:last-child { border-bottom: none; }
+.pdv-cliente-item:hover { background: var(--est-hover); }
+.pdv-cliente-item.ativo { background: var(--est-accent-dim); color: var(--est-accent); }
+
+.pdv-cliente-item-tel {
+  font-size: 0.72rem;
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: 8px;
+}
+
+/* Cliente selecionado no fiado */
+.pdv-cliente-selecionado {
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.pdv-cliente-selecionado-nome {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pdv-cliente-selecionado-info {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.pdv-cliente-info-item {
+  flex: 1;
+}
+
+.pdv-cliente-info-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.pdv-cliente-info-valor {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pdv-cliente-info-valor.novo-saldo {
+  color: var(--est-warning);
+}
+
+.pdv-btn-trocar-cliente {
+  background: none;
+  border: none;
+  color: var(--est-text-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+.pdv-btn-trocar-cliente:hover { color: var(--est-accent); }
+
+/* Erro pagamento */
+.pdv-pagamento-erro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--est-danger);
+  margin-bottom: 14px;
+}
+
+/* Ações do modal de pagamento */
+.pdv-pagamento-acoes {
+  display: flex;
+  gap: 10px;
+}
+
+.pdv-btn-cancelar {
+  flex: 1;
+  padding: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.pdv-btn-cancelar:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-text);
+}
+
+.pdv-btn-confirmar {
+  flex: 2;
+  padding: 13px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+}
+.pdv-btn-confirmar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.45);
+}
+.pdv-btn-confirmar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Modal título */
+.pdv-modal-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--est-text);
+  margin-bottom: 18px;
+}
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .pdv-container { flex-direction: column; }
+  .pdv-busca { flex: none; max-height: 45vh; }
+  .pdv-carrinho { flex: none; height: 55vh; }
+  .pdv-resultados { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+/* ========================= */
+/*  PRINT                     */
+/* ========================= */
+
+@media print {
+  .pdv-busca,
+  .pdv-carrinho-header,
+  .pdv-footer,
+  .pdv-item-remover,
+  .pdv-modal-overlay { display: none !important; }
+}
