@@ -1,10 +1,11 @@
 // src/pages/Estabelecimento/Estoque/ProdutoList.jsx
+import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import ProdutoModal from './ProdutoModal';
 import '../Estoque.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
+
 
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -50,8 +51,8 @@ export default function ProdutoList({ estabelecimentoId }) {
     setErro('');
     try {
       const [rProd, rCat] = await Promise.all([
-        fetch(`${API_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos`),
-        fetch(`${API_URL}/api/categorias/${estabelecimentoId}`),
+        apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos`),
+        apiFetch(`/api/categorias/${estabelecimentoId}`),
       ]);
       if (!rProd.ok) throw new Error('Erro ao buscar produtos');
       if (!rCat.ok)  throw new Error('Erro ao buscar categorias');
@@ -90,8 +91,7 @@ export default function ProdutoList({ estabelecimentoId }) {
   /* ── Deletar produto ─────────────────────────────────────── */
   async function deletarProduto(id) {
     try {
-      const resp = await fetch(
-        `${API_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos/${id}`,
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${id}`,
         { method: 'DELETE' }
       );
       if (!resp.ok) {

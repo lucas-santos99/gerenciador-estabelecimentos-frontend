@@ -1,10 +1,10 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../../utils/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import '../Financeiro.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -72,7 +72,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setLoadingResumo(true);
     setErroResumo('');
     try {
-      const resp = await fetch(`${API_URL}/api/financeiro/resumo/${encodeURIComponent(estabelecimentoId)}`);
+      const resp = await apiFetch(`/api/financeiro/resumo`);
       if (!resp.ok) throw new Error(`Erro ${resp.status}`);
       setResumo(await resp.json());
     } catch (err) { setErroResumo(err.message); }
@@ -87,8 +87,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setDreData(null);
     try {
       const params = new URLSearchParams({ data_inicio: dreInicio, data_fim: dreFim });
-      const resp = await fetch(
-        `${API_URL}/api/financeiro/relatorio_dre/${encodeURIComponent(estabelecimentoId)}?${params}`
+      const resp = await apiFetch(`/api/financeiro/relatorio_dre?${params}`
       );
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || `Erro ${resp.status}`);
@@ -157,8 +156,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setLoadingContas(true);
     setErroContas('');
     try {
-      const resp = await fetch(
-        `${API_URL}/api/financeiro/${encodeURIComponent(estabelecimentoId)}?status=${encodeURIComponent(status)}`
+      const resp = await apiFetch(`/api/financeiro?status=${encodeURIComponent(status)}`
       );
       if (!resp.ok) throw new Error(`Erro ${resp.status}`);
       setContas(await resp.json());
@@ -195,11 +193,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setErroContas('');
     try {
       const url    = contaEditId
-        ? `${API_URL}/api/financeiro/${encodeURIComponent(contaEditId)}`
-        : `${API_URL}/api/financeiro`;
+        ? `/api/financeiro/${encodeURIComponent(contaEditId)}`
+        : `/api/financeiro`;
       const method = contaEditId ? 'PUT' : 'POST';
 
-      const resp = await fetch(url, {
+      const resp = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,8 +223,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   async function marcarPaga(contaId) {
     setSalvandoConta(true);
     try {
-      const resp = await fetch(
-        `${API_URL}/api/financeiro/${encodeURIComponent(contaId)}/pagar`,
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}/pagar`,
         {
           method:  'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -248,8 +245,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     if (!window.confirm('Excluir esta conta?')) return;
     setSalvandoConta(true);
     try {
-      const resp = await fetch(
-        `${API_URL}/api/financeiro/${encodeURIComponent(contaId)}`,
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}`,
         {
           method:  'DELETE',
           headers: { 'Content-Type': 'application/json' },
@@ -267,7 +263,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   ════════════════════════════════════════════════════════ */
   async function carregarCategorias() {
     try {
-      const resp = await fetch(`${API_URL}/api/categorias/${encodeURIComponent(estabelecimentoId)}`);
+      const resp = await apiFetch(`/api/categorias/${encodeURIComponent(estabelecimentoId)}`);
       if (!resp.ok) return;
       setCategorias(await resp.json());
     } catch {}
@@ -281,8 +277,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     try {
       const params = new URLSearchParams({ data_inicio: reportInicio, data_fim: reportFim });
       if (reportCat) params.append('categoria_id', reportCat);
-      const resp = await fetch(
-        `${API_URL}/api/financeiro/relatorio_produtos/${encodeURIComponent(estabelecimentoId)}?${params}`
+      const resp = await apiFetch(`/api/financeiro/relatorio_produtos?${params}`
       );
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao gerar relatório');

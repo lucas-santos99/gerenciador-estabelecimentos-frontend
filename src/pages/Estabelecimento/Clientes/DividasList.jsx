@@ -1,10 +1,10 @@
 // src/pages/Estabelecimento/Clientes/DividasList.jsx
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../../utils/api';
 import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -27,7 +27,7 @@ function DetalhesFiado({ cliente, onFechar }) {
       setLoading(true);
       setErro('');
       try {
-        const resp = await fetch(`${API_URL}/api/clientes/${cliente.id}/itens-fiado`);
+        const resp = await apiFetch(`/api/clientes/${cliente.id}/itens-fiado`);
         if (!resp.ok) throw new Error('Erro ao buscar histórico');
         setVendas(await resp.json());
       } catch (err) { setErro(err.message); }
@@ -103,8 +103,8 @@ export default function DividasList({ estabelecimentoId }) {
     setErro('');
     try {
       const [rDiv, rTodos] = await Promise.all([
-        fetch(`${API_URL}/api/clientes/${estabelecimentoId}/dividas`),
-        fetch(`${API_URL}/api/clientes/${estabelecimentoId}/todos-clientes`),
+        fetch(`/api/clientes/dividas`),
+        fetch(`/api/clientes`),
       ]);
       if (!rDiv.ok)   throw new Error('Erro ao buscar dívidas');
       if (!rTodos.ok) throw new Error('Erro ao buscar clientes');
@@ -127,7 +127,7 @@ export default function DividasList({ estabelecimentoId }) {
   }
 
   async function confirmarRecebimento(valorPago, meioPagamento) {
-    const resp = await fetch(`${API_URL}/api/clientes/liquidar`, {
+    const resp = await apiFetch(`/api/clientes/liquidar`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
@@ -150,8 +150,7 @@ export default function DividasList({ estabelecimentoId }) {
     }
     if (!window.confirm(`Excluir o cliente "${cliente.nome}"? Esta ação é irreversível.`)) return;
     try {
-      const resp = await fetch(
-        `${API_URL}/api/clientes/deletar/${cliente.id}?estabelecimentoId=${estabelecimentoId}`,
+      const resp = await apiFetch(`/api/clientes/deletar/${cliente.id}`,
         { method: 'DELETE' }
       );
       const data = await resp.json();

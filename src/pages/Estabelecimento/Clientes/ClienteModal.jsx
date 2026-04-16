@@ -1,8 +1,8 @@
 // src/pages/Estabelecimento/Clientes/ClienteModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../../../utils/api';
 import '../Clientes.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -51,12 +51,12 @@ export default function ClienteModal({
     setErro('');
 
     const url    = isEdit
-      ? `${API_URL}/api/clientes/atualizar/${encodeURIComponent(cliente.id)}`
-      : `${API_URL}/api/clientes/criar`;
+      ? `/api/clientes/atualizar/${encodeURIComponent(cliente.id)}`
+      : `/api/clientes/criar`;
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const resp = await fetch(url, {
+      const resp = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,8 +88,7 @@ export default function ClienteModal({
     if (!window.confirm(`Excluir "${cliente.nome}"? Esta ação é irreversível.`)) return;
     setSalvando(true);
     try {
-      const resp = await fetch(
-        `${API_URL}/api/clientes/deletar/${encodeURIComponent(cliente.id)}?estabelecimentoId=${encodeURIComponent(estabelecimentoId)}`,
+      const resp = await apiFetch(`/api/clientes/deletar/${encodeURIComponent(cliente.id)}`,
         { method: 'DELETE' }
       );
       const data = await resp.json();

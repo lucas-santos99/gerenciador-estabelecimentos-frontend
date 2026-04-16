@@ -1,9 +1,9 @@
 // src/pages/Estabelecimento/Configuracoes/Configuracoes.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../../../utils/api';
 import { supabase } from '../../../utils/supabaseClient';
 import '../Configuracoes.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 /* ── Máscaras ──────────────────────────────────────────────── */
 function mascaraCNPJ(v) {
@@ -50,7 +50,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
       setLoading(true);
       setErro('');
       try {
-        const resp = await fetch(`${API_URL}/api/estabelecimentos/dados/${estabelecimentoId}`);
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
         if (!resp.ok) throw new Error('Falha ao carregar dados.');
         const data = await resp.json();
         setForm({
@@ -130,8 +130,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
     setSucesso('');
 
     try {
-      const resp = await fetch(
-        `${API_URL}/api/estabelecimentos/dados/${estabelecimentoId}`,
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`,
         {
           method:  'PUT',
           headers: { 'Content-Type': 'application/json' },

@@ -1,8 +1,9 @@
 // src/pages/Estabelecimento/Estoque/ProdutoModal.jsx
+import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import '../Estoque.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
+
 
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoModal({
@@ -88,7 +89,7 @@ export default function ProdutoModal({
     setSalvandoCat(true);
     setErro('');
     try {
-      const resp = await fetch(`${API_URL}/api/categorias`, {
+      const resp = await apiFetch(`/api/categorias`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ estabelecimentoId, nome: novaCatNome.trim() }),
@@ -114,11 +115,11 @@ export default function ProdutoModal({
     setSalvando(true);
 
     const url = isEdit
-      ? `${API_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos/${produtoEditar.id}`
-      : `${API_URL}/api/estabelecimentoss/${estabelecimentoId}/produtos`;
+      ? `/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}`
+      : `/api/estabelecimentos/${estabelecimentoId}/produtos`;
 
     try {
-      const resp = await fetch(url, {
+      const resp = await apiFetch(url, {
         method:  isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(form),
