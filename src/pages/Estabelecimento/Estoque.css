@@ -1,0 +1,649 @@
+/* ============================================================
+   Estoque.css — Lucas J. Systems
+   Módulo: Estoque / Produtos
+   Prefixo: est-prod-
+   ============================================================ */
+
+/* ========================= */
+/*  LAYOUT PRINCIPAL          */
+/* ========================= */
+
+.estoque-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+}
+
+/* ========================= */
+/*  SIDEBAR DE CATEGORIAS     */
+/* ========================= */
+
+.estoque-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--est-sidebar);
+  border-right: 1px solid var(--est-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.estoque-sidebar-titulo {
+  padding: 16px 16px 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+  border-bottom: 1px solid var(--est-border);
+  flex-shrink: 0;
+}
+
+.estoque-cats {
+  list-style: none;
+  padding: 8px;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.estoque-cats::-webkit-scrollbar { width: 3px; }
+.estoque-cats::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 3px; }
+
+.estoque-cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.estoque-cat-item:hover {
+  background: var(--est-hover);
+  color: var(--est-accent);
+}
+
+.estoque-cat-item.ativo {
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+}
+
+.estoque-cat-count {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: var(--est-text-muted);
+}
+
+.estoque-cat-item.ativo .estoque-cat-count {
+  background: var(--est-accent-dim);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+
+/* ========================= */
+/*  CONTEÚDO PRINCIPAL        */
+/* ========================= */
+
+.estoque-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Header */
+.estoque-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--est-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--est-sidebar);
+}
+
+.estoque-busca-input {
+  flex: 1;
+  padding: 10px 14px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  background: var(--est-input);
+  color: var(--est-text);
+  transition: all 0.2s;
+}
+.estoque-busca-input::placeholder { color: var(--est-text-muted); }
+.estoque-busca-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+/* Botões do header */
+.estoque-header-btns {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.estoque-btn {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.estoque-btn:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-hover);
+}
+
+.estoque-btn.primary {
+  background: var(--est-gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+}
+.estoque-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20,184,166,0.4);
+  color: #fff;
+}
+
+.estoque-btn.verde {
+  border-color: rgba(74,222,128,0.3);
+  color: var(--est-success);
+  background: var(--est-success-dim);
+}
+.estoque-btn.verde:hover {
+  background: var(--est-success);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Erro */
+.estoque-erro {
+  margin: 10px 20px 0;
+  padding: 10px 14px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+  color: var(--est-danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Grid de produtos */
+.estoque-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  align-content: start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.estoque-grid::-webkit-scrollbar { width: 4px; }
+.estoque-grid::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 4px; }
+
+/* Vazio */
+.estoque-vazio {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px;
+  color: var(--est-text-muted);
+  text-align: center;
+}
+.estoque-vazio-icon { font-size: 2.5rem; opacity: 0.5; }
+.estoque-vazio p   { font-size: 0.95rem; font-weight: 700; color: var(--est-text-soft); margin: 0; }
+.estoque-vazio small { font-size: 0.78rem; }
+
+/* ========================= */
+/*  CARD DE PRODUTO           */
+/* ========================= */
+
+.prod-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.18s;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.prod-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  border-color: var(--est-border-accent);
+}
+
+.prod-card.focado {
+  border-color: var(--est-accent);
+  box-shadow: 0 0 0 2px var(--est-accent), 0 8px 24px rgba(20,184,166,0.2);
+  animation: prodFoco 3s ease-out forwards;
+}
+
+@keyframes prodFoco {
+  0%   { box-shadow: 0 0 0 3px var(--est-accent), 0 8px 24px rgba(20,184,166,0.35); }
+  70%  { box-shadow: 0 0 0 3px var(--est-accent), 0 8px 24px rgba(20,184,166,0.2); }
+  100% { box-shadow: var(--est-shadow); }
+}
+
+/* Corpo do card */
+.prod-card-corpo {
+  padding: 14px 14px 10px;
+  flex: 1;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Badge de estoque */
+.prod-badge-estoque {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 6px;
+}
+.prod-badge-estoque.ok {
+  background: var(--est-success-dim);
+  color: var(--est-success);
+  border: 1px solid rgba(74,222,128,0.2);
+}
+.prod-badge-estoque.baixo {
+  background: var(--est-warning-dim);
+  color: var(--est-warning);
+  border: 1px solid rgba(251,191,36,0.2);
+}
+.prod-badge-estoque.critico {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.prod-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  margin-bottom: 3px;
+  margin-right: 60px;
+  line-height: 1.3;
+}
+
+.prod-codigo {
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-text-muted);
+  margin-bottom: 12px;
+  min-height: 1em;
+}
+
+/* Preços */
+.prod-precos {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--est-border);
+  padding-top: 10px;
+}
+
+.prod-preco-item {
+  flex: 1;
+}
+
+.prod-preco-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-muted);
+  margin-bottom: 2px;
+}
+
+.prod-preco-valor {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.prod-preco-valor.venda {
+  font-size: 1rem;
+  color: var(--est-accent);
+  font-weight: 800;
+}
+
+/* Ações do card */
+.prod-card-acoes {
+  display: flex;
+  border-top: 1px solid var(--est-border);
+}
+
+.prod-btn-acao {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--est-text-soft);
+  transition: all 0.15s;
+}
+
+.prod-btn-acao:not(:last-child) {
+  border-right: 1px solid var(--est-border);
+}
+
+.prod-btn-acao.editar:hover {
+  background: var(--est-hover);
+  color: var(--est-accent);
+}
+
+.prod-btn-acao.excluir {
+  color: var(--est-danger);
+  background: var(--est-danger-dim);
+}
+.prod-btn-acao.excluir:hover {
+  background: var(--est-danger);
+  color: #fff;
+}
+
+/* ========================= */
+/*  MODAL BASE                */
+/* ========================= */
+
+.prod-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--est-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+  animation: prodOverlayIn 0.2s ease;
+}
+@keyframes prodOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.prod-modal {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 16px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  animation: prodModalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+@keyframes prodModalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.prod-modal-titulo {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--est-text);
+  margin-bottom: 22px;
+}
+
+/* Seções do form */
+.prod-form-section {
+  margin-bottom: 20px;
+}
+
+.prod-form-section-titulo {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--est-border);
+}
+
+.prod-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.prod-form-full { grid-column: 1 / -1; }
+
+.prod-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.prod-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-soft);
+}
+
+.prod-input,
+.prod-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.prod-input::placeholder { color: var(--est-text-muted); }
+.prod-input:focus,
+.prod-select:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+/* Categoria com botão + */
+.prod-cat-row {
+  display: flex;
+  gap: 6px;
+}
+.prod-cat-row .prod-select { flex: 1; }
+.prod-btn-nova-cat {
+  width: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.prod-btn-nova-cat:hover {
+  background: var(--est-accent);
+  color: #fff;
+}
+
+/* Mini form nova categoria */
+.prod-nova-cat-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  grid-column: 1 / -1;
+}
+.prod-nova-cat-form .prod-input { flex: 1; }
+.prod-nova-cat-btn-salvar {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.prod-nova-cat-btn-cancelar {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Erro do modal */
+.prod-modal-erro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--est-danger);
+  margin-bottom: 16px;
+}
+
+/* Ações do modal */
+.prod-modal-acoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--est-border);
+}
+
+.prod-modal-btn-cancelar {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.prod-modal-btn-cancelar:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-text);
+}
+
+.prod-modal-btn-salvar {
+  flex: 2;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+}
+.prod-modal-btn-salvar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.4);
+}
+.prod-modal-btn-salvar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 900px) {
+  .estoque-sidebar { display: none; }
+}
+
+@media (max-width: 600px) {
+  .estoque-grid { grid-template-columns: 1fr; }
+  .prod-form-grid { grid-template-columns: 1fr; }
+  .prod-form-full { grid-column: 1; }
+}
+
+/* ========================= */
+/*  PRINT                     */
+/* ========================= */
+
+@media print {
+  .estoque-header,
+  .estoque-sidebar,
+  .prod-card-acoes,
+  .prod-modal-overlay { display: none !important; }
+}

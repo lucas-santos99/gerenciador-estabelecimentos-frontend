@@ -1,0 +1,713 @@
+/* ============================================================
+   Financeiro.css — Lucas J. Systems
+   Módulo: Financeiro
+   Prefixo: fin-
+   ============================================================ */
+
+/* ========================= */
+/*  LAYOUT PRINCIPAL          */
+/* ========================= */
+
+.fin-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+}
+
+/* ========================= */
+/*  TABS NAV                  */
+/* ========================= */
+
+.fin-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--est-border);
+  background: var(--est-sidebar);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.fin-tabs-nav {
+  display: flex;
+  gap: 2px;
+}
+
+.fin-tab-btn {
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.fin-tab-btn:hover { color: var(--est-accent); }
+.fin-tab-btn.ativo {
+  color: var(--est-accent);
+  border-bottom-color: var(--est-accent);
+}
+
+.fin-tab-btn-imprimir {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fin-tab-btn-imprimir:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+
+/* ========================= */
+/*  ÁREA DE CONTEÚDO          */
+/* ========================= */
+
+.fin-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.fin-content::-webkit-scrollbar { width: 4px; }
+.fin-content::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 4px; }
+
+/* Erro */
+.fin-erro {
+  padding: 10px 14px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+  color: var(--est-danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* ========================= */
+/*  ABA FLUXO DE CAIXA        */
+/* ========================= */
+
+/* Header da seção */
+.fin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.fin-section-titulo {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+}
+
+.fin-btn-atualizar {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.fin-btn-atualizar:hover { background: var(--est-accent); color: #fff; }
+.fin-btn-atualizar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Cards de resumo */
+.fin-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.fin-resumo-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-resumo-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+.fin-resumo-card.destaque {
+  border-left: 3px solid var(--est-success);
+  background: var(--est-success-dim);
+}
+
+.fin-resumo-card-titulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--est-text-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.fin-resumo-card-valor {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--est-text);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  display: block;
+}
+
+.fin-resumo-card.destaque .fin-resumo-card-valor {
+  color: var(--est-success);
+}
+
+/* Spinner no card */
+.fin-card-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--est-border);
+  border-top-color: var(--est-accent);
+  border-radius: 50%;
+  animation: finSpin 0.7s linear infinite;
+}
+@keyframes finSpin { to { transform: rotate(360deg); } }
+
+/* Divisor de seção */
+.fin-divisor {
+  height: 1px;
+  background: var(--est-border);
+  margin: 24px 0 20px;
+}
+
+/* ========================= */
+/*  FORMULÁRIO DRE / FILTROS  */
+/* ========================= */
+
+.fin-form-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 16px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.fin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.fin-form-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-soft);
+}
+
+.fin-form-input,
+.fin-form-select {
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.fin-form-input:focus,
+.fin-form-select:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+.fin-btn-gerar {
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+.fin-btn-gerar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20,184,166,0.4);
+}
+.fin-btn-gerar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.fin-btn-pdf {
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--est-success-dim);
+  color: var(--est-success);
+  border: 1px solid rgba(74,222,128,0.3);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+.fin-btn-pdf:hover:not(:disabled) {
+  background: var(--est-success);
+  color: #fff;
+  border-color: transparent;
+}
+.fin-btn-pdf:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ========================= */
+/*  DRE — CARDS DE RESULTADO  */
+/* ========================= */
+
+.fin-dre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.fin-dre-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-dre-card:hover { transform: translateY(-1px); }
+
+.fin-dre-card-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.fin-dre-card-valor {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.fin-dre-card.receita  .fin-dre-card-valor { color: var(--est-success); }
+.fin-dre-card.despesa  .fin-dre-card-valor { color: var(--est-danger); }
+.fin-dre-card.bruto    .fin-dre-card-valor { color: var(--est-accent); }
+.fin-dre-card.liquido  {
+  grid-column: 1 / -1;
+  text-align: center;
+  border-left: 3px solid var(--est-accent);
+  background: var(--est-accent-dim);
+}
+.fin-dre-card.liquido  .fin-dre-card-valor {
+  color: var(--est-accent);
+  font-size: 2rem;
+}
+
+.fin-dre-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--est-border);
+}
+
+.fin-dre-sub span {
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-text-soft);
+  font-weight: 600;
+}
+
+/* ========================= */
+/*  CONTAS A PAGAR            */
+/* ========================= */
+
+.fin-contas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Toggle de status */
+.fin-status-toggle {
+  display: flex;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.fin-status-btn {
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.fin-status-btn.ativo {
+  background: var(--est-card);
+  color: var(--est-accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.fin-status-btn.atrasada.ativo {
+  color: var(--est-danger);
+}
+
+.fin-btn-nova-conta {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+}
+.fin-btn-nova-conta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20,184,166,0.4);
+}
+
+/* Form inline de nova conta */
+.fin-conta-form {
+  background: var(--est-card);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(8px);
+  animation: finFormIn 0.2s ease;
+}
+@keyframes finFormIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fin-conta-form-titulo {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+
+.fin-conta-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.fin-conta-form-acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.fin-btn-cancelar-conta {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.fin-btn-cancelar-conta:hover { border-color: var(--est-border-accent); color: var(--est-text); }
+
+/* Grid de contas */
+.fin-contas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+/* Card de conta */
+.fin-conta-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-conta-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+.fin-conta-card.atrasada {
+  border-left: 3px solid var(--est-danger);
+}
+.fin-conta-card.paga {
+  opacity: 0.65;
+}
+
+.fin-conta-card-header {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--est-border);
+}
+
+.fin-conta-descricao {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  word-break: break-word;
+}
+
+.fin-conta-card-body {
+  padding: 12px 14px;
+}
+
+.fin-conta-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.fin-conta-info-row:last-child { margin-bottom: 0; }
+
+.fin-conta-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+}
+
+.fin-conta-info-valor {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.fin-conta-info-valor.valor-grande {
+  font-size: 1.2rem;
+  color: var(--est-danger);
+}
+
+.fin-conta-card.paga .fin-conta-info-valor.valor-grande {
+  color: var(--est-success);
+}
+
+/* Badge status */
+.fin-badge-status {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.fin-badge-status.pendente {
+  background: var(--est-warning-dim);
+  color: var(--est-warning);
+  border: 1px solid rgba(251,191,36,0.2);
+}
+.fin-badge-status.paga {
+  background: var(--est-success-dim);
+  color: var(--est-success);
+  border: 1px solid rgba(74,222,128,0.2);
+}
+.fin-badge-status.atrasada {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+/* Ações do card */
+.fin-conta-acoes {
+  display: flex;
+  border-top: 1px solid var(--est-border);
+}
+
+.fin-conta-btn {
+  flex: 1;
+  padding: 9px 6px;
+  background: none;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--est-text-soft);
+  transition: all 0.15s;
+}
+.fin-conta-btn:not(:last-child) { border-right: 1px solid var(--est-border); }
+.fin-conta-btn.editar:hover   { background: var(--est-hover); color: var(--est-accent); }
+.fin-conta-btn.excluir        { color: var(--est-danger); background: var(--est-danger-dim); }
+.fin-conta-btn.excluir:hover  { background: var(--est-danger); color: #fff; }
+.fin-conta-btn.pagar          { color: var(--est-success); font-weight: 800; }
+.fin-conta-btn.pagar:hover    { background: var(--est-success); color: #fff; }
+
+/* ========================= */
+/*  RELATÓRIO DE PRODUTOS     */
+/* ========================= */
+
+.fin-report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.fin-report-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-report-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+.fin-report-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--est-border);
+  word-break: break-word;
+}
+
+.fin-report-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.fin-report-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+}
+
+.fin-report-info-valor {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-text-soft);
+}
+.fin-report-info-valor.receita  { color: var(--est-success); }
+.fin-report-info-valor.qtd      { color: var(--est-accent); }
+
+/* ========================= */
+/*  ESTADOS VAZIOS / LOADING  */
+/* ========================= */
+
+.fin-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--est-text-muted);
+  font-size: 0.875rem;
+}
+
+.fin-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+.fin-vazio-icon  { font-size: 2.2rem; opacity: 0.5; }
+.fin-vazio p     { font-size: 0.9rem; font-weight: 700; color: var(--est-text-soft); margin: 0; }
+.fin-vazio small { font-size: 0.75rem; color: var(--est-text-muted); }
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .fin-dre-grid   { grid-template-columns: 1fr; }
+  .fin-dre-card.liquido { grid-column: 1; }
+  .fin-conta-form-grid { grid-template-columns: 1fr; }
+  .fin-contas-grid { grid-template-columns: 1fr; }
+  .fin-resumo-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ========================= */
+/*  PRINT                     */
+/* ========================= */
+
+@media print {
+  .fin-tabs,
+  .fin-btn-atualizar,
+  .fin-form-filtros,
+  .fin-conta-acoes,
+  .fin-contas-header { display: none !important; }
+}

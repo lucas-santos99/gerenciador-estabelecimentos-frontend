@@ -1,0 +1,361 @@
+/* ============================================================
+   Configuracoes.css — Lucas J. Systems
+   Módulo: Configurações do Estabelecimento
+   Prefixo: cfg-
+   ============================================================ */
+
+/* ========================= */
+/*  LAYOUT PRINCIPAL          */
+/* ========================= */
+
+.cfg-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+}
+
+/* ========================= */
+/*  HEADER                    */
+/* ========================= */
+
+.cfg-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--est-border);
+  background: var(--est-sidebar);
+  flex-shrink: 0;
+}
+
+.cfg-header-titulo {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.cfg-header-sub {
+  font-size: 0.82rem;
+  color: var(--est-text-soft);
+  font-weight: 500;
+}
+
+/* ========================= */
+/*  CONTEÚDO PRINCIPAL        */
+/* ========================= */
+
+.cfg-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.cfg-content::-webkit-scrollbar { width: 4px; }
+.cfg-content::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 4px; }
+
+/* Grid principal */
+.cfg-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .cfg-grid { grid-template-columns: 1fr; }
+}
+
+/* ========================= */
+/*  SEÇÕES                    */
+/* ========================= */
+
+.cfg-section {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 16px;
+}
+
+.cfg-section:last-child { margin-bottom: 0; }
+
+.cfg-section-titulo {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--est-border);
+  display: block;
+}
+
+/* ========================= */
+/*  FORM FIELDS               */
+/* ========================= */
+
+.cfg-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.cfg-form-full { grid-column: 1 / -1; }
+
+.cfg-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cfg-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-soft);
+}
+
+.cfg-input,
+.cfg-textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cfg-input::placeholder,
+.cfg-textarea::placeholder { color: var(--est-text-muted); }
+.cfg-input:focus,
+.cfg-textarea:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+.cfg-input:disabled,
+.cfg-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cfg-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ========================= */
+/*  COLUNA DA LOGO            */
+/* ========================= */
+
+.cfg-logo-section {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  align-self: start;
+}
+
+.cfg-logo-titulo {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--est-text-muted);
+  align-self: flex-start;
+}
+
+/* Preview da logo */
+.cfg-logo-preview {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 180px;
+  border-radius: 16px;
+  border: 2px dashed var(--est-border);
+  background: var(--est-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.cfg-logo-preview:hover {
+  border-color: var(--est-border-accent);
+}
+
+.cfg-logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.cfg-logo-preview-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--est-text-muted);
+}
+
+.cfg-logo-preview-vazio span {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.cfg-logo-preview-vazio p {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+/* Botão upload */
+.cfg-logo-file-input {
+  display: none;
+}
+
+.cfg-btn-upload {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+  display: block;
+}
+.cfg-btn-upload:hover {
+  background: var(--est-accent);
+  color: #fff;
+  border-color: transparent;
+}
+.cfg-btn-upload.uploading {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cfg-logo-hint {
+  font-size: 0.68rem;
+  color: var(--est-text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ========================= */
+/*  ALERTAS                   */
+/* ========================= */
+
+.cfg-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: cfgAlertIn 0.25s ease;
+  grid-column: 1 / -1;
+}
+@keyframes cfgAlertIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cfg-alert.erro {
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: var(--est-danger);
+}
+
+.cfg-alert.sucesso {
+  background: var(--est-success-dim);
+  border: 1px solid rgba(34,197,94,0.15);
+  color: var(--est-success);
+}
+
+/* ========================= */
+/*  FOOTER DE AÇÕES           */
+/* ========================= */
+
+.cfg-footer {
+  flex-shrink: 0;
+  padding: 14px 24px;
+  border-top: 1px solid var(--est-border);
+  background: var(--est-sidebar);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cfg-btn-salvar {
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cfg-btn-salvar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.4);
+}
+.cfg-btn-salvar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cfg-btn-salvar-status {
+  font-size: 0.72rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+}
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 600px) {
+  .cfg-form-grid { grid-template-columns: 1fr; }
+  .cfg-form-full { grid-column: 1; }
+  .cfg-content { padding: 16px; }
+}
