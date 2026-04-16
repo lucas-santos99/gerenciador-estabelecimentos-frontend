@@ -263,7 +263,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   ════════════════════════════════════════════════════════ */
   async function carregarCategorias() {
     try {
-      const resp = await apiFetch(`/api/categorias/${encodeURIComponent(estabelecimentoId)}`);
+      const resp = await apiFetch(`/api/categorias`);
       if (!resp.ok) return;
       setCategorias(await resp.json());
     } catch {}

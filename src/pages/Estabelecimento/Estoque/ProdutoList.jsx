@@ -52,7 +52,7 @@ export default function ProdutoList({ estabelecimentoId }) {
     try {
       const [rProd, rCat] = await Promise.all([
         apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos`),
-        apiFetch(`/api/categorias/${estabelecimentoId}`),
+        apiFetch(`/api/categorias`),
       ]);
       if (!rProd.ok) throw new Error('Erro ao buscar produtos');
       if (!rCat.ok)  throw new Error('Erro ao buscar categorias');

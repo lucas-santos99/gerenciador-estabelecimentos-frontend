@@ -92,7 +92,7 @@ export default function ProdutoModal({
       const resp = await apiFetch(`/api/categorias`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ estabelecimentoId, nome: novaCatNome.trim() }),
+        body:    JSON.stringify({ nome: novaCatNome.trim() }),
       });
       const nova = await resp.json();
       if (!resp.ok) throw new Error(nova.error || 'Erro ao criar categoria');
