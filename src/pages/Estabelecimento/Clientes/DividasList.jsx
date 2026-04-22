@@ -103,8 +103,8 @@ export default function DividasList({ estabelecimentoId }) {
     setErro('');
     try {
       const [rDiv, rTodos] = await Promise.all([
-        fetch(`/api/clientes/dividas`),
-        fetch(`/api/clientes`),
+        apiFetch(`/api/clientes/dividas`),
+        apiFetch(`/api/clientes`),
       ]);
       if (!rDiv.ok)   throw new Error('Erro ao buscar dívidas');
       if (!rTodos.ok) throw new Error('Erro ao buscar clientes');
