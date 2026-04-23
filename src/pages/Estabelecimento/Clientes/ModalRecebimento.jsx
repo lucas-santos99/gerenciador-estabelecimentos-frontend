@@ -103,7 +103,6 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
       ref={overlayRef}
       tabIndex={-1}
       onKeyDown={handleOverlayKey}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="cli-modal">
 
