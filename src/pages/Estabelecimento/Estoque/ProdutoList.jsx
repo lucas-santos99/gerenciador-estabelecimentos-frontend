@@ -42,7 +42,17 @@ export default function ProdutoList({ estabelecimentoId }) {
   const [modalAberto,      setModalAberto]      = useState(false);
   const [produtoEditar,    setProdutoEditar]    = useState(null);
 
-  const searchRef = useRef(null);
+  // Gestão de categorias
+  const [catEditandoId,    setCatEditandoId]    = useState(null);
+  const [catEditandoNome,  setCatEditandoNome]  = useState('');
+  const [catNovaNome,      setCatNovaNome]      = useState('');
+  const [catNovaAberta,    setCatNovaAberta]    = useState(false);
+  const [catSalvando,      setCatSalvando]      = useState(false);
+  const [catErro,          setCatErro]          = useState('');
+
+  const searchRef   = useRef(null);
+  const catEditRef  = useRef(null);
+  const catNovaRef  = useRef(null);
 
   /* ── Carregar dados ─────────────────────────────────────── */
   async function carregarDados(focarId = null) {
@@ -77,6 +87,15 @@ export default function ProdutoList({ estabelecimentoId }) {
   useEffect(() => {
     if (!loading) setTimeout(() => searchRef.current?.focus(), 100);
   }, [loading]);
+
+  /* ── Foco no input de edição de categoria ───────────────── */
+  useEffect(() => {
+    if (catEditandoId) setTimeout(() => catEditRef.current?.focus(), 0);
+  }, [catEditandoId]);
+
+  useEffect(() => {
+    if (catNovaAberta) setTimeout(() => catNovaRef.current?.focus(), 0);
+  }, [catNovaAberta]);
 
   /* ── Scroll para produto focado ─────────────────────────── */
   useEffect(() => {
@@ -146,6 +165,79 @@ export default function ProdutoList({ estabelecimentoId }) {
     return catOK && buscaOK;
   });
 
+  /* ── Criar categoria ────────────────────────────────────── */
+  async function criarCategoria() {
+    if (!catNovaNome.trim()) return;
+    setCatSalvando(true);
+    setCatErro('');
+    try {
+      const resp = await apiFetch('/api/categorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: catNovaNome.trim() }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao criar categoria');
+      setCategorias(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setCatNovaNome('');
+      setCatNovaAberta(false);
+      setCategoriaAtiva(data.id);
+    } catch (err) {
+      setCatErro(err.message);
+    } finally {
+      setCatSalvando(false);
+    }
+  }
+
+  /* ── Salvar edição de categoria ─────────────────────────── */
+  async function salvarEdicaoCategoria(id) {
+    if (!catEditandoNome.trim()) return;
+    setCatSalvando(true);
+    setCatErro('');
+    try {
+      const resp = await apiFetch(`/api/categorias/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: catEditandoNome.trim() }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao atualizar');
+      setCategorias(prev =>
+        prev.map(c => c.id === id ? { ...c, nome: data.nome } : c)
+            .sort((a, b) => a.nome.localeCompare(b.nome))
+      );
+      setCatEditandoId(null);
+      setCatEditandoNome('');
+    } catch (err) {
+      setCatErro(err.message);
+    } finally {
+      setCatSalvando(false);
+    }
+  }
+
+  /* ── Excluir categoria ──────────────────────────────────── */
+  async function excluirCategoria(id, nome) {
+    const count = produtos.filter(p => p.categoria_id === id).length;
+    const msg = count > 0
+      ? `A categoria "${nome}" tem ${count} produto(s). Eles ficarão sem categoria. Confirmar exclusão?`
+      : `Excluir a categoria "${nome}"?`;
+    if (!window.confirm(msg)) return;
+    setCatErro('');
+    try {
+      const resp = await apiFetch(`/api/categorias/${id}`, { method: 'DELETE' });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || 'Erro ao excluir');
+      }
+      setCategorias(prev => prev.filter(c => c.id !== id));
+      if (categoriaAtiva === id) setCategoriaAtiva('todos');
+      // Atualiza produtos removendo categoria_id deletada
+      setProdutos(prev => prev.map(p => p.categoria_id === id ? { ...p, categoria_id: null } : p));
+    } catch (err) {
+      setCatErro(err.message);
+    }
+  }
+
   /* ── Handlers modal ─────────────────────────────────────── */
   function abrirNovo() { setProdutoEditar(null); setModalAberto(true); }
   function abrirEditar(p) { setProdutoEditar(p); setModalAberto(true); }
@@ -179,7 +271,43 @@ export default function ProdutoList({ estabelecimentoId }) {
 
       {/* ── SIDEBAR CATEGORIAS ───────────────────────────── */}
       <aside className="estoque-sidebar">
-        <div className="estoque-sidebar-titulo">Categorias</div>
+        <div className="estoque-sidebar-header">
+          <div className="estoque-sidebar-titulo">Categorias</div>
+          <button
+            className="estoque-cat-btn-nova"
+            onClick={() => { setCatNovaAberta(p => !p); setCatEditandoId(null); setCatErro(''); }}
+            title="Nova categoria"
+          >+</button>
+        </div>
+
+        {/* Formulário nova categoria */}
+        {catNovaAberta && (
+          <div className="estoque-cat-form">
+            <input
+              ref={catNovaRef}
+              className="estoque-cat-input"
+              placeholder="Nome da categoria…"
+              value={catNovaNome}
+              onChange={e => setCatNovaNome(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); criarCategoria(); }
+                if (e.key === 'Escape') { setCatNovaAberta(false); setCatNovaNome(''); }
+              }}
+              disabled={catSalvando}
+            />
+            <div className="estoque-cat-form-btns">
+              <button className="estoque-cat-form-btn confirmar" onClick={criarCategoria} disabled={catSalvando}>
+                {catSalvando ? '…' : '✓'}
+              </button>
+              <button className="estoque-cat-form-btn cancelar" onClick={() => { setCatNovaAberta(false); setCatNovaNome(''); }}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {catErro && <div className="estoque-cat-erro">⚠️ {catErro}</div>}
+
         <ul className="estoque-cats">
 
           <li>
@@ -193,16 +321,56 @@ export default function ProdutoList({ estabelecimentoId }) {
           </li>
 
           {categorias.map(cat => (
-            <li key={cat.id}>
-              <button
-                className={`estoque-cat-item${categoriaAtiva === cat.id ? ' ativo' : ''}`}
-                onClick={() => setCategoriaAtiva(cat.id)}
-              >
-                {cat.nome}
-                <span className="estoque-cat-count">
-                  {produtos.filter(p => p.categoria_id === cat.id).length}
-                </span>
-              </button>
+            <li key={cat.id} className="estoque-cat-li">
+              {catEditandoId === cat.id ? (
+                /* Modo edição inline */
+                <div className="estoque-cat-form">
+                  <input
+                    ref={catEditRef}
+                    className="estoque-cat-input"
+                    value={catEditandoNome}
+                    onChange={e => setCatEditandoNome(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); salvarEdicaoCategoria(cat.id); }
+                      if (e.key === 'Escape') { setCatEditandoId(null); setCatEditandoNome(''); }
+                    }}
+                    disabled={catSalvando}
+                  />
+                  <div className="estoque-cat-form-btns">
+                    <button className="estoque-cat-form-btn confirmar" onClick={() => salvarEdicaoCategoria(cat.id)} disabled={catSalvando}>
+                      {catSalvando ? '…' : '✓'}
+                    </button>
+                    <button className="estoque-cat-form-btn cancelar" onClick={() => { setCatEditandoId(null); setCatEditandoNome(''); }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Modo normal */
+                <div className="estoque-cat-row">
+                  <button
+                    className={`estoque-cat-item${categoriaAtiva === cat.id ? ' ativo' : ''}`}
+                    onClick={() => setCategoriaAtiva(cat.id)}
+                  >
+                    {cat.nome}
+                    <span className="estoque-cat-count">
+                      {produtos.filter(p => p.categoria_id === cat.id).length}
+                    </span>
+                  </button>
+                  <div className="estoque-cat-acoes">
+                    <button
+                      className="estoque-cat-acao editar"
+                      title="Editar categoria"
+                      onClick={() => { setCatEditandoId(cat.id); setCatEditandoNome(cat.nome); setCatNovaAberta(false); setCatErro(''); }}
+                    >✏️</button>
+                    <button
+                      className="estoque-cat-acao excluir"
+                      title="Excluir categoria"
+                      onClick={() => excluirCategoria(cat.id, cat.nome)}
+                    >🗑</button>
+                  </div>
+                </div>
+              )}
             </li>
           ))}
 
