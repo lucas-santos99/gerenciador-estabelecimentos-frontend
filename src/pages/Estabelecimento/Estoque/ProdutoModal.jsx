@@ -142,8 +142,8 @@ export default function ProdutoModal({
 
   /* ════════════════════════════════════════════════════════ */
   return (
-    <div className="prod-modal-overlay" onClick={onClose}>
-      <div className="prod-modal" onClick={e => e.stopPropagation()}>
+    <div className="prod-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="prod-modal">
 
         <div className="prod-modal-titulo">
           {isEdit ? '✏️ Editar produto' : '➕ Novo produto'}

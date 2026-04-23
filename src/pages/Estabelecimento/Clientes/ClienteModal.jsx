@@ -104,8 +104,8 @@ export default function ClienteModal({
 
   /* ════════════════════════════════════════════════════════ */
   return (
-    <div className="cli-modal-overlay" onClick={onClose}>
-      <div className="cli-modal" onClick={e => e.stopPropagation()}>
+    <div className="cli-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="cli-modal">
 
         <div className="cli-modal-titulo">
           {isEdit ? `✏️ Editar — ${cliente.nome}` : '➕ Novo cliente'}
