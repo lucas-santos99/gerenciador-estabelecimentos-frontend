@@ -106,7 +106,7 @@ export default function LayoutEstabelecimento({
   logoUrl,
 }) {
   const navigate  = useNavigate();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
@@ -217,7 +217,9 @@ export default function LayoutEstabelecimento({
             <span className="est-brand-name">
               {nomeEstabelecimento || "Estabelecimento"}
             </span>
-            <span className="est-brand-role">Operador</span>
+            <span className="est-brand-role">
+              {profile?.role === 'merchant' ? 'Administrador' : 'Operador'}
+            </span>
           </div>
         </div>
 
@@ -244,6 +246,13 @@ export default function LayoutEstabelecimento({
 
         {/* Footer */}
         <div className="est-sidebar-footer">
+
+          {/* Identidade Lucas J. Systems */}
+          <div className="est-ljs-badge">
+            <span className="est-ljs-dot" />
+            <span className="est-ljs-label">Lucas J. Systems</span>
+          </div>
+
           <div className="est-footer-divider" />
 
           {/* Tema */}

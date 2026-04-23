@@ -255,7 +255,12 @@ export default function PDV({ estabelecimentoId }) {
   }, [showPagamento, itemQuantificar, editIndex]);
 
   useEffect(() => {
-    if (itemQuantificar) { inputQtdRef.current?.focus(); inputQtdRef.current?.select(); }
+    if (itemQuantificar) {
+      setTimeout(() => {
+        inputQtdRef.current?.focus();
+        inputQtdRef.current?.select();
+      }, 50);
+    }
   }, [itemQuantificar]);
 
   useEffect(() => {

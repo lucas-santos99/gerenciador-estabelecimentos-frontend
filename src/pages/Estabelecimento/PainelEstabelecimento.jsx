@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
+import { apiFetch } from "../../utils/api";
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
 
 import PDV           from "./PDV/PDV";
@@ -9,8 +10,6 @@ import ProdutoList   from "./Estoque/ProdutoList";
 import DividasList   from "./Clientes/DividasList";
 import Financeiro    from "./Financeiro/Financeiro";
 import Configuracoes from "./Configuracoes/Configuracoes";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -28,8 +27,8 @@ export default function PainelEstabelecimento() {
       if (!estabelecimentoId) return;
       setCarregando(true);
       try {
-        const resp = await fetch(
-          `${API_URL}/api/estabelecimentos/dados/${estabelecimentoId}`
+        const resp = await apiFetch(
+          `/api/estabelecimentos/dados/${estabelecimentoId}`
         );
         if (resp.ok) {
           const data = await resp.json();
