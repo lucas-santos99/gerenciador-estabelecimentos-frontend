@@ -31,12 +31,19 @@
   background: var(--est-sidebar);
   flex-shrink: 0;
   gap: 8px;
+  overflow: hidden;
 }
 
 .fin-tabs-nav {
   display: flex;
   gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
 }
+.fin-tabs-nav::-webkit-scrollbar { display: none; }
 
 .fin-tab-btn {
   padding: 14px 16px;
@@ -51,6 +58,7 @@
   margin-bottom: -1px;
   transition: all 0.18s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .fin-tab-btn:hover { color: var(--est-accent); }
 .fin-tab-btn.ativo {
@@ -693,11 +701,36 @@
 /* ========================= */
 
 @media (max-width: 768px) {
+  .fin-tabs { padding: 0 12px; gap: 4px; }
+  .fin-tab-btn { padding: 12px 10px; font-size: 0.75rem; }
+  .fin-tab-btn-imprimir { display: none; } /* esconde no mobile */
+
+  .fin-content { padding: 12px; }
+
   .fin-dre-grid   { grid-template-columns: 1fr; }
   .fin-dre-card.liquido { grid-column: 1; }
   .fin-conta-form-grid { grid-template-columns: 1fr; }
   .fin-contas-grid { grid-template-columns: 1fr; }
   .fin-resumo-grid { grid-template-columns: repeat(2, 1fr); }
+  .fin-report-grid { grid-template-columns: 1fr; }
+
+  .fin-form-filtros {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .fin-form-filtros .fin-form-group { min-width: unset; width: 100%; }
+  .fin-btn-gerar { width: 100%; }
+  .fin-btn-pdf   { width: 100%; }
+
+  .fin-contas-header { flex-wrap: wrap; gap: 8px; }
+  .fin-filtro-btns { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .fin-resumo-grid { grid-template-columns: 1fr; }
+  .fin-resumo-card-valor { font-size: 1.4rem; }
+  .fin-tab-btn { padding: 10px 8px; font-size: 0.7rem; }
 }
 
 /* ========================= */

@@ -770,13 +770,84 @@
 /* ========================= */
 
 @media (max-width: 900px) {
-  .estoque-sidebar { display: none; }
+  /* Sidebar vira drawer deslizável no mobile */
+  .estoque-container { position: relative; }
+
+  .estoque-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+  }
+
+  .estoque-sidebar.aberta {
+    transform: translateX(0);
+  }
+
+  /* Overlay para fechar sidebar */
+  .estoque-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+  .estoque-sidebar-overlay.visivel { display: block; }
+
+  /* Botão para abrir categorias no header */
+  .estoque-btn-cats-mobile {
+    display: flex !important;
+  }
+}
+
+/* Botão categorias mobile — escondido por padrão no desktop */
+.estoque-btn-cats-mobile {
+  display: none;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.18s;
+}
+.estoque-btn-cats-mobile:hover {
+  background: var(--est-accent);
+  color: #fff;
 }
 
 @media (max-width: 600px) {
-  .estoque-grid { grid-template-columns: 1fr; }
+  .estoque-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .estoque-header { padding: 10px 12px; gap: 8px; }
+  .estoque-busca-input { font-size: 1rem; }
+  .estoque-btn:not(.primary):not(.estoque-btn-cats-mobile) { padding: 9px 10px; }
+  /* Esconde Excel no mobile */
+  .estoque-btn.verde { display: none; }
+
+  /* Modal produto bottom sheet */
+  .prod-modal-overlay { align-items: flex-end; }
+  .prod-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 94vh;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 14px;
+  }
   .prod-form-grid { grid-template-columns: 1fr; }
   .prod-form-full { grid-column: 1; }
+  .prod-modal-acoes { flex-direction: row; }
 }
 
 /* ========================= */

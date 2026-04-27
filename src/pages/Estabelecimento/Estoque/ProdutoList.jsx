@@ -49,6 +49,7 @@ export default function ProdutoList({ estabelecimentoId }) {
   const [catNovaAberta,    setCatNovaAberta]    = useState(false);
   const [catSalvando,      setCatSalvando]      = useState(false);
   const [catErro,          setCatErro]          = useState('');
+  const [sidebarMobile,    setSidebarMobile]    = useState(false);
 
   const searchRef   = useRef(null);
   const catEditRef  = useRef(null);
@@ -269,8 +270,14 @@ export default function ProdutoList({ estabelecimentoId }) {
         />
       )}
 
+      {/* Overlay mobile para fechar sidebar */}
+      <div
+        className={`estoque-sidebar-overlay${sidebarMobile ? ' visivel' : ''}`}
+        onClick={() => setSidebarMobile(false)}
+      />
+
       {/* ── SIDEBAR CATEGORIAS ───────────────────────────── */}
-      <aside className="estoque-sidebar">
+      <aside className={`estoque-sidebar${sidebarMobile ? ' aberta' : ''}`}>
         <div className="estoque-sidebar-header">
           <div className="estoque-sidebar-titulo">Categorias</div>
           <button
@@ -403,6 +410,13 @@ export default function ProdutoList({ estabelecimentoId }) {
             onChange={e => setTermoBusca(e.target.value)}
           />
           <div className="estoque-header-btns">
+            <button
+              className="estoque-btn-cats-mobile"
+              onClick={() => setSidebarMobile(true)}
+              title="Categorias"
+            >
+              🗂 Categorias
+            </button>
             <button className="estoque-btn verde" onClick={exportarExcel} title="Exportar Excel">
               📥 Excel
             </button>
