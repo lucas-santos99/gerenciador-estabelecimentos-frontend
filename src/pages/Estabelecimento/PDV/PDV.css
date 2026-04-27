@@ -905,10 +905,79 @@
 /* ========================= */
 
 @media (max-width: 768px) {
-  .pdv-container { flex-direction: column; }
-  .pdv-busca { flex: none; max-height: 45vh; }
-  .pdv-carrinho { flex: none; height: 55vh; }
-  .pdv-resultados { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .pdv-container {
+    flex-direction: column;
+    height: calc(100vh - 64px); /* desconta o mobile toggle */
+  }
+
+  /* No mobile, busca e carrinho viram abas — JS controla via classe */
+  .pdv-busca {
+    flex: 1;
+    padding: 12px;
+    gap: 10px;
+    overflow: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--est-border);
+  }
+
+  .pdv-busca-input {
+    font-size: 1rem;
+    padding: 13px 14px;
+  }
+
+  .pdv-resultados {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .pdv-produto-card {
+    padding: 10px;
+  }
+
+  .pdv-carrinho {
+    height: 50vh;
+    flex: none;
+  }
+
+  /* Footer PDV mais fácil de tocar */
+  .pdv-footer { padding: 12px 14px; }
+
+  .pdv-btn-finalizar {
+    padding: 16px;
+    font-size: 1rem;
+  }
+
+  /* Modal pagamento fullscreen no mobile */
+  .pdv-modal-overlay {
+    align-items: flex-end;
+  }
+  .pdv-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    margin: 0;
+    width: 100%;
+    padding: 24px 16px;
+  }
+
+  /* Quantidade modal */
+  .pdv-qtd-modal {
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  .pdv-pagamento-total-valor { font-size: 2.2rem; }
+  .pdv-troco-input { font-size: 1.3rem; }
+}
+
+@media (max-width: 480px) {
+  .pdv-resultados { grid-template-columns: repeat(2, 1fr); }
+  .pdv-card-nome { font-size: 0.82rem; }
+  .pdv-card-preco { font-size: 0.95rem; }
+  .pdv-meios-lista { border-radius: 10px; }
+  .pdv-meio-item { padding: 15px 14px; } /* mais fácil de tocar */
+  .pdv-btn-confirmar,
+  .pdv-btn-cancelar { padding: 15px; }
 }
 
 /* ========================= */

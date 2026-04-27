@@ -786,11 +786,72 @@
 
 @media (max-width: 900px) {
   .cli-detalhes { display: none; }
-  .cli-grid { grid-template-columns: 1fr; }
+  .cli-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 }
 
-@media (max-width: 600px) {
-  .cli-toggle { display: none; }
+@media (max-width: 768px) {
+  .cli-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .cli-header-busca {
+    width: 100%;
+    flex: none;
+    order: 1;
+    font-size: 1rem;
+    padding: 12px 14px;
+  }
+
+  .cli-toggle {
+    order: 2;
+    flex: 1;
+  }
+
+  .cli-toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+  }
+
+  .cli-header-btns {
+    order: 3;
+    flex-shrink: 0;
+  }
+
+  .cli-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .cli-grid-wrapper { padding: 12px 14px; }
+
+  /* Ações do card maiores para toque */
+  .cli-btn-acao {
+    padding: 12px 6px;
+    font-size: 0.78rem;
+  }
+
+  /* Modal bottom sheet no mobile */
+  .cli-modal-overlay { align-items: flex-end; }
+  .cli-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 24px 16px;
+  }
+  .cli-receb-total-valor { font-size: 2rem; }
+  .cli-receb-input { font-size: 1.5rem; padding: 12px; }
+  .cli-meio-item { padding: 15px 14px; }
+}
+
+@media (max-width: 480px) {
+  .cli-toggle { width: 100%; }
+  .cli-header-btns .cli-btn:not(.primary) { display: none; } /* esconde imprimir no mobile */
+  .cli-divida-valor { font-size: 1.5rem; }
 }
 
 /* ========================= */
