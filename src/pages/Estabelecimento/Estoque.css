@@ -290,6 +290,41 @@
   flex-shrink: 0;
 }
 
+@media (max-width: 600px) {
+  .estoque-header {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .estoque-busca-input {
+    flex: 1 1 100%; /* ocupa linha inteira */
+    order: 1;
+  }
+
+  .estoque-header-btns {
+    flex: 1 1 100%; /* ocupa linha inteira */
+    order: 2;
+    justify-content: space-between;
+  }
+
+  /* Esconde imprimir e excel no mobile */
+  .estoque-btn:not(.primary):not(.estoque-btn-cats-mobile) {
+    display: none;
+  }
+
+  /* Categorias e + Produto lado a lado ocupando tudo */
+  .estoque-btn-cats-mobile {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .estoque-btn.primary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 .estoque-btn {
   padding: 9px 14px;
   border-radius: 10px;

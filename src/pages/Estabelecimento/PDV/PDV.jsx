@@ -343,7 +343,7 @@ export default function PDV({ estabelecimentoId }) {
         method: 'POST',
         body: JSON.stringify({
           estabelecimentoId, valor_total: total, meio_pagamento: meioPagamento,
-          carrinho: carrinho.map(i => ({ id: i.id, quantidade: parseFloat(i.quantidade), preco_venda: parseFloat(i.preco_venda) })),
+          carrinho: carrinho.map(i => ({ produto_id: i.id, quantidade: parseFloat(i.quantidade), preco_unitario: parseFloat(i.preco_venda) })),
           clienteId,
         }),
       });
