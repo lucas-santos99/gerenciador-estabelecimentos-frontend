@@ -38,6 +38,7 @@ export default function ProdutoList({ estabelecimentoId }) {
   const [erro,             setErro]             = useState('');
   const [categoriaAtiva,   setCategoriaAtiva]   = useState('todos');
   const [termoBusca,       setTermoBusca]       = useState('');
+  const [modoBusca,        setModoBusca]        = useState('nome'); // 'nome' | 'marca' | 'codigo'
   const [produtoFocadoId,  setProdutoFocadoId]  = useState(null);
   const [modalAberto,      setModalAberto]      = useState(false);
   const [produtoEditar,    setProdutoEditar]    = useState(null);
@@ -160,9 +161,12 @@ export default function ProdutoList({ estabelecimentoId }) {
       : p.categoria_id === categoriaAtiva;
 
     const busca = normalizar(termoBusca).trim();
-    const buscaOK = busca.length === 0
-      ? true
-      : normalizar(p.nome).includes(busca) || (p.codigo_barras || '').toLowerCase().includes(busca);
+    let buscaOK = true;
+    if (busca.length > 0) {
+      if (modoBusca === 'nome')   buscaOK = normalizar(p.nome).includes(busca);
+      if (modoBusca === 'marca')  buscaOK = normalizar(p.marca || '').includes(busca);
+      if (modoBusca === 'codigo') buscaOK = (p.codigo_barras || '').toLowerCase().includes(busca);
+    }
 
     return catOK && buscaOK;
   });
@@ -416,14 +420,36 @@ export default function ProdutoList({ estabelecimentoId }) {
 
         {/* Header */}
         <div className="estoque-header">
-          <input
-            ref={searchRef}
-            className="estoque-busca-input"
-            type="text"
-            placeholder="🔍  Buscar por nome ou código de barras…"
-            value={termoBusca}
-            onChange={e => setTermoBusca(e.target.value)}
-          />
+          <div className="estoque-busca-wrap">
+            <input
+              ref={searchRef}
+              className="estoque-busca-input"
+              type="text"
+              placeholder={
+                modoBusca === 'nome'   ? '🔍  Buscar por nome…' :
+                modoBusca === 'marca'  ? '🏷️  Buscar por marca…' :
+                                         '🔢  Buscar por código de barras…'
+              }
+              value={termoBusca}
+              onChange={e => setTermoBusca(e.target.value)}
+            />
+            <div className="estoque-busca-modos">
+              {[
+                { key: 'nome',   label: 'Nome' },
+                { key: 'marca',  label: 'Marca' },
+                { key: 'codigo', label: 'Código' },
+              ].map(m => (
+                <button
+                  key={m.key}
+                  className={`estoque-busca-modo-btn${modoBusca === m.key ? ' ativo' : ''}`}
+                  onClick={() => { setModoBusca(m.key); setTermoBusca(''); searchRef.current?.focus(); }}
+                  type="button"
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="estoque-header-btns">
             <button
               className="estoque-btn-cats-mobile"

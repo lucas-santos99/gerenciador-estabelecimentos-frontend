@@ -283,6 +283,44 @@
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
+/* Busca com toggle de modo */
+.estoque-busca-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.estoque-busca-modos {
+  display: flex;
+  gap: 4px;
+}
+
+.estoque-busca-modo-btn {
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-muted);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.estoque-busca-modo-btn:hover {
+  color: var(--est-accent);
+  border-color: var(--est-border-accent);
+}
+.estoque-busca-modo-btn.ativo {
+  background: var(--est-accent-dim);
+  border-color: var(--est-accent);
+  color: var(--est-accent);
+}
+
 /* Botões do header */
 .estoque-header-btns {
   display: flex;
