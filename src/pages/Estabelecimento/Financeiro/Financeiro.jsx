@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import '../Financeiro.css';
 
 
@@ -54,6 +55,20 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [reportFim,      setReportFim]      = useState(hoje());
   const [reportCat,      setReportCat]      = useState('');
 
+  /* ── Estado Histórico de Vendas ──────────────────────────── */
+  const [historico,        setHistorico]        = useState([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [erroHistorico,    setErroHistorico]    = useState('');
+  const [histInicio,       setHistInicio]       = useState(hoje());
+  const [histFim,          setHistFim]          = useState(hoje());
+  const [vendaDetalhes,    setVendaDetalhes]    = useState(null);
+
+  /* ── Estado Relatório Estoque ────────────────────────────── */
+  const [estoque,        setEstoque]        = useState([]);
+  const [loadingEstoque, setLoadingEstoque] = useState(false);
+  const [erroEstoque,    setErroEstoque]    = useState('');
+  const [filtrEstoque,   setFiltrEstoque]   = useState('todos');
+
   /* ── Carga inicial ───────────────────────────────────────── */
   useEffect(() => {
     if (!estabelecimentoId) return;
@@ -63,6 +78,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
   useEffect(() => {
     if (abaAtiva === 'contas' && estabelecimentoId) carregarContas(filtroStatus);
+    if (abaAtiva === 'historico' && estabelecimentoId) carregarHistorico();
+    if (abaAtiva === 'estoque' && estabelecimentoId) carregarEstoque();
   }, [abaAtiva, filtroStatus, estabelecimentoId]);
 
   /* ════════════════════════════════════════════════════════
@@ -287,18 +304,108 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   }
 
   /* ════════════════════════════════════════════════════════
+     HISTÓRICO DE VENDAS
+  ════════════════════════════════════════════════════════ */
+  async function carregarHistorico() {
+    setLoadingHistorico(true);
+    setErroHistorico('');
+    try {
+      const params = new URLSearchParams({ data_inicio: histInicio, data_fim: histFim });
+      const resp = await apiFetch(`/api/financeiro/historico?${params}`);
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      setHistorico(await resp.json());
+    } catch (err) { setErroHistorico(err.message); }
+    finally { setLoadingHistorico(false); }
+  }
+
+  /* ════════════════════════════════════════════════════════
+     RELATÓRIO DE ESTOQUE
+  ════════════════════════════════════════════════════════ */
+  async function carregarEstoque() {
+    setLoadingEstoque(true);
+    setErroEstoque('');
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos`);
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      setEstoque(await resp.json());
+    } catch (err) { setErroEstoque(err.message); }
+    finally { setLoadingEstoque(false); }
+  }
+
+  function estoqueStatus(p) {
+    const e = parseFloat(p.estoque_atual);
+    const m = parseFloat(p.estoque_minimo);
+    if (e <= 0) return 'critico';
+    if (e <= m) return 'baixo';
+    return 'ok';
+  }
+
+  const estoqueFiltrado = estoque.filter(p => {
+    if (filtrEstoque === 'todos') return true;
+    return estoqueStatus(p) === filtrEstoque;
+  });
+
+  const totalEstoqueCusto = estoque.reduce((s, p) => s + parseFloat(p.preco_custo || 0) * parseFloat(p.estoque_atual || 0), 0);
+  const totalEstoqueVenda = estoque.reduce((s, p) => s + parseFloat(p.preco_venda || 0) * parseFloat(p.estoque_atual || 0), 0);
+  const qtdCritico = estoque.filter(p => estoqueStatus(p) === 'critico').length;
+  const qtdBaixo   = estoque.filter(p => estoqueStatus(p) === 'baixo').length;
+
+  /* ════════════════════════════════════════════════════════
+     EXPORTAR EXCEL — RELATÓRIO DE PRODUTOS
+  ════════════════════════════════════════════════════════ */
+  function exportarRelatorioExcel() {
+    if (!reportProd.length) return;
+    const dados = reportProd.map((p, i) => ({
+      '#': i + 1,
+      'Produto':        p.produto_nome,
+      'Categoria':      p.categoria_nome || 'Sem categoria',
+      'Unidade':        p.unidade_medida,
+      'Total Vendido':  parseFloat(p.total_vendido),
+      'Receita (R$)':   parseFloat(p.receita_total),
+      'Custo (R$)':     parseFloat(p.custo_total || 0),
+      'Lucro (R$)':     parseFloat(p.receita_total) - parseFloat(p.custo_total || 0),
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Relatório de Vendas');
+    XLSX.writeFile(wb, `Relatorio_Vendas_${reportInicio}_${reportFim}.xlsx`);
+  }
+
+  function exportarEstoqueExcel() {
+    if (!estoque.length) return;
+    const dados = estoque.map(p => ({
+      'Produto':       p.nome,
+      'Categoria':     p.nome_categoria || 'Sem categoria',
+      'Unidade':       p.unidade_medida,
+      'Estoque Atual': parseFloat(p.estoque_atual),
+      'Estoque Mín.':  parseFloat(p.estoque_minimo),
+      'Status':        estoqueStatus(p),
+      'Custo Unit.':   parseFloat(p.preco_custo || 0),
+      'Venda Unit.':   parseFloat(p.preco_venda || 0),
+      'Total Custo':   parseFloat(p.preco_custo || 0) * parseFloat(p.estoque_atual || 0),
+      'Total Venda':   parseFloat(p.preco_venda || 0) * parseFloat(p.estoque_atual || 0),
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
+    XLSX.writeFile(wb, `Estoque_${hoje()}.xlsx`);
+  }
+
+  /* ════════════════════════════════════════════════════════
      RENDER
   ════════════════════════════════════════════════════════ */
   return (
     <div className="fin-container">
 
-      {/* ── TABS NAV ─────────────────────────────────────── */}
+        {/* ── TABS NAV ─────────────────────────────────────── */}
       <div className="fin-tabs">
         <div className="fin-tabs-nav">
           {[
-            { key: 'fluxo',     label: '💰 Fluxo de Caixa' },
-            { key: 'contas',    label: '📋 Contas a Pagar' },
-            { key: 'relatorios',label: '📊 Relatório de Vendas' },
+            { key: 'fluxo',      label: '💰 Fluxo de Caixa' },
+            { key: 'contas',     label: '📋 Contas a Pagar' },
+            { key: 'relatorios', label: '📊 Relatório de Vendas' },
+            { key: 'historico',  label: '🧾 Histórico' },
+            { key: 'estoque',    label: '📦 Estoque' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -551,6 +658,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           <>
             <div className="fin-section-header">
               <span className="fin-section-titulo">📊 Produtos mais vendidos</span>
+              {reportProd.length > 0 && (
+                <button className="fin-btn-excel" onClick={exportarRelatorioExcel}>
+                  📥 Excel
+                </button>
+              )}
             </div>
 
             <form className="fin-form-filtros" onSubmit={gerarReportProdutos}>
@@ -587,27 +699,199 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                     <small>Selecione um período e clique em Gerar</small>
                   </div>
                 ) : (
-                  reportProd.map((prod, i) => (
-                    <div key={i} className="fin-report-card">
-                      <div className="fin-report-nome">{prod.produto_nome}</div>
-                      <div className="fin-report-info">
-                        <span className="fin-report-info-label">Categoria</span>
-                        <span className="fin-report-info-valor">{prod.categoria_nome || 'Sem categoria'}</span>
+                  reportProd.map((prod, i) => {
+                    const lucro = parseFloat(prod.receita_total) - parseFloat(prod.custo_total || 0);
+                    const margem = parseFloat(prod.receita_total) > 0
+                      ? ((lucro / parseFloat(prod.receita_total)) * 100).toFixed(1)
+                      : '0.0';
+                    return (
+                      <div key={i} className="fin-report-card">
+                        <div className="fin-report-rank">#{i + 1}</div>
+                        <div className="fin-report-nome">{prod.produto_nome}</div>
+                        <div className="fin-report-info">
+                          <span className="fin-report-info-label">Categoria</span>
+                          <span className="fin-report-info-valor">{prod.categoria_nome || 'Sem categoria'}</span>
+                        </div>
+                        <div className="fin-report-info">
+                          <span className="fin-report-info-label">Total vendido</span>
+                          <span className="fin-report-info-valor qtd">
+                            {prod.unidade_medida === 'kg'
+                              ? `${parseFloat(prod.total_vendido).toFixed(3)} kg`
+                              : `${parseFloat(prod.total_vendido).toFixed(0)} un`}
+                          </span>
+                        </div>
+                        <div className="fin-report-info">
+                          <span className="fin-report-info-label">Receita</span>
+                          <span className="fin-report-info-valor receita">{fmt(prod.receita_total)}</span>
+                        </div>
+                        <div className="fin-report-info">
+                          <span className="fin-report-info-label">Lucro</span>
+                          <span className={`fin-report-info-valor ${lucro >= 0 ? 'receita' : 'negativo'}`}>
+                            {fmt(lucro)} <span className="fin-report-margem">({margem}%)</span>
+                          </span>
+                        </div>
                       </div>
-                      <div className="fin-report-info">
-                        <span className="fin-report-info-label">Total vendido</span>
-                        <span className="fin-report-info-valor qtd">
-                          {prod.unidade_medida === 'kg'
-                            ? `${parseFloat(prod.total_vendido).toFixed(3)} kg`
-                            : `${parseFloat(prod.total_vendido).toFixed(0)} un`}
-                        </span>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ ABA 4: HISTÓRICO DE VENDAS ══ */}
+        {abaAtiva === 'historico' && (
+          <>
+            <div className="fin-section-header">
+              <span className="fin-section-titulo">🧾 Histórico de Vendas</span>
+            </div>
+
+            <form className="fin-form-filtros" onSubmit={e => { e.preventDefault(); carregarHistorico(); }}>
+              <div className="fin-form-group">
+                <label className="fin-form-label">Data início</label>
+                <input className="fin-form-input" type="date" value={histInicio} onChange={e => setHistInicio(e.target.value)} />
+              </div>
+              <div className="fin-form-group">
+                <label className="fin-form-label">Data fim</label>
+                <input className="fin-form-input" type="date" value={histFim} onChange={e => setHistFim(e.target.value)} />
+              </div>
+              <button type="submit" className="fin-btn-gerar" disabled={loadingHistorico}>
+                {loadingHistorico ? '⏳…' : '▶ Buscar'}
+              </button>
+            </form>
+
+            {erroHistorico && <div className="fin-erro">⚠️ {erroHistorico}</div>}
+
+            {loadingHistorico ? (
+              <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
+            ) : (
+              <div className="fin-historico-lista">
+                {historico.length === 0 ? (
+                  <div className="fin-vazio">
+                    <span className="fin-vazio-icon">🧾</span>
+                    <p>Nenhuma venda encontrada</p>
+                    <small>Selecione um período e clique em Buscar</small>
+                  </div>
+                ) : (
+                  historico.map(venda => (
+                    <div key={venda.id} className="fin-historico-card">
+                      <div className="fin-historico-header" onClick={() => setVendaDetalhes(vendaDetalhes?.id === venda.id ? null : venda)}>
+                        <div className="fin-historico-info">
+                          <span className="fin-historico-data">{new Date(venda.data_venda).toLocaleString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{venda.meio_pagamento}</span>
+                          {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
+                        </div>
+                        <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
                       </div>
-                      <div className="fin-report-info">
-                        <span className="fin-report-info-label">Receita</span>
-                        <span className="fin-report-info-valor receita">{fmt(prod.receita_total)}</span>
-                      </div>
+                      {vendaDetalhes?.id === venda.id && venda.itens?.length > 0 && (
+                        <div className="fin-historico-itens">
+                          {venda.itens.map((item, i) => (
+                            <div key={i} className="fin-historico-item">
+                              <span className="fin-hist-item-nome">{item.produto_nome}</span>
+                              <span className="fin-hist-item-qtd">{item.quantidade}×</span>
+                              <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ ABA 5: ESTOQUE ══ */}
+        {abaAtiva === 'estoque' && (
+          <>
+            <div className="fin-section-header">
+              <span className="fin-section-titulo">📦 Relatório de Estoque</span>
+              {estoque.length > 0 && (
+                <button className="fin-btn-excel" onClick={exportarEstoqueExcel}>📥 Excel</button>
+              )}
+            </div>
+
+            {/* Cards de resumo */}
+            <div className="fin-estoque-resumo">
+              <div className="fin-estoque-resumo-card">
+                <span className="fin-estoque-resumo-label">Valor em Custo</span>
+                <span className="fin-estoque-resumo-valor">{fmt(totalEstoqueCusto)}</span>
+              </div>
+              <div className="fin-estoque-resumo-card destaque">
+                <span className="fin-estoque-resumo-label">Valor em Venda</span>
+                <span className="fin-estoque-resumo-valor">{fmt(totalEstoqueVenda)}</span>
+              </div>
+              <div className="fin-estoque-resumo-card alerta">
+                <span className="fin-estoque-resumo-label">⚠️ Estoque Baixo</span>
+                <span className="fin-estoque-resumo-valor">{qtdBaixo} produtos</span>
+              </div>
+              <div className="fin-estoque-resumo-card critico">
+                <span className="fin-estoque-resumo-label">🔴 Estoque Crítico</span>
+                <span className="fin-estoque-resumo-valor">{qtdCritico} produtos</span>
+              </div>
+            </div>
+
+            {/* Filtros */}
+            <div className="fin-filtro-btns" style={{ marginBottom: 16 }}>
+              {[
+                { key: 'todos',   label: `Todos (${estoque.length})` },
+                { key: 'critico', label: `🔴 Crítico (${qtdCritico})` },
+                { key: 'baixo',   label: `⚠️ Baixo (${qtdBaixo})` },
+                { key: 'ok',      label: `✅ Normal (${estoque.length - qtdCritico - qtdBaixo})` },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  className={`fin-filtro-btn${filtrEstoque === f.key ? ' ativo' : ''}`}
+                  onClick={() => setFiltrEstoque(f.key)}
+                >{f.label}</button>
+              ))}
+            </div>
+
+            {erroEstoque && <div className="fin-erro">⚠️ {erroEstoque}</div>}
+
+            {loadingEstoque ? (
+              <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
+            ) : (
+              <div className="fin-estoque-grid">
+                {estoqueFiltrado.length === 0 ? (
+                  <div className="fin-vazio">
+                    <span className="fin-vazio-icon">📦</span>
+                    <p>Nenhum produto encontrado</p>
+                  </div>
+                ) : (
+                  estoqueFiltrado.map(p => {
+                    const status = estoqueStatus(p);
+                    const estAtual = parseFloat(p.estoque_atual);
+                    const unidade = p.unidade_medida === 'kg'
+                      ? `${estAtual.toFixed(3)} kg`
+                      : `${Math.trunc(estAtual)} un`;
+                    return (
+                      <div key={p.id} className={`fin-estoque-card ${status}`}>
+                        <div className={`fin-estoque-badge ${status}`}>
+                          {status === 'critico' ? '🔴 Crítico' : status === 'baixo' ? '⚠️ Baixo' : '✅ Normal'}
+                        </div>
+                        <div className="fin-estoque-nome">{p.nome}</div>
+                        <div className="fin-estoque-cat">{p.nome_categoria || 'Sem categoria'}</div>
+                        <div className="fin-estoque-info-row">
+                          <span className="fin-estoque-info-label">Estoque</span>
+                          <span className="fin-estoque-info-valor">{unidade}</span>
+                        </div>
+                        <div className="fin-estoque-info-row">
+                          <span className="fin-estoque-info-label">Mínimo</span>
+                          <span className="fin-estoque-info-valor">{p.estoque_minimo} {p.unidade_medida}</span>
+                        </div>
+                        <div className="fin-estoque-info-row">
+                          <span className="fin-estoque-info-label">Venda</span>
+                          <span className="fin-estoque-info-valor accent">{fmt(p.preco_venda)}</span>
+                        </div>
+                        <div className="fin-estoque-info-row">
+                          <span className="fin-estoque-info-label">Total estoque</span>
+                          <span className="fin-estoque-info-valor">{fmt(parseFloat(p.preco_venda) * estAtual)}</span>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             )}
