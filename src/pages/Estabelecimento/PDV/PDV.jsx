@@ -409,7 +409,7 @@ export default function PDV({ estabelecimentoId }) {
           {!loadingBusca && resultados.length === 0 && termoBusca.length <= 1 && <li className="pdv-resultados-status"><span>🛒</span>Digite o nome ou código do produto</li>}
           {resultados.map((p, i) => (
             <li key={p.id} className={`pdv-produto-card${buscaIndex === i ? ' selecionado' : ''}`} onClick={() => selecionarProduto(p)} onMouseEnter={() => setBuscaIndex(i)}>
-              <span className="pdv-card-nome">{p.nome}</span>
+              <span className="pdv-card-nome">{p.nome}{p.marca ? <span className="pdv-card-marca"> — {p.marca}</span> : ''}</span>
               <span className="pdv-card-preco">{fmt(p.preco_venda)}</span>
               <span className={`pdv-card-estoque ${estoqueClass(p)}`}>{estoqueLabel(p)}</span>
             </li>
@@ -429,7 +429,7 @@ export default function PDV({ estabelecimentoId }) {
             carrinho.map((item, idx) => (
               <li key={`${item.id}-${idx}`} className="pdv-item">
                 <div className="pdv-item-info" onClick={() => editarItem(item, idx)}>
-                  <span className="pdv-item-nome">{item.nome}</span>
+                  <span className="pdv-item-nome">{item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}</span>
                   <span className="pdv-item-qtde">{item.unidade_medida === 'kg' ? `${parseFloat(item.quantidade).toFixed(3)} kg` : `${parseFloat(item.quantidade).toFixed(0)} un`}{' @ '}{fmt(item.preco_venda)}</span>
                 </div>
                 <span className="pdv-item-total">{fmt(item.preco_venda * item.quantidade)}</span>
