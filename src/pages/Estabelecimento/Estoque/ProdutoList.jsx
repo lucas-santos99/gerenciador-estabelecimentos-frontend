@@ -474,6 +474,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
           {formatarEstoque(produto.estoque_atual, produto.unidade_medida)}
         </span>
         <div className="prod-nome">{produto.nome}</div>
+        {produto.marca && <div className="prod-marca">{produto.marca}</div>}
         <div className="prod-codigo">{produto.codigo_barras || 'Sem código'}</div>
         <div className="prod-precos">
           <div className="prod-preco-item">

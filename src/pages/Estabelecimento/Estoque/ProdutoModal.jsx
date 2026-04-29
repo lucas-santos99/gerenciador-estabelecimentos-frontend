@@ -18,6 +18,7 @@ export default function ProdutoModal({
 
   const [form, setForm] = useState({
     nome:            '',
+    marca:           '',
     codigo_barras:   '',
     categoria_id:    '',
     unidade_medida:  'un',
@@ -42,6 +43,7 @@ export default function ProdutoModal({
     if (isEdit) {
       setForm({
         nome:           produtoEditar.nome           || '',
+        marca:          produtoEditar.marca          || '',
         codigo_barras:  produtoEditar.codigo_barras  || '',
         categoria_id:   produtoEditar.categoria_id   || '',
         unidade_medida: produtoEditar.unidade_medida || 'un',
@@ -172,6 +174,17 @@ export default function ProdutoModal({
               </div>
 
               <div className="prod-form-group">
+                <label className="prod-label">Marca</label>
+                <input
+                  className="prod-input"
+                  name="marca"
+                  placeholder="Ex: Tio João, Camil…"
+                  value={form.marca}
+                  onChange={atualizar}
+                />
+              </div>
+
+              <div className="prod-form-group">
                 <label className="prod-label">Código de barras</label>
                 <input
                   className="prod-input"
@@ -182,7 +195,7 @@ export default function ProdutoModal({
                 />
               </div>
 
-              <div className="prod-form-group">
+              <div className="prod-form-group prod-form-full">
                 <label className="prod-label">Categoria</label>
                 <div className="prod-cat-row">
                   <select
@@ -240,24 +253,35 @@ export default function ProdutoModal({
 
           {/* ── Estoque ───────────────────────────────── */}
           <div className="prod-form-section">
-            <div className="prod-form-section-titulo">📦 Estoque</div>
+            <div className="prod-form-section-titulo">📦 Estoque & Unidade</div>
             <div className="prod-form-grid">
 
-              <div className="prod-form-group">
+              {/* Seletor de unidade com visual melhorado */}
+              <div className="prod-form-group prod-form-full">
                 <label className="prod-label">Vendido por *</label>
-                <select
-                  className="prod-select"
-                  name="unidade_medida"
-                  value={form.unidade_medida}
-                  onChange={atualizar}
-                >
-                  <option value="un">Unidade (un)</option>
-                  <option value="kg">Quilo (kg)</option>
-                </select>
+                <div className="prod-unidade-toggle">
+                  {[
+                    { value: 'un', label: 'Unidade', sub: 'peças, caixas, pacotes', icon: '📦' },
+                    { value: 'kg', label: 'Quilo',   sub: 'granel, frios, hortifruti', icon: '⚖️' },
+                  ].map(op => (
+                    <button
+                      key={op.value}
+                      type="button"
+                      className={`prod-unidade-btn${form.unidade_medida === op.value ? ' ativo' : ''}`}
+                      onClick={() => setForm(prev => ({ ...prev, unidade_medida: op.value }))}
+                    >
+                      <span className="prod-unidade-icon">{op.icon}</span>
+                      <span className="prod-unidade-label">{op.label}</span>
+                      <span className="prod-unidade-sub">{op.sub}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="prod-form-group">
-                <label className="prod-label">Estoque atual *</label>
+                <label className="prod-label">
+                  Estoque atual * <span className="prod-label-unit">({form.unidade_medida})</span>
+                </label>
                 <input
                   className="prod-input"
                   type="number"
@@ -270,8 +294,10 @@ export default function ProdutoModal({
                 />
               </div>
 
-              <div className="prod-form-group prod-form-full">
-                <label className="prod-label">Estoque mínimo (alerta)</label>
+              <div className="prod-form-group">
+                <label className="prod-label">
+                  Estoque mínimo <span className="prod-label-unit">({form.unidade_medida})</span>
+                </label>
                 <input
                   className="prod-input"
                   type="number"
@@ -281,6 +307,7 @@ export default function ProdutoModal({
                   min="0"
                   step={stepEstoque}
                 />
+                <span className="prod-label-hint">Alerta de estoque baixo</span>
               </div>
 
             </div>
@@ -289,8 +316,28 @@ export default function ProdutoModal({
           {/* ── Preços ────────────────────────────────── */}
           <div className="prod-form-section">
             <div className="prod-form-section-titulo">💰 Preços</div>
-            <div className="prod-form-grid">
 
+            {/* Indicador de margem dinâmico */}
+            {parseFloat(form.preco_venda) > 0 && parseFloat(form.preco_custo) > 0 && (
+              <div className="prod-margem-preview">
+                {(() => {
+                  const custo = parseFloat(form.preco_custo);
+                  const venda = parseFloat(form.preco_venda);
+                  const lucro = venda - custo;
+                  const margem = ((lucro / venda) * 100).toFixed(1);
+                  return (
+                    <>
+                      <span>Lucro: <strong>R$ {lucro.toFixed(2).replace('.', ',')}</strong></span>
+                      <span className={`prod-margem-badge ${margem < 0 ? 'negativo' : margem < 20 ? 'baixo' : 'bom'}`}>
+                        Margem {margem}%
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div className="prod-form-grid">
               <div className="prod-form-group">
                 <label className="prod-label">{labelCusto}</label>
                 <input
@@ -317,7 +364,6 @@ export default function ProdutoModal({
                   required
                 />
               </div>
-
             </div>
           </div>
 

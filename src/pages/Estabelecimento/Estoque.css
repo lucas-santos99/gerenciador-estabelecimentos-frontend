@@ -678,7 +678,99 @@
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
-/* Categoria com botão + */
+/* Marca do produto */
+.prod-marca {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--est-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1px;
+  margin-right: 60px;
+}
+
+/* Label com unidade */
+.prod-label-unit {
+  font-size: 0.65rem;
+  color: var(--est-accent);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.prod-label-hint {
+  font-size: 0.68rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Toggle de unidade */
+.prod-unidade-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.prod-unidade-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--est-border);
+  background: var(--est-input);
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+.prod-unidade-btn:hover {
+  border-color: var(--est-border-accent);
+  background: var(--est-accent-dim);
+}
+.prod-unidade-btn.ativo {
+  border-color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+
+.prod-unidade-icon { font-size: 1.3rem; }
+.prod-unidade-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--est-text);
+}
+.prod-unidade-btn.ativo .prod-unidade-label { color: var(--est-accent); }
+.prod-unidade-sub {
+  font-size: 0.65rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+}
+
+/* Preview de margem */
+.prod-margem-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+  margin-bottom: 12px;
+}
+
+.prod-margem-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.prod-margem-badge.bom     { background: var(--est-success-dim); color: var(--est-success); }
+.prod-margem-badge.baixo   { background: var(--est-warning-dim); color: var(--est-warning); }
+.prod-margem-badge.negativo { background: var(--est-danger-dim);  color: var(--est-danger); }
 .prod-cat-row {
   display: flex;
   gap: 6px;
