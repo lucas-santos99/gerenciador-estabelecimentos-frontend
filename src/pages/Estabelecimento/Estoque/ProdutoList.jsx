@@ -49,6 +49,7 @@ export default function ProdutoList({ estabelecimentoId }) {
   const [catNovaAberta,    setCatNovaAberta]    = useState(false);
   const [catSalvando,      setCatSalvando]      = useState(false);
   const [catErro,          setCatErro]          = useState('');
+  const [catBusca,         setCatBusca]         = useState('');
   const [sidebarMobile,    setSidebarMobile]    = useState(false);
 
   const searchRef   = useRef(null);
@@ -315,6 +316,18 @@ export default function ProdutoList({ estabelecimentoId }) {
 
         {catErro && <div className="estoque-cat-erro">⚠️ {catErro}</div>}
 
+        {/* Busca de categoria */}
+        {categorias.length > 5 && (
+          <div className="estoque-cat-busca-wrap">
+            <input
+              className="estoque-cat-busca"
+              placeholder="🔍 Filtrar categorias…"
+              value={catBusca}
+              onChange={e => setCatBusca(e.target.value)}
+            />
+          </div>
+        )}
+
         <ul className="estoque-cats">
 
           <li>
@@ -327,7 +340,9 @@ export default function ProdutoList({ estabelecimentoId }) {
             </button>
           </li>
 
-          {categorias.map(cat => (
+          {categorias
+            .filter(cat => !catBusca.trim() || cat.nome.toLowerCase().includes(catBusca.toLowerCase()))
+            .map(cat => (
             <li key={cat.id} className="estoque-cat-li">
               {catEditandoId === cat.id ? (
                 /* Modo edição inline */
@@ -463,6 +478,7 @@ export default function ProdutoList({ estabelecimentoId }) {
 /* ── Card de produto ─────────────────────────────────────────*/
 function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
   const status = estoqueStatus(produto);
+  const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
 
   return (
     <div
@@ -475,14 +491,19 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
         </span>
         <div className="prod-nome">{produto.nome}</div>
         {produto.marca && <div className="prod-marca">{produto.marca}</div>}
-        <div className="prod-codigo">{produto.codigo_barras || 'Sem código'}</div>
+        <div className="prod-card-meta">
+          {produto.nome_categoria && (
+            <span className="prod-badge-categoria">{produto.nome_categoria}</span>
+          )}
+          <span className="prod-codigo-inline">{produto.codigo_barras || ''}</span>
+        </div>
         <div className="prod-precos">
           <div className="prod-preco-item">
-            <span className="prod-preco-label">Custo</span>
+            <span className="prod-preco-label">Custo{unSufixo}</span>
             <span className="prod-preco-valor">{fmt(produto.preco_custo)}</span>
           </div>
           <div className="prod-preco-item">
-            <span className="prod-preco-label">Venda</span>
+            <span className="prod-preco-label">Venda{unSufixo}</span>
             <span className="prod-preco-valor venda">{fmt(produto.preco_venda)}</span>
           </div>
         </div>

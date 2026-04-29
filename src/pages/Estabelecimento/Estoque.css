@@ -678,7 +678,58 @@
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
-/* Marca do produto */
+/* Meta row — categoria + código */
+.prod-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  min-height: 1.2em;
+}
+
+.prod-badge-categoria {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  border: 1px solid var(--est-border-accent);
+  white-space: nowrap;
+}
+
+.prod-codigo-inline {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-text-muted);
+}
+
+/* Busca de categoria na sidebar */
+.estoque-cat-busca-wrap {
+  padding: 6px 8px 0;
+}
+
+.estoque-cat-busca {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+.estoque-cat-busca:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 2px var(--est-accent-dim);
+}
 .prod-marca {
   font-size: 0.7rem;
   font-weight: 700;
