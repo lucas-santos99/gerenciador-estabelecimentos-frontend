@@ -362,16 +362,17 @@
 }
 
 .cli-detalhes-header {
-  padding: 16px 16px 12px;
+  padding: 14px 16px 12px;
   border-bottom: 1px solid var(--est-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  background: var(--est-card);
 }
 
 .cli-detalhes-titulo {
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: var(--est-text);
   letter-spacing: -0.01em;
@@ -381,15 +382,46 @@
   background: none;
   border: none;
   color: var(--est-text-muted);
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 0.15s;
+  line-height: 1;
 }
 .cli-detalhes-fechar:hover {
   background: var(--est-danger-dim);
   color: var(--est-danger);
+}
+
+/* Abas */
+.cli-detalhes-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--est-border);
+  flex-shrink: 0;
+  background: var(--est-card);
+  padding: 0 12px;
+  gap: 4px;
+}
+
+.cli-detalhes-tab {
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--est-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cli-detalhes-tab:hover { color: var(--est-accent); }
+.cli-detalhes-tab.ativo {
+  color: var(--est-accent);
+  border-bottom-color: var(--est-accent);
 }
 
 .cli-detalhes-body {
@@ -398,31 +430,46 @@
   padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--est-border) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
+/* Card de venda */
 .cli-venda-card {
   background: var(--est-card);
   border: 1px solid var(--est-border);
   border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 10px;
-  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: border-color 0.15s;
 }
+.cli-venda-card:hover { border-color: var(--est-border-accent); }
 
 .cli-venda-info {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--est-text-soft);
-  margin-bottom: 8px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--est-input);
+  border-bottom: 1px solid var(--est-border);
 }
 
-.cli-venda-info strong { color: var(--est-text); }
+.cli-venda-info-data {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+}
+
+.cli-venda-info-valor {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--est-danger);
+  font-family: 'JetBrains Mono', monospace;
+}
 
 .cli-venda-itens {
   list-style: none;
-  padding: 0;
+  padding: 6px 0;
   margin: 0;
 }
 
@@ -430,7 +477,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--est-border);
   font-size: 0.78rem;
 }
@@ -439,16 +486,23 @@
 .cli-item-qtd {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: var(--est-text-muted);
+  color: var(--est-accent);
   font-size: 0.72rem;
   flex-shrink: 0;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  padding: 1px 6px;
+  border-radius: 5px;
+  min-width: 38px;
+  text-align: center;
 }
 .cli-item-nome    { flex: 1; color: var(--est-text); font-weight: 600; }
 .cli-item-subtotal {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: var(--est-accent);
+  color: var(--est-text-soft);
   flex-shrink: 0;
+  font-size: 0.75rem;
 }
 
 .cli-detalhes-loading {

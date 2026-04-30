@@ -86,19 +86,25 @@ function DetalhesFiado({ cliente, onFechar }) {
               vendas.map(venda => (
                 <div key={venda.venda_id} className="cli-venda-card">
                   <div className="cli-venda-info">
-                    <span>📅 {formatarData(venda.data_venda)}</span>
-                    <strong>{fmt(venda.valor_total)}</strong>
+                    <span className="cli-venda-info-data">📅 {formatarData(venda.data_venda)}</span>
+                    <span className="cli-venda-info-valor">{fmt(venda.valor_total)}</span>
                   </div>
                   <ul className="cli-venda-itens">
-                    {venda.itens.map((item, i) => (
-                      <li key={i} className="cli-venda-item">
-                        <span className="cli-item-qtd">{item.quantidade}×</span>
-                        <span className="cli-item-nome">{item.produto_nome}</span>
-                        <span className="cli-item-subtotal">
-                          {fmt(item.quantidade * item.preco_unitario)}
-                        </span>
-                      </li>
-                    ))}
+                    {venda.itens.map((item, i) => {
+                      const unidade = item.unidade_medida || 'un';
+                      const qtdLabel = unidade === 'kg'
+                        ? `${parseFloat(item.quantidade).toFixed(3)} kg`
+                        : `${parseFloat(item.quantidade).toFixed(0)}×`;
+                      return (
+                        <li key={i} className="cli-venda-item">
+                          <span className="cli-item-qtd">{qtdLabel}</span>
+                          <span className="cli-item-nome">{item.produto_nome}</span>
+                          <span className="cli-item-subtotal">
+                            {fmt(item.quantidade * item.preco_unitario)}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))
