@@ -830,7 +830,11 @@
   background: rgba(37,211,102,0.1);
   color: #25d366;
   border-right: 1px solid var(--est-border);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 .cli-btn-acao.whatsapp:hover {
   background: #25d366;
