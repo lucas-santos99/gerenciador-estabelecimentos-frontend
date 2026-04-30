@@ -70,6 +70,7 @@ export default function PainelEstabelecimento() {
         return (
           <DividasList
             estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
 

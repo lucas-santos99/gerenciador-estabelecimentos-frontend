@@ -82,7 +82,7 @@ function DetalhesFiado({ cliente, onFechar }) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function DividasList({ estabelecimentoId }) {
+export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) {
 
   const [viewMode,          setViewMode]          = useState('devedores');
   const [dividas,           setDividas]           = useState([]);
@@ -172,7 +172,8 @@ export default function DividasList({ estabelecimentoId }) {
     }
     const valor = parseFloat(cliente.saldo_devedor || 0)
       .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const msg = `Olá, ${cliente.nome}! Passando para informar que você possui um saldo devedor de *${valor}* em nosso estabelecimento. Por favor, entre em contato para regularizar. Obrigado! 😊`;
+    const estabelecimento = nomeEstabelecimento || 'nosso estabelecimento';
+    const msg = `Olá, ${cliente.nome}! Passando para informar que você possui um saldo devedor de *${valor}* em *${estabelecimento}*. Por favor, entre em contato para regularizar. Obrigado! 😊`;
     const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   }
