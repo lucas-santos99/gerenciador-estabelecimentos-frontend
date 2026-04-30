@@ -24,6 +24,9 @@ export default function ClienteModal({
 
   const [nome,           setNome]           = useState(cliente?.nome || '');
   const [telefone,       setTelefone]       = useState(cliente?.telefone || '');
+  const [semLimite,      setSemLimite]      = useState(
+    !cliente || parseFloat(cliente?.limite_credito || 0) === 0
+  );
   const [limiteCredito,  setLimiteCredito]  = useState(
     parseFloat(cliente?.limite_credito || 0).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 })
   );
@@ -63,7 +66,7 @@ export default function ClienteModal({
           estabelecimentoId,
           nome:          nome.trim(),
           telefone:      telefone.trim() || null,
-          limiteCredito: limiteCredito.replace(/\./g, '').replace(',', '.'),
+          limiteCredito: semLimite ? '0' : limiteCredito.replace(/\./g, '').replace(',', '.'),
           dataVencimento: dataVencimento || null,
         }),
       });
@@ -148,14 +151,39 @@ export default function ClienteModal({
             <div className="cli-modal-section-titulo">💳 Configurações do Fiado</div>
 
             <div className="cli-form-group">
-              <label className="cli-form-label">Limite de crédito (R$)</label>
-              <input
-                className="cli-form-input"
-                type="text"
-                value={limiteCredito}
-                onChange={e => setLimiteCredito(e.target.value)}
-                disabled={salvando}
-              />
+              <label className="cli-form-label">Limite de crédito</label>
+              <div className="cli-limite-toggle">
+                <button
+                  type="button"
+                  className={`cli-limite-btn${semLimite ? ' ativo' : ''}`}
+                  onClick={() => setSemLimite(true)}
+                  disabled={salvando}
+                >
+                  ∞ Sem limite
+                </button>
+                <button
+                  type="button"
+                  className={`cli-limite-btn${!semLimite ? ' ativo' : ''}`}
+                  onClick={() => setSemLimite(false)}
+                  disabled={salvando}
+                >
+                  R$ Definir limite
+                </button>
+              </div>
+              {!semLimite && (
+                <input
+                  className="cli-form-input"
+                  type="text"
+                  placeholder="0,00"
+                  value={limiteCredito}
+                  onChange={e => setLimiteCredito(e.target.value)}
+                  disabled={salvando}
+                  style={{ marginTop: 8 }}
+                />
+              )}
+              {semLimite && (
+                <span className="cli-form-small">Cliente pode comprar fiado sem restrição de valor.</span>
+              )}
             </div>
 
             <div className="cli-form-group">

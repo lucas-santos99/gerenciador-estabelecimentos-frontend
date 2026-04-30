@@ -90,8 +90,9 @@ export default function DividasList({ estabelecimentoId }) {
   const [loading,           setLoading]           = useState(true);
   const [erro,              setErro]              = useState('');
   const [termoBusca,        setTermoBusca]        = useState('');
+  const [ordenacao,         setOrdenacao]         = useState('vencimento'); // 'vencimento' | 'valor' | 'nome'
   const [clienteDetalhes,   setClienteDetalhes]   = useState(null);
-  const [clienteModal,      setClienteModal]      = useState(null); // null = fechado, {} = novo, {...} = editar
+  const [clienteModal,      setClienteModal]      = useState(null);
   const [modalAberto,       setModalAberto]       = useState(false);
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
@@ -162,16 +163,48 @@ export default function DividasList({ estabelecimentoId }) {
     }
   }
 
-  /* ── Filtro ──────────────────────────────────────────────── */
+  /* ── WhatsApp cobrança ──────────────────────────────────── */
+  function enviarWhatsApp(cliente) {
+    const tel = (cliente.telefone || '').replace(/\D/g, '');
+    if (!tel) {
+      alert('Este cliente não tem telefone cadastrado.');
+      return;
+    }
+    const valor = parseFloat(cliente.saldo_devedor || 0)
+      .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const msg = `Olá, ${cliente.nome}! Passando para informar que você possui um saldo devedor de *${valor}* em nosso estabelecimento. Por favor, entre em contato para regularizar. Obrigado! 😊`;
+    const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  }
+
+  /* ── Filtro + Ordenação ──────────────────────────────────── */
   const lista = viewMode === 'devedores' ? dividas : todosClientes;
-  const listaFiltrada = lista.filter(c => {
-    if (!termoBusca.trim()) return true;
-    const t = termoBusca.toLowerCase();
-    return (
-      (c.nome || '').toLowerCase().includes(t) ||
-      (c.telefone || '').toString().toLowerCase().includes(t)
-    );
-  });
+
+  const listaFiltrada = lista
+    .filter(c => {
+      if (!termoBusca.trim()) return true;
+      const t = termoBusca.toLowerCase();
+      return (
+        (c.nome || '').toLowerCase().includes(t) ||
+        (c.telefone || '').toString().toLowerCase().includes(t)
+      );
+    })
+    .sort((a, b) => {
+      if (ordenacao === 'vencimento') {
+        // Sem vencimento vai pro final
+        if (!a.data_vencimento && !b.data_vencimento) return 0;
+        if (!a.data_vencimento) return 1;
+        if (!b.data_vencimento) return -1;
+        return new Date(a.data_vencimento) - new Date(b.data_vencimento);
+      }
+      if (ordenacao === 'valor') {
+        return parseFloat(b.saldo_devedor || 0) - parseFloat(a.saldo_devedor || 0);
+      }
+      if (ordenacao === 'nome') {
+        return (a.nome || '').localeCompare(b.nome || '');
+      }
+      return 0;
+    });
 
   /* ════════════════════════════════════════════════════════ */
   if (loading) {
@@ -240,6 +273,26 @@ export default function DividasList({ estabelecimentoId }) {
         </div>
       </div>
 
+      {/* ── ORDENAÇÃO ───────────────────────────────────── */}
+      {viewMode === 'devedores' && dividas.length > 0 && (
+        <div className="cli-ordenacao">
+          <span className="cli-ordenacao-label">Ordenar:</span>
+          {[
+            { key: 'vencimento', label: '📅 Vencimento' },
+            { key: 'valor',      label: '💰 Maior dívida' },
+            { key: 'nome',       label: '🔤 Nome' },
+          ].map(o => (
+            <button
+              key={o.key}
+              className={`cli-ordenacao-btn${ordenacao === o.key ? ' ativo' : ''}`}
+              onClick={() => setOrdenacao(o.key)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {erro && <div className="cli-erro">⚠️ {erro}</div>}
 
       {/* ── CORPO ───────────────────────────────────────── */}
@@ -275,6 +328,7 @@ export default function DividasList({ estabelecimentoId }) {
                   )}
                   onReceber={() => abrirRecebimento(cliente)}
                   onExcluir={() => excluirCliente(cliente)}
+                  onWhatsApp={() => enviarWhatsApp(cliente)}
                 />
               ))
             )}
@@ -295,7 +349,7 @@ export default function DividasList({ estabelecimentoId }) {
 }
 
 /* ── Card de cliente ─────────────────────────────────────────*/
-function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir }) {
+function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp }) {
   const temDivida       = parseFloat(cliente.saldo_devedor) > 0.01;
   const limiteExcedido  = temDivida
     && parseFloat(cliente.limite_credito || 0) > 0
@@ -308,6 +362,19 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir }) {
     try { return new Date(s).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); }
     catch { return '—'; }
   }
+
+  // Verifica se vencimento está próximo ou vencido
+  function statusVencimento(data) {
+    if (!data) return null;
+    const hoje = new Date();
+    const venc = new Date(data);
+    const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return 'vencido';
+    if (diff <= 3) return 'proximo';
+    return 'ok';
+  }
+
+  const svStatus = statusVencimento(cliente.data_vencimento);
 
   return (
     <div className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}`}>
@@ -327,19 +394,29 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir }) {
         <div className="cli-card-info-row">
           <div className="cli-info-item">
             <span className="cli-info-label">Vencimento</span>
-            <span className="cli-info-valor">
+            <span className={`cli-info-valor${svStatus === 'vencido' ? ' vencido' : svStatus === 'proximo' ? ' proximo' : ''}`}>
               {temDivida ? formatarData(cliente.data_vencimento) : '—'}
+              {svStatus === 'vencido' && ' 🔴'}
+              {svStatus === 'proximo' && ' ⚠️'}
             </span>
           </div>
           <div className="cli-info-item">
             <span className="cli-info-label">Limite</span>
-            <span className="cli-info-valor">{fmt(cliente.limite_credito)}</span>
+            <span className="cli-info-valor">
+              {parseFloat(cliente.limite_credito || 0) === 0 ? '∞ Sem limite' : fmt(cliente.limite_credito)}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="cli-card-acoes">
-        <button className="cli-btn-acao config" onClick={onEditar}>⚙️ Config</button>
+        <button className="cli-btn-acao config" onClick={onEditar}>⚙️</button>
+
+        {temDivida && cliente.telefone && (
+          <button className="cli-btn-acao whatsapp" onClick={onWhatsApp} title="Enviar cobrança via WhatsApp">
+            💬
+          </button>
+        )}
 
         {temDivida
           ? <button className="cli-btn-acao detalhes" onClick={onDetalhes}>📋 Detalhes</button>
