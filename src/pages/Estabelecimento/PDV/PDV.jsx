@@ -103,6 +103,21 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
     setErro('');
     if (meioPagamento === 'Fiado') {
       if (!clienteSelecionado?.id) { setErro('Selecione um cliente para o fiado.'); return; }
+
+      // Verificar limite de crédito
+      const limite = parseFloat(clienteSelecionado.limite_credito || 0);
+      const saldoAtual = parseFloat(clienteSelecionado.saldo_devedor || 0);
+      const novoSaldo = saldoAtual + total;
+
+      if (limite > 0 && novoSaldo > limite) {
+        const limiteStr = fmt(limite);
+        const novoStr = fmt(novoSaldo);
+        const ok = window.confirm(
+          `⚠️ Limite de crédito excedido!\n\nLimite: ${limiteStr}\nNovo saldo após venda: ${novoStr}\n\nDeseja continuar mesmo assim?`
+        );
+        if (!ok) return;
+      }
+
       onFinalizar('Fiado', clienteSelecionado.id);
     } else if (meioPagamento === 'Dinheiro') {
       const recebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
@@ -193,6 +208,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
                         <span className="pdv-cliente-info-label">Novo saldo</span>
                         <span className="pdv-cliente-info-valor novo-saldo">{fmt((parseFloat(clienteSelecionado.saldo_devedor) || 0) + total)}</span>
                       </div>
+                      {parseFloat(clienteSelecionado.limite_credito || 0) > 0 && (
+                        <div className="pdv-cliente-info-item">
+                          <span className="pdv-cliente-info-label">Limite</span>
+                          <span className={`pdv-cliente-info-valor${(parseFloat(clienteSelecionado.saldo_devedor || 0) + total) > parseFloat(clienteSelecionado.limite_credito) ? ' limite-excedido' : ''}`}>
+                            {fmt(clienteSelecionado.limite_credito)}
+                            {(parseFloat(clienteSelecionado.saldo_devedor || 0) + total) > parseFloat(clienteSelecionado.limite_credito) && ' ⚠️'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <button className="pdv-btn-trocar-cliente" onClick={() => setClienteSelecionado(null)}>↩ Trocar cliente</button>
                   </div>

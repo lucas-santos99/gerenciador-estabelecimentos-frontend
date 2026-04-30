@@ -18,18 +18,24 @@ function formatarData(s) {
 
 /* ── Painel de detalhes do fiado ───────────────────────────── */
 function DetalhesFiado({ cliente, onFechar }) {
-  const [vendas,   setVendas]   = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [erro,     setErro]     = useState('');
+  const [vendas,     setVendas]     = useState([]);
+  const [pagamentos, setPagamentos] = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [erro,       setErro]       = useState('');
+  const [abaDetalhe, setAbaDetalhe] = useState('compras'); // 'compras' | 'pagamentos'
 
   useEffect(() => {
     async function carregar() {
       setLoading(true);
       setErro('');
       try {
-        const resp = await apiFetch(`/api/clientes/${cliente.id}/itens-fiado`);
-        if (!resp.ok) throw new Error('Erro ao buscar histórico');
-        setVendas(await resp.json());
+        const [rVendas, rPagamentos] = await Promise.all([
+          apiFetch(`/api/clientes/${cliente.id}/itens-fiado`),
+          apiFetch(`/api/clientes/${cliente.id}/pagamentos`),
+        ]);
+        if (!rVendas.ok) throw new Error('Erro ao buscar histórico');
+        setVendas(await rVendas.json());
+        if (rPagamentos.ok) setPagamentos(await rPagamentos.json());
       } catch (err) { setErro(err.message); }
       finally { setLoading(false); }
     }
@@ -43,6 +49,22 @@ function DetalhesFiado({ cliente, onFechar }) {
         <button className="cli-detalhes-fechar" onClick={onFechar}>✕</button>
       </div>
 
+      {/* Abas internas */}
+      <div className="cli-detalhes-tabs">
+        <button
+          className={`cli-detalhes-tab${abaDetalhe === 'compras' ? ' ativo' : ''}`}
+          onClick={() => setAbaDetalhe('compras')}
+        >
+          🛒 Compras
+        </button>
+        <button
+          className={`cli-detalhes-tab${abaDetalhe === 'pagamentos' ? ' ativo' : ''}`}
+          onClick={() => setAbaDetalhe('pagamentos')}
+        >
+          💰 Pagamentos
+        </button>
+      </div>
+
       <div className="cli-detalhes-body">
         {loading && (
           <div className="cli-detalhes-loading">
@@ -51,31 +73,60 @@ function DetalhesFiado({ cliente, onFechar }) {
           </div>
         )}
         {erro && <div className="cli-erro">⚠️ {erro}</div>}
-        {!loading && vendas.length === 0 && (
-          <div className="cli-vazio">
-            <span className="cli-vazio-icon">📋</span>
-            <p>Sem vendas fiadas pendentes</p>
-          </div>
+
+        {/* Aba compras */}
+        {!loading && abaDetalhe === 'compras' && (
+          <>
+            {vendas.length === 0 ? (
+              <div className="cli-vazio">
+                <span className="cli-vazio-icon">📋</span>
+                <p>Sem vendas fiadas pendentes</p>
+              </div>
+            ) : (
+              vendas.map(venda => (
+                <div key={venda.venda_id} className="cli-venda-card">
+                  <div className="cli-venda-info">
+                    <span>📅 {formatarData(venda.data_venda)}</span>
+                    <strong>{fmt(venda.valor_total)}</strong>
+                  </div>
+                  <ul className="cli-venda-itens">
+                    {venda.itens.map((item, i) => (
+                      <li key={i} className="cli-venda-item">
+                        <span className="cli-item-qtd">{item.quantidade}×</span>
+                        <span className="cli-item-nome">{item.produto_nome}</span>
+                        <span className="cli-item-subtotal">
+                          {fmt(item.quantidade * item.preco_unitario)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </>
         )}
-        {vendas.map(venda => (
-          <div key={venda.venda_id} className="cli-venda-card">
-            <div className="cli-venda-info">
-              <span>📅 {formatarData(venda.data_venda)}</span>
-              <strong>{fmt(venda.valor_total)}</strong>
-            </div>
-            <ul className="cli-venda-itens">
-              {venda.itens.map((item, i) => (
-                <li key={i} className="cli-venda-item">
-                  <span className="cli-item-qtd">{item.quantidade}×</span>
-                  <span className="cli-item-nome">{item.produto_nome}</span>
-                  <span className="cli-item-subtotal">
-                    {fmt(item.quantidade * item.preco_unitario)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+
+        {/* Aba pagamentos */}
+        {!loading && abaDetalhe === 'pagamentos' && (
+          <>
+            {pagamentos.length === 0 ? (
+              <div className="cli-vazio">
+                <span className="cli-vazio-icon">💰</span>
+                <p>Nenhum pagamento registrado</p>
+              </div>
+            ) : (
+              pagamentos.map((p, i) => (
+                <div key={i} className="cli-pagamento-card">
+                  <div className="cli-pagamento-info">
+                    <span className="cli-pagamento-data">📅 {formatarData(p.data_transacao)}</span>
+                    <span className={`cli-pagamento-meio ${p.meio_pagamento?.toLowerCase()}`}>{p.meio_pagamento}</span>
+                  </div>
+                  <span className="cli-pagamento-valor">- {fmt(p.valor)}</span>
+                </div>
+              ))
+            )}
+          </>
+        )}
       </div>
     </div>
   );
