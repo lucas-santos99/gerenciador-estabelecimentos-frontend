@@ -176,7 +176,16 @@
   letter-spacing: 0.08em;
   color: var(--est-text-muted);
   display: block;
+  margin-bottom: 4px;
+}
+
+.fin-resumo-card-info {
+  font-size: 0.62rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+  display: block;
   margin-bottom: 8px;
+  font-style: italic;
 }
 
 .fin-resumo-card-valor {

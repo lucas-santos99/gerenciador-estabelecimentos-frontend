@@ -443,15 +443,18 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             <div className="fin-resumo-grid">
               {[
-                { key: 'total_entradas_dia', label: 'Entradas do Dia', destaque: true },
-                { key: 'total_dinheiro',     label: 'Dinheiro' },
-                { key: 'total_pix',          label: 'Pix' },
-                { key: 'total_cartao',       label: 'Cartão' },
-                { key: 'total_fiado_pendente',       label: 'Fiado Pendente' },
-                { key: 'total_contas_pagar_pendente', label: 'Contas a Pagar' },
+                { key: 'total_entradas_dia',    label: 'Total Entradas',      destaque: true },
+                { key: 'total_vendas_dia',       label: '🛒 Vendas',           info: 'Vendas pagas no ato' },
+                { key: 'total_fiado_recebido',   label: '📋 Fiado Recebido',   info: 'Quitação de dívidas' },
+                { key: 'total_dinheiro',         label: 'Dinheiro' },
+                { key: 'total_pix',              label: 'Pix' },
+                { key: 'total_cartao',           label: 'Cartão' },
+                { key: 'total_fiado_pendente',         label: 'Fiado Pendente' },
+                { key: 'total_contas_pagar_pendente',  label: 'Contas a Pagar' },
               ].map(c => (
                 <div key={c.key} className={`fin-resumo-card${c.destaque ? ' destaque' : ''}`}>
                   <span className="fin-resumo-card-titulo">{c.label}</span>
+                  {c.info && <span className="fin-resumo-card-info">{c.info}</span>}
                   {loadingResumo
                     ? <div className="fin-card-spinner" />
                     : <span className="fin-resumo-card-valor">{fmt(resumo?.[c.key])}</span>
