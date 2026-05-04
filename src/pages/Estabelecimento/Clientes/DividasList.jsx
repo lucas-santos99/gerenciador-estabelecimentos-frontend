@@ -17,15 +17,17 @@ function formatarData(s) {
 }
 
 /* ── Painel de detalhes do fiado ───────────────────────────── */
-function DetalhesFiado({ cliente, onFechar }) {
-  const [vendas,     setVendas]     = useState([]);
-  const [pagamentos, setPagamentos] = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [erro,       setErro]       = useState('');
-  const [abaDetalhe, setAbaDetalhe] = useState('compras'); // 'compras' | 'pagamentos'
+function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
+  const [vendas,        setVendas]        = useState([]);
+  const [pagamentos,    setPagamentos]    = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [erro,          setErro]          = useState('');
+  const [abaDetalhe,    setAbaDetalhe]    = useState('compras');
+  const [pagandoVenda,  setPagandoVenda]  = useState(null); // venda sendo paga
+  const [meioPagVenda,  setMeioPagVenda]  = useState('Dinheiro');
+  const [salvandoPag,   setSalvandoPag]   = useState(false); // 'compras' | 'pagamentos'
 
-  useEffect(() => {
-    async function carregar() {
+  async function carregar() {
       setLoading(true);
       setErro('');
       try {
@@ -39,8 +41,33 @@ function DetalhesFiado({ cliente, onFechar }) {
       } catch (err) { setErro(err.message); }
       finally { setLoading(false); }
     }
-    carregar();
-  }, [cliente.id]);
+
+  useEffect(() => { carregar(); }, [cliente.id]);
+
+  async function pagarVenda(venda) {
+    setSalvandoPag(true);
+    setErro('');
+    try {
+      const resp = await apiFetch('/api/clientes/pagar-venda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendaId:       venda.venda_id,
+          clienteId:     cliente.id,
+          meioPagamento: meioPagVenda,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao pagar');
+      setPagandoVenda(null);
+      await carregar();
+      onAtualizar?.();
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setSalvandoPag(false);
+    }
+  }
 
   return (
     <div className="cli-detalhes">
@@ -106,6 +133,41 @@ function DetalhesFiado({ cliente, onFechar }) {
                       );
                     })}
                   </ul>
+
+                  {/* Botão pagar esta compra */}
+                  {pagandoVenda?.venda_id === venda.venda_id ? (
+                    <div className="cli-pagar-venda-form">
+                      <select
+                        className="cli-pagar-venda-select"
+                        value={meioPagVenda}
+                        onChange={e => setMeioPagVenda(e.target.value)}
+                        disabled={salvandoPag}
+                      >
+                        {['Dinheiro','Pix','Debito','Credito'].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <button
+                        className="cli-pagar-venda-btn confirmar"
+                        onClick={() => pagarVenda(venda)}
+                        disabled={salvandoPag}
+                      >
+                        {salvandoPag ? '⏳' : `✓ Confirmar ${fmt(venda.valor_total)}`}
+                      </button>
+                      <button
+                        className="cli-pagar-venda-btn cancelar"
+                        onClick={() => setPagandoVenda(null)}
+                        disabled={salvandoPag}
+                      >✕</button>
+                    </div>
+                  ) : (
+                    <button
+                      className="cli-pagar-venda-trigger"
+                      onClick={() => { setPagandoVenda(venda); setMeioPagVenda('Dinheiro'); }}
+                    >
+                      💰 Pagar esta compra
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -398,6 +460,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
           <DetalhesFiado
             cliente={clienteDetalhes}
             onFechar={() => setClienteDetalhes(null)}
+            onAtualizar={carregarDados}
           />
         )}
 
