@@ -338,11 +338,11 @@ export default function PDV({ estabelecimentoId }) {
     const estoque = parseFloat(produto.estoque_atual);
     if (editIndex !== null) {
       const outrasQtds = carrinho.filter((item, idx) => item.id === produto.id && idx !== editIndex).reduce((acc, i) => acc + i.quantidade, 0);
-      if (outrasQtds + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque} ${produto.unidade_medida}`); return; }
+      if (outrasQtds + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${produto.unidade_medida}`); return; }
       const novo = [...carrinho]; novo[editIndex] = { ...produto, quantidade: qtd }; setCarrinho(novo);
     } else {
       const qtdJa = carrinho.filter(i => i.id === produto.id).reduce((acc, i) => acc + i.quantidade, 0);
-      if (qtdJa + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque} ${produto.unidade_medida}`); return; }
+      if (qtdJa + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${produto.unidade_medida}`); return; }
       setCarrinho(prev => [...prev, { ...produto, quantidade: qtd }]);
     }
     fecharModalQtd();
@@ -354,7 +354,7 @@ export default function PDV({ estabelecimentoId }) {
   }
 
   function editarItem(item, idx) {
-    setInputQtd(item.unidade_medida === 'kg' ? parseFloat(item.quantidade).toFixed(3) : String(parseFloat(item.quantidade)));
+    setInputQtd(item.unidade_medida === 'kg' ? parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : String(parseFloat(item.quantidade)));
     setItemQuantificar(item); setEditIndex(idx);
   }
 
@@ -401,7 +401,7 @@ export default function PDV({ estabelecimentoId }) {
 
   function estoqueLabel(p) {
     const e = parseFloat(p.estoque_atual);
-    return p.unidade_medida === 'kg' ? `${e.toFixed(3)} kg` : `${Math.trunc(e)} un`;
+    return p.unidade_medida === 'kg' ? `${e.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg` : `${Math.trunc(e)} un`;
   }
 
   return (
@@ -454,7 +454,7 @@ export default function PDV({ estabelecimentoId }) {
               <li key={`${item.id}-${idx}`} className="pdv-item">
                 <div className="pdv-item-info" onClick={() => editarItem(item, idx)}>
                   <span className="pdv-item-nome">{item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}</span>
-                  <span className="pdv-item-qtde">{item.unidade_medida === 'kg' ? `${parseFloat(item.quantidade).toFixed(3)} kg` : `${parseFloat(item.quantidade).toFixed(0)} un`}{' @ '}{fmt(item.preco_venda)}</span>
+                  <span className="pdv-item-qtde">{item.unidade_medida === 'kg' ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg` : `${parseFloat(item.quantidade).toFixed(0)} un`}{' @ '}{fmt(item.preco_venda)}</span>
                 </div>
                 <span className="pdv-item-total">{fmt(item.preco_venda * item.quantidade)}</span>
                 <button className="pdv-item-remover" onClick={() => removerItem(idx)}>×</button>
