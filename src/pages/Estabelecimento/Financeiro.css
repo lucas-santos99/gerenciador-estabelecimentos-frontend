@@ -342,8 +342,17 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--est-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 2px;
   display: block;
+}
+
+.fin-dre-card-subtitulo {
+  font-size: 0.65rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+  font-style: italic;
+  display: block;
+  margin-bottom: 8px;
 }
 
 .fin-dre-card-valor {

@@ -504,6 +504,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               <div className="fin-dre-grid">
                 <div className="fin-dre-card receita">
                   <span className="fin-dre-card-titulo">(+) Receita Bruta Total</span>
+                  <span className="fin-dre-card-subtitulo">Tudo que entrou no caixa</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.receita_bruta)}</span>
                   <div className="fin-dre-sub">
                     <span>Dinheiro: {fmt(dreData.receita_dinheiro)}</span>
@@ -513,18 +514,22 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) CMV</span>
+                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.cmv)}</span>
                 </div>
                 <div className="fin-dre-card bruto">
                   <span className="fin-dre-card-titulo">(=) Lucro Bruto</span>
+                  <span className="fin-dre-card-subtitulo">Receita menos custo dos produtos</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_bruto)}</span>
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) Despesas Operacionais</span>
+                  <span className="fin-dre-card-subtitulo">Contas pagas no período</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.despesas)}</span>
                 </div>
                 <div className="fin-dre-card liquido">
                   <span className="fin-dre-card-titulo">(=) Lucro Líquido</span>
+                  <span className="fin-dre-card-subtitulo">Resultado final do período</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_liquido)}</span>
                 </div>
               </div>
@@ -788,13 +793,20 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                       </div>
                       {vendaDetalhes?.id === venda.id && venda.itens?.length > 0 && (
                         <div className="fin-historico-itens">
-                          {venda.itens.map((item, i) => (
-                            <div key={i} className="fin-historico-item">
-                              <span className="fin-hist-item-nome">{item.produto_nome}</span>
-                              <span className="fin-hist-item-qtd">{item.quantidade}×</span>
-                              <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
-                            </div>
-                          ))}
+                          {venda.itens.map((item, i) => {
+                            const unidade = item.unidade_medida || 'un';
+                            const qtd = parseFloat(item.quantidade);
+                            const qtdLabel = unidade === 'kg'
+                              ? `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                              : `${Math.trunc(qtd)}×`;
+                            return (
+                              <div key={i} className="fin-historico-item">
+                                <span className="fin-hist-item-nome">{item.produto_nome}</span>
+                                <span className="fin-hist-item-qtd">{qtdLabel}</span>
+                                <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
