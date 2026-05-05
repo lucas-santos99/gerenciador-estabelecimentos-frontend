@@ -22,7 +22,7 @@
 /* ========================= */
 
 .estoque-sidebar {
-  width: 220px;
+  width: 230px;
   flex-shrink: 0;
   background: var(--est-sidebar);
   border-right: 1px solid var(--est-sidebar-border);
@@ -32,20 +32,21 @@
 }
 
 .estoque-sidebar-header {
-  padding: 12px 12px 10px;
+  padding: 14px 14px 12px;
   border-bottom: 1px solid var(--est-border);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  background: var(--est-card);
 }
 
 .estoque-sidebar-titulo {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: var(--est-text-muted);
 }
 
@@ -145,7 +146,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  border-radius: 8px;
+  border-radius: 9px;
   transition: background 0.15s;
 }
 .estoque-cat-row:hover { background: var(--est-hover); }
@@ -153,45 +154,47 @@
 
 .estoque-cat-row .estoque-cat-item {
   flex: 1;
-  margin-bottom: 0;
-  border-radius: 8px 0 0 8px;
+  border-radius: 9px 0 0 9px;
 }
 .estoque-cat-row .estoque-cat-item:hover { background: none; }
 
 .estoque-cat-acoes {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   opacity: 0;
   transition: opacity 0.15s;
   flex-shrink: 0;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .estoque-cat-acao {
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
   color: var(--est-text-muted);
 }
-.estoque-cat-acao.editar:hover { background: var(--est-accent-dim); color: var(--est-accent); }
-.estoque-cat-acao.excluir:hover { background: var(--est-danger-dim); color: var(--est-danger); }
+.estoque-cat-acao.editar:hover  { background: var(--est-accent-dim);  color: var(--est-accent); }
+.estoque-cat-acao.excluir:hover { background: var(--est-danger-dim);  color: var(--est-danger); }
 
 .estoque-cats {
   list-style: none;
-  padding: 8px;
+  padding: 10px 8px;
   margin: 0;
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--est-border) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .estoque-cats::-webkit-scrollbar { width: 3px; }
 .estoque-cats::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 3px; }
@@ -200,43 +203,61 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 9px;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--est-text-soft);
   cursor: pointer;
   transition: all 0.15s;
-  margin-bottom: 2px;
   border: none;
   background: none;
   width: 100%;
   text-align: left;
+  position: relative;
 }
 
 .estoque-cat-item:hover {
   background: var(--est-hover);
-  color: var(--est-accent);
+  color: var(--est-text);
 }
 
 .estoque-cat-item.ativo {
   background: var(--est-accent-dim);
   color: var(--est-accent);
+  font-weight: 700;
+  padding-left: 14px;
+}
+
+/* Barra lateral teal no item ativo */
+.estoque-cat-item.ativo::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  background: var(--est-accent);
+  border-radius: 0 3px 3px 0;
 }
 
 .estoque-cat-count {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-family: 'JetBrains Mono', monospace;
-  font-weight: 600;
+  font-weight: 700;
   background: var(--est-input);
   border: 1px solid var(--est-border);
-  padding: 1px 6px;
+  padding: 1px 7px;
   border-radius: 10px;
   color: var(--est-text-muted);
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  transition: all 0.15s;
 }
 
 .estoque-cat-item.ativo .estoque-cat-count {
-  background: var(--est-accent-dim);
+  background: rgba(20,184,166,0.2);
   border-color: var(--est-border-accent);
   color: var(--est-accent);
 }
@@ -498,7 +519,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--est-font-scale, 1));
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   padding: 3px 7px;
@@ -521,7 +542,7 @@
 }
 
 .prod-nome {
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--est-font-scale, 1));
   font-weight: 700;
   color: var(--est-text);
   margin-bottom: 3px;
@@ -551,7 +572,7 @@
 
 .prod-preco-label {
   display: block;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--est-font-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -560,14 +581,14 @@
 }
 
 .prod-preco-valor {
-  font-size: 0.88rem;
+  font-size: calc(0.88rem * var(--est-font-scale, 1));
   font-weight: 700;
   color: var(--est-text-soft);
   font-family: 'JetBrains Mono', monospace;
 }
 
 .prod-preco-valor.venda {
-  font-size: 1rem;
+  font-size: calc(1rem * var(--est-font-scale, 1));
   color: var(--est-accent);
   font-weight: 800;
 }
@@ -745,7 +766,38 @@
   color: var(--est-text-muted);
 }
 
-/* Busca de categoria na sidebar */
+/* Item especial "Todos os produtos" — separado das categorias */
+.estoque-cat-li--todos {
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--est-border);
+}
+
+/* Botão zoom de fonte no header */
+.estoque-zoom-btn {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.estoque-zoom-btn:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+.estoque-zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 .estoque-cat-busca-wrap {
   padding: 6px 8px 0;
 }
@@ -769,7 +821,7 @@
   box-shadow: 0 0 0 2px var(--est-accent-dim);
 }
 .prod-marca {
-  font-size: 0.7rem;
+  font-size: calc(0.7rem * var(--est-font-scale, 1));
   font-weight: 700;
   color: var(--est-accent);
   text-transform: uppercase;

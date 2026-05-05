@@ -52,6 +52,18 @@ export default function ProdutoList({ estabelecimentoId }) {
   const [catErro,          setCatErro]          = useState('');
   const [catBusca,         setCatBusca]         = useState('');
   const [sidebarMobile,    setSidebarMobile]    = useState(false);
+  const [fontScale,        setFontScale]        = useState(() => {
+    const saved = localStorage.getItem('estoque-font-scale');
+    return saved ? parseFloat(saved) : 1;
+  });
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('estoque-font-scale', next);
+      return next;
+    });
+  }
 
   const searchRef   = useRef(null);
   const catEditRef  = useRef(null);
@@ -261,7 +273,7 @@ export default function ProdutoList({ estabelecimentoId }) {
   }
 
   return (
-    <div className="estoque-container">
+    <div className="estoque-container" style={{ '--est-font-scale': fontScale }}>
 
       {/* Modal produto */}
       {modalAberto && (
@@ -334,7 +346,7 @@ export default function ProdutoList({ estabelecimentoId }) {
 
         <ul className="estoque-cats">
 
-          <li>
+          <li className="estoque-cat-li--todos">
             <button
               className={`estoque-cat-item${categoriaAtiva === 'todos' ? ' ativo' : ''}`}
               onClick={() => setCategoriaAtiva('todos')}
@@ -458,6 +470,18 @@ export default function ProdutoList({ estabelecimentoId }) {
             >
               🗂 Categorias
             </button>
+            <button
+              className="estoque-zoom-btn"
+              onClick={() => changeFontScale(-0.1)}
+              disabled={fontScale <= 0.8}
+              title="Diminuir fonte"
+            >A−</button>
+            <button
+              className="estoque-zoom-btn"
+              onClick={() => changeFontScale(0.1)}
+              disabled={fontScale >= 1.6}
+              title="Aumentar fonte"
+            >A+</button>
             <button className="estoque-btn verde" onClick={exportarExcel} title="Exportar Excel">
               📥 Excel
             </button>
