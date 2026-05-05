@@ -122,6 +122,32 @@
   color: #fff;
 }
 
+/* Botões zoom de fonte (A− / A+) */
+.cli-zoom-btn {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cli-zoom-btn:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+.cli-zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* ========================= */
 /*  CORPO                     */
 /* ========================= */
@@ -219,7 +245,7 @@
 .cli-card-header:hover { background: var(--est-hover); }
 
 .cli-card-nome {
-  font-size: 1rem;
+  font-size: calc(1rem * var(--cli-font-scale, 1));
   font-weight: 700;
   color: var(--est-text);
   display: block;
@@ -227,7 +253,7 @@
 }
 
 .cli-card-tel {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--cli-font-scale, 1));
   color: var(--est-text-muted);
   font-family: 'JetBrains Mono', monospace;
 }
@@ -242,7 +268,7 @@
 .cli-card-corpo:hover { background: var(--est-hover); }
 
 .cli-divida-label {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--cli-font-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -252,7 +278,7 @@
 }
 
 .cli-divida-valor {
-  font-size: 1.8rem;
+  font-size: calc(1.8rem * var(--cli-font-scale, 1));
   font-weight: 800;
   color: var(--est-text);
   font-family: 'JetBrains Mono', monospace;
@@ -276,7 +302,7 @@
 .cli-info-item { flex: 1; }
 
 .cli-info-label {
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--cli-font-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -286,7 +312,7 @@
 }
 
 .cli-info-valor {
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--cli-font-scale, 1));
   font-weight: 700;
   color: var(--est-text-soft);
   font-family: 'JetBrains Mono', monospace;
@@ -297,7 +323,7 @@
   display: inline-block;
   background: var(--est-danger);
   color: #fff;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--cli-font-scale, 1));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -455,13 +481,13 @@
 }
 
 .cli-venda-info-data {
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--cli-font-scale, 1));
   font-weight: 600;
   color: var(--est-text-soft);
 }
 
 .cli-venda-info-valor {
-  font-size: 0.88rem;
+  font-size: calc(0.88rem * var(--cli-font-scale, 1));
   font-weight: 800;
   color: var(--est-danger);
   font-family: 'JetBrains Mono', monospace;
@@ -479,7 +505,7 @@
   gap: 8px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--est-border);
-  font-size: 0.78rem;
+  font-size: calc(0.78rem * var(--cli-font-scale, 1));
 }
 .cli-venda-item:last-child { border-bottom: none; }
 
@@ -487,7 +513,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   color: var(--est-accent);
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--cli-font-scale, 1));
   flex-shrink: 0;
   background: var(--est-accent-dim);
   border: 1px solid var(--est-border-accent);
@@ -502,7 +528,7 @@
   font-weight: 700;
   color: var(--est-text-soft);
   flex-shrink: 0;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--cli-font-scale, 1));
 }
 
 .cli-detalhes-loading {

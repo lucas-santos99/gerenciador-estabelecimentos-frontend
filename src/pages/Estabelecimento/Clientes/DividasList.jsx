@@ -120,7 +120,7 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
                     {venda.itens.map((item, i) => {
                       const unidade = item.unidade_medida || 'un';
                       const qtdLabel = unidade === 'kg'
-                        ? `${parseFloat(item.quantidade).toFixed(3)} kg`
+                        ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
                         : `${parseFloat(item.quantidade).toFixed(0)}×`;
                       return (
                         <li key={i} className="cli-venda-item">
@@ -215,6 +215,18 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
   const [modalAberto,       setModalAberto]       = useState(false);
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
+  const [fontScale,         setFontScale]         = useState(() => {
+    const saved = localStorage.getItem('cli-font-scale');
+    return saved ? parseFloat(saved) : 1;
+  });
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('cli-font-scale', next);
+      return next;
+    });
+  }
 
   /* ── Carregar dados ─────────────────────────────────────── */
   async function carregarDados() {
@@ -337,7 +349,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
   }
 
   return (
-    <div className="cli-container">
+    <div className="cli-container" style={{ '--cli-font-scale': fontScale }}>
 
       {/* Modal cliente */}
       {modalAberto && (
@@ -383,6 +395,18 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
           </button>
         </div>
         <div className="cli-header-btns">
+          <button
+            className="cli-zoom-btn"
+            onClick={() => changeFontScale(-0.1)}
+            disabled={fontScale <= 0.8}
+            title="Diminuir fonte"
+          >A−</button>
+          <button
+            className="cli-zoom-btn"
+            onClick={() => changeFontScale(0.1)}
+            disabled={fontScale >= 1.6}
+            title="Aumentar fonte"
+          >A+</button>
           <button className="cli-btn" onClick={() => window.print()}>🖨️</button>
           <button
             className="cli-btn primary"
