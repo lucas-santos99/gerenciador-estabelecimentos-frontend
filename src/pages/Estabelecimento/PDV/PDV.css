@@ -22,10 +22,10 @@
 /* ========================= */
 
 .pdv-busca {
-  flex: 5;
+  flex: 3;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 16px;
   gap: 14px;
   overflow: hidden;
   border-right: 1px solid var(--est-border);
@@ -181,7 +181,7 @@
 /* ========================= */
 
 .pdv-carrinho {
-  flex: 4;
+  flex: 5;
   display: flex;
   flex-direction: column;
   background: var(--est-sidebar);
@@ -200,7 +200,7 @@
 }
 
 .pdv-carrinho-titulo {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -216,6 +216,31 @@
   border: 1px solid var(--est-border-accent);
   padding: 2px 8px;
   border-radius: 20px;
+}
+
+/* Botões de zoom de fonte */
+.pdv-zoom-btn {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+.pdv-zoom-btn:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+.pdv-zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 /* Status de venda */
@@ -292,7 +317,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 8px;
+  padding: calc(13px * var(--pdv-font-scale, 1)) 8px;
   border-radius: 10px;
   border-bottom: 1px solid var(--est-border);
   transition: background 0.15s;
@@ -314,7 +339,7 @@
 
 .pdv-item-nome {
   display: block;
-  font-size: 0.9rem;
+  font-size: calc(1rem * var(--pdv-font-scale, 1));
   font-weight: 700;
   color: var(--est-text);
   white-space: nowrap;
@@ -323,14 +348,14 @@
 }
 
 .pdv-item-qtde {
-  font-size: 0.75rem;
+  font-size: calc(0.85rem * var(--pdv-font-scale, 1));
   color: var(--est-text-soft);
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
 }
 
 .pdv-item-total {
-  font-size: 0.95rem;
+  font-size: calc(1.1rem * var(--pdv-font-scale, 1));
   font-weight: 800;
   color: var(--est-text);
   font-family: 'JetBrains Mono', monospace;
@@ -373,7 +398,7 @@
 }
 
 .pdv-total-label {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -381,7 +406,7 @@
 }
 
 .pdv-total-valor {
-  font-size: 2rem;
+  font-size: calc(2.4rem * var(--pdv-font-scale, 1));
   font-weight: 800;
   color: var(--est-accent);
   font-family: 'JetBrains Mono', monospace;
@@ -391,20 +416,19 @@
 
 .pdv-btn-finalizar {
   width: 100%;
-  padding: 15px;
+  padding: calc(17px * var(--pdv-font-scale, 1)) 15px;
   border-radius: 12px;
   border: none;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.95rem;
+  font-size: calc(1rem * var(--pdv-font-scale, 1));
   font-weight: 800;
   cursor: pointer;
   background: var(--est-gradient);
   color: #fff;
   box-shadow: 0 4px 16px rgba(20,184,166,0.35);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.06em;
   transition: all 0.2s;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
 .pdv-btn-finalizar:hover:not(:disabled) {

@@ -263,6 +263,10 @@ export default function PDV({ estabelecimentoId }) {
   const [loadingBusca,    setLoadingBusca]    = useState(false);
   const [loadingVenda,    setLoadingVenda]    = useState(false);
   const [vendaStatus,     setVendaStatus]     = useState(null);
+  const [fontScale,       setFontScale]       = useState(() => {
+    const saved = localStorage.getItem('pdv-font-scale');
+    return saved ? parseFloat(saved) : 1;
+  });
   const [buscaIndex,      setBuscaIndex]      = useState(-1);
   const [itemQuantificar, setItemQuantificar] = useState(null);
   const [inputQtd,        setInputQtd]        = useState('1');
@@ -295,6 +299,14 @@ export default function PDV({ estabelecimentoId }) {
     if (buscaIndex < 0 || !resultadosRef.current) return;
     resultadosRef.current.children[buscaIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [buscaIndex]);
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('pdv-font-scale', next);
+      return next;
+    });
+  }
 
   async function buscarProdutos(termo) {
     setTermoBusca(termo);
@@ -440,10 +452,24 @@ export default function PDV({ estabelecimentoId }) {
           ))}
         </ul>
       </div>
-      <div className="pdv-carrinho">
+      <div className="pdv-carrinho" style={{ '--pdv-font-scale': fontScale }}>
         <div className="pdv-carrinho-header">
           <span className="pdv-carrinho-titulo">Resumo da Venda</span>
-          {carrinho.length > 0 && <span className="pdv-carrinho-count">{carrinho.length} {carrinho.length === 1 ? 'item' : 'itens'}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {carrinho.length > 0 && <span className="pdv-carrinho-count">{carrinho.length} {carrinho.length === 1 ? 'item' : 'itens'}</span>}
+            <button
+              className="pdv-zoom-btn"
+              onClick={() => changeFontScale(-0.1)}
+              disabled={fontScale <= 0.8}
+              title="Diminuir fonte"
+            >A−</button>
+            <button
+              className="pdv-zoom-btn"
+              onClick={() => changeFontScale(0.1)}
+              disabled={fontScale >= 1.6}
+              title="Aumentar fonte"
+            >A+</button>
+          </div>
         </div>
         {vendaStatus && <div className={`pdv-status ${vendaStatus.tipo}`}>{vendaStatus.msg}</div>}
         <ul className="pdv-carrinho-lista">
