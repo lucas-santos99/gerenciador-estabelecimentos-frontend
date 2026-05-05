@@ -25,6 +25,18 @@ function formatarData(s) {
 export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia }) {
 
   const [abaAtiva, setAbaAtiva] = useState('fluxo');
+  const [fontScale, setFontScale] = useState(() => {
+    const saved = localStorage.getItem('fin-font-scale');
+    return saved ? parseFloat(saved) : 1;
+  });
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('fin-font-scale', next);
+      return next;
+    });
+  }
 
   /* ── Estado Fluxo / DRE ──────────────────────────────────── */
   const [resumo,        setResumo]        = useState(null);
@@ -395,7 +407,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
      RENDER
   ════════════════════════════════════════════════════════ */
   return (
-    <div className="fin-container">
+    <div className="fin-container" style={{ '--fin-font-scale': fontScale }}>
 
         {/* ── TABS NAV ─────────────────────────────────────── */}
       <div className="fin-tabs">
@@ -416,9 +428,23 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             </button>
           ))}
         </div>
-        <button className="fin-tab-btn-imprimir" onClick={() => window.print()}>
-          🖨️ Imprimir
-        </button>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
+          <button
+            className="fin-zoom-btn"
+            onClick={() => changeFontScale(-0.1)}
+            disabled={fontScale <= 0.8}
+            title="Diminuir fonte"
+          >A−</button>
+          <button
+            className="fin-zoom-btn"
+            onClick={() => changeFontScale(0.1)}
+            disabled={fontScale >= 1.6}
+            title="Aumentar fonte"
+          >A+</button>
+          <button className="fin-tab-btn-imprimir" onClick={() => window.print()}>
+            🖨️ Imprimir
+          </button>
+        </div>
       </div>
 
       {/* ── CONTEÚDO ─────────────────────────────────────── */}
@@ -710,8 +736,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   reportProd.map((prod, i) => {
                     const lucro = parseFloat(prod.receita_total) - parseFloat(prod.custo_total || 0);
                     const margem = parseFloat(prod.receita_total) > 0
-                      ? ((lucro / parseFloat(prod.receita_total)) * 100).toFixed(1)
-                      : '0.0';
+                      ? ((lucro / parseFloat(prod.receita_total)) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                      : '0,0';
                     return (
                       <div key={i} className="fin-report-card">
                         <div className="fin-report-rank">#{i + 1}</div>
@@ -724,8 +750,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                           <span className="fin-report-info-label">Total vendido</span>
                           <span className="fin-report-info-valor qtd">
                             {prod.unidade_medida === 'kg'
-                              ? `${parseFloat(prod.total_vendido).toFixed(3)} kg`
-                              : `${parseFloat(prod.total_vendido).toFixed(0)} un`}
+                              ? `${parseFloat(prod.total_vendido).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                              : `${Math.trunc(parseFloat(prod.total_vendido))} un`}
                           </span>
                         </div>
                         <div className="fin-report-info">
@@ -879,7 +905,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                     const status = estoqueStatus(p);
                     const estAtual = parseFloat(p.estoque_atual);
                     const unidade = p.unidade_medida === 'kg'
-                      ? `${estAtual.toFixed(3)} kg`
+                      ? `${estAtual.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
                       : `${Math.trunc(estAtual)} un`;
                     return (
                       <div key={p.id} className={`fin-estoque-card ${status}`}>
