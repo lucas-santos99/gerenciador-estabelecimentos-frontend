@@ -247,6 +247,108 @@
 }
 
 /* ========================= */
+/*  LABELS DE SEÇÃO FLUXO    */
+/* ========================= */
+
+.fin-resumo-secao-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.fin-resumo-secao-label--entradas {
+  color: var(--est-success);
+  background: var(--est-success-dim);
+  border: 1px solid rgba(74,222,128,0.2);
+  margin-top: 4px;
+}
+
+.fin-resumo-secao-label--pendencias {
+  color: var(--est-warning);
+  background: var(--est-warning-dim);
+  border: 1px solid rgba(251,191,36,0.2);
+  margin-top: 20px;
+}
+
+/* ========================= */
+/*  GRID DE PENDÊNCIAS        */
+/* ========================= */
+
+.fin-pendencias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.fin-pendencia-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-pendencia-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+.fin-pendencia-card.fiado {
+  border-left: 3px solid var(--est-accent);
+}
+.fin-pendencia-card.contas {
+  border-left: 3px solid var(--est-warning);
+}
+
+.fin-pendencia-icone {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.fin-pendencia-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fin-pendencia-titulo {
+  font-size: calc(0.82rem * var(--fin-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text);
+  display: block;
+}
+
+.fin-pendencia-desc {
+  font-size: calc(0.68rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted);
+  font-weight: 500;
+  display: block;
+}
+
+.fin-pendencia-valor {
+  font-size: calc(1.3rem * var(--fin-font-scale, 1));
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.fin-pendencia-card.fiado  .fin-pendencia-valor { color: var(--est-accent); }
+.fin-pendencia-card.contas .fin-pendencia-valor { color: var(--est-warning); }
+
+/* ========================= */
 /*  FORMULÁRIO DRE / FILTROS  */
 /* ========================= */
 
@@ -963,6 +1065,7 @@
   .fin-contas-grid { grid-template-columns: 1fr; }
   .fin-resumo-grid { grid-template-columns: repeat(2, 1fr); }
   .fin-report-grid { grid-template-columns: 1fr; }
+  .fin-pendencias-grid { grid-template-columns: 1fr; }
 
   .fin-form-filtros {
     flex-direction: column;

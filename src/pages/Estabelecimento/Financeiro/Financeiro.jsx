@@ -467,16 +467,18 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             {erroResumo && <div className="fin-erro">⚠️ {erroResumo}</div>}
 
+            {/* ── Entradas do dia ── */}
+            <div className="fin-resumo-secao-label fin-resumo-secao-label--entradas">
+              ✅ Entradas de Hoje
+            </div>
             <div className="fin-resumo-grid">
               {[
-                { key: 'total_entradas_dia',    label: 'Total Entradas',      destaque: true },
-                { key: 'total_vendas_dia',       label: '🛒 Vendas',           info: 'Vendas pagas no ato' },
-                { key: 'total_fiado_recebido',   label: '📋 Fiado Recebido',   info: 'Quitação de dívidas' },
-                { key: 'total_dinheiro',         label: 'Dinheiro' },
-                { key: 'total_pix',              label: 'Pix' },
-                { key: 'total_cartao',           label: 'Cartão' },
-                { key: 'total_fiado_pendente',         label: 'Fiado Pendente' },
-                { key: 'total_contas_pagar_pendente',  label: 'Contas a Pagar' },
+                { key: 'total_entradas_dia',  label: 'Total Entradas',    destaque: true },
+                { key: 'total_vendas_dia',    label: '🛒 Vendas',         info: 'Vendas pagas no ato' },
+                { key: 'total_fiado_recebido',label: '📋 Fiado Recebido', info: 'Quitação de dívidas' },
+                { key: 'total_dinheiro',      label: '💵 Dinheiro' },
+                { key: 'total_pix',           label: '📱 Pix' },
+                { key: 'total_cartao',        label: '💳 Cartão' },
               ].map(c => (
                 <div key={c.key} className={`fin-resumo-card${c.destaque ? ' destaque' : ''}`}>
                   <span className="fin-resumo-card-titulo">{c.label}</span>
@@ -487,6 +489,35 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   }
                 </div>
               ))}
+            </div>
+
+            {/* ── Pendências ── */}
+            <div className="fin-resumo-secao-label fin-resumo-secao-label--pendencias">
+              ⚠️ Pendências
+            </div>
+            <div className="fin-pendencias-grid">
+              <div className="fin-pendencia-card fiado">
+                <div className="fin-pendencia-icone">📋</div>
+                <div className="fin-pendencia-info">
+                  <span className="fin-pendencia-titulo">Fiado Pendente</span>
+                  <span className="fin-pendencia-desc">Total a receber de clientes</span>
+                </div>
+                {loadingResumo
+                  ? <div className="fin-card-spinner" />
+                  : <span className="fin-pendencia-valor">{fmt(resumo?.total_fiado_pendente)}</span>
+                }
+              </div>
+              <div className="fin-pendencia-card contas">
+                <div className="fin-pendencia-icone">💸</div>
+                <div className="fin-pendencia-info">
+                  <span className="fin-pendencia-titulo">Contas a Pagar</span>
+                  <span className="fin-pendencia-desc">Despesas pendentes e atrasadas</span>
+                </div>
+                {loadingResumo
+                  ? <div className="fin-card-spinner" />
+                  : <span className="fin-pendencia-valor">{fmt(resumo?.total_contas_pagar_pendente)}</span>
+                }
+              </div>
             </div>
 
             <div className="fin-divisor" />
