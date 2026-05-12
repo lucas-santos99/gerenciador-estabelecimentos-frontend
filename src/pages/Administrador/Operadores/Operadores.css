@@ -698,3 +698,113 @@
 @media (max-width: 480px) {
   .op-table th:nth-child(3), .op-table td:nth-child(3) { display: none; }
 }
+
+/* ========================= */
+/*  PERMISSÕES (NovoOperador) */
+/* ========================= */
+
+/* Info de limite abaixo do select de estabelecimento */
+.op-limite-info {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #22c55e;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+}
+.op-limite-info.cheio {
+  color: #ef4444;
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.2);
+}
+
+/* Texto hint abaixo de labels */
+.op-form-hint-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: -8px 0 12px;
+  line-height: 1.5;
+}
+
+/* Grid de botões de módulo */
+.op-perm-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.op-perm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.op-perm-btn:hover {
+  border-color: #14b8a6;
+  color: #14b8a6;
+  background: rgba(20,184,166,0.06);
+}
+.op-perm-btn.ativo {
+  border-color: #14b8a6;
+  background: rgba(20,184,166,0.1);
+  color: #14b8a6;
+  font-weight: 700;
+}
+
+.op-perm-check {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #14b8a6;
+  margin-left: 2px;
+}
+
+/* ========================= */
+/*  LIMITE OPERADORES         */
+/*  (EditarEstabelecimento)   */
+/* ========================= */
+
+.op-limite-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.op-limite-input {
+  width: 80px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.2s;
+}
+.op-limite-input:focus {
+  outline: none;
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.12);
+}
+
+.op-limite-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 160px;
+}

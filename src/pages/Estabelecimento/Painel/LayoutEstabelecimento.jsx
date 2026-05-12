@@ -78,6 +78,16 @@ const Icons = {
       <line x1="3" y1="18" x2="21" y2="18"/>
     </svg>
   ),
+  Operadores: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <line x1="19" y1="11" x2="19" y2="17"/>
+      <line x1="22" y1="14" x2="16" y2="14"/>
+    </svg>
+  ),
   Close: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6"  x2="6"  y2="18"/>
@@ -86,14 +96,19 @@ const Icons = {
   ),
 };
 
-/* ── Definição das abas ────────────────────────────────────── */
-const ABAS = [
-  { key: "pdv",        label: "PDV (Caixa)",    icon: Icons.PDV,        shortcut: "F2" },
-  { key: "estoque",    label: "Estoque",         icon: Icons.Estoque,    shortcut: "F3" },
-  { key: "clientes",   label: "Clientes / Fiado",icon: Icons.Clientes,   shortcut: "F4" },
-  { key: "financeiro", label: "Financeiro",      icon: Icons.Financeiro, shortcut: "F5" },
-  { key: "config",     label: "Configurações",   icon: Icons.Config,     shortcut: "F6" },
+/* ── Abas base (todos os roles) ───────────────────────────── */
+const ABAS_BASE = [
+  { key: "pdv",        label: "PDV (Caixa)",     icon: Icons.PDV,        shortcut: "F2" },
+  { key: "estoque",    label: "Estoque",          icon: Icons.Estoque,    shortcut: "F3" },
+  { key: "clientes",   label: "Clientes / Fiado", icon: Icons.Clientes,   shortcut: "F4" },
+  { key: "financeiro", label: "Financeiro",       icon: Icons.Financeiro, shortcut: "F5" },
+  { key: "config",     label: "Configurações",    icon: Icons.Config,     shortcut: "F6" },
 ];
+
+/* ── Aba exclusiva do merchant ────────────────────────────── */
+const ABA_OPERADORES = {
+  key: "operadores", label: "Operadores", icon: Icons.Operadores, shortcut: null,
+};
 
 const SIDEBAR_KEY = "est_sidebar_collapsed";
 
@@ -107,6 +122,11 @@ export default function LayoutEstabelecimento({
 }) {
   const navigate  = useNavigate();
   const { logout, profile } = useAuth();
+
+  /* ── abas disponíveis para este role ─────────────────────── */
+  const ABAS = profile?.role === 'merchant'
+    ? [...ABAS_BASE, ABA_OPERADORES]
+    : ABAS_BASE;
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
@@ -227,20 +247,25 @@ export default function LayoutEstabelecimento({
         <ul className="est-nav">
           <div className="est-nav-section">Menu</div>
           {ABAS.map(aba => (
-            <li
-              key={aba.key}
-              className={`est-nav-item${abaAtiva === aba.key ? " active" : ""}`}
-            >
-              <button
-                className="est-nav-link"
-                onClick={() => { onAbaChange?.(aba.key); setMobileOpen(false); }}
-              >
-                <span className="est-nav-icon"><aba.icon /></span>
-                <span className="est-nav-label">{aba.label}</span>
-                <span className="est-nav-shortcut">{aba.shortcut}</span>
-              </button>
-              <span className="est-nav-tooltip">{aba.label}</span>
-            </li>
+            <React.Fragment key={aba.key}>
+              {/* Divisor antes de Operadores */}
+              {aba.key === 'operadores' && (
+                <div className="est-nav-divider" />
+              )}
+              <li className={`est-nav-item${abaAtiva === aba.key ? " active" : ""}`}>
+                <button
+                  className="est-nav-link"
+                  onClick={() => { onAbaChange?.(aba.key); setMobileOpen(false); }}
+                >
+                  <span className="est-nav-icon"><aba.icon /></span>
+                  <span className="est-nav-label">{aba.label}</span>
+                  {aba.shortcut && (
+                    <span className="est-nav-shortcut">{aba.shortcut}</span>
+                  )}
+                </button>
+                <span className="est-nav-tooltip">{aba.label}</span>
+              </li>
+            </React.Fragment>
           ))}
         </ul>
 

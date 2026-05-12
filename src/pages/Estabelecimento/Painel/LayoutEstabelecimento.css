@@ -791,3 +791,15 @@ body.light select {
   .est-modal-actions { flex-direction: column; }
   .est-mobile-toggle { top: 10px; left: 10px; }
 }
+
+/* ============================================================
+   PATCH — adicionar ao FINAL de LayoutEstabelecimento.css
+   ============================================================ */
+
+/* Divisor entre abas normais e Operadores na sidebar */
+.est-nav-divider {
+  height: 1px;
+  background: var(--est-border);
+  margin: 8px 12px;
+  opacity: 0.6;
+}

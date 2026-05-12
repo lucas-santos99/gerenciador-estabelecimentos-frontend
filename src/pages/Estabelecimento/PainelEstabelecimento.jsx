@@ -10,6 +10,7 @@ import ProdutoList   from "./Estoque/ProdutoList";
 import DividasList   from "./Clientes/DividasList";
 import Financeiro    from "./Financeiro/Financeiro";
 import Configuracoes from "./Configuracoes/Configuracoes";
+import OperadoresEstabelecimento from "./Operadores/OperadoresEstabelecimento";
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -89,6 +90,13 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             onLogoAtualizada={handleLogoAtualizada}
             logoUrl={logoUrl}
+          />
+        );
+
+      case "operadores":
+        return (
+          <OperadoresEstabelecimento
+            estabelecimentoId={estabelecimentoId}
           />
         );
 

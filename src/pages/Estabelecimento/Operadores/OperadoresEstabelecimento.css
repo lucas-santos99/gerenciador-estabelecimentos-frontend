@@ -1,0 +1,581 @@
+/* ============================================================
+   OperadoresEstabelecimento.css — Lucas J. Systems
+   Prefixo: opest-
+   ============================================================ */
+
+.opest-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+
+/* ========================= */
+/*  HEADER                   */
+/* ========================= */
+
+.opest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.opest-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.opest-titulo {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin: 0;
+}
+
+.opest-subtitulo {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+}
+
+.opest-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Badge de limite */
+.opest-limite-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.opest-limite-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--est-accent);
+}
+
+.opest-limite-sep {
+  font-size: 0.9rem;
+  color: var(--est-text-muted);
+}
+
+.opest-limite-max {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+}
+
+.opest-limite-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  margin-left: 4px;
+}
+
+/* Botão novo */
+.opest-btn-novo {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(20,184,166,0.35);
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.opest-btn-novo:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(20,184,166,0.45);
+}
+.opest-btn-novo:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ========================= */
+/*  ERRO                      */
+/* ========================= */
+
+.opest-erro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 10px;
+  color: var(--est-danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.opest-erro-fechar {
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+/* ========================= */
+/*  LOADING / VAZIO           */
+/* ========================= */
+
+.opest-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--est-text-muted);
+  font-size: 0.875rem;
+}
+
+.opest-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--est-border);
+  border-top-color: var(--est-accent);
+  border-radius: 50%;
+  animation: opestSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes opestSpin { to { transform: rotate(360deg); } }
+
+.opest-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.opest-vazio-icone {
+  font-size: 3rem;
+  opacity: 0.3;
+}
+
+.opest-vazio p {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+  margin: 0;
+}
+
+.opest-vazio small {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+}
+
+/* ========================= */
+/*  LISTA DE OPERADORES       */
+/* ========================= */
+
+.opest-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opest-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: all 0.18s;
+}
+.opest-card:hover {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.opest-card.inativo {
+  opacity: 0.6;
+}
+
+/* Avatar */
+.opest-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--est-accent-dim);
+  border: 2px solid var(--est-border-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.opest-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.opest-avatar-inicial {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--est-accent);
+}
+
+/* Info */
+.opest-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.opest-card-nome {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--est-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opest-card-email {
+  font-size: 0.75rem;
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opest-card-tel {
+  font-size: 0.72rem;
+  color: var(--est-text-muted);
+}
+
+/* Status badge */
+.opest-status-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.opest-status-badge.verde {
+  background: var(--est-success-dim);
+  color: var(--est-success);
+  border: 1px solid rgba(74,222,128,0.25);
+}
+
+.opest-status-badge.cinza {
+  background: var(--est-input);
+  color: var(--est-text-muted);
+  border: 1px solid var(--est-border);
+}
+
+/* Ações */
+.opest-card-acoes {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.opest-acao-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.opest-acao-btn.permissoes:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+
+.opest-acao-btn.editar:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+
+.opest-acao-btn.status.desativar:hover {
+  border-color: rgba(251,191,36,0.4);
+  color: var(--est-warning);
+  background: var(--est-warning-dim);
+}
+
+.opest-acao-btn.status.ativar:hover {
+  border-color: rgba(74,222,128,0.4);
+  color: var(--est-success);
+  background: var(--est-success-dim);
+}
+
+.opest-acao-btn.excluir {
+  color: var(--est-danger);
+  border-color: rgba(239,68,68,0.25);
+  background: var(--est-danger-dim);
+}
+.opest-acao-btn.excluir:hover {
+  background: var(--est-danger);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* ========================= */
+/*  MODAIS                    */
+/* ========================= */
+
+.opest-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.opest-modal {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 18px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+  animation: opestModalIn 0.2s ease;
+}
+
+.opest-modal--perm {
+  max-width: 600px;
+}
+
+@keyframes opestModalIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.opest-modal-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin-bottom: 20px;
+}
+
+.opest-modal-erro {
+  padding: 10px 14px;
+  background: var(--est-danger-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+  color: var(--est-danger);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.opest-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.opest-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.opest-form-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--est-text-soft);
+}
+
+.opest-form-input {
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+.opest-form-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+.opest-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.opest-form-hint {
+  font-size: 0.68rem;
+  color: var(--est-text-muted);
+  font-style: italic;
+}
+
+.opest-modal-acoes {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.opest-modal-btn-cancelar {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.opest-modal-btn-cancelar:hover { border-color: var(--est-border-accent); color: var(--est-text); }
+
+.opest-modal-btn-salvar {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+}
+.opest-modal-btn-salvar:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20,184,166,0.4);
+}
+.opest-modal-btn-salvar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Modal Permissões ── */
+
+.opest-perm-subtitulo {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+  margin: -12px 0 18px;
+  line-height: 1.5;
+}
+
+.opest-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.opest-perm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--est-border);
+  background: var(--est-input);
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  text-align: center;
+}
+.opest-perm-card:hover {
+  border-color: var(--est-border-accent);
+  background: var(--est-hover);
+}
+.opest-perm-card.ativo {
+  border-color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+
+.opest-perm-icone {
+  font-size: 1.6rem;
+}
+
+.opest-perm-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--est-text);
+}
+
+.opest-perm-desc {
+  font-size: 0.65rem;
+  color: var(--est-text-muted);
+  line-height: 1.4;
+}
+
+.opest-perm-check {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--est-text-muted);
+}
+.opest-perm-check.ativo {
+  color: var(--est-accent);
+}
+
+.opest-perm-resumo {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--est-text-muted);
+  text-align: center;
+  padding: 10px;
+  background: var(--est-input);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
