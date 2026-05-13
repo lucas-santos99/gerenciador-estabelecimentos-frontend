@@ -3,13 +3,47 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
 
-/* ── Módulos disponíveis ─────────────────────────────────── */
+/* ── Módulos disponíveis com ações granulares ────────────── */
 const MODULOS = [
-  { id: 'pdv',           label: 'PDV (Caixa)',       icone: '🖥️',  desc: 'Realizar vendas e operar o caixa' },
-  { id: 'estoque',       label: 'Estoque',           icone: '📦',  desc: 'Ver e editar produtos e categorias' },
-  { id: 'clientes',      label: 'Clientes / Fiado',  icone: '👥',  desc: 'Gerenciar clientes e cobranças' },
-  { id: 'financeiro',    label: 'Financeiro',        icone: '💰',  desc: 'Fluxo de caixa e relatórios' },
-  { id: 'configuracoes', label: 'Configurações',     icone: '⚙️',  desc: 'Editar dados do estabelecimento' },
+  {
+    id: 'pdv', label: 'PDV (Caixa)', icone: '🖥️', desc: 'Realizar vendas e operar o caixa',
+    acoes: [
+      { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
+      { id: 'pdv_fiado',          label: 'Registrar fiado' },
+    ],
+  },
+  {
+    id: 'estoque', label: 'Estoque', icone: '📦', desc: 'Ver e editar produtos e categorias',
+    acoes: [
+      { id: 'estoque_adicionar', label: 'Adicionar produtos' },
+      { id: 'estoque_editar',    label: 'Editar produtos' },
+      { id: 'estoque_excluir',   label: 'Excluir produtos' },
+    ],
+  },
+  {
+    id: 'clientes', label: 'Clientes / Fiado', icone: '👥', desc: 'Gerenciar clientes e cobranças',
+    acoes: [
+      { id: 'clientes_adicionar', label: 'Adicionar clientes' },
+      { id: 'clientes_editar',    label: 'Editar clientes' },
+      { id: 'clientes_excluir',   label: 'Excluir clientes' },
+      { id: 'clientes_receber',   label: 'Registrar recebimentos' },
+    ],
+  },
+  {
+    id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e relatórios',
+    acoes: [
+      { id: 'financeiro_ver_dre',       label: 'Ver DRE' },
+      { id: 'financeiro_ver_relatorio', label: 'Ver relatório de vendas' },
+      { id: 'financeiro_contas_pagar',  label: 'Gerenciar contas a pagar' },
+    ],
+  },
+  {
+    id: 'configuracoes', label: 'Configurações', icone: '⚙️', desc: 'Editar dados do estabelecimento',
+    acoes: [
+      { id: 'config_editar_dados', label: 'Editar dados' },
+      { id: 'config_editar_logo',  label: 'Alterar logo' },
+    ],
+  },
 ];
 
 const STATUS_LABEL = { ativo: 'Ativo', inativo: 'Inativo' };
@@ -29,6 +63,7 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
 
   // Modal de permissões
   const [permModal,     setPermModal]     = useState(null); // operador selecionado
+  const [resetModal,    setResetModal]    = useState(null); // operador selecionado para reset
 
   useEffect(() => {
     if (estabelecimentoId) {
@@ -103,6 +138,14 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
           operador={permModal}
           onClose={() => setPermModal(null)}
           onSalvo={() => setPermModal(null)}
+        />
+      )}
+
+      {/* Modal reset senha */}
+      {resetModal && (
+        <ModalResetSenha
+          operador={resetModal}
+          onClose={() => setResetModal(null)}
         />
       )}
 
@@ -198,6 +241,13 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
                   title="Editar operador"
                 >
                   ✏️ Editar
+                </button>
+                <button
+                  className="opest-acao-btn senha"
+                  onClick={() => setResetModal(op)}
+                  title="Alterar senha"
+                >
+                  🔒 Senha
                 </button>
                 <button
                   className={`opest-acao-btn status ${op.status === 'ativo' ? 'desativar' : 'ativar'}`}
@@ -339,7 +389,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   MODAL — Permissões do Operador
+   MODAL — Permissões do Operador (com ações granulares)
 ════════════════════════════════════════════════════════════ */
 function ModalPermissoes({ operador, onClose, onSalvo }) {
   const [selecionadas, setSelecionadas] = useState([]);
@@ -367,9 +417,30 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
   }
 
   function toggleModulo(id) {
-    setSelecionadas(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setSelecionadas(prev => {
+      const temModulo = prev.includes(id);
+      const mod = MODULOS.find(m => m.id === id);
+      if (temModulo) {
+        // Remove módulo e todas as suas ações
+        const acoesIds = mod?.acoes.map(a => a.id) || [];
+        return prev.filter(p => p !== id && !acoesIds.includes(p));
+      } else {
+        return [...prev, id];
+      }
+    });
+  }
+
+  function toggleAcao(acaoId, moduloId) {
+    setSelecionadas(prev => {
+      if (prev.includes(acaoId)) {
+        return prev.filter(p => p !== acaoId);
+      } else {
+        // Garantir que o módulo pai também está selecionado
+        const novo = [...prev, acaoId];
+        if (!novo.includes(moduloId)) novo.push(moduloId);
+        return novo;
+      }
+    });
   }
 
   async function salvar() {
@@ -390,6 +461,8 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
     }
   }
 
+  const modulosCount = MODULOS.filter(m => selecionadas.includes(m.id)).length;
+
   return (
     <div className="opest-modal-overlay">
       <div className="opest-modal opest-modal--perm">
@@ -397,8 +470,7 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
           🔑 Permissões — {operador.nome}
         </div>
         <p className="opest-perm-subtitulo">
-          Selecione os módulos que este operador pode acessar.
-          Módulos não selecionados ficam ocultos no painel dele.
+          Ative os módulos e as ações específicas que este operador pode executar.
         </p>
 
         {erro && <div className="opest-modal-erro">⚠️ {erro}</div>}
@@ -406,23 +478,46 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
         {loading ? (
           <div className="opest-loading"><div className="opest-spinner" /> Carregando…</div>
         ) : (
-          <div className="opest-perm-grid">
+          <div className="opest-perm-lista">
             {MODULOS.map(mod => {
-              const ativo = selecionadas.includes(mod.id);
+              const moduloAtivo = selecionadas.includes(mod.id);
               return (
-                <button
-                  key={mod.id}
-                  type="button"
-                  className={`opest-perm-card ${ativo ? 'ativo' : ''}`}
-                  onClick={() => toggleModulo(mod.id)}
-                >
-                  <span className="opest-perm-icone">{mod.icone}</span>
-                  <span className="opest-perm-label">{mod.label}</span>
-                  <span className="opest-perm-desc">{mod.desc}</span>
-                  <span className={`opest-perm-check ${ativo ? 'ativo' : ''}`}>
-                    {ativo ? '✓' : '○'}
-                  </span>
-                </button>
+                <div key={mod.id} className={`opest-perm-modulo ${moduloAtivo ? 'ativo' : ''}`}>
+                  {/* Header do módulo — toggle principal */}
+                  <button
+                    type="button"
+                    className="opest-perm-modulo-header"
+                    onClick={() => toggleModulo(mod.id)}
+                  >
+                    <span className="opest-perm-modulo-icone">{mod.icone}</span>
+                    <div className="opest-perm-modulo-info">
+                      <span className="opest-perm-modulo-label">{mod.label}</span>
+                      <span className="opest-perm-modulo-desc">{mod.desc}</span>
+                    </div>
+                    <span className={`opest-perm-toggle ${moduloAtivo ? 'ativo' : ''}`}>
+                      {moduloAtivo ? '✓' : '○'}
+                    </span>
+                  </button>
+
+                  {/* Ações granulares — só exibe se módulo ativo */}
+                  {moduloAtivo && mod.acoes.length > 0 && (
+                    <div className="opest-perm-acoes">
+                      {mod.acoes.map(acao => {
+                        const acaoAtiva = selecionadas.includes(acao.id);
+                        return (
+                          <label key={acao.id} className={`opest-perm-acao ${acaoAtiva ? 'ativo' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={acaoAtiva}
+                              onChange={() => toggleAcao(acao.id, mod.id)}
+                            />
+                            <span>{acao.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -430,9 +525,9 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
 
         {!loading && (
           <div className="opest-perm-resumo">
-            {selecionadas.length === 0
-              ? '⚠️ Nenhum módulo selecionado — o operador não conseguirá acessar nada.'
-              : `✓ ${selecionadas.length} módulo(s) liberado(s)`
+            {modulosCount === 0
+              ? '⚠️ Nenhum módulo selecionado — o operador não acessará nenhuma tela.'
+              : `✓ ${modulosCount} módulo(s) liberado(s) — ${selecionadas.length} permissão(ões) total`
             }
           </div>
         )}
@@ -445,6 +540,104 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
             {salvando ? '⏳ Salvando…' : '✓ Salvar permissões'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL — Reset Senha do Operador
+════════════════════════════════════════════════════════════ */
+function ModalResetSenha({ operador, onClose }) {
+  const [senha,      setSenha]      = useState('');
+  const [confirmar,  setConfirmar]  = useState('');
+  const [salvando,   setSalvando]   = useState(false);
+  const [erro,       setErro]       = useState('');
+  const [sucesso,    setSucesso]    = useState(false);
+  const senhaRef = useRef(null);
+
+  useEffect(() => {
+    setTimeout(() => senhaRef.current?.focus(), 0);
+    function handleEsc(e) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  async function salvar(e) {
+    e.preventDefault();
+    setErro('');
+    if (senha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return; }
+    if (senha !== confirmar) { setErro('As senhas não coincidem.'); return; }
+    setSalvando(true);
+    try {
+      const resp = await apiFetch(`/api/operadores/${operador.id}/reset-senha`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ senha }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+      setSucesso(true);
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="opest-modal-overlay">
+      <div className="opest-modal">
+        <div className="opest-modal-titulo">🔒 Alterar senha — {operador.nome}</div>
+
+        {sucesso ? (
+          <>
+            <div className="opest-modal-sucesso">✓ Senha alterada com sucesso!</div>
+            <div className="opest-modal-acoes">
+              <button className="opest-modal-btn-salvar" onClick={onClose}>Fechar</button>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={salvar} className="opest-modal-form">
+            {erro && <div className="opest-modal-erro">⚠️ {erro}</div>}
+            <div className="opest-form-group">
+              <label className="opest-form-label">Nova senha *</label>
+              <input
+                ref={senhaRef}
+                className="opest-form-input"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={senha}
+                onChange={e => setSenha(e.target.value)}
+                required
+                disabled={salvando}
+              />
+            </div>
+            <div className="opest-form-group">
+              <label className="opest-form-label">Confirmar senha *</label>
+              <input
+                className="opest-form-input"
+                type="password"
+                placeholder="Repita a senha"
+                value={confirmar}
+                onChange={e => setConfirmar(e.target.value)}
+                required
+                disabled={salvando}
+              />
+            </div>
+            <span className="opest-form-hint">
+              O operador deverá usar esta nova senha no próximo login.
+            </span>
+            <div className="opest-modal-acoes">
+              <button type="button" className="opest-modal-btn-cancelar" onClick={onClose} disabled={salvando}>
+                Cancelar (Esc)
+              </button>
+              <button type="submit" className="opest-modal-btn-salvar" disabled={salvando}>
+                {salvando ? '⏳ Salvando…' : '✓ Alterar senha'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

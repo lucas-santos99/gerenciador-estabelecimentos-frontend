@@ -119,14 +119,19 @@ export default function LayoutEstabelecimento({
   children,
   nomeEstabelecimento,
   logoUrl,
+  permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
 }) {
   const navigate  = useNavigate();
   const { logout, profile } = useAuth();
 
-  /* ── abas disponíveis para este role ─────────────────────── */
-  const ABAS = profile?.role === 'merchant'
-    ? [...ABAS_BASE, ABA_OPERADORES]
-    : ABAS_BASE;
+  /* ── abas disponíveis para este role/permissões ───────────── */
+  const isMerchant = profile?.role === 'merchant';
+
+  const ABAS = (() => {
+    if (isMerchant) return [...ABAS_BASE, ABA_OPERADORES];
+    // Operador: só mostra abas cujo key está nas permissões
+    return ABAS_BASE.filter(aba => permissoes.includes(aba.key));
+  })();
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");

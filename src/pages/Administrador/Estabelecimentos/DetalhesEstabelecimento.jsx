@@ -17,8 +17,11 @@ export default function DetalhesEstabelecimento() {
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
 
-  const [dados,   setDados]   = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [dados,        setDados]        = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [limiteEdit,   setLimiteEdit]   = useState(false);
+  const [limiteVal,    setLimiteVal]    = useState(3);
+  const [limiteSaving, setLimiteSaving] = useState(false);
 
   async function carregar() {
     setLoading(true);
@@ -28,6 +31,7 @@ export default function DetalhesEstabelecimento() {
       });
       const data = await resp.json();
       setDados(resp.ok ? data : null);
+      if (resp.ok) setLimiteVal(data.limite_operadores ?? 3);
     } catch { setDados(null); }
     setLoading(false);
   }
@@ -50,6 +54,25 @@ export default function DetalhesEstabelecimento() {
     });
     if (resp.ok) navigate("/admin");
     else alert("Erro ao excluir.");
+  }
+
+  async function salvarLimite() {
+    setLimiteSaving(true);
+    try {
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/limite-operadores`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ limite: parseInt(limiteVal) || 0 }),
+        credentials: "include",
+      });
+      if (resp.ok) {
+        setDados(prev => ({ ...prev, limite_operadores: parseInt(limiteVal) }));
+        setLimiteEdit(false);
+      } else {
+        alert("Erro ao salvar limite.");
+      }
+    } catch { alert("Erro interno."); }
+    setLimiteSaving(false);
   }
 
   /* ── loading ──────────────────────────────────────────── */
@@ -181,6 +204,46 @@ export default function DetalhesEstabelecimento() {
               <span className="est-info-row-value">
                 {dados.endereco_completo || "Não informado"}
               </span>
+            </div>
+          </div>
+
+          <div className="est-info-block">
+            <div className="est-info-block-title">Operadores</div>
+            <div className="est-info-row" style={{ alignItems: 'center', gap: 8 }}>
+              <span className="est-info-row-label">Limite</span>
+              {limiteEdit ? (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min="0" max="50"
+                    value={limiteVal}
+                    onChange={e => setLimiteVal(e.target.value)}
+                    style={{
+                      width: 60, padding: '4px 8px', borderRadius: 7,
+                      border: '1px solid #14b8a6', fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '0.9rem', fontWeight: 700, textAlign: 'center',
+                      background: 'var(--bg-input, #f8fafc)', color: 'inherit',
+                    }}
+                  />
+                  <button className="est-btn est-btn-outline" style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                    onClick={salvarLimite} disabled={limiteSaving}>
+                    {limiteSaving ? '…' : '✓'}
+                  </button>
+                  <button className="est-btn est-btn-ghost" style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                    onClick={() => { setLimiteEdit(false); setLimiteVal(dados.limite_operadores ?? 3); }}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <span
+                  className="est-info-row-value mono"
+                  style={{ cursor: 'pointer', color: 'var(--accent, #14b8a6)', textDecoration: 'underline dotted' }}
+                  onClick={() => setLimiteEdit(true)}
+                  title="Clique para editar"
+                >
+                  {dados.limite_operadores ?? 3} operador(es) ✏️
+                </span>
+              )}
             </div>
           </div>
 

@@ -579,3 +579,134 @@
   border-radius: 8px;
   margin-bottom: 16px;
 }
+/* ========================= */
+/*  PERMISSÕES GRANULARES    */
+/* ========================= */
+
+.opest-perm-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+
+.opest-perm-modulo {
+  border: 1.5px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.opest-perm-modulo.ativo {
+  border-color: var(--est-accent);
+}
+
+.opest-perm-modulo-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--est-input);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.opest-perm-modulo.ativo .opest-perm-modulo-header {
+  background: var(--est-accent-dim);
+}
+.opest-perm-modulo-header:hover { background: var(--est-hover); }
+
+.opest-perm-modulo-icone { font-size: 1.3rem; flex-shrink: 0; }
+
+.opest-perm-modulo-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.opest-perm-modulo-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--est-text);
+}
+
+.opest-perm-modulo-desc {
+  font-size: 0.68rem;
+  color: var(--est-text-muted);
+}
+
+.opest-perm-toggle {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--est-text-muted);
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+.opest-perm-toggle.ativo { color: var(--est-accent); }
+
+/* Sub-ações */
+.opest-perm-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px 12px 42px;
+  background: var(--est-card);
+  border-top: 1px solid var(--est-border);
+}
+
+.opest-perm-acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-muted);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.opest-perm-acao input[type="checkbox"] { display: none; }
+.opest-perm-acao:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+.opest-perm-acao.ativo {
+  background: var(--est-accent-dim);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  font-weight: 700;
+}
+
+/* ========================= */
+/*  BOTÃO SENHA / SUCESSO    */
+/* ========================= */
+
+.opest-acao-btn.senha:hover {
+  border-color: rgba(139,92,246,0.4);
+  color: #8b5cf6;
+  background: rgba(139,92,246,0.08);
+}
+
+.opest-modal-sucesso {
+  padding: 14px;
+  background: var(--est-success-dim);
+  border: 1px solid rgba(74,222,128,0.25);
+  border-radius: 10px;
+  color: var(--est-success);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+}

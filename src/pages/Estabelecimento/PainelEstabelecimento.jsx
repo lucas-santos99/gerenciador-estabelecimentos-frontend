@@ -21,29 +21,50 @@ export default function PainelEstabelecimento() {
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
   const [logoUrl,             setLogoUrl]            = useState("");
   const [carregando,          setCarregando]         = useState(true);
+  const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
 
-  /* ── Carregar dados do estabelecimento ───────────────────── */
+  const isMerchant = profile?.role === 'merchant';
+
+  /* ── Carregar dados do estabelecimento + permissões ─────── */
   useEffect(() => {
     async function carregarDados() {
       if (!estabelecimentoId) return;
       setCarregando(true);
       try {
-        const resp = await apiFetch(
-          `/api/estabelecimentos/dados/${estabelecimentoId}`
-        );
-        if (resp.ok) {
-          const data = await resp.json();
+        const promises = [
+          apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`),
+        ];
+
+        // Operadores carregam permissões
+        if (!isMerchant) {
+          promises.push(apiFetch('/api/operadores/minhas-permissoes'));
+        }
+
+        const [respDados, respPerms] = await Promise.all(promises);
+
+        if (respDados.ok) {
+          const data = await respDados.json();
           setNomeEstabelecimento(data.nome_fantasia || "");
           setLogoUrl(data.logo_url || "");
         }
+
+        if (respPerms && respPerms.ok) {
+          const perms = await respPerms.json();
+          setPermissoes(perms);
+
+          // Redirecionar para primeira aba permitida se pdv não estiver liberado
+          if (!perms.includes('pdv') && perms.length > 0) {
+            setAbaAtiva(perms[0]);
+          }
+        }
       } catch (err) {
-        console.error("Erro ao carregar dados do estabelecimento:", err);
+        console.error("Erro ao carregar dados:", err);
       } finally {
         setCarregando(false);
       }
     }
     carregarDados();
-  }, [estabelecimentoId]);
+  }, [estabelecimentoId, isMerchant]);
 
   /* ── Callback quando logo é atualizada nas configurações ─── */
   function handleLogoAtualizada(novaUrl) {
@@ -126,6 +147,7 @@ export default function PainelEstabelecimento() {
       onAbaChange={setAbaAtiva}
       nomeEstabelecimento={nomeEstabelecimento}
       logoUrl={logoUrl}
+      permissoes={permissoes}
     >
       {renderModulo()}
     </LayoutEstabelecimento>

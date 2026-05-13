@@ -18,21 +18,70 @@ export default function DetalhesOperador() {
   const [op,         setOp]         = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [showReset,  setShowReset]  = useState(false);
+  const [permissoes, setPermissoes] = useState([]);
+  const [permLoading,setPermLoading]= useState(false);
+  const [permSaving, setPermSaving] = useState(false);
+  const [permEditing,setPermEditing]= useState(false);
+
+  const MODULOS_ADMIN = [
+    { id:'pdv',           label:'PDV (Caixa)',      icone:'🖥️', acoes:[{id:'pdv_cancelar_venda',label:'Cancelar vendas'},{id:'pdv_fiado',label:'Registrar fiado'}] },
+    { id:'estoque',       label:'Estoque',          icone:'📦', acoes:[{id:'estoque_adicionar',label:'Adicionar'},{id:'estoque_editar',label:'Editar'},{id:'estoque_excluir',label:'Excluir'}] },
+    { id:'clientes',      label:'Clientes / Fiado', icone:'👥', acoes:[{id:'clientes_adicionar',label:'Adicionar'},{id:'clientes_editar',label:'Editar'},{id:'clientes_excluir',label:'Excluir'},{id:'clientes_receber',label:'Receber'}] },
+    { id:'financeiro',    label:'Financeiro',       icone:'💰', acoes:[{id:'financeiro_ver_dre',label:'DRE'},{id:'financeiro_ver_relatorio',label:'Relatório'},{id:'financeiro_contas_pagar',label:'Contas a pagar'}] },
+    { id:'configuracoes', label:'Configurações',    icone:'⚙️', acoes:[{id:'config_editar_dados',label:'Editar dados'},{id:'config_editar_logo',label:'Alterar logo'}] },
+  ];
 
   async function carregar() {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/detalhes/${id}`, {
-        credentials: "include",
-      });
-      const data = await resp.json();
-      setOp(resp.ok ? data : null);
+      const [respOp, respPerms] = await Promise.all([
+        fetch(`${API_URL}/admin/operadores/detalhes/${id}`, { credentials: "include" }),
+        fetch(`${API_URL}/admin/operadores/${id}/permissoes`,  { credentials: "include" }),
+      ]);
+      const data = await respOp.json();
+      setOp(respOp.ok ? data : null);
+      if (respPerms.ok) setPermissoes(await respPerms.json());
     } catch { setOp(null); }
     setLoading(false);
   }
 
 
   useEffect(() => { carregar(); }, [id]);
+
+  function togglePerm(id, moduloId) {
+    setPermissoes(prev => {
+      if (prev.includes(id)) return prev.filter(p => p !== id);
+      const novo = [...prev, id];
+      if (moduloId && !novo.includes(moduloId)) novo.push(moduloId);
+      return novo;
+    });
+  }
+
+  function toggleModulo(id) {
+    setPermissoes(prev => {
+      const mod = MODULOS_ADMIN.find(m => m.id === id);
+      if (prev.includes(id)) {
+        const acoesIds = mod?.acoes.map(a => a.id) || [];
+        return prev.filter(p => p !== id && !acoesIds.includes(p));
+      }
+      return [...prev, id];
+    });
+  }
+
+  async function salvarPermissoes() {
+    setPermSaving(true);
+    try {
+      const resp = await fetch(`${API_URL}/admin/operadores/${id}/permissoes`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ permissoes }),
+        credentials: "include",
+      });
+      if (resp.ok) setPermEditing(false);
+      else alert("Erro ao salvar permissões.");
+    } catch { alert("Erro interno."); }
+    setPermSaving(false);
+  }
 
   async function toggleStatus() {
     if (!op) return;
@@ -182,6 +231,74 @@ export default function DetalhesOperador() {
               </span>
             </div>
           </div>
+        {/* PERMISSÕES */}
+        <div className="op-info-block" style={{ gridColumn: '1 / -1' }}>
+          <div className="op-info-block-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>🔑 Módulos e Permissões</span>
+            {!permEditing
+              ? <button className="op-btn op-btn-ghost op-btn-sm" onClick={() => setPermEditing(true)}>✏️ Editar</button>
+              : <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="op-btn op-btn-ghost op-btn-sm" onClick={() => { setPermEditing(false); carregar(); }}>Cancelar</button>
+                  <button className="op-btn op-btn-primary op-btn-sm" onClick={salvarPermissoes} disabled={permSaving}>
+                    {permSaving ? '⏳…' : '✓ Salvar'}
+                  </button>
+                </div>
+            }
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+            {MODULOS_ADMIN.map(mod => {
+              const modAtivo = permissoes.includes(mod.id);
+              return (
+                <div key={mod.id} style={{
+                  border: `1.5px solid ${modAtivo ? '#14b8a6' : 'var(--border, #e2e8f0)'}`,
+                  borderRadius: 10, overflow: 'hidden',
+                }}>
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 12px',
+                      background: modAtivo ? 'rgba(20,184,166,0.08)' : 'var(--bg-input, #f8fafc)',
+                      cursor: permEditing ? 'pointer' : 'default',
+                    }}
+                    onClick={() => permEditing && toggleModulo(mod.id)}
+                  >
+                    <span style={{ fontSize: '1.1rem' }}>{mod.icone}</span>
+                    <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 700, color: 'var(--text, #1e293b)' }}>{mod.label}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: modAtivo ? '#14b8a6' : 'var(--text-muted, #94a3b8)' }}>
+                      {modAtivo ? '✓ Ativo' : '○ Inativo'}
+                    </span>
+                  </div>
+                  {modAtivo && mod.acoes.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 12px 10px 36px', background: 'var(--card-bg, #fff)', borderTop: '1px solid var(--border, #e2e8f0)' }}>
+                      {mod.acoes.map(acao => {
+                        const acaoAtiva = permissoes.includes(acao.id);
+                        return (
+                          <span
+                            key={acao.id}
+                            onClick={() => permEditing && togglePerm(acao.id, mod.id)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '3px 10px', borderRadius: 20,
+                              border: `1px solid ${acaoAtiva ? '#14b8a6' : 'var(--border, #e2e8f0)'}`,
+                              background: acaoAtiva ? 'rgba(20,184,166,0.1)' : 'var(--bg-input, #f8fafc)',
+                              color: acaoAtiva ? '#14b8a6' : 'var(--text-muted, #94a3b8)',
+                              fontSize: '0.72rem', fontWeight: acaoAtiva ? 700 : 500,
+                              cursor: permEditing ? 'pointer' : 'default',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {acaoAtiva ? '✓' : '○'} {acao.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
         </div>
 
       </div>
