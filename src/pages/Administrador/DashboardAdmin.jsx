@@ -21,6 +21,7 @@ const Icon = {
   Sort:        () => <span style={{ fontSize:"0.65rem", opacity:0.6 }}>⬍</span>,
   Edit:        () => <span>✏️</span>,
   Users:       () => <span>👥</span>,
+  Config:      () => <span>⚙️</span>,
 };
 
 /* ── helpers ──────────────────────────────────────────────── */
@@ -48,15 +49,22 @@ export default function DashboardAdmin() {
   const API_URL    = import.meta.env.VITE_API_URL;
 
   /* ── state ─────────────────────────────────────────────── */
-  const [loading,        setLoading]        = useState(true);
-  const [nomeUsuario,    setNomeUsuario]     = useState("");
-  const [todasLista,     setTodasLista]      = useState([]);
-  const [qtdExcluidas,   setQtdExcluidas]    = useState(0);
-  const [filtro,         setFiltro]          = useState("");
-  const [busca,          setBusca]           = useState("");
-  const [filtroTipo,     setFiltroTipo]      = useState("");
-  const [mostrarAlertas, setMostrarAlertas]  = useState(true);
-  const [ordenacao,      setOrdenacao]       = useState({ campo: "", direcao: "asc" });
+  const [loading,          setLoading]          = useState(true);
+  const [nomeUsuario,      setNomeUsuario]       = useState("");
+  const [todasLista,       setTodasLista]        = useState([]);
+  const [qtdExcluidas,     setQtdExcluidas]      = useState(0);
+  const [filtro,           setFiltro]            = useState("");
+  const [busca,            setBusca]             = useState("");
+  const [filtroTipo,       setFiltroTipo]        = useState("");
+  const [mostrarAlertas,   setMostrarAlertas]    = useState(true);
+  const [ordenacao,        setOrdenacao]         = useState({ campo: "", direcao: "asc" });
+
+  // Modal configurações globais
+  const [modalConfig,      setModalConfig]       = useState(false);
+  const [limiteGlobal,     setLimiteGlobal]      = useState(3);
+  const [limiteInput,      setLimiteInput]       = useState(3);
+  const [salvandoConfig,   setSalvandoConfig]    = useState(false);
+  const [configMsg,        setConfigMsg]         = useState("");
 
   /* ── carregar dados ─────────────────────────────────────── */
   async function carregarDados() {
@@ -75,6 +83,49 @@ export default function DashboardAdmin() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function abrirConfig() {
+    setConfigMsg("");
+    setModalConfig(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const resp = await fetch(`${API_URL}/superadmin/config`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        const val = d.limite_operadores_padrao ?? 3;
+        setLimiteGlobal(val);
+        setLimiteInput(val);
+      }
+    } catch (err) { console.error(err); }
+  }
+
+  async function salvarConfig() {
+    const val = parseInt(limiteInput);
+    if (isNaN(val) || val < 0 || val > 50) {
+      setConfigMsg("❌ Valor inválido (0–50)");
+      return;
+    }
+    setSalvandoConfig(true);
+    setConfigMsg("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const resp = await fetch(`${API_URL}/superadmin/config`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ limite_operadores_padrao: val }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) { setConfigMsg("❌ " + (json.error || "Erro ao salvar")); return; }
+      setLimiteGlobal(val);
+      setConfigMsg("✓ Salvo! Novos estabelecimentos herdarão este limite.");
+      setTimeout(() => setConfigMsg(""), 4000);
+    } catch { setConfigMsg("❌ Erro interno"); }
+    setSalvandoConfig(false);
   }
 
   useEffect(() => { carregarDados(); }, []);
@@ -219,6 +270,14 @@ export default function DashboardAdmin() {
               onClick={() => navigate("/admin/superadmins")}
             >
               <Icon.Crown /> Novo SuperAdmin
+            </button>
+
+            <button
+              className="btn btn-config"
+              onClick={abrirConfig}
+              title="Configurações globais do sistema"
+            >
+              <Icon.Config /> Configurações
             </button>
 
             <button
@@ -459,6 +518,63 @@ export default function DashboardAdmin() {
         </div>
 
       </div>
+
+      {/* ── MODAL CONFIG GLOBAL ────────────────────────────── */}
+      {modalConfig && (
+        <div className="dash-modal-overlay" onClick={() => setModalConfig(false)}>
+          <div className="dash-modal" onClick={e => e.stopPropagation()}>
+            <div className="dash-modal-icon">⚙️</div>
+            <div className="dash-modal-title">Configurações Globais</div>
+            <div className="dash-modal-subtitle">
+              Parâmetros padrão aplicados a <strong>novos</strong> estabelecimentos.
+              Estabelecimentos existentes não são afetados.
+            </div>
+
+            <div className="dash-config-item">
+              <div className="dash-config-info">
+                <span className="dash-config-label">👥 Limite padrão de operadores</span>
+                <span className="dash-config-desc">
+                  Novos estabelecimentos criados herdarão este limite automaticamente.
+                  Para alterar individualmente, use ✏️ Editar no estabelecimento.
+                </span>
+              </div>
+              <div className="dash-config-control">
+                <input
+                  className="dash-config-input"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={limiteInput}
+                  onChange={e => setLimiteInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && salvarConfig()}
+                  autoFocus
+                />
+                <span className="dash-config-unit">operadores</span>
+              </div>
+            </div>
+
+            {configMsg && (
+              <div className={`dash-config-msg ${configMsg.startsWith('✓') ? 'sucesso' : 'erro'}`}>
+                {configMsg}
+              </div>
+            )}
+
+            <div className="dash-modal-actions">
+              <button className="btn btn-ghost" onClick={() => setModalConfig(false)}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-teal"
+                onClick={salvarConfig}
+                disabled={salvandoConfig || parseInt(limiteInput) === limiteGlobal}
+              >
+                {salvandoConfig ? "⏳ Salvando…" : "✓ Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </LayoutAdmin>
   );
 }

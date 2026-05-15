@@ -825,3 +825,157 @@ body.light {
     display: none;
   }
 }
+/* ========================= */
+/*  BOTÃO CONFIG             */
+/* ========================= */
+
+.btn-config {
+  background: var(--bg-card, #1e293b);
+  color: var(--text-secondary, #94a3b8);
+  border: 1px solid var(--border, #334155);
+}
+.btn-config:hover {
+  border-color: var(--border-accent, #14b8a6);
+  color: var(--text-accent, #14b8a6);
+  background: var(--bg-hover, rgba(20,184,166,0.06));
+}
+
+/* ========================= */
+/*  MODAL CONFIG GLOBAL      */
+/* ========================= */
+
+.dash-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  animation: dashOverlayIn 0.18s ease;
+}
+@keyframes dashOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dash-modal {
+  background: var(--bg-card, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  animation: dashModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes dashModalIn {
+  from { opacity: 0; transform: scale(0.93) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dash-modal-icon {
+  font-size: 1.8rem;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.dash-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #f1f5f9);
+  margin-bottom: 6px;
+}
+
+.dash-modal-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.dash-config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-hover, rgba(255,255,255,0.03));
+  border: 1px solid var(--border, #334155);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.dash-config-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-config-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.dash-config-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.5;
+}
+
+.dash-config-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-config-input {
+  width: 72px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border-accent, #14b8a6);
+  background: var(--bg-input, #0f172a);
+  color: var(--text-primary, #f1f5f9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.2s;
+}
+.dash-config-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.2);
+}
+
+.dash-config-unit {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.dash-config-msg {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.dash-config-msg.sucesso {
+  color: #4ade80;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.2);
+}
+.dash-config-msg.erro {
+  color: #ef4444;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.dash-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
