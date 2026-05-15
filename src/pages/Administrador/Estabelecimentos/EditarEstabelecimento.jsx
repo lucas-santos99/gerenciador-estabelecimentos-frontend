@@ -273,6 +273,22 @@ export default function EditarEstabelecimento() {
                 </span>
               </div>
             </div>
+
+            <div className="est-info-block">
+              <div className="est-info-block-title">👥 Operadores</div>
+              <div className="est-info-row">
+                <span className="est-info-row-label">Limite de operadores</span>
+                <span className="est-info-row-value mono">
+                  {form.limite_operadores ?? 3} operador(es)
+                </span>
+              </div>
+              <div className="est-info-row" style={{ marginTop: 8 }}>
+                <span className="est-info-row-label" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  Para alterar, clique em ✏️ Editar
+                </span>
+              </div>
+            </div>
+
           </div>
 
         </div>
