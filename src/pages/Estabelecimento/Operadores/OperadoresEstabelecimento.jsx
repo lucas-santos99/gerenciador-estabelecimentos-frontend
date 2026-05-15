@@ -8,8 +8,10 @@ const MODULOS = [
   {
     id: 'pdv', label: 'PDV (Caixa)', icone: '🖥️', desc: 'Realizar vendas e operar o caixa',
     acoes: [
-      { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
-      { id: 'pdv_fiado',          label: 'Registrar fiado' },
+      { id: 'pdv_realizar_venda',  label: 'Realizar vendas' },
+      { id: 'pdv_cancelar_venda',  label: 'Cancelar vendas' },
+      { id: 'pdv_fiado',           label: 'Vender no fiado' },
+      { id: 'pdv_desconto',        label: 'Aplicar desconto' },
     ],
   },
   {
@@ -32,6 +34,7 @@ const MODULOS = [
   {
     id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e relatórios',
     acoes: [
+      { id: 'financeiro_ver_resumo',    label: 'Ver resumo do caixa' },
       { id: 'financeiro_ver_dre',       label: 'Ver DRE' },
       { id: 'financeiro_ver_relatorio', label: 'Ver relatório de vendas' },
       { id: 'financeiro_contas_pagar',  label: 'Gerenciar contas a pagar' },
@@ -502,10 +505,29 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
                   {/* Ações granulares — só exibe se módulo ativo */}
                   {moduloAtivo && mod.acoes.length > 0 && (
                     <div className="opest-perm-acoes">
+                      <button
+                        type="button"
+                        className="opest-perm-acao-todas"
+                        onClick={() => {
+                          const todasAtivas = mod.acoes.every(a => selecionadas.includes(a.id));
+                          if (todasAtivas) {
+                            setSelecionadas(prev => prev.filter(p => !mod.acoes.map(a => a.id).includes(p)));
+                          } else {
+                            setSelecionadas(prev => {
+                              const novo = [...prev];
+                              mod.acoes.forEach(a => { if (!novo.includes(a.id)) novo.push(a.id); });
+                              return novo;
+                            });
+                          }
+                        }}
+                      >
+                        {mod.acoes.every(a => selecionadas.includes(a.id)) ? '✕ Desmarcar todas' : '✓ Selecionar todas'}
+                      </button>
                       {mod.acoes.map(acao => {
                         const acaoAtiva = selecionadas.includes(acao.id);
                         return (
                           <label key={acao.id} className={`opest-perm-acao ${acaoAtiva ? 'ativo' : ''}`}>
+                            <span className="opest-perm-acao-check">{acaoAtiva ? '✓' : ''}</span>
                             <input
                               type="checkbox"
                               checked={acaoAtiva}
