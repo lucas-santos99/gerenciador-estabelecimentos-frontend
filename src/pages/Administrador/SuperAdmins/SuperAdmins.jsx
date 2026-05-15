@@ -33,17 +33,8 @@ export default function SuperAdmins() {
   const [novaSenha,      setNovaSenha]      = useState("");
   const [erroSenha,      setErroSenha]      = useState("");
 
-  // Configurações globais
-  const [limiteGlobal,      setLimiteGlobal]      = useState(3);
-  const [limiteGlobalInput, setLimiteGlobalInput] = useState(3);
-  const [salvandoLimite,    setSalvandoLimite]    = useState(false);
-  const [limiteMsg,         setLimiteMsg]         = useState("");
-
   useEffect(() => {
-    if (profile?.is_master) {
-      carregarLista();
-      carregarLimiteGlobal();
-    }
+    if (profile?.is_master) carregarLista();
   }, [profile]);
 
   /* ── bloqueio de acesso — DEPOIS dos hooks ───────────────── */
@@ -60,45 +51,6 @@ export default function SuperAdmins() {
       if (resp.ok) setLista(await resp.json());
     } catch (err) { console.error(err); }
     setLoadingLista(false);
-  }
-
-  async function carregarLimiteGlobal() {
-    try {
-      const token = await getToken();
-      const resp  = await fetch(`${API_URL}/superadmin/config`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const val = data.limite_operadores_padrao ?? 3;
-        setLimiteGlobal(val);
-        setLimiteGlobalInput(val);
-      }
-    } catch (err) { console.error(err); }
-  }
-
-  async function salvarLimiteGlobal() {
-    const val = parseInt(limiteGlobalInput);
-    if (isNaN(val) || val < 0 || val > 50) {
-      setLimiteMsg("❌ Valor inválido (0–50)");
-      return;
-    }
-    setSalvandoLimite(true);
-    setLimiteMsg("");
-    try {
-      const token = await getToken();
-      const resp  = await fetch(`${API_URL}/superadmin/config`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ limite_operadores_padrao: val }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) { setLimiteMsg("❌ " + (data.error || "Erro ao salvar")); return; }
-      setLimiteGlobal(val);
-      setLimiteMsg("✓ Salvo com sucesso!");
-      setTimeout(() => setLimiteMsg(""), 3000);
-    } catch { setLimiteMsg("❌ Erro interno"); }
-    setSalvandoLimite(false);
   }
 
   async function criarSuperAdmin() {
@@ -265,57 +217,6 @@ export default function SuperAdmins() {
               );
             })
           )}
-        </div>
-
-        {/* ── CONFIGURAÇÕES GLOBAIS ────────────────────────── */}
-        <div className="sa-config-box">
-          <div className="sa-config-header">
-            <div className="sa-config-header-left">
-              <span className="sa-config-icon">⚙️</span>
-              <div>
-                <div className="sa-config-title">Configurações Globais</div>
-                <div className="sa-config-subtitle">
-                  Parâmetros aplicados a todos os estabelecimentos do sistema
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="sa-config-body">
-            <div className="sa-config-item">
-              <div className="sa-config-item-info">
-                <span className="sa-config-item-label">👥 Limite padrão de operadores</span>
-                <span className="sa-config-item-desc">
-                  Número máximo de operadores que cada estabelecimento pode criar.
-                  Novos estabelecimentos herdam este valor. Você pode sobrescrever
-                  individualmente em cada estabelecimento.
-                </span>
-              </div>
-              <div className="sa-config-item-control">
-                <input
-                  className="sa-config-input"
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={limiteGlobalInput}
-                  onChange={e => setLimiteGlobalInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && salvarLimiteGlobal()}
-                />
-                <button
-                  className="sa-btn sa-btn-primary sa-btn-sm"
-                  onClick={salvarLimiteGlobal}
-                  disabled={salvandoLimite || parseInt(limiteGlobalInput) === limiteGlobal}
-                >
-                  {salvandoLimite ? '⏳' : '✓ Salvar'}
-                </button>
-              </div>
-            </div>
-            {limiteMsg && (
-              <div className={`sa-config-msg ${limiteMsg.startsWith('✓') ? 'sucesso' : 'erro'}`}>
-                {limiteMsg}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* MODAL: CRIAR */}
