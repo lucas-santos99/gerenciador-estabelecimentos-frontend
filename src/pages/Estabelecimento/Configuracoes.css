@@ -360,138 +360,47 @@
   .cfg-content { padding: 16px; }
 }
 /* ========================= */
-/*  GUIA IMPRESSORA TÉRMICA  */
+/*  ACCORDION                 */
 /* ========================= */
 
-.cfg-guia-intro {
-  font-size: 0.78rem;
-  color: var(--est-text-muted);
-  line-height: 1.55;
-  margin-bottom: 14px;
+.cfg-accordion {
+  padding: 0;
+  overflow: hidden;
 }
 
-/* Abas */
-.cfg-guia-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--est-border);
-  padding-bottom: 12px;
-}
-
-.cfg-guia-tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--est-border);
-  background: var(--est-input);
-  color: var(--est-text-muted);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.cfg-guia-tab:hover {
-  border-color: var(--est-border-accent);
-  color: var(--est-accent);
-}
-.cfg-guia-tab.ativo {
-  background: var(--est-accent-dim);
-  border-color: var(--est-border-accent);
-  color: var(--est-accent);
-  font-weight: 700;
-}
-
-/* Conteúdo */
-.cfg-guia-conteudo {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  animation: cfgGuiaIn 0.18s ease;
-}
-@keyframes cfgGuiaIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Steps */
-.cfg-guia-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cfg-guia-step {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.cfg-guia-step-num {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--est-accent-dim);
-  border: 1.5px solid var(--est-border-accent);
-  color: var(--est-accent);
-  font-size: 0.72rem;
-  font-weight: 800;
+.cfg-accordion-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-  font-family: 'JetBrains Mono', monospace;
+  justify-content: space-between;
+  width: 100%;
+  padding: 18px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  gap: 12px;
+}
+.cfg-accordion-header:hover {
+  background: var(--est-hover);
 }
 
-.cfg-guia-step-titulo {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--est-text);
-  margin-bottom: 3px;
-}
-
-.cfg-guia-step-desc {
-  font-size: 0.75rem;
+.cfg-accordion-chevron {
+  font-size: 0.65rem;
   color: var(--est-text-muted);
-  line-height: 1.5;
-}
-
-/* Dica destacada */
-.cfg-guia-dica {
-  font-size: 0.75rem;
-  color: var(--est-text-soft);
-  padding: 10px 12px;
-  background: var(--est-input);
-  border-radius: 9px;
-  border: 1px solid var(--est-border);
-  line-height: 1.5;
-}
-
-/* Lista de dicas */
-.cfg-guia-dicas-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cfg-guia-dica-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  background: var(--est-input);
-  border-radius: 10px;
-  border: 1px solid var(--est-border);
-  transition: border-color 0.15s;
-}
-.cfg-guia-dica-item:hover {
-  border-color: var(--est-border-accent);
-}
-
-.cfg-guia-dica-icone {
-  font-size: 1.1rem;
+  transition: transform 0.2s ease;
   flex-shrink: 0;
-  margin-top: 1px;
+}
+.cfg-accordion-chevron.aberto {
+  transform: rotate(180deg);
+}
+
+.cfg-accordion-body {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--est-border);
+  animation: cfgAccordionIn 0.2s ease;
+}
+@keyframes cfgAccordionIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

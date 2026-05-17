@@ -255,7 +255,24 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
    MODAL PÓS-VENDA — pergunta se quer imprimir
    ════════════════════════════════════════════════════════════ */
 function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
-  const reciboRef = useRef(null);
+  const reciboRef    = useRef(null);
+  const btnImpRef    = useRef(null);
+  const overlayRef   = useRef(null);
+
+  // Foco automático no botão Imprimir ao abrir
+  useEffect(() => {
+    setTimeout(() => btnImpRef.current?.focus(), 0);
+  }, []);
+
+  // Atalhos: Enter → imprimir, Esc → fechar
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); onFechar(); }
+      if (e.key === 'Enter')  { e.preventDefault(); imprimir(); }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onFechar]);
 
   const meioLabel = {
     Dinheiro: '💵 Dinheiro',
@@ -347,10 +364,10 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
 
         <div className="pdv-posv-acoes">
           <button className="pdv-posv-btn-fechar" onClick={onFechar}>
-            Não, fechar
+            Fechar <span className="pdv-posv-hint">Esc</span>
           </button>
-          <button className="pdv-posv-btn-imprimir" onClick={imprimir}>
-            🖨️ Imprimir recibo
+          <button ref={btnImpRef} className="pdv-posv-btn-imprimir" onClick={imprimir}>
+            🖨️ Imprimir recibo <span className="pdv-posv-hint">Enter</span>
           </button>
         </div>
 
