@@ -78,6 +78,13 @@ const Icons = {
       <line x1="3" y1="18" x2="21" y2="18"/>
     </svg>
   ),
+  Relatorios: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6"  y1="20" x2="6"  y2="14"/>
+    </svg>
+  ),
   Operadores: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -105,7 +112,11 @@ const ABAS_BASE = [
   { key: "config",     label: "Configurações",    icon: Icons.Config,     shortcut: "F6" },
 ];
 
-/* ── Aba exclusiva do merchant ────────────────────────────── */
+/* ── Abas exclusivas do merchant ─────────────────────────── */
+const ABA_RELATORIOS = {
+  key: "relatorios", label: "Relatórios", icon: Icons.Relatorios, shortcut: null,
+};
+
 const ABA_OPERADORES = {
   key: "operadores", label: "Operadores", icon: Icons.Operadores, shortcut: null,
 };
@@ -128,7 +139,7 @@ export default function LayoutEstabelecimento({
   const isMerchant = profile?.role === 'merchant';
 
   const ABAS = (() => {
-    if (isMerchant) return [...ABAS_BASE, ABA_OPERADORES];
+    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_OPERADORES];
     // Operador: só mostra abas cujo key está nas permissões
     return ABAS_BASE.filter(aba => permissoes.includes(aba.key));
   })();
@@ -253,8 +264,8 @@ export default function LayoutEstabelecimento({
           <div className="est-nav-section">Menu</div>
           {ABAS.map(aba => (
             <React.Fragment key={aba.key}>
-              {/* Divisor antes de Operadores */}
-              {aba.key === 'operadores' && (
+              {/* Divisor antes de Relatórios e Operadores */}
+              {(aba.key === 'relatorios' || aba.key === 'operadores') && (
                 <div className="est-nav-divider" />
               )}
               <li className={`est-nav-item${abaAtiva === aba.key ? " active" : ""}`}>

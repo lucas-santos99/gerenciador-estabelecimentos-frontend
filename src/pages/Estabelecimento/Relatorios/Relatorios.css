@@ -1,0 +1,393 @@
+/* ============================================================
+   Relatorios.css — Lucas J. Systems
+   Prefixo: rel-
+   ============================================================ */
+
+.rel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--est-bg);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--est-text);
+}
+
+/* ── Header ── */
+.rel-header {
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+
+.rel-titulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin: 0 0 2px;
+}
+
+.rel-subtitulo {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+  font-weight: 500;
+}
+
+/* ── Abas ── */
+.rel-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid var(--est-border);
+  flex-shrink: 0;
+}
+
+.rel-tab {
+  padding: 9px 18px;
+  border-radius: 10px 10px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: none;
+  color: var(--est-text-muted);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+.rel-tab:hover { color: var(--est-text); background: var(--est-hover); }
+.rel-tab.ativo {
+  background: var(--est-card);
+  border-color: var(--est-border);
+  border-bottom-color: var(--est-card);
+  color: var(--est-accent);
+  font-weight: 700;
+}
+
+/* ── Filtros ── */
+.rel-filtros {
+  display: flex;
+  gap: 10px;
+  padding: 14px 24px;
+  background: var(--est-card);
+  border-bottom: 1px solid var(--est-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.rel-filtro-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rel-filtro-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+}
+
+.rel-filtro-input,
+.rel-filtro-select {
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  height: 36px;
+}
+.rel-filtro-input:focus,
+.rel-filtro-select:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+.rel-btn-filtrar {
+  padding: 8px 16px;
+  height: 36px;
+  border-radius: 9px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+.rel-btn-filtrar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(20,184,166,0.4);
+}
+
+/* ── Body ── */
+.rel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+
+/* ── Loading / Vazio ── */
+.rel-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px;
+  color: var(--est-text-muted);
+  font-size: 0.875rem;
+}
+
+.rel-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--est-border);
+  border-top-color: var(--est-accent);
+  border-radius: 50%;
+  animation: relSpin 0.7s linear infinite;
+}
+@keyframes relSpin { to { transform: rotate(360deg); } }
+
+.rel-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 60px;
+  text-align: center;
+}
+.rel-vazio-icone { font-size: 2.5rem; opacity: 0.3; }
+.rel-vazio p { font-size: 0.95rem; font-weight: 700; color: var(--est-text-soft); margin: 0; }
+.rel-vazio small { font-size: 0.75rem; color: var(--est-text-muted); }
+
+/* ── Lista de registros ── */
+.rel-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.rel-registro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+.rel-registro:hover {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Cores por módulo */
+.rel-mod-teal   { border-left-color: var(--est-accent); }
+.rel-mod-blue   { border-left-color: #3b82f6; }
+.rel-mod-purple { border-left-color: #8b5cf6; }
+.rel-mod-green  { border-left-color: #22c55e; }
+.rel-mod-gray   { border-left-color: var(--est-border); }
+
+.rel-registro-esq {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rel-registro-modulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rel-registro-acao {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--est-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rel-registro-desc {
+  font-size: 0.75rem;
+  color: var(--est-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.rel-registro-dir {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.rel-registro-usuario {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+}
+
+.rel-registro-hora {
+  font-size: 0.68rem;
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Paginação ── */
+.rel-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.rel-paginacao-info {
+  font-size: 0.75rem;
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.rel-paginacao-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.rel-pag-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rel-pag-btn:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+.rel-pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Resumo por operador ── */
+.rel-resumo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rel-resumo-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  transition: all 0.15s;
+}
+.rel-resumo-card:hover {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.rel-resumo-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--est-accent-dim);
+  border: 2px solid var(--est-border-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--est-accent);
+  flex-shrink: 0;
+}
+
+.rel-resumo-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rel-resumo-nome {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--est-text);
+}
+
+.rel-resumo-modulos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.rel-resumo-mod {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  border: 1px solid var(--est-border);
+}
+.rel-resumo-mod.rel-mod-teal   { background: var(--est-accent-dim); color: var(--est-accent); border-color: var(--est-border-accent); }
+.rel-resumo-mod.rel-mod-blue   { background: rgba(59,130,246,0.1);  color: #3b82f6; border-color: rgba(59,130,246,0.25); }
+.rel-resumo-mod.rel-mod-purple { background: rgba(139,92,246,0.1);  color: #8b5cf6; border-color: rgba(139,92,246,0.25); }
+.rel-resumo-mod.rel-mod-green  { background: rgba(34,197,94,0.1);   color: #22c55e; border-color: rgba(34,197,94,0.25); }
+
+.rel-resumo-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rel-resumo-total-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--est-text);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1;
+}
+
+.rel-resumo-total-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+}
