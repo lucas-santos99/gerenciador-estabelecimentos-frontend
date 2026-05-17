@@ -104,7 +104,6 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
     if (meioPagamento === 'Fiado') {
       if (!clienteSelecionado?.id) { setErro('Selecione um cliente para o fiado.'); return; }
 
-      // Verificar limite de crédito
       const limite = parseFloat(clienteSelecionado.limite_credito || 0);
       const saldoAtual = parseFloat(clienteSelecionado.saldo_devedor || 0);
       const novoSaldo = saldoAtual + total;
@@ -118,13 +117,13 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
         if (!ok) return;
       }
 
-      onFinalizar('Fiado', clienteSelecionado.id);
+      onFinalizar('Fiado', clienteSelecionado.id, { clienteNome: clienteSelecionado.nome });
     } else if (meioPagamento === 'Dinheiro') {
       const recebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
       if (recebido < parseFloat(total.toFixed(2))) { setErro('Valor recebido insuficiente.'); return; }
-      onFinalizar('Dinheiro', null);
+      onFinalizar('Dinheiro', null, { valorRecebido: recebido, troco });
     } else {
-      onFinalizar(meioPagamento, null);
+      onFinalizar(meioPagamento, null, {});
     }
   }
 
@@ -253,9 +252,170 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   MODAL PÓS-VENDA — pergunta se quer imprimir
+   ════════════════════════════════════════════════════════════ */
+function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
+  const reciboRef = useRef(null);
+
+  const meioLabel = {
+    Dinheiro: '💵 Dinheiro',
+    Pix:      '📱 Pix',
+    Debito:   '💳 Débito',
+    Credito:  '💳 Crédito',
+    Fiado:    '📋 Fiado',
+  }[venda.meioPagamento] || venda.meioPagamento;
+
+  function imprimir() {
+    const conteudo = reciboRef.current?.innerHTML;
+    if (!conteudo) return;
+    const janela = window.open('', '_blank', 'width=400,height=600');
+    janela.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Recibo</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 12px;
+              width: 80mm;
+              padding: 4mm;
+              color: #000;
+              background: #fff;
+            }
+            .rec-header { text-align: center; margin-bottom: 8px; }
+            .rec-nome { font-size: 15px; font-weight: bold; }
+            .rec-data { font-size: 10px; color: #555; margin-top: 2px; }
+            .rec-divider { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+            .rec-item { display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; }
+            .rec-item-nome { flex: 1; }
+            .rec-item-qtd { color: #555; margin: 0 6px; white-space: nowrap; }
+            .rec-item-val { font-weight: bold; white-space: nowrap; }
+            .rec-total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-top: 4px; }
+            .rec-pagamento { display: flex; justify-content: space-between; font-size: 11px; margin: 2px 0; }
+            .rec-footer { text-align: center; font-size: 10px; color: #555; margin-top: 8px; }
+            .rec-obrigado { font-size: 13px; font-weight: bold; text-align: center; margin: 6px 0 4px; }
+          </style>
+        </head>
+        <body>${conteudo}</body>
+      </html>
+    `);
+    janela.document.close();
+    janela.focus();
+    setTimeout(() => { janela.print(); janela.close(); }, 300);
+  }
+
+  const horarioStr = venda.horario.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  return (
+    <div className="pdv-modal-overlay">
+      <div className="pdv-posv-modal" onClick={e => e.stopPropagation()}>
+
+        {/* Sucesso */}
+        <div className="pdv-posv-sucesso">
+          <span className="pdv-posv-check">✓</span>
+          <div>
+            <div className="pdv-posv-titulo">Venda registrada!</div>
+            <div className="pdv-posv-subtitulo">{fmt(venda.total)} · {meioLabel}</div>
+          </div>
+        </div>
+
+        {/* Troco se Dinheiro */}
+        {venda.meioPagamento === 'Dinheiro' && venda.troco > 0 && (
+          <div className="pdv-posv-troco">
+            <span className="pdv-posv-troco-label">Troco</span>
+            <span className="pdv-posv-troco-valor">{fmt(venda.troco)}</span>
+          </div>
+        )}
+
+        {/* Fiado */}
+        {venda.meioPagamento === 'Fiado' && venda.clienteNome && (
+          <div className="pdv-posv-fiado">
+            📋 Lançado no fiado de <strong>{venda.clienteNome}</strong>
+          </div>
+        )}
+
+        {/* Pergunta de impressão */}
+        <div className="pdv-posv-pergunta">
+          🖨️ Deseja imprimir o recibo?
+        </div>
+
+        <div className="pdv-posv-acoes">
+          <button className="pdv-posv-btn-fechar" onClick={onFechar}>
+            Não, fechar
+          </button>
+          <button className="pdv-posv-btn-imprimir" onClick={imprimir}>
+            🖨️ Imprimir recibo
+          </button>
+        </div>
+
+        {/* Recibo oculto usado para impressão */}
+        <div style={{ display: 'none' }}>
+          <div ref={reciboRef}>
+            <div className="rec-header">
+              <div className="rec-nome">{nomeEstabelecimento || 'Estabelecimento'}</div>
+              <div className="rec-data">{horarioStr}</div>
+            </div>
+            <hr className="rec-divider" />
+            {venda.itens.map((item, i) => (
+              <div key={i} className="rec-item">
+                <span className="rec-item-nome">{item.nome}</span>
+                <span className="rec-item-qtd">
+                  {item.unidade_medida === 'kg'
+                    ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                    : `${parseFloat(item.quantidade).toFixed(0)}x`
+                  }
+                </span>
+                <span className="rec-item-val">{fmt(item.preco_venda * item.quantidade)}</span>
+              </div>
+            ))}
+            <hr className="rec-divider" />
+            <div className="rec-total-row">
+              <span>TOTAL</span>
+              <span>{fmt(venda.total)}</span>
+            </div>
+            <div className="rec-pagamento">
+              <span>Pagamento</span>
+              <span>{venda.meioPagamento}</span>
+            </div>
+            {venda.meioPagamento === 'Dinheiro' && venda.valorRecebido && (
+              <>
+                <div className="rec-pagamento">
+                  <span>Recebido</span>
+                  <span>{fmt(venda.valorRecebido)}</span>
+                </div>
+                <div className="rec-pagamento">
+                  <span>Troco</span>
+                  <span>{fmt(venda.troco)}</span>
+                </div>
+              </>
+            )}
+            {venda.meioPagamento === 'Fiado' && venda.clienteNome && (
+              <div className="rec-pagamento">
+                <span>Cliente</span>
+                <span>{venda.clienteNome}</span>
+              </div>
+            )}
+            <hr className="rec-divider" />
+            <div className="rec-obrigado">Obrigado!</div>
+            <div className="rec-footer">Lucas J. Systems</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL — PDV
    ════════════════════════════════════════════════════════════ */
-export default function PDV({ estabelecimentoId }) {
+export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   const [termoBusca,      setTermoBusca]      = useState('');
   const [resultados,      setResultados]      = useState([]);
   const [carrinho,        setCarrinho]        = useState([]);
@@ -272,6 +432,7 @@ export default function PDV({ estabelecimentoId }) {
   const [inputQtd,        setInputQtd]        = useState('1');
   const [editIndex,       setEditIndex]       = useState(null);
   const [showPagamento,   setShowPagamento]   = useState(false);
+  const [vendaFinalizada, setVendaFinalizada] = useState(null); // dados para recibo
 
   const inputBuscaRef   = useRef(null);
   const inputQtdRef     = useRef(null);
@@ -372,7 +533,7 @@ export default function PDV({ estabelecimentoId }) {
 
   function removerItem(idx) { setCarrinho(prev => prev.filter((_, i) => i !== idx)); }
 
-  async function finalizarVenda(meioPagamento, clienteId) {
+  async function finalizarVenda(meioPagamento, clienteId, dadosPagamento) {
     setLoadingVenda(true); setVendaStatus(null);
     try {
       const resp = await apiFetch(`/api/vendas/finalizar`, {
@@ -385,8 +546,21 @@ export default function PDV({ estabelecimentoId }) {
       });
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error?.includes('check constraint') ? 'Falha de estoque. Verifique as quantidades.' : result.error || 'Erro no servidor.');
-      mostrarStatus('sucesso', `✓ Venda de ${fmt(total)} registrada!`);
-      setCarrinho([]); setShowPagamento(false);
+
+      // Guardar dados da venda para o recibo
+      setVendaFinalizada({
+        itens:         carrinho,
+        total,
+        meioPagamento,
+        clienteId,
+        clienteNome:   dadosPagamento?.clienteNome || null,
+        valorRecebido: dadosPagamento?.valorRecebido || null,
+        troco:         dadosPagamento?.troco || 0,
+        horario:       new Date(),
+      });
+
+      setCarrinho([]);
+      setShowPagamento(false);
     } catch (err) {
       mostrarStatus('erro', `Falha: ${err.message}`); setShowPagamento(false);
     } finally { setLoadingVenda(false); }
@@ -435,6 +609,16 @@ export default function PDV({ estabelecimentoId }) {
         </div>
       )}
       {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} />}
+      {vendaFinalizada && (
+        <ModalPosVenda
+          venda={vendaFinalizada}
+          nomeEstabelecimento={nomeEstabelecimento}
+          onFechar={() => {
+            setVendaFinalizada(null);
+            mostrarStatus('sucesso', `✓ Venda de ${fmt(vendaFinalizada.total)} registrada!`);
+          }}
+        />
+      )}
       <div className="pdv-busca">
         <form onSubmit={handleSearchSubmit}>
           <input ref={inputBuscaRef} className="pdv-busca-input" type="text" placeholder="🔍  Nome ou código de barras… (↑ ↓ Enter)" value={termoBusca} onChange={e => buscarProdutos(e.target.value)} onKeyDown={handleSearchKeyDown} disabled={loadingVenda} autoComplete="off" />

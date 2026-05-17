@@ -40,6 +40,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const [uploading,  setUploading]  = useState(false);
   const [erro,       setErro]       = useState('');
   const [sucesso,    setSucesso]    = useState('');
+  const [abaGuia,    setAbaGuia]    = useState('windows'); // 'windows' | 'android' | 'dicas'
 
   const fileInputRef = useRef(null);
 
@@ -255,9 +256,109 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 </div>
               </div>
 
-            </div>
+              {/* Impressora Térmica */}
+              <div className="cfg-section">
+                <span className="cfg-section-titulo">🖨️ Impressora Térmica</span>
 
-            {/* Coluna direita — logo */}
+                <p className="cfg-guia-intro">
+                  Configure sua impressora para imprimir recibos de 80mm diretamente do navegador — sem instalar nenhum software extra.
+                </p>
+
+                {/* Abas do guia */}
+                <div className="cfg-guia-tabs">
+                  {[
+                    { key: 'windows', label: '🖥️ Windows' },
+                    { key: 'android', label: '📱 Android' },
+                    { key: 'dicas',   label: '💡 Dicas' },
+                  ].map(t => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className={`cfg-guia-tab${abaGuia === t.key ? ' ativo' : ''}`}
+                      onClick={() => setAbaGuia(t.key)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Conteúdo Windows */}
+                {abaGuia === 'windows' && (
+                  <div className="cfg-guia-conteudo">
+                    <div className="cfg-guia-steps">
+                      {[
+                        { n: '1', titulo: 'Instale o driver da impressora', desc: 'Conecte a impressora via USB e instale o driver. Procure pelo modelo no site do fabricante (ex: Elgin, Epson, Bematech). O Windows geralmente detecta automaticamente.' },
+                        { n: '2', titulo: 'Defina como impressora padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → clique com o botão direito na impressora → "Definir como impressora padrão".' },
+                        { n: '3', titulo: 'Configure o papel para 80mm', desc: 'Clique com botão direito na impressora → Preferências de impressão → Tamanho do papel: selecione "Receipt 80mm" ou crie um tamanho personalizado de 80mm de largura.' },
+                        { n: '4', titulo: 'Ajuste o Chrome/Edge', desc: 'Ao imprimir, selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, e escala: 100%.' },
+                      ].map(s => (
+                        <div key={s.n} className="cfg-guia-step">
+                          <span className="cfg-guia-step-num">{s.n}</span>
+                          <div>
+                            <div className="cfg-guia-step-titulo">{s.titulo}</div>
+                            <div className="cfg-guia-step-desc">{s.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="cfg-guia-dica">
+                      💡 <strong>Atalho:</strong> Win + I → Bluetooth e dispositivos → Impressoras e scanners
+                    </div>
+                  </div>
+                )}
+
+                {/* Conteúdo Android */}
+                {abaGuia === 'android' && (
+                  <div className="cfg-guia-conteudo">
+                    <div className="cfg-guia-steps">
+                      {[
+                        { n: '1', titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora e ative o Bluetooth no celular. Vá em Configurações → Bluetooth → pareie com a impressora (nome geralmente começa com "POS-" ou o modelo).' },
+                        { n: '2', titulo: 'Instale um app de impressão', desc: 'Baixe o app "RawBT" (gratuito) ou "PrinterShare" na Play Store. Eles funcionam como serviço de impressão para o Chrome Android.' },
+                        { n: '3', titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora Bluetooth → papel: 80mm. O app fica rodando em segundo plano.' },
+                        { n: '4', titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" ou "PrinterShare" como destino. O recibo será enviado diretamente para a térmica.' },
+                      ].map(s => (
+                        <div key={s.n} className="cfg-guia-step">
+                          <span className="cfg-guia-step-num">{s.n}</span>
+                          <div>
+                            <div className="cfg-guia-step-titulo">{s.titulo}</div>
+                            <div className="cfg-guia-step-desc">{s.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="cfg-guia-dica">
+                      💡 Impressoras com WiFi funcionam ainda mais fácil — conecte na mesma rede e o Chrome detecta automaticamente.
+                    </div>
+                  </div>
+                )}
+
+                {/* Dicas */}
+                {abaGuia === 'dicas' && (
+                  <div className="cfg-guia-conteudo">
+                    <div className="cfg-guia-dicas-lista">
+                      {[
+                        { icone: '⚡', titulo: 'Teste antes de usar', desc: 'Clique em "Imprimir recibo" após uma venda de R$ 0,01 para testar o layout antes de usar no dia a dia.' },
+                        { icone: '📐', titulo: 'Papel 80mm é o padrão', desc: 'A maioria das impressoras térmicas usa rolo de 80mm. Se o recibo sair cortado, verifique o tamanho do papel nas preferências de impressão.' },
+                        { icone: '🌐', titulo: 'Use Google Chrome', desc: 'O Chrome tem o melhor suporte a impressão silenciosa. Evite Firefox e Safari para impressoras térmicas.' },
+                        { icone: '🔇', titulo: 'Impressão silenciosa', desc: 'Para não aparecer a janela de impressão, configure a impressora como padrão e marque "Impressão silenciosa" nas configurações do Chrome (chrome://settings/content/print).' },
+                        { icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos WiFi como Elgin i9 ou Epson TM-T20 se conectam direto na rede — sem fios, funciona no celular e no computador ao mesmo tempo.' },
+                        { icone: '📞', titulo: 'Suporte', desc: 'Dificuldades? Entre em contato com o suporte Lucas J. Systems pelo WhatsApp do sistema.' },
+                      ].map((d, i) => (
+                        <div key={i} className="cfg-guia-dica-item">
+                          <span className="cfg-guia-dica-icone">{d.icone}</span>
+                          <div>
+                            <div className="cfg-guia-step-titulo">{d.titulo}</div>
+                            <div className="cfg-guia-step-desc">{d.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+            </div>
             <div className="cfg-logo-section">
               <span className="cfg-logo-titulo">🖼 Logo</span>
 

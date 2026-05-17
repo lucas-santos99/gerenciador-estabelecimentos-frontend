@@ -78,6 +78,7 @@ export default function PainelEstabelecimento() {
         return (
           <PDV
             estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
 
@@ -125,6 +126,7 @@ export default function PainelEstabelecimento() {
         return (
           <PDV
             estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
     }
