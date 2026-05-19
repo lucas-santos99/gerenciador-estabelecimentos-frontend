@@ -232,32 +232,51 @@ export default function Relatorios({ estabelecimentoId }) {
               <div className="rel-lista">
                 {registros.map(r => (
                   <div key={r.id} className={`rel-registro rel-mod-${MODULO_COR[r.modulo] || 'gray'}`}>
-                    <div className="rel-registro-esq">
-                      <span className="rel-registro-modulo">
-                        {MODULO_LABEL[r.modulo] || r.modulo}
-                      </span>
-                      <span className="rel-registro-acao">
-                        {ACAO_LABEL[r.acao] || r.acao}
-                      </span>
-                      <div className="rel-registro-desc-wrap">
+
+                    {/* Linha principal */}
+                    <div className="rel-registro-corpo">
+
+                      {/* Linha 1 — badges + usuário/hora */}
+                      <div className="rel-registro-linha1">
+                        <div className="rel-registro-badges">
+                          <span className="rel-registro-modulo">
+                            {MODULO_LABEL[r.modulo] || r.modulo}
+                          </span>
+                          <span className="rel-registro-acao">
+                            {ACAO_LABEL[r.acao] || r.acao}
+                          </span>
+                        </div>
+                        <div className="rel-registro-dir">
+                          <span className="rel-registro-usuario">
+                            {r.usuario_nome || 'Merchant'}
+                          </span>
+                          <span className="rel-registro-hora">
+                            {formatarDataHora(r.criado_em)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Linha 2 — descrição + meta */}
+                      <div className="rel-registro-linha2">
                         <span className="rel-registro-desc">{r.descricao}</span>
                         {r.meta?.depois && (
-                          <span className="rel-registro-meta">
+                          <div className="rel-registro-meta">
                             {Object.entries(r.meta.depois)
                               .filter(([, v]) => v !== null && v !== undefined)
-                              .map(([k, v]) => `${k}: ${typeof v === 'number' ? v.toLocaleString('pt-BR') : v}`)
-                              .join(' · ')}
-                          </span>
+                              .map(([k, v]) => (
+                                <span key={k} className="rel-meta-tag">
+                                  <span className="rel-meta-key">{k}</span>
+                                  <span className="rel-meta-val">
+                                    {typeof v === 'number'
+                                      ? v.toLocaleString('pt-BR')
+                                      : String(v)}
+                                  </span>
+                                </span>
+                              ))}
+                          </div>
                         )}
                       </div>
-                    </div>
-                    <div className="rel-registro-dir">
-                      <span className="rel-registro-usuario">
-                        {r.usuario_nome || 'Merchant'}
-                      </span>
-                      <span className="rel-registro-hora">
-                        {formatarDataHora(r.criado_em)}
-                      </span>
+
                     </div>
                   </div>
                 ))}

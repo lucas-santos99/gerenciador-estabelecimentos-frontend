@@ -182,11 +182,7 @@
 }
 
 .rel-registro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 16px;
+  padding: 12px 14px 12px 16px;
   background: var(--est-card);
   border: 1px solid var(--est-border);
   border-radius: 12px;
@@ -205,10 +201,26 @@
 .rel-mod-green  { border-left-color: #22c55e; }
 .rel-mod-gray   { border-left-color: var(--est-border); }
 
-.rel-registro-esq {
+/* Corpo do registro — coluna */
+.rel-registro-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Linha 1 — badges à esquerda, usuário/hora à direita */
+.rel-registro-linha1 {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+}
+
+.rel-registro-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
   flex: 1;
   min-width: 0;
 }
@@ -232,33 +244,77 @@
   flex-shrink: 0;
 }
 
-.rel-registro-desc {
-  font-size: 0.75rem;
-  color: var(--est-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
+/* Usuário + hora — fixos à direita, não quebram */
 .rel-registro-dir {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 1px;
   flex-shrink: 0;
+  min-width: 160px;
+  max-width: 220px;
 }
 
 .rel-registro-usuario {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--est-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: right;
 }
 
 .rel-registro-hora {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--est-text-muted);
   font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+/* Linha 2 — descrição + tags de meta */
+.rel-registro-linha2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rel-registro-desc {
+  font-size: 0.75rem;
+  color: var(--est-text-muted);
+  flex-shrink: 0;
+}
+
+/* Tags individuais de meta */
+.rel-registro-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.rel-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.rel-meta-key {
+  color: var(--est-text-muted);
+  font-weight: 600;
+}
+
+.rel-meta-val {
+  color: var(--est-accent);
+  font-weight: 700;
 }
 
 /* ── Paginação ── */
