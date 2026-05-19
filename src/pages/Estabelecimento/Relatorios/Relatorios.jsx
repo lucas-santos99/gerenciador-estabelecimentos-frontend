@@ -239,7 +239,17 @@ export default function Relatorios({ estabelecimentoId }) {
                       <span className="rel-registro-acao">
                         {ACAO_LABEL[r.acao] || r.acao}
                       </span>
-                      <span className="rel-registro-desc">{r.descricao}</span>
+                      <div className="rel-registro-desc-wrap">
+                        <span className="rel-registro-desc">{r.descricao}</span>
+                        {r.meta?.depois && (
+                          <span className="rel-registro-meta">
+                            {Object.entries(r.meta.depois)
+                              .filter(([, v]) => v !== null && v !== undefined)
+                              .map(([k, v]) => `${k}: ${typeof v === 'number' ? v.toLocaleString('pt-BR') : v}`)
+                              .join(' · ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="rel-registro-dir">
                       <span className="rel-registro-usuario">
