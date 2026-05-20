@@ -53,6 +53,37 @@ const ACAO_LABEL = {
   config_atualizada:  '⚙️ Config atualizada',
 };
 
+/* ── Labels legíveis para campos do meta ─────────────────── */
+const META_LABEL = {
+  nome:           'Nome',
+  preco_venda:    'Preço venda',
+  preco_custo:    'Preço custo',
+  estoque_atual:  'Estoque',
+  estoque_minimo: 'Est. mínimo',
+  unidade_medida: null, // usado como contexto, não exibido sozinho
+  limite_credito: 'Limite crédito',
+  meio_pagamento: 'Pagamento',
+  valor:          'Valor',
+  itens:          'Itens',
+  campos:         null, // ignorado na exibição
+};
+
+/* Formata o valor do meta de forma legível */
+function formatarMetaValor(chave, valor, meta) {
+  if (chave === 'estoque_atual' || chave === 'estoque_minimo') {
+    const unidade = meta?.unidade_medida || 'un';
+    if (unidade === 'kg') {
+      return `${parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`;
+    }
+    return `${parseFloat(valor).toLocaleString('pt-BR')} un`;
+  }
+  if (chave === 'preco_venda' || chave === 'preco_custo' || chave === 'limite_credito' || chave === 'valor') {
+    return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  if (typeof valor === 'number') return valor.toLocaleString('pt-BR');
+  return String(valor);
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function Relatorios({ estabelecimentoId }) {
 
@@ -262,14 +293,12 @@ export default function Relatorios({ estabelecimentoId }) {
                         {r.meta?.depois && (
                           <div className="rel-registro-meta">
                             {Object.entries(r.meta.depois)
-                              .filter(([, v]) => v !== null && v !== undefined)
+                              .filter(([k]) => META_LABEL[k] !== null && META_LABEL[k] !== undefined && k !== 'unidade_medida')
                               .map(([k, v]) => (
                                 <span key={k} className="rel-meta-tag">
-                                  <span className="rel-meta-key">{k}</span>
+                                  <span className="rel-meta-key">{META_LABEL[k] || k}</span>
                                   <span className="rel-meta-val">
-                                    {typeof v === 'number'
-                                      ? v.toLocaleString('pt-BR')
-                                      : String(v)}
+                                    {formatarMetaValor(k, v, r.meta.depois)}
                                   </span>
                                 </span>
                               ))}

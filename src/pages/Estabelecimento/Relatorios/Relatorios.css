@@ -211,9 +211,10 @@
 /* Linha 1 — badges à esquerda, usuário/hora à direita */
 .rel-registro-linha1 {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .rel-registro-badges {
@@ -244,15 +245,13 @@
   flex-shrink: 0;
 }
 
-/* Usuário + hora — fixos à direita, não quebram */
+/* Usuário + hora — sem max-width, sem corte */
 .rel-registro-dir {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
   flex-shrink: 0;
-  min-width: 160px;
-  max-width: 220px;
 }
 
 .rel-registro-usuario {
@@ -260,9 +259,6 @@
   font-weight: 700;
   color: var(--est-text-soft);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
   text-align: right;
 }
 
