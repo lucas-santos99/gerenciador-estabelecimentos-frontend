@@ -1097,3 +1097,167 @@
   .fin-conta-acoes,
   .fin-contas-header { display: none !important; }
 }
+/* ════════════════════════════════════════════════════════
+   RELATÓRIO POR OPERADOR — adicionar ao final de Financeiro.css
+   ════════════════════════════════════════════════════════ */
+
+/* Grid de cards */
+.fin-relop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+/* Card individual */
+.fin-relop-card {
+  background: var(--est-surface, #1e293b);
+  border: 1px solid var(--est-border, rgba(255,255,255,0.08));
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.2s;
+}
+
+.fin-relop-card:hover {
+  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.15);
+}
+
+/* Header: rank + nome + % */
+.fin-relop-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fin-relop-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: calc(0.72rem * var(--fin-font-scale, 1));
+  color: var(--est-accent, #14b8a6);
+  font-weight: 700;
+  min-width: 28px;
+}
+
+.fin-relop-nome {
+  font-size: calc(0.95rem * var(--fin-font-scale, 1));
+  font-weight: 600;
+  color: var(--est-text, #f1f5f9);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fin-relop-pct {
+  font-size: calc(0.78rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted, #94a3b8);
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+/* Barra de progresso */
+.fin-relop-barra-bg {
+  height: 6px;
+  background: var(--est-border, rgba(255,255,255,0.08));
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.fin-relop-barra-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #14b8a6, #0d9488);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+  min-width: 4px;
+}
+
+/* Total em destaque */
+.fin-relop-total {
+  font-size: calc(1.35rem * var(--fin-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-accent, #14b8a6);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.5px;
+}
+
+/* Métricas (qtd + ticket) */
+.fin-relop-metricas {
+  display: flex;
+  gap: 16px;
+}
+
+.fin-relop-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fin-relop-metrica-label {
+  font-size: calc(0.68rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fin-relop-metrica-valor {
+  font-size: calc(0.88rem * var(--fin-font-scale, 1));
+  font-weight: 600;
+  color: var(--est-text, #f1f5f9);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Breakdown por meio de pagamento */
+.fin-relop-meios {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--est-border, rgba(255,255,255,0.08));
+  padding-top: 10px;
+  margin-top: 2px;
+}
+
+.fin-relop-meio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: calc(0.78rem * var(--fin-font-scale, 1));
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+
+.fin-relop-meio span:last-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.fin-relop-meio.dinheiro { background: rgba(34, 197, 94, 0.08);  color: #86efac; }
+.fin-relop-meio.pix      { background: rgba(99, 102, 241, 0.1);  color: #a5b4fc; }
+.fin-relop-meio.cartao   { background: rgba(245, 158, 11, 0.08); color: #fcd34d; }
+.fin-relop-meio.fiado    { background: rgba(239, 68, 68, 0.08);  color: #fca5a5; }
+
+/* Light mode overrides */
+body.light .fin-relop-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+body.light .fin-relop-nome   { color: #0f172a; }
+body.light .fin-relop-pct    { color: #64748b; }
+body.light .fin-relop-total  { color: #0d9488; }
+body.light .fin-relop-metrica-valor { color: #1e293b; }
+body.light .fin-relop-metrica-label { color: #64748b; }
+body.light .fin-relop-barra-bg { background: #e2e8f0; }
+
+body.light .fin-relop-meio.dinheiro { background: rgba(34, 197, 94, 0.1);  color: #15803d; }
+body.light .fin-relop-meio.pix      { background: rgba(99, 102, 241, 0.1); color: #4338ca; }
+body.light .fin-relop-meio.cartao   { background: rgba(245, 158, 11, 0.1); color: #b45309; }
+body.light .fin-relop-meio.fiado    { background: rgba(239, 68, 68, 0.1);  color: #b91c1c; }
+
+/* Responsivo mobile */
+@media (max-width: 600px) {
+  .fin-relop-grid {
+    grid-template-columns: 1fr;
+  }
+}

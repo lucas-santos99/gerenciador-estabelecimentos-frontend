@@ -81,6 +81,13 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [erroEstoque,    setErroEstoque]    = useState('');
   const [filtrEstoque,   setFiltrEstoque]   = useState('todos');
 
+  /* ── Estado Relatório por Operador ──────────────────────── */
+  const [relOp,        setRelOp]        = useState([]);
+  const [loadingRelOp, setLoadingRelOp] = useState(false);
+  const [erroRelOp,    setErroRelOp]    = useState('');
+  const [relOpInicio,  setRelOpInicio]  = useState(hoje());
+  const [relOpFim,     setRelOpFim]     = useState(hoje());
+
   /* ── Carga inicial ───────────────────────────────────────── */
   useEffect(() => {
     if (!estabelecimentoId) return;
@@ -89,9 +96,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   }, [estabelecimentoId]);
 
   useEffect(() => {
-    if (abaAtiva === 'contas' && estabelecimentoId) carregarContas(filtroStatus);
+    if (abaAtiva === 'contas'    && estabelecimentoId) carregarContas(filtroStatus);
     if (abaAtiva === 'historico' && estabelecimentoId) carregarHistorico();
-    if (abaAtiva === 'estoque' && estabelecimentoId) carregarEstoque();
+    if (abaAtiva === 'estoque'   && estabelecimentoId) carregarEstoque();
   }, [abaAtiva, filtroStatus, estabelecimentoId]);
 
   /* ════════════════════════════════════════════════════════
@@ -116,8 +123,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setDreData(null);
     try {
       const params = new URLSearchParams({ data_inicio: dreInicio, data_fim: dreFim });
-      const resp = await apiFetch(`/api/financeiro/relatorio_dre?${params}`
-      );
+      const resp = await apiFetch(`/api/financeiro/relatorio_dre?${params}`);
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || `Erro ${resp.status}`);
       setDreData(data);
@@ -185,8 +191,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setLoadingContas(true);
     setErroContas('');
     try {
-      const resp = await apiFetch(`/api/financeiro?status=${encodeURIComponent(status)}`
-      );
+      const resp = await apiFetch(`/api/financeiro?status=${encodeURIComponent(status)}`);
       if (!resp.ok) throw new Error(`Erro ${resp.status}`);
       setContas(await resp.json());
     } catch (err) { setErroContas(err.message); }
@@ -252,13 +257,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   async function marcarPaga(contaId) {
     setSalvandoConta(true);
     try {
-      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}/pagar`,
-        {
-          method:  'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ estabelecimentoId }),
-        }
-      );
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}/pagar`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estabelecimentoId }),
+      });
       if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
       carregarResumo();
       if (filtroStatus === 'pendente' || filtroStatus === 'atrasada') {
@@ -274,13 +277,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     if (!window.confirm('Excluir esta conta?')) return;
     setSalvandoConta(true);
     try {
-      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}`,
-        {
-          method:  'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ estabelecimentoId }),
-        }
-      );
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}`, {
+        method:  'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estabelecimentoId }),
+      });
       if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
       setContas(prev => prev.filter(c => c.id !== contaId));
     } catch (err) { setErroContas(err.message); }
@@ -306,8 +307,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     try {
       const params = new URLSearchParams({ data_inicio: reportInicio, data_fim: reportFim });
       if (reportCat) params.append('categoria_id', reportCat);
-      const resp = await apiFetch(`/api/financeiro/relatorio_produtos?${params}`
-      );
+      const resp = await apiFetch(`/api/financeiro/relatorio_produtos?${params}`);
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao gerar relatório');
       setReportProd(data);
@@ -363,6 +363,133 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const qtdBaixo   = estoque.filter(p => estoqueStatus(p) === 'baixo').length;
 
   /* ════════════════════════════════════════════════════════
+     RELATÓRIO POR OPERADOR
+  ════════════════════════════════════════════════════════ */
+  async function gerarRelatorioOperador(e) {
+    e.preventDefault();
+    setLoadingRelOp(true);
+    setErroRelOp('');
+    setRelOp([]);
+    try {
+      const params = new URLSearchParams({ data_inicio: relOpInicio, data_fim: relOpFim });
+      const resp = await apiFetch(`/api/financeiro/relatorio_vendas_operador?${params}`);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao gerar relatório');
+      setRelOp(data);
+    } catch (err) { setErroRelOp(err.message); }
+    finally { setLoadingRelOp(false); }
+  }
+
+  function exportarRelatorioOperadorExcel() {
+    if (!relOp.length) return;
+
+    const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
+
+    const dados = relOp.map((op, i) => ({
+      '#':              i + 1,
+      'Operador':       op.operador_nome,
+      'Qtd Vendas':     op.qtd_vendas,
+      'Total (R$)':     parseFloat(op.total_vendas.toFixed(2)),
+      '% do Total':     totalGeral > 0
+                          ? parseFloat(((op.total_vendas / totalGeral) * 100).toFixed(1))
+                          : 0,
+      'Dinheiro (R$)':  parseFloat(op.total_dinheiro.toFixed(2)),
+      'Pix (R$)':       parseFloat(op.total_pix.toFixed(2)),
+      'Cartão (R$)':    parseFloat(op.total_cartao.toFixed(2)),
+      'Fiado (R$)':     parseFloat(op.total_fiado.toFixed(2)),
+      'Ticket Médio':   op.qtd_vendas > 0
+                          ? parseFloat((op.total_vendas / op.qtd_vendas).toFixed(2))
+                          : 0,
+    }));
+
+    // Linha de totais
+    dados.push({
+      '#':              '',
+      'Operador':       'TOTAL',
+      'Qtd Vendas':     relOp.reduce((s, op) => s + op.qtd_vendas, 0),
+      'Total (R$)':     parseFloat(totalGeral.toFixed(2)),
+      '% do Total':     100,
+      'Dinheiro (R$)':  parseFloat(relOp.reduce((s, op) => s + op.total_dinheiro, 0).toFixed(2)),
+      'Pix (R$)':       parseFloat(relOp.reduce((s, op) => s + op.total_pix, 0).toFixed(2)),
+      'Cartão (R$)':    parseFloat(relOp.reduce((s, op) => s + op.total_cartao, 0).toFixed(2)),
+      'Fiado (R$)':     parseFloat(relOp.reduce((s, op) => s + op.total_fiado, 0).toFixed(2)),
+      'Ticket Médio':   '',
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vendas por Operador');
+    XLSX.writeFile(wb, `Vendas_Operador_${relOpInicio}_${relOpFim}.xlsx`);
+  }
+
+  function baixarPDFOperador() {
+    if (!relOp.length) return;
+    const doc = new jsPDF();
+    const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
+
+    const gerar = (y) => {
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text(nomeFantasia || 'Relatório', 105, y, { align: 'center' });
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(80);
+      doc.text('Relatório de Vendas por Operador', 105, y + 7, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text(`Período: ${formatarData(relOpInicio)} a ${formatarData(relOpFim)}`, 105, y + 13, { align: 'center' });
+
+      const body = relOp.map((op, i) => [
+        `#${i + 1}`,
+        op.operador_nome,
+        op.qtd_vendas,
+        fmt(op.total_vendas),
+        totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
+        fmt(op.total_dinheiro),
+        fmt(op.total_pix),
+        fmt(op.total_cartao),
+      ]);
+
+      // Linha de totais
+      body.push([
+        '',
+        'TOTAL',
+        relOp.reduce((s, op) => s + op.qtd_vendas, 0),
+        fmt(totalGeral),
+        '100%',
+        fmt(relOp.reduce((s, op) => s + op.total_dinheiro, 0)),
+        fmt(relOp.reduce((s, op) => s + op.total_pix, 0)),
+        fmt(relOp.reduce((s, op) => s + op.total_cartao, 0)),
+      ]);
+
+      autoTable(doc, {
+        startY: y + 20,
+        head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
+        body,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+        foot: [],
+      });
+
+      doc.save(`Vendas_Operador_${nomeFantasia || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
+    };
+
+    if (logoUrl) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.src = logoUrl;
+      img.onload = () => {
+        const ratio = img.width / img.height;
+        doc.addImage(img, 'PNG', 15, 10, 25, 25 / ratio);
+        gerar(25 / ratio + 15);
+      };
+      img.onerror = () => gerar(15);
+    } else {
+      gerar(15);
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════
      EXPORTAR EXCEL — RELATÓRIO DE PRODUTOS
   ════════════════════════════════════════════════════════ */
   function exportarRelatorioExcel() {
@@ -409,13 +536,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   return (
     <div className="fin-container" style={{ '--fin-font-scale': fontScale }}>
 
-        {/* ── TABS NAV ─────────────────────────────────────── */}
+      {/* ── TABS NAV ─────────────────────────────────────── */}
       <div className="fin-tabs">
         <div className="fin-tabs-nav">
           {[
             { key: 'fluxo',      label: '💰 Fluxo de Caixa' },
             { key: 'contas',     label: '📋 Contas a Pagar' },
             { key: 'relatorios', label: '📊 Relatório de Vendas' },
+            { key: 'operadores', label: '👤 Por Operador' },
             { key: 'historico',  label: '🧾 Histórico' },
             { key: 'estoque',    label: '📦 Estoque' },
           ].map(tab => (
@@ -804,7 +932,164 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           </>
         )}
 
-        {/* ══ ABA 4: HISTÓRICO DE VENDAS ══ */}
+        {/* ══ ABA 4: RELATÓRIO POR OPERADOR ══ */}
+        {abaAtiva === 'operadores' && (
+          <>
+            <div className="fin-section-header">
+              <span className="fin-section-titulo">👤 Vendas por Operador</span>
+              {relOp.length > 0 && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="fin-btn-excel" onClick={exportarRelatorioOperadorExcel}>
+                    📥 Excel
+                  </button>
+                  <button className="fin-btn-pdf" onClick={baixarPDFOperador}>
+                    📄 PDF
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <form className="fin-form-filtros" onSubmit={gerarRelatorioOperador}>
+              <div className="fin-form-group">
+                <label className="fin-form-label">Data início</label>
+                <input
+                  className="fin-form-input"
+                  type="date"
+                  value={relOpInicio}
+                  onChange={e => setRelOpInicio(e.target.value)}
+                />
+              </div>
+              <div className="fin-form-group">
+                <label className="fin-form-label">Data fim</label>
+                <input
+                  className="fin-form-input"
+                  type="date"
+                  value={relOpFim}
+                  onChange={e => setRelOpFim(e.target.value)}
+                />
+              </div>
+              <button type="submit" className="fin-btn-gerar" disabled={loadingRelOp}>
+                {loadingRelOp ? '⏳ Gerando…' : '▶ Gerar'}
+              </button>
+            </form>
+
+            {erroRelOp && <div className="fin-erro">⚠️ {erroRelOp}</div>}
+
+            {loadingRelOp ? (
+              <div className="fin-loading"><div className="est-spinner" /> Gerando relatório…</div>
+            ) : relOp.length === 0 ? (
+              <div className="fin-vazio">
+                <span className="fin-vazio-icon">👤</span>
+                <p>Nenhuma venda encontrada</p>
+                <small>Selecione um período e clique em Gerar</small>
+              </div>
+            ) : (
+              <>
+                {/* ── Cards de totais gerais ── */}
+                {(() => {
+                  const totalGeral   = relOp.reduce((s, op) => s + op.total_vendas, 0);
+                  const totalVendas  = relOp.reduce((s, op) => s + op.qtd_vendas, 0);
+                  const ticketMedio  = totalVendas > 0 ? totalGeral / totalVendas : 0;
+                  return (
+                    <div className="fin-resumo-grid" style={{ marginBottom: 24 }}>
+                      <div className="fin-resumo-card destaque">
+                        <span className="fin-resumo-card-titulo">Total do Período</span>
+                        <span className="fin-resumo-card-valor">{fmt(totalGeral)}</span>
+                      </div>
+                      <div className="fin-resumo-card">
+                        <span className="fin-resumo-card-titulo">Qtd Vendas</span>
+                        <span className="fin-resumo-card-valor">{totalVendas}</span>
+                      </div>
+                      <div className="fin-resumo-card">
+                        <span className="fin-resumo-card-titulo">Ticket Médio</span>
+                        <span className="fin-resumo-card-valor">{fmt(ticketMedio)}</span>
+                      </div>
+                      <div className="fin-resumo-card">
+                        <span className="fin-resumo-card-titulo">Operadores ativos</span>
+                        <span className="fin-resumo-card-valor">{relOp.length}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Cards por operador ── */}
+                <div className="fin-relop-grid">
+                  {relOp.map((op, i) => {
+                    const totalGeral  = relOp.reduce((s, o) => s + o.total_vendas, 0);
+                    const pct         = totalGeral > 0 ? (op.total_vendas / totalGeral) * 100 : 0;
+                    const ticketMedio = op.qtd_vendas > 0 ? op.total_vendas / op.qtd_vendas : 0;
+
+                    return (
+                      <div key={op.operador_id || i} className="fin-relop-card">
+
+                        {/* Rank + nome */}
+                        <div className="fin-relop-header">
+                          <span className="fin-relop-rank">#{i + 1}</span>
+                          <span className="fin-relop-nome">{op.operador_nome}</span>
+                          <span className="fin-relop-pct">{pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>
+                        </div>
+
+                        {/* Barra de progresso */}
+                        <div className="fin-relop-barra-bg">
+                          <div
+                            className="fin-relop-barra-fill"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        {/* Total em destaque */}
+                        <div className="fin-relop-total">{fmt(op.total_vendas)}</div>
+
+                        {/* Métricas */}
+                        <div className="fin-relop-metricas">
+                          <div className="fin-relop-metrica">
+                            <span className="fin-relop-metrica-label">Qtd Vendas</span>
+                            <span className="fin-relop-metrica-valor">{op.qtd_vendas}</span>
+                          </div>
+                          <div className="fin-relop-metrica">
+                            <span className="fin-relop-metrica-label">Ticket Médio</span>
+                            <span className="fin-relop-metrica-valor">{fmt(ticketMedio)}</span>
+                          </div>
+                        </div>
+
+                        {/* Breakdown por meio de pagamento */}
+                        <div className="fin-relop-meios">
+                          {op.total_dinheiro > 0 && (
+                            <div className="fin-relop-meio dinheiro">
+                              <span>💵 Dinheiro</span>
+                              <span>{fmt(op.total_dinheiro)}</span>
+                            </div>
+                          )}
+                          {op.total_pix > 0 && (
+                            <div className="fin-relop-meio pix">
+                              <span>📱 Pix</span>
+                              <span>{fmt(op.total_pix)}</span>
+                            </div>
+                          )}
+                          {op.total_cartao > 0 && (
+                            <div className="fin-relop-meio cartao">
+                              <span>💳 Cartão</span>
+                              <span>{fmt(op.total_cartao)}</span>
+                            </div>
+                          )}
+                          {op.total_fiado > 0 && (
+                            <div className="fin-relop-meio fiado">
+                              <span>📋 Fiado</span>
+                              <span>{fmt(op.total_fiado)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ══ ABA 5: HISTÓRICO DE VENDAS ══ */}
         {abaAtiva === 'historico' && (
           <>
             <div className="fin-section-header">
@@ -874,7 +1159,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           </>
         )}
 
-        {/* ══ ABA 5: ESTOQUE ══ */}
+        {/* ══ ABA 6: ESTOQUE ══ */}
         {abaAtiva === 'estoque' && (
           <>
             <div className="fin-section-header">
