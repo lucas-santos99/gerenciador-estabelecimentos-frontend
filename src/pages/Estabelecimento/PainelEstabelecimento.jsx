@@ -121,6 +121,7 @@ export default function PainelEstabelecimento() {
           <Relatorios
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
+            logoUrl={logoUrl}
           />
         );
 

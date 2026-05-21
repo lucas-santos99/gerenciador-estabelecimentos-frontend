@@ -471,3 +471,47 @@
 
 body.light .rel-meta-val--old { color: #64748b; }
 body.light .rel-meta-val--new { color: #0d9488; }
+
+/* ── Diff de alterações na auditoria ── */
+.rel-meta-tag--diff {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.rel-meta-val--old {
+  text-decoration: line-through;
+  opacity: 0.55;
+  color: var(--rel-text-muted, #94a3b8);
+}
+
+.rel-meta-val--new {
+  font-weight: 600;
+  color: var(--rel-accent, #14b8a6);
+}
+
+.rel-meta-seta {
+  font-size: 0.75em;
+  opacity: 0.6;
+  color: var(--rel-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+body.light .rel-meta-val--old { color: #64748b; }
+body.light .rel-meta-val--new { color: #0d9488; }
+
+/* ── Operador no histórico de vendas ── */
+.fin-historico-operador {
+  font-size: calc(0.75rem * var(--fin-font-scale, 1));
+  color: var(--est-accent, #14b8a6);
+  background: rgba(20, 184, 166, 0.08);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+body.light .fin-historico-operador {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+}
