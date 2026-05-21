@@ -1001,7 +1001,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                         <span className="fin-resumo-card-valor">{totalVendas}</span>
                       </div>
                       <div className="fin-resumo-card">
-                        <span className="fin-resumo-card-titulo">Ticket Médio</span>
+                        <span className="fin-resumo-card-titulo">Média por Venda</span>
                         <span className="fin-resumo-card-valor">{fmt(ticketMedio)}</span>
                       </div>
                       <div className="fin-resumo-card">
@@ -1047,7 +1047,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                             <span className="fin-relop-metrica-valor">{op.qtd_vendas}</span>
                           </div>
                           <div className="fin-relop-metrica">
-                            <span className="fin-relop-metrica-label">Ticket Médio</span>
+                            <span className="fin-relop-metrica-label">MÉdia por Venda</span>
                             <span className="fin-relop-metrica-valor">{fmt(ticketMedio)}</span>
                           </div>
                         </div>
