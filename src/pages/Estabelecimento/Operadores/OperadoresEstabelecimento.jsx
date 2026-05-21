@@ -4,14 +4,16 @@ import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
 
 /* ── Módulos disponíveis com ações granulares ────────────── */
+// ⚠️ FONTE DA VERDADE: ao adicionar módulos ou ações no sistema,
+// atualize este array. Ele controla o que aparece no modal de permissões.
 const MODULOS = [
   {
     id: 'pdv', label: 'PDV (Caixa)', icone: '🖥️', desc: 'Realizar vendas e operar o caixa',
     acoes: [
-      { id: 'pdv_realizar_venda',  label: 'Realizar vendas' },
-      { id: 'pdv_cancelar_venda',  label: 'Cancelar vendas' },
-      { id: 'pdv_fiado',           label: 'Vender no fiado' },
-      { id: 'pdv_desconto',        label: 'Aplicar desconto' },
+      { id: 'pdv_realizar_venda', label: 'Realizar vendas' },
+      { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
+      { id: 'pdv_fiado',          label: 'Vender no fiado' },
+      { id: 'pdv_desconto',       label: 'Aplicar desconto' },
     ],
   },
   {
@@ -32,12 +34,23 @@ const MODULOS = [
     ],
   },
   {
-    id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e relatórios',
+    // Financeiro agora é só fluxo de caixa e contas a pagar
+    id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e contas a pagar',
     acoes: [
-      { id: 'financeiro_ver_resumo',    label: 'Ver resumo do caixa' },
-      { id: 'financeiro_ver_dre',       label: 'Ver DRE' },
-      { id: 'financeiro_ver_relatorio', label: 'Ver relatório de vendas' },
-      { id: 'financeiro_contas_pagar',  label: 'Gerenciar contas a pagar' },
+      { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa' },
+      { id: 'financeiro_ver_dre',      label: 'Ver DRE' },
+      { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar' },
+    ],
+  },
+  {
+    // Módulo Relatórios: histórico, vendas por operador, produtos, estoque, auditoria
+    id: 'relatorios', label: 'Relatórios', icone: '📊', desc: 'Histórico de vendas, estoque e auditoria',
+    acoes: [
+      { id: 'relatorios_historico',  label: 'Ver histórico de vendas' },
+      { id: 'relatorios_operadores', label: 'Ver vendas por operador' },
+      { id: 'relatorios_produtos',   label: 'Ver produtos mais vendidos' },
+      { id: 'relatorios_estoque',    label: 'Ver relatório de estoque' },
+      { id: 'relatorios_auditoria',  label: 'Ver auditoria de ações' },
     ],
   },
   {
