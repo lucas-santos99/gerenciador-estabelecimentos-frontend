@@ -515,3 +515,38 @@ body.light .fin-historico-operador {
   background: rgba(13, 148, 136, 0.1);
   color: #0d9488;
 }
+/* ════════════════════════════════════════════════════════════
+   FIXES: zoom + filtro-btn dark mode
+   ════════════════════════════════════════════════════════════ */
+
+/* Propaga AMBAS as variáveis de zoom — rel- e fin- — para que
+   as classes do Financeiro reutilizadas aqui também respondam ao A+/A- */
+.rel-container {
+  --fin-font-scale: var(--rel-font-scale, 1);
+}
+
+/* Corrige fin-filtro-btn no dark mode dentro de Relatórios */
+.rel-container .fin-filtro-btn {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-soft);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.8rem * var(--rel-font-scale, 1));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.rel-container .fin-filtro-btn:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+
+.rel-container .fin-filtro-btn.ativo {
+  background: var(--est-accent-dim);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
