@@ -120,6 +120,7 @@ export default function PainelEstabelecimento() {
         return (
           <Relatorios
             estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
 

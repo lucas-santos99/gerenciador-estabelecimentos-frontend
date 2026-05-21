@@ -85,10 +85,22 @@ function formatarMetaValor(chave, valor, meta) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function Relatorios({ estabelecimentoId }) {
+export default function Relatorios({ estabelecimentoId, nomeEstabelecimento }) {
 
   const [abaAtiva,    setAbaAtiva]    = useState('auditoria');
   const [operadores,  setOperadores]  = useState([]);
+  const [fontScale,   setFontScale]   = useState(() => {
+    const s = localStorage.getItem('rel-font-scale');
+    return s ? parseFloat(s) : 1;
+  });
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('rel-font-scale', next);
+      return next;
+    });
+  }
   const [filtros, setFiltros] = useState({
     data_inicio:  dataHa30(),
     data_fim:     dataHoje(),
@@ -155,40 +167,36 @@ export default function Relatorios({ estabelecimentoId }) {
 
   useEffect(() => {
     if (abaAtiva === 'auditoria') carregarAuditoria(0);
-    if (abaAtiva === 'resumo')    carregarResumo();
   }, [abaAtiva]);
 
   function aplicarFiltros() {
     if (abaAtiva === 'auditoria') carregarAuditoria(0);
-    if (abaAtiva === 'resumo')    carregarResumo();
   }
 
   /* ════════════════════════════════════════════════════════ */
   return (
-    <div className="rel-container">
+    <div className="rel-container" style={{ '--rel-font-scale': fontScale }}>
 
       {/* ── Header ── */}
       <div className="rel-header">
         <div className="rel-header-info">
           <h2 className="rel-titulo">📊 Relatórios</h2>
-          <span className="rel-subtitulo">Auditoria de ações e resumo por operador</span>
+          <span className="rel-subtitulo">Histórico de ações por módulo e operador</span>
         </div>
       </div>
 
-      {/* ── Abas ── */}
-      <div className="rel-tabs">
-        {[
-          { key: 'auditoria', label: '📋 Auditoria' },
-          { key: 'resumo',    label: '👥 Por operador' },
-        ].map(t => (
+      {/* ── Abas + zoom ── */}
+      <div className="rel-tabs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 4 }}>
           <button
-            key={t.key}
-            className={`rel-tab${abaAtiva === t.key ? ' ativo' : ''}`}
-            onClick={() => setAbaAtiva(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+            className={`rel-tab${abaAtiva === 'auditoria' ? ' ativo' : ''}`}
+            onClick={() => setAbaAtiva('auditoria')}
+          >📋 Auditoria</button>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="fin-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+          <button className="fin-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.6} title="Aumentar fonte">A+</button>
+        </div>
       </div>
 
       {/* ── Filtros ── */}
@@ -234,7 +242,7 @@ export default function Relatorios({ estabelecimentoId }) {
                 onChange={e => setFiltros(p => ({ ...p, operador_id: e.target.value }))}
               >
                 <option value="">Todos</option>
-                <option value="merchant">Merchant</option>
+                <option value="merchant">{nomeEstabelecimento || 'Administrador'}</option>
                 {operadores.map(op => (
                   <option key={op.id} value={op.id}>{op.nome}</option>
                 ))}
@@ -279,7 +287,7 @@ export default function Relatorios({ estabelecimentoId }) {
                         </div>
                         <div className="rel-registro-dir">
                           <span className="rel-registro-usuario">
-                            {r.usuario_nome || 'Merchant'}
+                            {r.usuario_nome || nomeEstabelecimento || 'Administrador'}
                           </span>
                           <span className="rel-registro-hora">
                             {formatarDataHora(r.criado_em)}
@@ -330,44 +338,6 @@ export default function Relatorios({ estabelecimentoId }) {
                 </div>
               </div>
             </>
-          )}
-        </div>
-      )}
-
-      {/* ── Conteúdo: Resumo por operador ── */}
-      {abaAtiva === 'resumo' && (
-        <div className="rel-body">
-          {loadingRes ? (
-            <div className="rel-loading"><div className="rel-spinner" /> Carregando…</div>
-          ) : resumo.length === 0 ? (
-            <div className="rel-vazio">
-              <span className="rel-vazio-icone">👥</span>
-              <p>Nenhuma ação registrada no período</p>
-            </div>
-          ) : (
-            <div className="rel-resumo-lista">
-              {resumo.map((op, i) => (
-                <div key={i} className="rel-resumo-card">
-                  <div className="rel-resumo-avatar">
-                    {(op.nome || 'M')[0].toUpperCase()}
-                  </div>
-                  <div className="rel-resumo-info">
-                    <span className="rel-resumo-nome">{op.nome || 'Merchant'}</span>
-                    <div className="rel-resumo-modulos">
-                      {Object.entries(op.por_modulo).map(([mod, qtd]) => (
-                        <span key={mod} className={`rel-resumo-mod rel-mod-${MODULO_COR[mod] || 'gray'}`}>
-                          {MODULO_LABEL[mod] || mod}: {qtd}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rel-resumo-total">
-                    <span className="rel-resumo-total-num">{op.total}</span>
-                    <span className="rel-resumo-total-label">ações</span>
-                  </div>
-                </div>
-              ))}
-            </div>
           )}
         </div>
       )}
