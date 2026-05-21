@@ -443,3 +443,31 @@
   letter-spacing: 0.06em;
   color: var(--est-text-muted);
 }
+/* ── Diff de alterações na auditoria ── */
+.rel-meta-tag--diff {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.rel-meta-val--old {
+  text-decoration: line-through;
+  opacity: 0.55;
+  color: var(--rel-text-muted, #94a3b8);
+}
+
+.rel-meta-val--new {
+  font-weight: 600;
+  color: var(--rel-accent, #14b8a6);
+}
+
+.rel-meta-seta {
+  font-size: 0.75em;
+  opacity: 0.6;
+  color: var(--rel-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+body.light .rel-meta-val--old { color: #64748b; }
+body.light .rel-meta-val--new { color: #0d9488; }

@@ -84,6 +84,18 @@ function formatarMetaValor(chave, valor, meta) {
   return String(valor);
 }
 
+/* Calcula campos que mudaram entre antes e depois */
+function calcularDiff(antes, depois) {
+  if (!antes || !depois) return null;
+  const campos = Object.keys(depois).filter(k =>
+    META_LABEL[k] !== null &&
+    META_LABEL[k] !== undefined &&
+    k !== 'unidade_medida' &&
+    String(antes[k]) !== String(depois[k])
+  );
+  return campos.length > 0 ? campos : null;
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function Relatorios({ estabelecimentoId, nomeEstabelecimento }) {
 
@@ -298,20 +310,46 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento }) {
                       {/* Linha 2 — descrição + meta */}
                       <div className="rel-registro-linha2">
                         <span className="rel-registro-desc">{r.descricao}</span>
-                        {r.meta?.depois && (
-                          <div className="rel-registro-meta">
-                            {Object.entries(r.meta.depois)
-                              .filter(([k]) => META_LABEL[k] !== null && META_LABEL[k] !== undefined && k !== 'unidade_medida')
-                              .map(([k, v]) => (
-                                <span key={k} className="rel-meta-tag">
-                                  <span className="rel-meta-key">{META_LABEL[k] || k}</span>
-                                  <span className="rel-meta-val">
-                                    {formatarMetaValor(k, v, r.meta.depois)}
+                        {(() => {
+                          const diff = calcularDiff(r.meta?.antes, r.meta?.depois);
+                          // Com antes+depois: mostra só o que mudou com seta
+                          if (diff) {
+                            return (
+                              <div className="rel-registro-meta">
+                                {diff.map(k => (
+                                  <span key={k} className="rel-meta-tag rel-meta-tag--diff">
+                                    <span className="rel-meta-key">{META_LABEL[k] || k}</span>
+                                    <span className="rel-meta-val rel-meta-val--old">
+                                      {formatarMetaValor(k, r.meta.antes[k], r.meta.antes)}
+                                    </span>
+                                    <span className="rel-meta-seta">→</span>
+                                    <span className="rel-meta-val rel-meta-val--new">
+                                      {formatarMetaValor(k, r.meta.depois[k], r.meta.depois)}
+                                    </span>
                                   </span>
-                                </span>
-                              ))}
-                          </div>
-                        )}
+                                ))}
+                              </div>
+                            );
+                          }
+                          // Sem antes (registros antigos ou criação): mostra depois normalmente
+                          if (r.meta?.depois) {
+                            return (
+                              <div className="rel-registro-meta">
+                                {Object.entries(r.meta.depois)
+                                  .filter(([k]) => META_LABEL[k] !== null && META_LABEL[k] !== undefined && k !== 'unidade_medida')
+                                  .map(([k, v]) => (
+                                    <span key={k} className="rel-meta-tag">
+                                      <span className="rel-meta-key">{META_LABEL[k] || k}</span>
+                                      <span className="rel-meta-val">
+                                        {formatarMetaValor(k, v, r.meta.depois)}
+                                      </span>
+                                    </span>
+                                  ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                     </div>
