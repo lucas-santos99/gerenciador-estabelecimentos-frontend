@@ -515,6 +515,13 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
                     </span>
                   </button>
 
+                  {/* Hint: módulo ativo sem ações = somente visualização */}
+                  {moduloAtivo && mod.acoes.length > 0 && !mod.acoes.some(a => selecionadas.includes(a.id)) && (
+                    <div className="opest-perm-somente-view">
+                      👁️ Somente visualização — marque ações abaixo para liberar edição
+                    </div>
+                  )}
+
                   {/* Ações granulares — só exibe se módulo ativo */}
                   {moduloAtivo && mod.acoes.length > 0 && (
                     <div className="opest-perm-acoes">
