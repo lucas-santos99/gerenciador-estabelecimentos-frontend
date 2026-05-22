@@ -808,3 +808,92 @@
   flex: 1;
   min-width: 160px;
 }
+/* ========================= */
+/*  CARDS DE MÓDULO/PERMISSÃO */
+/*  (DetalhesOperador)        */
+/* ========================= */
+
+.op-modulo-card {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  transition: border-color 0.15s;
+}
+.op-modulo-card.ativo {
+  border-color: #14b8a6;
+}
+
+.op-modulo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  cursor: default;
+  user-select: none;
+}
+.op-modulo-header.editavel {
+  cursor: pointer;
+}
+.op-modulo-header.ativo {
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.op-modulo-icone {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.op-modulo-label {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.op-modulo-status {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.op-modulo-status.ativo {
+  color: #14b8a6;
+}
+
+.op-modulo-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 10px 36px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+
+.op-acao-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: default;
+  user-select: none;
+  transition: all 0.15s;
+}
+.op-acao-tag.editavel {
+  cursor: pointer;
+}
+.op-acao-tag.ativo {
+  border-color: #14b8a6;
+  background: rgba(20, 184, 166, 0.1);
+  color: #14b8a6;
+  font-weight: 700;
+}
+.op-acao-tag.editavel:hover {
+  border-color: #14b8a6;
+  color: #14b8a6;
+}

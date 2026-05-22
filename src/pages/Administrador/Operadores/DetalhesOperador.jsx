@@ -23,12 +23,60 @@ export default function DetalhesOperador() {
   const [permSaving, setPermSaving] = useState(false);
   const [permEditing,setPermEditing]= useState(false);
 
+  // ⚠️ FONTE DA VERDADE DO ADMIN: mantenha sincronizado com
+  // OperadoresEstabelecimento.jsx ao adicionar módulos/ações
   const MODULOS_ADMIN = [
-    { id:'pdv',           label:'PDV (Caixa)',      icone:'🖥️', acoes:[{id:'pdv_cancelar_venda',label:'Cancelar vendas'},{id:'pdv_fiado',label:'Registrar fiado'}] },
-    { id:'estoque',       label:'Estoque',          icone:'📦', acoes:[{id:'estoque_adicionar',label:'Adicionar'},{id:'estoque_editar',label:'Editar'},{id:'estoque_excluir',label:'Excluir'}] },
-    { id:'clientes',      label:'Clientes / Fiado', icone:'👥', acoes:[{id:'clientes_adicionar',label:'Adicionar'},{id:'clientes_editar',label:'Editar'},{id:'clientes_excluir',label:'Excluir'},{id:'clientes_receber',label:'Receber'}] },
-    { id:'financeiro',    label:'Financeiro',       icone:'💰', acoes:[{id:'financeiro_ver_dre',label:'DRE'},{id:'financeiro_ver_relatorio',label:'Relatório'},{id:'financeiro_contas_pagar',label:'Contas a pagar'}] },
-    { id:'configuracoes', label:'Configurações',    icone:'⚙️', acoes:[{id:'config_editar_dados',label:'Editar dados'},{id:'config_editar_logo',label:'Alterar logo'}] },
+    {
+      id: 'pdv', label: 'PDV (Caixa)', icone: '🖥️',
+      acoes: [
+        { id: 'pdv_realizar_venda', label: 'Realizar vendas' },
+        { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
+        { id: 'pdv_fiado',          label: 'Vender no fiado' },
+        { id: 'pdv_desconto',       label: 'Aplicar desconto' },
+      ],
+    },
+    {
+      id: 'estoque', label: 'Estoque', icone: '📦',
+      acoes: [
+        { id: 'estoque_adicionar', label: 'Adicionar produtos' },
+        { id: 'estoque_editar',    label: 'Editar produtos' },
+        { id: 'estoque_excluir',   label: 'Excluir produtos' },
+      ],
+    },
+    {
+      id: 'clientes', label: 'Clientes / Fiado', icone: '👥',
+      acoes: [
+        { id: 'clientes_adicionar', label: 'Adicionar clientes' },
+        { id: 'clientes_editar',    label: 'Editar clientes' },
+        { id: 'clientes_excluir',   label: 'Excluir clientes' },
+        { id: 'clientes_receber',   label: 'Registrar recebimentos' },
+      ],
+    },
+    {
+      id: 'financeiro', label: 'Financeiro', icone: '💰',
+      acoes: [
+        { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa' },
+        { id: 'financeiro_ver_dre',      label: 'Ver DRE' },
+        { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar' },
+      ],
+    },
+    {
+      id: 'relatorios', label: 'Relatórios', icone: '📊',
+      acoes: [
+        { id: 'relatorios_historico',  label: 'Ver histórico de vendas' },
+        { id: 'relatorios_operadores', label: 'Ver vendas por operador' },
+        { id: 'relatorios_produtos',   label: 'Ver produtos mais vendidos' },
+        { id: 'relatorios_estoque',    label: 'Ver relatório de estoque' },
+        { id: 'relatorios_auditoria',  label: 'Ver auditoria de ações' },
+      ],
+    },
+    {
+      id: 'configuracoes', label: 'Configurações', icone: '⚙️',
+      acoes: [
+        { id: 'config_editar_dados', label: 'Editar dados' },
+        { id: 'config_editar_logo',  label: 'Alterar logo' },
+      ],
+    },
   ];
 
   async function carregar() {
@@ -250,43 +298,29 @@ export default function DetalhesOperador() {
             {MODULOS_ADMIN.map(mod => {
               const modAtivo = permissoes.includes(mod.id);
               return (
-                <div key={mod.id} style={{
-                  border: `1.5px solid ${modAtivo ? '#14b8a6' : 'var(--border, #e2e8f0)'}`,
-                  borderRadius: 10, overflow: 'hidden',
-                }}>
+                <div
+                  key={mod.id}
+                  className={`op-modulo-card${modAtivo ? ' ativo' : ''}`}
+                >
                   <div
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 12px',
-                      background: modAtivo ? 'rgba(20,184,166,0.08)' : 'var(--bg-input, #f8fafc)',
-                      cursor: permEditing ? 'pointer' : 'default',
-                    }}
+                    className={`op-modulo-header${modAtivo ? ' ativo' : ''}${permEditing ? ' editavel' : ''}`}
                     onClick={() => permEditing && toggleModulo(mod.id)}
                   >
-                    <span style={{ fontSize: '1.1rem' }}>{mod.icone}</span>
-                    <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 700, color: 'var(--text, #1e293b)' }}>{mod.label}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: modAtivo ? '#14b8a6' : 'var(--text-muted, #94a3b8)' }}>
+                    <span className="op-modulo-icone">{mod.icone}</span>
+                    <span className="op-modulo-label">{mod.label}</span>
+                    <span className={`op-modulo-status${modAtivo ? ' ativo' : ''}`}>
                       {modAtivo ? '✓ Ativo' : '○ Inativo'}
                     </span>
                   </div>
                   {modAtivo && mod.acoes.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 12px 10px 36px', background: 'var(--card-bg, #fff)', borderTop: '1px solid var(--border, #e2e8f0)' }}>
+                    <div className="op-modulo-acoes">
                       {mod.acoes.map(acao => {
                         const acaoAtiva = permissoes.includes(acao.id);
                         return (
                           <span
                             key={acao.id}
+                            className={`op-acao-tag${acaoAtiva ? ' ativo' : ''}${permEditing ? ' editavel' : ''}`}
                             onClick={() => permEditing && togglePerm(acao.id, mod.id)}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              padding: '3px 10px', borderRadius: 20,
-                              border: `1px solid ${acaoAtiva ? '#14b8a6' : 'var(--border, #e2e8f0)'}`,
-                              background: acaoAtiva ? 'rgba(20,184,166,0.1)' : 'var(--bg-input, #f8fafc)',
-                              color: acaoAtiva ? '#14b8a6' : 'var(--text-muted, #94a3b8)',
-                              fontSize: '0.72rem', fontWeight: acaoAtiva ? 700 : 500,
-                              cursor: permEditing ? 'pointer' : 'default',
-                              userSelect: 'none',
-                            }}
                           >
                             {acaoAtiva ? '✓' : '○'} {acao.label}
                           </span>
