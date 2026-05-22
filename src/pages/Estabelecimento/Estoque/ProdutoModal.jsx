@@ -13,6 +13,7 @@ export default function ProdutoModal({
   onClose,
   onSalvo,
   onCategoriaCriada,
+  somenteLeitura = false,
 }) {
   const isEdit = !!produtoEditar;
 
@@ -148,7 +149,7 @@ export default function ProdutoModal({
       <div className="prod-modal">
 
         <div className="prod-modal-titulo">
-          {isEdit ? '✏️ Editar produto' : '➕ Novo produto'}
+          {somenteLeitura ? '👁️ Visualizar produto' : isEdit ? '✏️ Editar produto' : '➕ Novo produto'}
         </div>
 
         {erro && <div className="prod-modal-erro">⚠️ {erro}</div>}
@@ -166,6 +167,7 @@ export default function ProdutoModal({
                   ref={nomeRef}
                   className="prod-input"
                   name="nome"
+                  readOnly={somenteLeitura}
                   placeholder="Ex: Arroz Tipo 1 5kg"
                   value={form.nome}
                   onChange={atualizar}
@@ -178,6 +180,7 @@ export default function ProdutoModal({
                 <input
                   className="prod-input"
                   name="marca"
+                  readOnly={somenteLeitura}
                   placeholder="Ex: Tio João, Camil…"
                   value={form.marca}
                   onChange={atualizar}
@@ -189,6 +192,7 @@ export default function ProdutoModal({
                 <input
                   className="prod-input"
                   name="codigo_barras"
+                  readOnly={somenteLeitura}
                   placeholder="Opcional"
                   value={form.codigo_barras}
                   onChange={atualizar}
@@ -213,6 +217,7 @@ export default function ProdutoModal({
                     type="button"
                     className="prod-btn-nova-cat"
                     onClick={() => setNovaCatAberta(p => !p)}
+                    disabled={somenteLeitura}
                     title="Nova categoria"
                   >
                     +
@@ -268,7 +273,7 @@ export default function ProdutoModal({
                       key={op.value}
                       type="button"
                       className={`prod-unidade-btn${form.unidade_medida === op.value ? ' ativo' : ''}`}
-                      onClick={() => setForm(prev => ({ ...prev, unidade_medida: op.value }))}
+                      onClick={() => !somenteLeitura && setForm(prev => ({ ...prev, unidade_medida: op.value }))}
                     >
                       <span className="prod-unidade-icon">{op.icon}</span>
                       <span className="prod-unidade-label">{op.label}</span>
@@ -286,6 +291,7 @@ export default function ProdutoModal({
                   className="prod-input"
                   type="number"
                   name="estoque_atual"
+                  readOnly={somenteLeitura}
                   value={form.estoque_atual}
                   onChange={atualizar}
                   min="0"
@@ -302,6 +308,7 @@ export default function ProdutoModal({
                   className="prod-input"
                   type="number"
                   name="estoque_minimo"
+                  readOnly={somenteLeitura}
                   value={form.estoque_minimo}
                   onChange={atualizar}
                   min="0"
@@ -344,6 +351,7 @@ export default function ProdutoModal({
                   className="prod-input"
                   type="number"
                   name="preco_custo"
+                  readOnly={somenteLeitura}
                   value={form.preco_custo}
                   onChange={atualizar}
                   min="0"
@@ -357,6 +365,7 @@ export default function ProdutoModal({
                   className="prod-input"
                   type="number"
                   name="preco_venda"
+                  readOnly={somenteLeitura}
                   value={form.preco_venda}
                   onChange={atualizar}
                   min="0"
@@ -370,11 +379,13 @@ export default function ProdutoModal({
           {/* Ações */}
           <div className="prod-modal-acoes">
             <button type="button" className="prod-modal-btn-cancelar" onClick={onClose}>
-              Cancelar (Esc)
+              {somenteLeitura ? 'Fechar' : 'Cancelar (Esc)'}
             </button>
-            <button type="submit" className="prod-modal-btn-salvar" disabled={salvando}>
-              {salvando ? '⏳ Salvando…' : isEdit ? '✓ Atualizar produto' : '✓ Criar produto'}
-            </button>
+            {!somenteLeitura && (
+              <button type="submit" className="prod-modal-btn-salvar" disabled={salvando}>
+                {salvando ? '⏳ Salvando…' : isEdit ? '✓ Atualizar produto' : '✓ Criar produto'}
+              </button>
+            )}
           </div>
 
         </form>

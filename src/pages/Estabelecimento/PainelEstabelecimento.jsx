@@ -87,6 +87,7 @@ export default function PainelEstabelecimento() {
         return (
           <ProdutoList
             estabelecimentoId={estabelecimentoId}
+            permissoes={isMerchant ? ['estoque','estoque_adicionar','estoque_editar','estoque_excluir'] : permissoes}
           />
         );
 

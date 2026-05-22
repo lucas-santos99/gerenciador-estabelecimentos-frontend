@@ -30,7 +30,14 @@ function estoqueStatus(produto) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function ProdutoList({ estabelecimentoId }) {
+export default function ProdutoList({ estabelecimentoId, permissoes = [] }) {
+
+  // Permissões granulares — merchant/super_admin tem tudo
+  const podeAdicionar = permissoes.includes('estoque_adicionar');
+  const podeEditar    = permissoes.includes('estoque_editar');
+  const podeExcluir   = permissoes.includes('estoque_excluir');
+  // Se tem o módulo mas nenhuma ação = somente leitura
+  const somenteLeitura = permissoes.includes('estoque') && !podeAdicionar && !podeEditar && !podeExcluir;
 
   const [produtos,         setProdutos]         = useState([]);
   const [categorias,       setCategorias]       = useState([]);
@@ -284,6 +291,7 @@ export default function ProdutoList({ estabelecimentoId }) {
           onClose={fecharModal}
           onSalvo={onProdutoSalvo}
           onCategoriaCriada={() => carregarDados()}
+          somenteLeitura={produtoEditar ? !podeEditar : false}
         />
       )}
 
@@ -488,9 +496,11 @@ export default function ProdutoList({ estabelecimentoId }) {
             <button className="estoque-btn" onClick={() => window.print()} title="Imprimir">
               🖨️
             </button>
-            <button className="estoque-btn primary" onClick={abrirNovo}>
-              + Produto
-            </button>
+            {podeAdicionar && (
+              <button className="estoque-btn primary" onClick={abrirNovo}>
+                + Produto
+              </button>
+            )}
           </div>
         </div>
 
@@ -515,6 +525,9 @@ export default function ProdutoList({ estabelecimentoId }) {
                 focado={produto.id === produtoFocadoId}
                 onEditar={() => abrirEditar(produto)}
                 onDeletar={() => deletarProduto(produto.id)}
+                podeEditar={podeEditar}
+                podeExcluir={podeExcluir}
+                somenteLeitura={somenteLeitura}
               />
             ))
           )}
@@ -526,7 +539,7 @@ export default function ProdutoList({ estabelecimentoId }) {
 }
 
 /* ── Card de produto ─────────────────────────────────────────*/
-function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
+function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false }) {
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
 
@@ -535,7 +548,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
       id={`prod-${produto.id}`}
       className={`prod-card${focado ? ' focado' : ''}`}
     >
-      <div className="prod-card-corpo" onClick={onEditar}>
+      <div className="prod-card-corpo" onClick={podeEditar || somenteLeitura ? onEditar : undefined} style={{ cursor: podeEditar || somenteLeitura ? "pointer" : "default" }}>
         <span className={`prod-badge-estoque ${status}`}>
           {formatarEstoque(produto.estoque_atual, produto.unidade_medida)}
         </span>
@@ -559,8 +572,14 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar }) {
         </div>
       </div>
       <div className="prod-card-acoes">
-        <button className="prod-btn-acao editar" onClick={onEditar}>✏️ Editar</button>
-        <button className="prod-btn-acao excluir" onClick={onDeletar}>🗑 Excluir</button>
+        {(podeEditar || somenteLeitura) && (
+          <button className="prod-btn-acao editar" onClick={onEditar}>
+            {somenteLeitura && !podeEditar ? '👁️ Ver' : '✏️ Editar'}
+          </button>
+        )}
+        {podeExcluir && (
+          <button className="prod-btn-acao excluir" onClick={onDeletar}>🗑 Excluir</button>
+        )}
       </div>
     </div>
   );
