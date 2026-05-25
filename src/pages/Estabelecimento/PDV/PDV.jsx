@@ -704,10 +704,10 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
               title="Aumentar fonte"
             >A+</button>
             <button
-              className="pdv-zoom-btn"
+              className="pdv-zoom-btn pdv-btn-tela-cheia"
               onClick={() => setTelaCheia(p => !p)}
               title={telaCheia ? 'Sair da tela cheia (F11)' : 'Tela cheia (F11)'}
-            >{telaCheia ? '⊠' : '⊞'}</button>
+            >{telaCheia ? '⊠ Sair' : '⊞ Tela Cheia'}</button>
           </div>
         </div>
         {vendaStatus && <div className={`pdv-status ${vendaStatus.tipo}`}>{vendaStatus.msg}</div>}

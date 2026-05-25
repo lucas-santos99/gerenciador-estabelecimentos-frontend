@@ -4,6 +4,7 @@ import { apiFetch } from '../../../utils/api';
 import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
+import * as XLSX from 'xlsx';
 
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -338,6 +339,46 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
       return 0;
     });
 
+  /* ── Alertas de fiado vencido ──────────────────────────── */
+  const hoje = new Date();
+  const fiadosVencidos  = dividas.filter(c => {
+    if (!c.data_vencimento) return false;
+    return new Date(c.data_vencimento) < hoje;
+  });
+  const fiadosProximos  = dividas.filter(c => {
+    if (!c.data_vencimento) return false;
+    const diff = Math.ceil((new Date(c.data_vencimento) - hoje) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 3;
+  });
+  const totalVencido = fiadosVencidos.reduce((s, c) => s + parseFloat(c.saldo_devedor || 0), 0);
+
+  /* ── Exportar Excel ─────────────────────────────────────── */
+  function exportarExcel() {
+    const lista = viewMode === 'devedores' ? dividas : todosClientes;
+    if (!lista.length) return;
+    const dados = lista.map(c => ({
+      'Nome':          c.nome || '',
+      'Telefone':      c.telefone || '',
+      'Dívida (R$)':   parseFloat(c.saldo_devedor || 0),
+      'Limite (R$)':   parseFloat(c.limite_credito || 0) || 'Sem limite',
+      'Vencimento':    c.data_vencimento
+                         ? new Date(c.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                         : '—',
+      'Status':        (() => {
+                         if (!c.data_vencimento) return '—';
+                         const diff = Math.ceil((new Date(c.data_vencimento) - hoje) / (1000 * 60 * 60 * 24));
+                         if (diff < 0) return 'Vencido';
+                         if (diff <= 3) return 'Vence em breve';
+                         return 'Em dia';
+                       })(),
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, viewMode === 'devedores' ? 'Devedores' : 'Clientes');
+    const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    XLSX.writeFile(wb, `Clientes_${data}.xlsx`);
+  }
+
   /* ════════════════════════════════════════════════════════ */
   if (loading) {
     return (
@@ -408,6 +449,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
             title="Aumentar fonte"
           >A+</button>
           <button className="cli-btn" onClick={() => window.print()}>🖨️</button>
+          <button className="cli-btn verde" onClick={exportarExcel} title="Exportar Excel">📥 Excel</button>
           <button
             className="cli-btn primary"
             onClick={() => { setClienteModal(null); setModalAberto(true); }}
@@ -416,6 +458,37 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
           </button>
         </div>
       </div>
+
+      {/* ── ALERTA FIADO VENCIDO ────────────────────────── */}
+      {(fiadosVencidos.length > 0 || fiadosProximos.length > 0) && (
+        <div className="cli-alerta-fiado">
+          {fiadosVencidos.length > 0 && (
+            <div className="cli-alerta-item vencido">
+              <span className="cli-alerta-icone">🔴</span>
+              <div className="cli-alerta-texto">
+                <strong>{fiadosVencidos.length} {fiadosVencidos.length === 1 ? 'fiado vencido' : 'fiados vencidos'}</strong>
+                <span> — total de {fmt(totalVencido)} em atraso</span>
+              </div>
+              <button
+                className="cli-alerta-btn"
+                onClick={() => { setViewMode('devedores'); setOrdenacao('vencimento'); }}
+              >Ver devedores</button>
+            </div>
+          )}
+          {fiadosProximos.length > 0 && (
+            <div className="cli-alerta-item proximo">
+              <span className="cli-alerta-icone">⚠️</span>
+              <div className="cli-alerta-texto">
+                <strong>{fiadosProximos.length} {fiadosProximos.length === 1 ? 'fiado vence' : 'fiados vencem'} nos próximos 3 dias</strong>
+              </div>
+              <button
+                className="cli-alerta-btn"
+                onClick={() => { setViewMode('devedores'); setOrdenacao('vencimento'); }}
+              >Ver devedores</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── ORDENAÇÃO ───────────────────────────────────── */}
       {viewMode === 'devedores' && dividas.length > 0 && (

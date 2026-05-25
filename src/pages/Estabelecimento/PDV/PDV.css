@@ -1208,3 +1208,20 @@
 
 /* Esconde a sidebar do layout quando em tela cheia */
 .pdv-tela-cheia ~ * { display: none; }
+/* ════════════════════════════════════════════════════════════
+   PDV — TELA CHEIA
+   ════════════════════════════════════════════════════════════ */
+
+.pdv-tela-cheia {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--est-bg);
+  border-radius: 0;
+}
+
+.pdv-btn-tela-cheia {
+  min-width: 90px;
+  font-size: calc(0.72rem * var(--pdv-font-scale, 1));
+  white-space: nowrap;
+}

@@ -1098,4 +1098,86 @@
   .cli-header-btns,
   .cli-btn-acao,
   .cli-modal-overlay { display: none !important; }
+}/* ════════════════════════════════════════════════════════════
+   CLIENTES — Alertas de fiado + botão Excel
+   Adicionar ao final de Clientes.css
+   ════════════════════════════════════════════════════════════ */
+
+/* Botão Excel (verde) */
+.cli-btn.verde {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.25);
 }
+.cli-btn.verde:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+body.light .cli-btn.verde {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Banner de alertas */
+.cli-alerta-fiado {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 20px 10px;
+  flex-shrink: 0;
+}
+
+.cli-alerta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: calc(0.8rem * var(--cli-font-scale, 1));
+}
+
+.cli-alerta-item.vencido {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+body.light .cli-alerta-item.vencido {
+  background: rgba(239, 68, 68, 0.06);
+  color: #b91c1c;
+}
+
+.cli-alerta-item.proximo {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+body.light .cli-alerta-item.proximo {
+  background: rgba(245, 158, 11, 0.06);
+  color: #b45309;
+}
+
+.cli-alerta-icone {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.cli-alerta-texto {
+  flex: 1;
+}
+
+.cli-alerta-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: 7px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: calc(0.72rem * var(--cli-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.cli-alerta-btn:hover { opacity: 1; }
