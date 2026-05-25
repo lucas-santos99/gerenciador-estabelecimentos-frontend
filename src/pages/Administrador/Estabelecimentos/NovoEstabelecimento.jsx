@@ -18,6 +18,7 @@ export default function NovoEstabelecimento() {
     status_assinatura:    "ativa",
     data_vencimento:      "",
     tipo_estabelecimento: "mercearia",
+    limite_operadores:    3,
   });
 
   const [tipoCustomizado,  setTipoCustomizado]  = useState("");
@@ -50,7 +51,21 @@ export default function NovoEstabelecimento() {
     } catch {}
   }
 
-  useEffect(() => { carregarTipos(); }, []);
+  useEffect(() => {
+    carregarTipos();
+    carregarLimitePadrao();
+  }, []);
+
+  async function carregarLimitePadrao() {
+    try {
+      const resp = await fetch(`${API_URL}/superadmin/config`, { credentials: "include" });
+      if (resp.ok) {
+        const d = await resp.json();
+        const val = d.limite_operadores_padrao ?? 3;
+        setForm(prev => ({ ...prev, limite_operadores: val }));
+      }
+    } catch {}
+  }
 
   function filtrarSugestoes(valor) {
     setTipoCustomizado(valor);
@@ -95,7 +110,7 @@ export default function NovoEstabelecimento() {
       const resp = await fetch(`${API_URL}/admin/estabelecimentos/criar`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ ...form, tipo_estabelecimento: tipoFinal }),
+        body:    JSON.stringify({ ...form, tipo_estabelecimento: tipoFinal, limite_operadores: parseInt(form.limite_operadores) || 3 }),
         credentials: "include",
       });
       const json = await resp.json();
@@ -319,7 +334,31 @@ export default function NovoEstabelecimento() {
             </div>
           </div>
 
-          {/* SEÇÃO 5 — Logo (opcional) */}
+          {/* SEÇÃO 5 — Operadores */}
+          <div className="est-form-section">
+            <div className="est-form-section-title">👥 Operadores</div>
+            <div className="est-form-grid">
+              <div className="est-form-group">
+                <label className="est-label">Limite de operadores</label>
+                <div className="op-limite-field">
+                  <input
+                    className="op-limite-input"
+                    type="number"
+                    name="limite_operadores"
+                    min="0"
+                    max="50"
+                    value={form.limite_operadores}
+                    onChange={atualizar}
+                  />
+                  <span className="op-limite-hint">
+                    Máximo de operadores ativos (0–50). Pré-preenchido com o padrão global.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEÇÃO 6 — Logo (opcional) */}
           <div className="est-form-section">
             <div className="est-form-section-title">🖼 Logo do Estabelecimento <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></div>
             <div className="est-logo-area">
