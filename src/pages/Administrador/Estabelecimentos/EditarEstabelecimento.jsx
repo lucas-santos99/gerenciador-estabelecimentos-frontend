@@ -431,28 +431,7 @@ export default function EditarEstabelecimento() {
             </div>
           </div>
 
-          {/* SEÇÃO 5 — Operadores */}
-          <div className="est-form-section">
-            <div className="est-form-section-title">👥 Operadores</div>
-            <div className="est-form-group">
-              <label className="est-label">Limite de operadores</label>
-              <div className="op-limite-field">
-                <input
-                  className="op-limite-input"
-                  type="number"
-                  name="limite_operadores"
-                  min="0"
-                  max="50"
-                  value={form.limite_operadores}
-                  onChange={atualizar}
-                />
-                <span className="op-limite-hint">
-                  Máximo de operadores ativos que este estabelecimento pode cadastrar (0–50).
-                  Padrão: 3.
-                </span>
-              </div>
-            </div>
-          </div>
+
 
           {/* AÇÕES */}
           <div className="est-form-actions">
