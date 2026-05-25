@@ -440,6 +440,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   const [loadingBusca,    setLoadingBusca]    = useState(false);
   const [loadingVenda,    setLoadingVenda]    = useState(false);
   const [vendaStatus,     setVendaStatus]     = useState(null);
+  const [telaCheia,       setTelaCheia]       = useState(false);
   const [fontScale,       setFontScale]       = useState(() => {
     const saved = localStorage.getItem('pdv-font-scale');
     return saved ? parseFloat(saved) : 1;
@@ -459,6 +460,38 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   useEffect(() => {
     if (!showPagamento && !itemQuantificar && editIndex === null) inputBuscaRef.current?.focus();
   }, [showPagamento, itemQuantificar, editIndex]);
+
+  // Atalhos globais do PDV
+  useEffect(() => {
+    function handleGlobalKey(e) {
+      // F10 ou F2 → finalizar venda
+      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && carrinho.length > 0) {
+        e.preventDefault();
+        setShowPagamento(true);
+        return;
+      }
+      // F11 → tela cheia
+      if (e.key === 'F11') {
+        e.preventDefault();
+        setTelaCheia(p => !p);
+        return;
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, [showPagamento, itemQuantificar, carrinho]);
+
+  // Confirmação ao fechar aba/navegar com carrinho cheio
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (carrinho.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [carrinho]);
 
   useEffect(() => {
     if (itemQuantificar) {
@@ -608,7 +641,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   }
 
   return (
-    <div className="pdv-container">
+    <div className={`pdv-container${telaCheia ? ' pdv-tela-cheia' : ''}`}>
       {itemQuantificar && (
         <div className="pdv-modal-overlay">
           <div className="pdv-modal" onClick={e => e.stopPropagation()}>
@@ -670,6 +703,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
               disabled={fontScale >= 1.6}
               title="Aumentar fonte"
             >A+</button>
+            <button
+              className="pdv-zoom-btn"
+              onClick={() => setTelaCheia(p => !p)}
+              title={telaCheia ? 'Sair da tela cheia (F11)' : 'Tela cheia (F11)'}
+            >{telaCheia ? '⊠' : '⊞'}</button>
           </div>
         </div>
         {vendaStatus && <div className={`pdv-status ${vendaStatus.tipo}`}>{vendaStatus.msg}</div>}
@@ -694,8 +732,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
             <span className="pdv-total-label">Total</span>
             <span className="pdv-total-valor">{fmt(total)}</span>
           </div>
-          <button ref={btnFinalizarRef} className="pdv-btn-finalizar" onClick={() => setShowPagamento(true)} disabled={carrinho.length === 0 || loadingVenda}>
-            {loadingVenda ? '⏳ Processando…' : '✓ Finalizar Venda'}
+          <button ref={btnFinalizarRef} className="pdv-btn-finalizar" onClick={() => setShowPagamento(true)} disabled={carrinho.length === 0 || loadingVenda} title="F10 ou F2">
+            {loadingVenda ? '⏳ Processando…' : `✓ Finalizar Venda${carrinho.length > 0 ? ' (F10)' : ''}`}
           </button>
         </div>
       </div>

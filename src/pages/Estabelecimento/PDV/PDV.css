@@ -1192,3 +1192,19 @@
   background: rgba(0,0,0,0.08);
   color: var(--est-text-muted);
 }
+/* ════════════════════════════════════════════════════════════
+   PDV — TELA CHEIA
+   Adicionar ao final de PDV.css
+   ════════════════════════════════════════════════════════════ */
+
+/* Quando ativo, o PDV ocupa toda a viewport por cima do layout */
+.pdv-tela-cheia {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--est-bg);
+  border-radius: 0;
+}
+
+/* Esconde a sidebar do layout quando em tela cheia */
+.pdv-tela-cheia ~ * { display: none; }
