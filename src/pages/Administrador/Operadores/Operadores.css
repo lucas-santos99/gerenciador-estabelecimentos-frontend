@@ -897,3 +897,54 @@
   border-color: #14b8a6;
   color: #14b8a6;
 }
+
+/* ── Painel de limite de operadores (ListaOperadores) ── */
+.op-limite-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.op-limite-box-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.op-limite-box-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.op-limite-box-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.op-limite-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.op-limite-input {
+  width: 64px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #14b8a6;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
