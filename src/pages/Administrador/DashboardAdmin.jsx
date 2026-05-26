@@ -292,8 +292,7 @@ export default function DashboardAdmin() {
             >
               <Icon.Config /> Configurações
             </button>
-            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
-            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
+
 
             <button
               className="btn btn-ghost"
@@ -301,6 +300,8 @@ export default function DashboardAdmin() {
             >
               <Icon.Trash /> Ver Excluídas
             </button>
+            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
           </div>
         </div>
 

@@ -1227,3 +1227,58 @@ body.dark .dash-est-card-info { color: #94a3b8; }
 .dash-est-card-info   { font-size: calc(0.75rem * var(--dash-font-scale, 1)); }
 .dash-sort-label      { font-size: calc(0.72rem * var(--dash-font-scale, 1)); }
 .dash-sort-btn        { font-size: calc(0.75rem * var(--dash-font-scale, 1)); }
+
+/* ── Correções light mode ── */
+body.light .dash-est-card-info {
+  color: #334155;
+}
+body.light .dash-est-card-info-label {
+  color: #64748b;
+  opacity: 1;
+}
+body.light .dash-est-card-nome {
+  color: #0f172a;
+}
+body.light .dash-card-btn--ghost {
+  color: #475569;
+  border-color: #cbd5e1;
+}
+body.light .dash-card-btn--ghost:hover {
+  color: #0d9488;
+  border-color: #0d9488;
+}
+body.light .dash-card-btn--outline {
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+/* ── Corrigir overflow botão Operadores ── */
+.dash-card-btn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-est-card-acoes {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+
+/* Botões principais crescem igual, excluir fixo */
+.dash-card-btn--ghost,
+.dash-card-btn--outline,
+.dash-card-btn--blue {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(0.72rem * var(--dash-font-scale, 1));
+  padding: 6px 6px;
+}
+
+.dash-card-btn--danger {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+}
