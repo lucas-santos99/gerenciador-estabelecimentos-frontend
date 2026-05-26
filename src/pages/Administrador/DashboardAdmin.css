@@ -979,3 +979,159 @@ body.light {
   gap: 10px;
   justify-content: flex-end;
 }
+/* ════════════════════════════════════════════════════════════
+   CARDS DE ESTABELECIMENTO
+   ════════════════════════════════════════════════════════════ */
+
+/* Barra de ordenação */
+.dash-sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.dash-sort-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.dash-sort-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.dash-sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+.dash-sort-btn.ativo  { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* Grid de cards */
+.dash-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+/* Card individual */
+.dash-est-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  border-left: 3px solid var(--border);
+}
+.dash-est-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  border-color: var(--accent-dim);
+}
+
+/* Borda colorida por status */
+.dash-est-card--ativa     { border-left-color: #22c55e; }
+.dash-est-card--bloqueada { border-left-color: #ef4444; }
+.dash-est-card--inativa   { border-left-color: #94a3b8; }
+.dash-est-card--excluida  { border-left-color: #64748b; }
+
+/* Topo */
+.dash-est-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dash-est-card-logo .logo-mini {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.dash-est-card-logo .logo-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.dash-est-card-identidade {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.dash-est-card-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-est-card-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Infos */
+.dash-est-card-infos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-est-card-info {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.dash-est-card-info.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Ações */
+.dash-est-card-acoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.dash-est-card-acoes .btn {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+}
+
+/* Botão excluir — menor, só ícone */
+.dash-est-card-acoes .btn.btn-danger {
+  flex: 0;
+  padding: 6px 10px;
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+  .dash-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

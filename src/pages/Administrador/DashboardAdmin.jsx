@@ -87,7 +87,7 @@ export default function DashboardAdmin() {
 
   async function abrirConfig() {
     setConfigMsg("");
-    setModalConfig(true);
+    // Busca o valor antes de abrir para evitar piscar o padrão 3
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -101,6 +101,7 @@ export default function DashboardAdmin() {
         setLimiteInput(val);
       }
     } catch (err) { console.error(err); }
+    setModalConfig(true);
   }
 
   async function salvarConfig() {
@@ -407,113 +408,96 @@ export default function DashboardAdmin() {
               Nenhum estabelecimento encontrado com os filtros aplicados.
             </div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Logo</th>
-                    <th className="sortable" onClick={() => ordenar("nome_fantasia")}>
-                      Nome {iconSort("nome_fantasia")}
-                    </th>
-                    <th className="sortable" onClick={() => ordenar("tipo_estabelecimento")}>
-                      Tipo {iconSort("tipo_estabelecimento")}
-                    </th>
-                    <th>CNPJ</th>
-                    <th>Telefone</th>
-                    <th className="sortable" onClick={() => ordenar("vencimento")}>
-                      Vencimento {iconSort("vencimento")}
-                    </th>
-                    <th className="sortable" onClick={() => ordenar("status_assinatura")}>
-                      Status {iconSort("status_assinatura")}
-                    </th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
+            <>
+              {/* Ordenação por campo */}
+              <div className="dash-sort-bar">
+                <span className="dash-sort-label">Ordenar:</span>
+                {[
+                  { key: "nome_fantasia", label: "Nome" },
+                  { key: "status_assinatura", label: "Status" },
+                  { key: "vencimento", label: "Vencimento" },
+                  { key: "tipo_estabelecimento", label: "Tipo" },
+                ].map(s => (
+                  <button
+                    key={s.key}
+                    className={`dash-sort-btn${ordenacao.campo === s.key ? " ativo" : ""}`}
+                    onClick={() => ordenar(s.key)}
+                  >
+                    {s.label} {iconSort(s.key)}
+                  </button>
+                ))}
+              </div>
 
-                <tbody>
-                  {listaFiltrada.map(m => (
-                    <tr key={m.id}>
-                      {/* Logo */}
-                      <td>
+              <div className="dash-cards-grid">
+                {listaFiltrada.map(m => (
+                  <div key={m.id} className={`dash-est-card dash-est-card--${m.status_assinatura}`}>
+
+                    {/* Topo: logo + nome + tipo + status */}
+                    <div className="dash-est-card-topo">
+                      <div className="dash-est-card-logo">
                         {m.logo_url
                           ? <img src={m.logo_url} className="logo-mini" alt={m.nome_fantasia} />
                           : <div className="logo-placeholder">{iniciais(m.nome_fantasia)}</div>
                         }
-                      </td>
-
-                      {/* Nome */}
-                      <td className="td-nome">{m.nome_fantasia}</td>
-
-                      {/* Tipo */}
-                      <td>
-                        <span className="badge-tipo">
-                          {m.tipo_estabelecimento || "—"}
-                        </span>
-                      </td>
-
-                      {/* CNPJ */}
-                      <td style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem" }}>
-                        {m.cnpj || "—"}
-                      </td>
-
-                      {/* Telefone */}
-                      <td>{m.telefone || "—"}</td>
-
-                      {/* Vencimento */}
-                      <td>
-                        <span className={`venc-text ${classVenc(m.data_vencimento)}`}>
-                          {formatarData(m.data_vencimento) || "—"}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td>
-                        <span className={`badge badge-${m.status_assinatura}`}>
-                          {m.status_assinatura}
-                        </span>
-                      </td>
-
-                      {/* Ações */}
-                      <td>
-                        <div className="acoes-col">
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
-                            title="Detalhes"
-                          >
-                            <Icon.Eye /> Detalhes
-                          </button>
-
-                          <button
-                            className="btn btn-outline btn-sm"
-                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
-                            title="Editar"
-                          >
-                            <Icon.Edit /> Editar
-                          </button>
-
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => excluir(m.id, m.nome_fantasia)}
-                            title="Excluir"
-                          >
-                            <Icon.Trash /> Excluir
-                          </button>
-
-                          <button
-                            className="btn btn-blue btn-sm"
-                            onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
-                            title="Operadores"
-                          >
-                            <Icon.Users /> Operadores
-                          </button>
+                      </div>
+                      <div className="dash-est-card-identidade">
+                        <span className="dash-est-card-nome">{m.nome_fantasia}</span>
+                        <div className="dash-est-card-badges">
+                          <span className="badge-tipo">{m.tipo_estabelecimento || "—"}</span>
+                          <span className={`badge badge-${m.status_assinatura}`}>{m.status_assinatura}</span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+
+                    {/* Infos secundárias */}
+                    <div className="dash-est-card-infos">
+                      {m.telefone && (
+                        <span className="dash-est-card-info">📞 {m.telefone}</span>
+                      )}
+                      {m.cnpj && (
+                        <span className="dash-est-card-info mono">🪪 {m.cnpj}</span>
+                      )}
+                      <span className={`dash-est-card-info venc-text ${classVenc(m.data_vencimento)}`}>
+                        📅 {formatarData(m.data_vencimento) || "Sem vencimento"}
+                      </span>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="dash-est-card-acoes">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
+                        title="Detalhes"
+                      >
+                        <Icon.Eye /> Detalhes
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
+                        title="Editar"
+                      >
+                        <Icon.Edit /> Editar
+                      </button>
+                      <button
+                        className="btn btn-blue btn-sm"
+                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
+                        title="Operadores"
+                      >
+                        <Icon.Users /> Operadores
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => excluir(m.id, m.nome_fantasia)}
+                        title="Excluir"
+                      >
+                        <Icon.Trash />
+                      </button>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
