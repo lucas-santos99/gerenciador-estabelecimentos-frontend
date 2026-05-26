@@ -1135,3 +1135,95 @@ body.light {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Zoom ── */
+.dash-zoom-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 32px;
+}
+
+/* ── Label de campo nos cards ── */
+.dash-est-card-info-label {
+  font-size: calc(0.65rem * var(--dash-font-scale, 1));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+  margin-right: 4px;
+}
+
+/* ── Botões dos cards — sistema próprio sem herança problemática ── */
+.dash-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: calc(0.75rem * var(--dash-font-scale, 1));
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.dash-card-btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.dash-card-btn--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dash-card-btn--outline {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.dash-card-btn--outline:hover {
+  background: var(--bg-input);
+}
+
+.dash-card-btn--blue {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+.dash-card-btn--blue:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.dash-card-btn--danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  flex: 0;
+  padding: 6px 10px;
+}
+.dash-card-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Dark mode explícito para cards */
+body.dark .dash-est-card {
+  background: var(--bg-input, #1e293b);
+  border-color: var(--border, rgba(255,255,255,0.08));
+}
+body.dark .dash-card-btn--ghost  { color: #94a3b8; border-color: rgba(255,255,255,0.1); }
+body.dark .dash-card-btn--outline { color: #f1f5f9; border-color: rgba(255,255,255,0.1); }
+body.dark .dash-est-card-nome { color: #f1f5f9; }
+body.dark .dash-est-card-info { color: #94a3b8; }
+
+/* Escala de fonte nos cards */
+.dash-est-card-nome   { font-size: calc(0.9rem  * var(--dash-font-scale, 1)); }
+.dash-est-card-info   { font-size: calc(0.75rem * var(--dash-font-scale, 1)); }
+.dash-sort-label      { font-size: calc(0.72rem * var(--dash-font-scale, 1)); }
+.dash-sort-btn        { font-size: calc(0.75rem * var(--dash-font-scale, 1)); }

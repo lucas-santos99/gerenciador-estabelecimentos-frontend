@@ -61,6 +61,18 @@ export default function DashboardAdmin() {
 
   // Modal configurações globais
   const [modalConfig,      setModalConfig]       = useState(false);
+  const [fontScale,        setFontScale]         = useState(() => {
+    const s = localStorage.getItem('dash-font-scale');
+    return s ? parseFloat(s) : 1;
+  });
+
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.4, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('dash-font-scale', next);
+      return next;
+    });
+  }
   const [limiteGlobal,     setLimiteGlobal]      = useState(3);
   const [limiteInput,      setLimiteInput]       = useState(3);
   const [salvandoConfig,   setSalvandoConfig]    = useState(false);
@@ -245,7 +257,7 @@ export default function DashboardAdmin() {
   ══════════════════════════════════════════════════════════ */
   return (
     <LayoutAdmin>
-      <div className="dash-wrapper">
+      <div className="dash-wrapper" style={{ "--dash-font-scale": fontScale }}>
 
         {/* ── HEADER ─────────────────────────────────────── */}
         <div className="dash-header">
@@ -280,6 +292,8 @@ export default function DashboardAdmin() {
             >
               <Icon.Config /> Configurações
             </button>
+            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="btn btn-ghost btn-sm dash-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
 
             <button
               className="btn btn-ghost"
@@ -452,46 +466,39 @@ export default function DashboardAdmin() {
                     {/* Infos secundárias */}
                     <div className="dash-est-card-infos">
                       {m.telefone && (
-                        <span className="dash-est-card-info">📞 {m.telefone}</span>
+                        <span className="dash-est-card-info">
+                          <span className="dash-est-card-info-label">Tel</span> {m.telefone}
+                        </span>
                       )}
                       {m.cnpj && (
-                        <span className="dash-est-card-info mono">🪪 {m.cnpj}</span>
+                        <span className="dash-est-card-info mono">
+                          <span className="dash-est-card-info-label">CNPJ</span> {m.cnpj}
+                        </span>
                       )}
                       <span className={`dash-est-card-info venc-text ${classVenc(m.data_vencimento)}`}>
-                        📅 {formatarData(m.data_vencimento) || "Sem vencimento"}
+                        <span className="dash-est-card-info-label">Venc.</span> {formatarData(m.data_vencimento) || "Sem vencimento"}
                       </span>
                     </div>
 
                     {/* Ações */}
                     <div className="dash-est-card-acoes">
                       <button
-                        className="btn btn-ghost btn-sm"
+                        className="dash-card-btn dash-card-btn--ghost"
                         onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
-                        title="Detalhes"
-                      >
-                        <Icon.Eye /> Detalhes
-                      </button>
+                      >👁 Detalhes</button>
                       <button
-                        className="btn btn-outline btn-sm"
+                        className="dash-card-btn dash-card-btn--outline"
                         onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
-                        title="Editar"
-                      >
-                        <Icon.Edit /> Editar
-                      </button>
+                      >✏️ Editar</button>
                       <button
-                        className="btn btn-blue btn-sm"
+                        className="dash-card-btn dash-card-btn--blue"
                         onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
-                        title="Operadores"
-                      >
-                        <Icon.Users /> Operadores
-                      </button>
+                      >👥 Operadores</button>
                       <button
-                        className="btn btn-danger btn-sm"
+                        className="dash-card-btn dash-card-btn--danger"
                         onClick={() => excluir(m.id, m.nome_fantasia)}
                         title="Excluir"
-                      >
-                        <Icon.Trash />
-                      </button>
+                      >🗑</button>
                     </div>
 
                   </div>
