@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
+import { apiFetch } from "../../../utils/api";
 
 export default function NovoEstabelecimento() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function NovoEstabelecimento() {
 
   async function carregarLimitePadrao() {
     try {
-      const resp = await fetch(`${API_URL}/superadmin/config`, { credentials: "include" });
+      const resp = await apiFetch('/superadmin/config');
       if (resp.ok) {
         const d = await resp.json();
         const val = d.limite_operadores_padrao ?? 3;
