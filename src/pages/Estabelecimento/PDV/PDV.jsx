@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/PDV/PDV.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
 import './PDV.css';
 
@@ -12,6 +12,168 @@ const MEIOS = [
   { key: 'Credito',  label: 'Cartão de Crédito', icone: '💳' },
   { key: 'Fiado',    label: 'Fiado (Na conta)',   icone: '📋' },
 ];
+
+/* ════════════════════════════════════════════════════════════
+   MODAL DE CÂMERA — leitura de código de barras
+   ════════════════════════════════════════════════════════════ */
+function ModalCamera({ onCodigoDetectado, onFechar }) {
+  const videoRef        = useRef(null);
+  const streamRef       = useRef(null);
+  const readerRef       = useRef(null);
+  const detectandoRef   = useRef(true);
+  const [erro,          setErro]          = useState(null);
+  const [facingMode,    setFacingMode]    = useState('environment');
+  const [flash,         setFlash]         = useState(false);
+  const [iniciando,     setIniciando]     = useState(true);
+  const [temDuasCams,   setTemDuasCams]   = useState(false);
+
+  const pararStream = useCallback(() => {
+    if (readerRef.current) {
+      try { readerRef.current.reset(); } catch {}
+      readerRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const iniciarCamera = useCallback(async (facing) => {
+    pararStream();
+    setIniciando(true);
+    setErro(null);
+    detectandoRef.current = true;
+
+    try {
+      // Verificar quantas câmeras há
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      setTemDuasCams(cams.length > 1);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      // Importação dinâmica do @zxing/browser
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      const reader = new BrowserMultiFormatReader();
+      readerRef.current = reader;
+
+      reader.decodeFromStream(stream, videoRef.current, (result, err) => {
+        if (result && detectandoRef.current) {
+          detectandoRef.current = false;
+
+          // Feedback: flash verde + vibração
+          setFlash(true);
+          if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+          setTimeout(() => setFlash(false), 600);
+
+          // Pequeno delay visual antes de fechar
+          setTimeout(() => {
+            onCodigoDetectado(result.getText());
+          }, 350);
+        }
+      });
+
+      setIniciando(false);
+    } catch (e) {
+      setIniciando(false);
+      if (e.name === 'NotAllowedError') {
+        setErro('Permissão de câmera negada. Permita o acesso nas configurações do navegador.');
+      } else if (e.name === 'NotFoundError') {
+        setErro('Nenhuma câmera encontrada neste dispositivo.');
+      } else {
+        setErro('Não foi possível acessar a câmera. Tente novamente.');
+      }
+    }
+  }, [pararStream, onCodigoDetectado]);
+
+  useEffect(() => {
+    iniciarCamera(facingMode);
+    return () => pararStream();
+  }, []);
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); onFechar(); }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onFechar]);
+
+  function trocarCamera() {
+    const novoModo = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(novoModo);
+    iniciarCamera(novoModo);
+  }
+
+  return (
+    <div className="pdv-modal-overlay pdv-camera-overlay" onClick={onFechar}>
+      <div className="pdv-camera-modal" onClick={e => e.stopPropagation()}>
+        <div className="pdv-camera-header">
+          <span className="pdv-camera-titulo">📷 Ler Código de Barras</span>
+          <div className="pdv-camera-acoes-topo">
+            {temDuasCams && (
+              <button className="pdv-camera-btn-trocar" onClick={trocarCamera} title="Trocar câmera">
+                🔄
+              </button>
+            )}
+            <button className="pdv-camera-btn-fechar" onClick={onFechar} title="Fechar (Esc)">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className={`pdv-camera-visor${flash ? ' pdv-camera-flash' : ''}`}>
+          {iniciando && !erro && (
+            <div className="pdv-camera-loading">
+              <span className="pdv-camera-loading-icon">⏳</span>
+              <span>Iniciando câmera…</span>
+            </div>
+          )}
+          {erro && (
+            <div className="pdv-camera-erro-visor">
+              <span>📵</span>
+              <p>{erro}</p>
+              <button className="pdv-camera-btn-retry" onClick={() => iniciarCamera(facingMode)}>
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          <video
+            ref={videoRef}
+            className="pdv-camera-video"
+            muted
+            playsInline
+            style={{ opacity: iniciando || erro ? 0 : 1 }}
+          />
+          {/* Overlay de mira */}
+          {!iniciando && !erro && (
+            <div className="pdv-camera-mira">
+              <div className="pdv-camera-mira-linha" />
+              <div className="pdv-camera-mira-cantos">
+                <span className="pdv-camera-canto pdv-canto-tl" />
+                <span className="pdv-camera-canto pdv-canto-tr" />
+                <span className="pdv-camera-canto pdv-canto-bl" />
+                <span className="pdv-camera-canto pdv-canto-br" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="pdv-camera-dica">
+          Aponte a câmera para o código de barras ou QR Code
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
@@ -259,12 +421,10 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
   const btnImpRef    = useRef(null);
   const overlayRef   = useRef(null);
 
-  // Foco automático no botão Imprimir ao abrir
   useEffect(() => {
     setTimeout(() => btnImpRef.current?.focus(), 0);
   }, []);
 
-  // Atalhos: Enter → imprimir, Esc → fechar
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') { e.preventDefault(); onFechar(); }
@@ -333,7 +493,6 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
     <div className="pdv-modal-overlay">
       <div className="pdv-posv-modal" onClick={e => e.stopPropagation()}>
 
-        {/* Sucesso */}
         <div className="pdv-posv-sucesso">
           <span className="pdv-posv-check">✓</span>
           <div>
@@ -342,7 +501,6 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           </div>
         </div>
 
-        {/* Troco se Dinheiro */}
         {venda.meioPagamento === 'Dinheiro' && venda.troco > 0 && (
           <div className="pdv-posv-troco">
             <span className="pdv-posv-troco-label">Troco</span>
@@ -350,14 +508,12 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           </div>
         )}
 
-        {/* Fiado */}
         {venda.meioPagamento === 'Fiado' && venda.clienteNome && (
           <div className="pdv-posv-fiado">
             📋 Lançado no fiado de <strong>{venda.clienteNome}</strong>
           </div>
         )}
 
-        {/* Pergunta de impressão */}
         <div className="pdv-posv-pergunta">
           🖨️ Deseja imprimir o recibo?
         </div>
@@ -371,7 +527,6 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           </button>
         </div>
 
-        {/* Recibo oculto usado para impressão */}
         <div style={{ display: 'none' }}>
           <div ref={reciboRef}>
             <div className="rec-header">
@@ -450,27 +605,132 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   const [inputQtd,        setInputQtd]        = useState('1');
   const [editIndex,       setEditIndex]       = useState(null);
   const [showPagamento,   setShowPagamento]   = useState(false);
-  const [vendaFinalizada, setVendaFinalizada] = useState(null); // dados para recibo
+  const [vendaFinalizada, setVendaFinalizada] = useState(null);
+  const [showCamera,      setShowCamera]      = useState(false);
 
   const inputBuscaRef   = useRef(null);
   const inputQtdRef     = useRef(null);
   const btnFinalizarRef = useRef(null);
   const resultadosRef   = useRef(null);
 
+  // ── Bipador USB: detecção por timing ─────────────────────
+  // O bipador digita tudo muito rápido (< 50ms por tecla).
+  // Acumulamos as teclas; se o intervalo médio for de bipador
+  // e o comprimento mínimo for atingido, disparamos a busca.
+  const barcodeBufferRef    = useRef('');
+  const barcodeLastTimeRef  = useRef(0);
+  const barcodeTimerRef     = useRef(null);
+
+  const BARCODE_MAX_INTERVAL = 50;   // ms máximo entre teclas de bipador
+  const BARCODE_MIN_LENGTH   = 6;    // mínimo de chars para considerar código
+  const BARCODE_FLUSH_DELAY  = 100;  // ms de silêncio antes de disparar
+
+  const dispararBuscaBipador = useCallback((codigo) => {
+    if (!codigo || codigo.length < BARCODE_MIN_LENGTH) return;
+    buscarProdutosPorCodigo(codigo.trim());
+  }, [estabelecimentoId]);
+
+  function handleBuscaKeyDown(e) {
+    const agora = Date.now();
+    const intervalo = agora - barcodeLastTimeRef.current;
+    barcodeLastTimeRef.current = agora;
+
+    // Teclas de navegação da lista — passa direto para o handler normal
+    if (e.key === 'ArrowDown') { e.preventDefault(); setBuscaIndex(p => Math.min(p + 1, resultados.length - 1)); return; }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setBuscaIndex(p => Math.max(p - 1, 0)); return; }
+    if (e.key === 'Escape')    { setTermoBusca(''); setResultados([]); setBuscaIndex(-1); barcodeBufferRef.current = ''; return; }
+
+    // Enter: pode vir do bipador (finaliza sequência) ou do usuário
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const buffer = barcodeBufferRef.current;
+      if (buffer.length >= BARCODE_MIN_LENGTH && intervalo < BARCODE_MAX_INTERVAL * 3) {
+        // Enter vindo do bipador logo após uma sequência rápida
+        clearTimeout(barcodeTimerRef.current);
+        barcodeBufferRef.current = '';
+        dispararBuscaBipador(buffer);
+      } else {
+        // Enter normal do usuário
+        barcodeBufferRef.current = '';
+        if (buscaIndex > -1 && resultados[buscaIndex]) selecionarProduto(resultados[buscaIndex]);
+        else if (!termoBusca.trim() && carrinho.length > 0) btnFinalizarRef.current?.focus();
+      }
+      return;
+    }
+
+    // Caracteres imprimíveis — verificar se é sequência de bipador
+    if (e.key.length === 1) {
+      if (intervalo < BARCODE_MAX_INTERVAL) {
+        // Rápido demais para digitação humana → acumular no buffer do bipador
+        barcodeBufferRef.current += e.key;
+
+        // Cancelar timer anterior e reagendar
+        clearTimeout(barcodeTimerRef.current);
+        barcodeTimerRef.current = setTimeout(() => {
+          const codigo = barcodeBufferRef.current;
+          barcodeBufferRef.current = '';
+          dispararBuscaBipador(codigo);
+        }, BARCODE_FLUSH_DELAY);
+      } else {
+        // Intervalo longo = digitação humana normal; limpar buffer de bipador
+        barcodeBufferRef.current = e.key;
+      }
+    }
+  }
+
+  // ── Busca por código de barras exato ─────────────────────
+  async function buscarProdutosPorCodigo(codigo) {
+    if (!estabelecimentoId) return;
+    setTermoBusca(codigo);
+    setLoadingBusca(true);
+    setBuscaIndex(-1);
+    try {
+      const resp = await apiFetch(
+        `/api/estabelecimentos/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(codigo)}`
+      );
+      if (!resp.ok) throw new Error();
+      const data = await resp.json();
+      setResultados(data);
+
+      // Se retornar exatamente 1 produto, selecionar automaticamente
+      if (data.length === 1) {
+        setTimeout(() => {
+          selecionarProduto(data[0]);
+        }, 120);
+      } else if (data.length > 1) {
+        setBuscaIndex(0);
+      } else {
+        mostrarStatus('erro', `Código "${codigo}" não encontrado.`);
+        limparBusca();
+      }
+    } catch {
+      setResultados([]);
+      mostrarStatus('erro', 'Erro ao buscar produto por código.');
+    } finally {
+      setLoadingBusca(false);
+    }
+  }
+
+  // ── Callback do modal de câmera ───────────────────────────
+  function handleCodigoDetectado(codigo) {
+    setShowCamera(false);
+    buscarProdutosPorCodigo(codigo);
+  }
+
   useEffect(() => {
-    if (!showPagamento && !itemQuantificar && editIndex === null) inputBuscaRef.current?.focus();
-  }, [showPagamento, itemQuantificar, editIndex]);
+    if (!showPagamento && !itemQuantificar && editIndex === null && !showCamera) {
+      inputBuscaRef.current?.focus();
+    }
+  }, [showPagamento, itemQuantificar, editIndex, showCamera]);
 
   // Atalhos globais do PDV
   useEffect(() => {
     function handleGlobalKey(e) {
-      // F10 ou F2 → finalizar venda
-      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && carrinho.length > 0) {
+      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !showCamera && carrinho.length > 0) {
         e.preventDefault();
         setShowPagamento(true);
         return;
       }
-      // F11 → tela cheia
       if (e.key === 'F11') {
         e.preventDefault();
         setTelaCheia(p => !p);
@@ -479,7 +739,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
     }
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [showPagamento, itemQuantificar, carrinho]);
+  }, [showPagamento, itemQuantificar, showCamera, carrinho]);
 
   // Confirmação ao fechar aba/navegar com carrinho cheio
   useEffect(() => {
@@ -597,7 +857,6 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error?.includes('check constraint') ? 'Falha de estoque. Verifique as quantidades.' : result.error || 'Erro no servidor.');
 
-      // Guardar dados da venda para o recibo
       setVendaFinalizada({
         itens:         carrinho,
         total,
@@ -618,18 +877,6 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
 
   function mostrarStatus(tipo, msg) { setVendaStatus({ tipo, msg }); setTimeout(() => setVendaStatus(null), 4000); }
 
-  function handleSearchKeyDown(e) {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setBuscaIndex(p => Math.min(p + 1, resultados.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setBuscaIndex(p => Math.max(p - 1, 0)); }
-    else if (e.key === 'Escape') { setTermoBusca(''); setResultados([]); setBuscaIndex(-1); }
-  }
-
-  function handleSearchSubmit(e) {
-    e.preventDefault();
-    if (buscaIndex > -1 && resultados[buscaIndex]) selecionarProduto(resultados[buscaIndex]);
-    else if (!termoBusca.trim() && carrinho.length > 0) btnFinalizarRef.current?.focus();
-  }
-
   function estoqueClass(p) {
     const e = parseFloat(p.estoque_atual), m = parseFloat(p.estoque_minimo);
     if (e <= 0) return 'critico'; if (e <= m) return 'baixo'; return '';
@@ -642,6 +889,15 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
 
   return (
     <div className={`pdv-container${telaCheia ? ' pdv-tela-cheia' : ''}`}>
+      {/* Modal de câmera */}
+      {showCamera && (
+        <ModalCamera
+          onCodigoDetectado={handleCodigoDetectado}
+          onFechar={() => setShowCamera(false)}
+        />
+      )}
+
+      {/* Modal de quantidade */}
       {itemQuantificar && (
         <div className="pdv-modal-overlay">
           <div className="pdv-modal" onClick={e => e.stopPropagation()}>
@@ -658,7 +914,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
           </div>
         </div>
       )}
+
       {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} />}
+
       {vendaFinalizada && (
         <ModalPosVenda
           venda={vendaFinalizada}
@@ -669,10 +927,30 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
           }}
         />
       )}
+
       <div className="pdv-busca">
-        <form onSubmit={handleSearchSubmit}>
-          <input ref={inputBuscaRef} className="pdv-busca-input" type="text" placeholder="🔍  Nome ou código de barras… (↑ ↓ Enter)" value={termoBusca} onChange={e => buscarProdutos(e.target.value)} onKeyDown={handleSearchKeyDown} disabled={loadingVenda} autoComplete="off" />
-        </form>
+        <div className="pdv-busca-row">
+          <input
+            ref={inputBuscaRef}
+            className="pdv-busca-input"
+            type="text"
+            placeholder="🔍  Nome ou código de barras… (↑ ↓ Enter)"
+            value={termoBusca}
+            onChange={e => buscarProdutos(e.target.value)}
+            onKeyDown={handleBuscaKeyDown}
+            disabled={loadingVenda}
+            autoComplete="off"
+          />
+          <button
+            className="pdv-btn-camera"
+            onClick={() => setShowCamera(true)}
+            disabled={loadingVenda}
+            title="Ler código de barras pela câmera"
+            type="button"
+          >
+            📷
+          </button>
+        </div>
         <ul className="pdv-resultados" ref={resultadosRef}>
           {loadingBusca && <li className="pdv-resultados-status"><span>⏳</span>Buscando…</li>}
           {!loadingBusca && resultados.length === 0 && termoBusca.length > 1 && <li className="pdv-resultados-status"><span>🔍</span>Nenhum produto encontrado para<br /><strong>"{termoBusca}"</strong></li>}
@@ -686,6 +964,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
           ))}
         </ul>
       </div>
+
       <div className="pdv-carrinho" style={{ '--pdv-font-scale': fontScale }}>
         <div className="pdv-carrinho-header">
           <span className="pdv-carrinho-titulo">Resumo da Venda</span>

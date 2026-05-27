@@ -31,9 +31,17 @@
   border-right: 1px solid var(--est-border);
 }
 
+/* Linha de busca: input + botão câmera */
+.pdv-busca-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* Campo de busca */
 .pdv-busca-input {
-  width: 100%;
+  flex: 1;
   padding: 15px 18px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 1.05rem;
@@ -61,6 +69,40 @@
 
 .pdv-busca-input:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botão câmera ao lado do input */
+.pdv-btn-camera {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid var(--est-border);
+  background: var(--est-card);
+  color: var(--est-text);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+  box-shadow: var(--est-shadow);
+}
+
+.pdv-btn-camera:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  background: var(--est-accent-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(20,184,166,0.18);
+}
+
+.pdv-btn-camera:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.pdv-btn-camera:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -482,6 +524,230 @@
 @keyframes pdvModalIn {
   from { opacity: 0; transform: scale(0.9) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ========================= */
+/*  MODAL CÂMERA              */
+/* ========================= */
+
+.pdv-camera-overlay {
+  z-index: 4000;
+  align-items: center;
+  padding: 0;
+}
+
+.pdv-camera-modal {
+  background: #0a0a0a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  margin: 16px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+  animation: pdvModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  display: flex;
+  flex-direction: column;
+}
+
+.pdv-camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.pdv-camera-titulo {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: -0.01em;
+}
+
+.pdv-camera-acoes-topo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdv-camera-btn-trocar,
+.pdv-camera-btn-fechar {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.pdv-camera-btn-trocar:hover,
+.pdv-camera-btn-fechar:hover {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+}
+
+/* Visor da câmera */
+.pdv-camera-visor {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pdv-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.3s;
+}
+
+/* Flash verde ao detectar */
+.pdv-camera-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 184, 166, 0.35);
+  animation: pdvCameraFlash 0.6s ease forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+@keyframes pdvCameraFlash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Loading dentro do visor */
+.pdv-camera-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: rgba(255,255,255,0.7);
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #000;
+  z-index: 5;
+}
+
+.pdv-camera-loading-icon {
+  font-size: 1.8rem;
+}
+
+/* Erro dentro do visor */
+.pdv-camera-erro-visor {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: #0a0a0a;
+  padding: 24px;
+  text-align: center;
+  z-index: 5;
+}
+
+.pdv-camera-erro-visor span {
+  font-size: 2.2rem;
+}
+
+.pdv-camera-erro-visor p {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+.pdv-camera-btn-retry {
+  margin-top: 4px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(20,184,166,0.4);
+  background: rgba(20,184,166,0.12);
+  color: #14b8a6;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pdv-camera-btn-retry:hover {
+  background: rgba(20,184,166,0.22);
+}
+
+/* Overlay de mira */
+.pdv-camera-mira {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Linha horizontal vermelha estilo laser */
+.pdv-camera-mira-linha {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  height: 2px;
+  background: rgba(239, 68, 68, 0.75);
+  box-shadow: 0 0 8px rgba(239,68,68,0.8), 0 0 20px rgba(239,68,68,0.4);
+  animation: pdvLaserPulse 1.8s ease-in-out infinite;
+}
+@keyframes pdvLaserPulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1; }
+}
+
+/* Cantos da mira */
+.pdv-camera-mira-cantos {
+  position: absolute;
+  inset: 15%;
+}
+
+.pdv-camera-canto {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: #14b8a6;
+  border-style: solid;
+  border-width: 0;
+}
+
+.pdv-canto-tl { top: 0; left: 0;  border-top-width: 3px; border-left-width: 3px;  border-radius: 4px 0 0 0; }
+.pdv-canto-tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+.pdv-canto-bl { bottom: 0; left: 0;  border-bottom-width: 3px; border-left-width: 3px;  border-radius: 0 0 0 4px; }
+.pdv-canto-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+/* Dica abaixo do visor */
+.pdv-camera-dica {
+  padding: 12px 16px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  letter-spacing: 0.01em;
 }
 
 /* ========================= */
@@ -937,97 +1203,6 @@
 }
 
 /* ========================= */
-/*  RESPONSIVO                */
-/* ========================= */
-
-@media (max-width: 768px) {
-  .pdv-container {
-    flex-direction: column;
-    height: calc(100vh - 64px); /* desconta o mobile toggle */
-  }
-
-  /* No mobile, busca e carrinho viram abas — JS controla via classe */
-  .pdv-busca {
-    flex: 1;
-    padding: 12px;
-    gap: 10px;
-    overflow: hidden;
-    border-right: none;
-    border-bottom: 1px solid var(--est-border);
-  }
-
-  .pdv-busca-input {
-    font-size: 1rem;
-    padding: 13px 14px;
-  }
-
-  .pdv-resultados {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
-  }
-
-  .pdv-produto-card {
-    padding: 10px;
-  }
-
-  .pdv-carrinho {
-    height: 50vh;
-    flex: none;
-  }
-
-  /* Footer PDV mais fácil de tocar */
-  .pdv-footer { padding: 12px 14px; }
-
-  .pdv-btn-finalizar {
-    padding: 16px;
-    font-size: 1rem;
-  }
-
-  /* Modal pagamento fullscreen no mobile */
-  .pdv-modal-overlay {
-    align-items: flex-end;
-  }
-  .pdv-modal {
-    border-radius: 20px 20px 0 0;
-    max-height: 92vh;
-    margin: 0;
-    width: 100%;
-    padding: 24px 16px;
-  }
-
-  /* Quantidade modal */
-  .pdv-qtd-modal {
-    border-radius: 20px 20px 0 0;
-    margin: 0;
-    width: 100%;
-  }
-
-  .pdv-pagamento-total-valor { font-size: 2.2rem; }
-  .pdv-troco-input { font-size: 1.3rem; }
-}
-
-@media (max-width: 480px) {
-  .pdv-resultados { grid-template-columns: repeat(2, 1fr); }
-  .pdv-card-nome { font-size: 0.82rem; }
-  .pdv-card-preco { font-size: 0.95rem; }
-  .pdv-meios-lista { border-radius: 10px; }
-  .pdv-meio-item { padding: 15px 14px; } /* mais fácil de tocar */
-  .pdv-btn-confirmar,
-  .pdv-btn-cancelar { padding: 15px; }
-}
-
-/* ========================= */
-/*  PRINT                     */
-/* ========================= */
-
-@media print {
-  .pdv-busca,
-  .pdv-carrinho-header,
-  .pdv-footer,
-  .pdv-item-remover,
-  .pdv-modal-overlay { display: none !important; }
-}
-/* ========================= */
 /*  MODAL PÓS-VENDA          */
 /* ========================= */
 
@@ -1177,7 +1352,6 @@
   box-shadow: 0 0 0 3px var(--est-accent-dim), 0 4px 14px rgba(20,184,166,0.35);
 }
 
-/* Hint de atalho dentro dos botões pós-venda */
 .pdv-posv-hint {
   font-size: 0.65rem;
   opacity: 0.65;
@@ -1192,12 +1366,11 @@
   background: rgba(0,0,0,0.08);
   color: var(--est-text-muted);
 }
-/* ════════════════════════════════════════════════════════════
-   PDV — TELA CHEIA
-   Adicionar ao final de PDV.css
-   ════════════════════════════════════════════════════════════ */
 
-/* Quando ativo, o PDV ocupa toda a viewport por cima do layout */
+/* ========================= */
+/*  TELA CHEIA                */
+/* ========================= */
+
 .pdv-tela-cheia {
   position: fixed;
   inset: 0;
@@ -1206,22 +1379,117 @@
   border-radius: 0;
 }
 
-/* Esconde a sidebar do layout quando em tela cheia */
 .pdv-tela-cheia ~ * { display: none; }
-/* ════════════════════════════════════════════════════════════
-   PDV — TELA CHEIA
-   ════════════════════════════════════════════════════════════ */
-
-.pdv-tela-cheia {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: var(--est-bg);
-  border-radius: 0;
-}
 
 .pdv-btn-tela-cheia {
   min-width: 90px;
   font-size: calc(0.72rem * var(--pdv-font-scale, 1));
   white-space: nowrap;
+}
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 768px) {
+  .pdv-container {
+    flex-direction: column;
+    height: calc(100vh - 64px);
+  }
+
+  .pdv-busca {
+    flex: 1;
+    padding: 12px;
+    gap: 10px;
+    overflow: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--est-border);
+  }
+
+  .pdv-busca-input {
+    font-size: 1rem;
+    padding: 13px 14px;
+  }
+
+  .pdv-btn-camera {
+    width: 48px;
+    height: 48px;
+  }
+
+  .pdv-resultados {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .pdv-produto-card {
+    padding: 10px;
+  }
+
+  .pdv-carrinho {
+    height: 50vh;
+    flex: none;
+  }
+
+  .pdv-footer { padding: 12px 14px; }
+
+  .pdv-btn-finalizar {
+    padding: 16px;
+    font-size: 1rem;
+  }
+
+  /* Modal pagamento fullscreen no mobile */
+  .pdv-modal-overlay {
+    align-items: flex-end;
+  }
+  .pdv-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    margin: 0;
+    width: 100%;
+    padding: 24px 16px;
+  }
+
+  /* Modal câmera no mobile: quase fullscreen */
+  .pdv-camera-overlay {
+    align-items: flex-end;
+  }
+  .pdv-camera-modal {
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    max-width: 100%;
+  }
+  .pdv-camera-visor {
+    aspect-ratio: 3/4;
+  }
+
+  .pdv-qtd-modal {
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  .pdv-pagamento-total-valor { font-size: 2.2rem; }
+  .pdv-troco-input { font-size: 1.3rem; }
+}
+
+@media (max-width: 480px) {
+  .pdv-resultados { grid-template-columns: repeat(2, 1fr); }
+  .pdv-card-nome { font-size: 0.82rem; }
+  .pdv-card-preco { font-size: 0.95rem; }
+  .pdv-meios-lista { border-radius: 10px; }
+  .pdv-meio-item { padding: 15px 14px; }
+  .pdv-btn-confirmar,
+  .pdv-btn-cancelar { padding: 15px; }
+}
+
+/* ========================= */
+/*  PRINT                     */
+/* ========================= */
+
+@media print {
+  .pdv-busca,
+  .pdv-carrinho-header,
+  .pdv-footer,
+  .pdv-item-remover,
+  .pdv-modal-overlay { display: none !important; }
 }
