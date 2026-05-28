@@ -421,7 +421,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                           : `${Math.trunc(qtd)}×`;
                         return (
                           <div key={i} className="fin-historico-item">
-                            <span className="fin-hist-item-nome">{item.produto_nome}</span>
+                            <span className="fin-hist-item-nome">{item.produto_nome}{item.produto_marca && <span className="rel-produto-marca"> · {item.produto_marca}</span>}</span>
                             <span className="fin-hist-item-qtd">{qtdLabel}</span>
                             <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
                           </div>
@@ -585,7 +585,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                 return (
                   <div key={i} className="fin-report-card">
                     <div className="fin-report-rank">#{i + 1}</div>
-                    <div className="fin-report-nome">{prod.produto_nome}</div>
+                    <div className="fin-report-nome">{prod.produto_nome}{prod.produto_marca && <span className="rel-produto-marca"> · {prod.produto_marca}</span>}</div>
                     <div className="fin-report-info">
                       <span className="fin-report-info-label">Categoria</span>
                       <span className="fin-report-info-valor">{prod.categoria_nome || 'Sem categoria'}</span>
@@ -672,7 +672,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                     <div className={`fin-estoque-badge ${status}`}>
                       {status === 'critico' ? '🔴 Crítico' : status === 'baixo' ? '⚠️ Baixo' : '✅ Normal'}
                     </div>
-                    <div className="fin-estoque-nome">{p.nome}</div>
+                    <div className="fin-estoque-nome">{p.nome}{p.marca && <span className="rel-produto-marca"> · {p.marca}</span>}</div>
                     <div className="fin-estoque-cat">{p.nome_categoria || 'Sem categoria'}</div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Estoque</span><span className="fin-estoque-info-valor">{unidade}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Mínimo</span><span className="fin-estoque-info-valor">{p.estoque_minimo} {p.unidade_medida}</span></div>

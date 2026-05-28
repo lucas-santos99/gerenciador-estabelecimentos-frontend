@@ -550,3 +550,10 @@ body.light .fin-historico-operador {
   border-color: var(--est-border-accent);
   color: var(--est-accent);
 }
+/* ── Marca do produto (exibida após o nome) ── */
+.rel-produto-marca {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--est-text-muted);
+  opacity: 0.8;
+}
