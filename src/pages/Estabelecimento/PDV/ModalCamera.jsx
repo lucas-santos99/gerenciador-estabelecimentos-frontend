@@ -5,66 +5,76 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function ModalCamera({ onCodigoDetectado, onFechar }) {
-  const videoRef       = useRef(null);
-  const streamRef      = useRef(null);
-  const readerRef      = useRef(null);
-  const detectandoRef  = useRef(true);
+  const videoRef      = useRef(null);
+  const readerRef     = useRef(null);
+  const detectandoRef = useRef(true);
+  const cancelledRef  = useRef(false);
 
-  const [erro,         setErro]         = useState(null);
-  const [flash,        setFlash]        = useState(false);
-  const [iniciando,    setIniciando]    = useState(true);
-  const [cameras,      setCameras]      = useState([]);   // lista de deviceIds
-  const [camIndex,     setCamIndex]     = useState(0);    // índice ativo
+  const [erro,      setErro]      = useState(null);
+  const [flash,     setFlash]     = useState(false);
+  const [iniciando, setIniciando] = useState(true);
+  const [cameras,   setCameras]   = useState([]);
+  const [camIndex,  setCamIndex]  = useState(0);
 
-  // ── Para o stream e o reader ──────────────────────────────
-  const pararStream = useCallback(() => {
+  // ── Para tudo: controles e stream ────────────────────────
+  const pararTudo = useCallback(() => {
     if (readerRef.current) {
       try { readerRef.current.reset(); } catch {}
       readerRef.current = null;
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
   }, []);
 
-  // ── Iniciar câmera por deviceId ───────────────────────────
+  // ── Inicia leitura via decodeFromVideoDevice ──────────────
+  // Esta é a API correta do @zxing/browser para mobile.
+  // Ela gerencia o getUserMedia internamente, incluindo câmera traseira.
   const iniciarCamera = useCallback(async (deviceId) => {
-    pararStream();
+    pararTudo();
     setIniciando(true);
     setErro(null);
     detectandoRef.current = true;
 
     try {
-      // Constraints: se tiver deviceId, usa ele; senão pede environment
-      const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+      const { BrowserMultiFormatReader, BrowserCodeReader } = await import('@zxing/browser');
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
+      const hints = new Map();
+      // Tentar todos os formatos comuns de código de barras
+      const { DecodeHintType, BarcodeFormat } = await import('@zxing/library');
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.ITF,
+        BarcodeFormat.DATA_MATRIX,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
-      const { BrowserMultiFormatReader } = await import('@zxing/browser');
-      const reader = new BrowserMultiFormatReader();
+      const reader = new BrowserMultiFormatReader(hints);
       readerRef.current = reader;
 
-      reader.decodeFromStream(stream, videoRef.current, (result) => {
-        if (result && detectandoRef.current) {
-          detectandoRef.current = false;
-          setFlash(true);
-          if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-          setTimeout(() => setFlash(false), 600);
-          setTimeout(() => onCodigoDetectado(result.getText()), 350);
+      // decodeFromVideoDevice gerencia o stream internamente e funciona
+      // corretamente com câmera traseira em Android e iOS
+      await reader.decodeFromVideoDevice(
+        deviceId || undefined,
+        videoRef.current,
+        (result, err) => {
+          if (cancelledRef.current) return;
+          if (result && detectandoRef.current) {
+            detectandoRef.current = false;
+            setFlash(true);
+            if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+            setTimeout(() => setFlash(false), 600);
+            setTimeout(() => onCodigoDetectado(result.getText()), 350);
+          }
         }
-      });
+      );
 
-      setIniciando(false);
+      if (!cancelledRef.current) setIniciando(false);
     } catch (e) {
+      if (cancelledRef.current) return;
       setIniciando(false);
       if (e.name === 'NotAllowedError') {
         setErro('Permissão de câmera negada. Permita o acesso nas configurações do navegador.');
@@ -74,46 +84,47 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
         setErro('Não foi possível acessar a câmera. Tente novamente.');
       }
     }
-  }, [pararStream, onCodigoDetectado]);
+  }, [pararTudo, onCodigoDetectado]);
 
-  // ── Enumeração de câmeras + inicialização ─────────────────
-  // Estratégia: pedir permissão primeiro (getUserMedia genérico),
-  // depois enumerar devices com labels para achar a traseira.
+  // ── Enumeração de câmeras + escolha da traseira ───────────
   useEffect(() => {
-    let cancelled = false;
+    cancelledRef.current = false;
 
     async function init() {
       try {
-        // Passo 1: pedir permissão com qualquer câmera para obter labels
+        // Pedir permissão primeiro para que os labels fiquem disponíveis
         const permStream = await navigator.mediaDevices.getUserMedia({ video: true });
         permStream.getTracks().forEach(t => t.stop());
 
-        if (cancelled) return;
+        if (cancelledRef.current) return;
 
-        // Passo 2: enumerar agora que temos permissão (labels disponíveis)
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
-        if (cancelled) return;
+        if (cancelledRef.current) return;
 
         setCameras(videoDevices);
 
-        // Passo 3: escolher câmera traseira
-        // Procurar por label contendo "back", "traseira", "environment", "rear"
-        // Se não achar, usar a ÚLTIMA da lista (convenção: traseira é a última no mobile)
-        let escolhidaIndex = videoDevices.length > 1 ? videoDevices.length - 1 : 0;
+        // Preferir câmera traseira por label; fallback: última da lista
+        let escolhido = videoDevices.length > 1 ? videoDevices.length - 1 : 0;
         for (let i = 0; i < videoDevices.length; i++) {
           const label = (videoDevices[i].label || '').toLowerCase();
-          if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('traseira')) {
-            escolhidaIndex = i;
+          if (
+            label.includes('back') ||
+            label.includes('rear') ||
+            label.includes('traseira') ||
+            label.includes('environment') ||
+            label.includes('0,')   // padrão Android: "camera2 0, facing back"
+          ) {
+            escolhido = i;
             break;
           }
         }
 
-        setCamIndex(escolhidaIndex);
-        await iniciarCamera(videoDevices[escolhidaIndex]?.deviceId || null);
+        setCamIndex(escolhido);
+        await iniciarCamera(videoDevices[escolhido]?.deviceId || null);
       } catch (e) {
-        if (!cancelled) {
+        if (!cancelledRef.current) {
           setIniciando(false);
           setErro('Permissão de câmera negada. Permita o acesso nas configurações do navegador.');
         }
@@ -121,7 +132,10 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
     }
 
     init();
-    return () => { cancelled = true; pararStream(); };
+    return () => {
+      cancelledRef.current = true;
+      pararTudo();
+    };
   }, []);
 
   // Esc fecha
@@ -133,7 +147,7 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [onFechar]);
 
-  // ── Trocar câmera (cicla pelo array de devices) ───────────
+  // ── Trocar câmera ─────────────────────────────────────────
   function trocarCamera() {
     if (cameras.length < 2) return;
     const novoIndex = (camIndex + 1) % cameras.length;
@@ -182,6 +196,7 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
             className="pdv-camera-video"
             muted
             playsInline
+            autoPlay
             style={{ opacity: iniciando || erro ? 0 : 1 }}
           />
           {!iniciando && !erro && (
