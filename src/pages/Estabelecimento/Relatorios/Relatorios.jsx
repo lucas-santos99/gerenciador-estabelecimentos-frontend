@@ -46,7 +46,7 @@ const ACAO_LABEL = {
   fiado_recebido: '💰 Fiado recebido', config_atualizada: '⚙️ Config atualizada',
 };
 const META_LABEL = {
-  nome: 'Nome', preco_venda: 'Preço venda', preco_custo: 'Preço custo',
+  nome: 'Nome', marca: 'Marca', preco_venda: 'Preço venda', preco_custo: 'Preço custo',
   estoque_atual: 'Estoque', estoque_minimo: 'Est. mínimo',
   unidade_medida: null, limite_credito: 'Limite crédito',
   meio_pagamento: 'Pagamento', valor: 'Valor', itens: 'Itens', campos: null,
