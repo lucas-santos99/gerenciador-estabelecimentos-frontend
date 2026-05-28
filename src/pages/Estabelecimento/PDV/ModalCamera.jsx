@@ -9,19 +9,19 @@ const SCANNER_ID = 'pdv-camera-scanner-region';
 export default function ModalCamera({ onCodigoDetectado, onFechar }) {
   const scannerRef    = useRef(null);
   const detectandoRef = useRef(true);
+  const ultimoLidoRef = useRef('');
+  const contagemRef   = useRef(0);
 
-  const [erro,      setErro]      = useState(null);
+  const [erro,        setErro]        = useState(null);
   const [erroDetalhe, setErroDetalhe] = useState('');
-  const [flash,     setFlash]     = useState(false);
-  const [iniciando, setIniciando] = useState(true);
+  const [flash,       setFlash]       = useState(false);
+  const [iniciando,   setIniciando]   = useState(true);
 
   // ── Parar scanner ─────────────────────────────────────────
   async function pararScanner() {
     if (scannerRef.current) {
       try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
-        }
+        if (scannerRef.current.isScanning) await scannerRef.current.stop();
         scannerRef.current.clear();
       } catch {}
       scannerRef.current = null;
@@ -35,6 +35,8 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
     setErro(null);
     setErroDetalhe('');
     detectandoRef.current = true;
+    ultimoLidoRef.current = '';
+    contagemRef.current   = 0;
 
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
@@ -56,20 +58,31 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
       scannerRef.current = scanner;
 
       await scanner.start(
-        { facingMode: 'environment' },  // câmera traseira no mobile
+        { facingMode: 'environment' },
         {
-          fps: 15,
-          qrbox: { width: 260, height: 160 },
+          fps: 10,                              // menos fps = só confirma quando tem certeza
+          qrbox: { width: 280, height: 180 },   // caixa maior = melhor centralização
           aspectRatio: 1.5,
           disableFlip: false,
         },
         (decodedText) => {
           if (!detectandoRef.current) return;
-          detectandoRef.current = false;
-          setFlash(true);
-          if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-          setTimeout(() => setFlash(false), 600);
-          setTimeout(() => onCodigoDetectado(decodedText), 350);
+
+          // Confirmação dupla: só aceita se o mesmo código aparecer 2x seguidas
+          if (decodedText === ultimoLidoRef.current) {
+            contagemRef.current++;
+          } else {
+            ultimoLidoRef.current = decodedText;
+            contagemRef.current   = 1;
+          }
+
+          if (contagemRef.current >= 2) {
+            detectandoRef.current = false;
+            setFlash(true);
+            if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+            setTimeout(() => setFlash(false), 600);
+            setTimeout(() => onCodigoDetectado(decodedText), 350);
+          }
         },
         () => {} // erros de frame são normais, ignorar
       );
@@ -132,7 +145,6 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
               </button>
             </div>
           )}
-          {/* html5-qrcode renderiza o vídeo dentro deste div */}
           <div
             id={SCANNER_ID}
             className="pdv-camera-scanner-div"
@@ -152,7 +164,7 @@ export default function ModalCamera({ onCodigoDetectado, onFechar }) {
         </div>
 
         <div className="pdv-camera-dica">
-          Aponte a câmera para o código de barras ou QR Code
+          Centralize o código de barras na área iluminada
         </div>
       </div>
     </div>
