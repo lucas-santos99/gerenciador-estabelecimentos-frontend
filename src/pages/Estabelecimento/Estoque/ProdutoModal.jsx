@@ -230,7 +230,7 @@ export default function ProdutoModal({
                     {!somenteLeitura && (
                       <button
                         type="button"
-                        className="prod-btn-scan"
+                        className="prod-btn-scan prod-btn-scan--desktop-only"
                         onClick={() => setShowCamera(true)}
                         title="Escanear código de barras pela câmera"
                       >

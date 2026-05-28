@@ -1434,6 +1434,10 @@
 /* ========================= */
 
 @media (max-width: 768px) {
+  .pdv-btn-camera--desktop-only { display: none; }
+}
+
+@media (max-width: 768px) {
   .pdv-container {
     flex-direction: column;
     height: calc(100vh - 64px);

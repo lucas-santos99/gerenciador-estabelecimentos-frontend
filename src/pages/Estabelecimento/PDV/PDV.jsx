@@ -781,7 +781,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
             autoComplete="off"
           />
           <button
-            className="pdv-btn-camera"
+            className="pdv-btn-camera pdv-btn-camera--desktop-only"
             onClick={() => setShowCamera(true)}
             disabled={loadingVenda}
             title="Ler código de barras pela câmera"

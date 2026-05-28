@@ -1071,6 +1071,10 @@
 /*  9. RESPONSIVO             */
 /* ========================= */
 
+@media (max-width: 600px) {
+  .prod-btn-scan--desktop-only { display: none; }
+}
+
 @media (max-width: 900px) {
   .estoque-container { position: relative; }
 
