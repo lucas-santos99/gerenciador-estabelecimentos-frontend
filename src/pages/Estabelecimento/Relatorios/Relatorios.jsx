@@ -401,7 +401,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                   <div className="fin-historico-header" onClick={() => setVendaDetalhes(vendaDetalhes?.id === venda.id ? null : venda)}>
                     <div className="fin-historico-info">
                       <span className="fin-historico-data">
-                        {new Date(venda.data_venda).toLocaleString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{venda.meio_pagamento}</span>
                       {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
