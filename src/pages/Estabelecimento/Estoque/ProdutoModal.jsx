@@ -226,6 +226,7 @@ export default function ProdutoModal({
                       placeholder="Digite ou escaneie…"
                       value={form.codigo_barras}
                       onChange={atualizar}
+                      onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
                     />
                     {!somenteLeitura && (
                       <button
