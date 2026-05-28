@@ -693,6 +693,15 @@
   background: rgba(20,184,166,0.22);
 }
 
+.pdv-camera-erro-detalhe {
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.35);
+  font-family: 'JetBrains Mono', monospace;
+  word-break: break-all;
+  max-width: 260px;
+  text-align: center;
+}
+
 /* Overlay de mira */
 .pdv-camera-mira {
   position: absolute;
