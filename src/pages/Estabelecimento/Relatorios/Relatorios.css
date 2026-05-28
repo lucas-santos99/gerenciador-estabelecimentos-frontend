@@ -557,3 +557,26 @@ body.light .fin-historico-operador {
   color: var(--est-text-muted);
   opacity: 0.8;
 }
+
+/* ── Filtros da aba Estoque ── */
+.rel-estoque-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rel-estoque-filtro-cat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rel-estoque-filtro-cat .rel-filtro-label {
+  flex-shrink: 0;
+}
+
+.rel-estoque-filtro-cat .rel-filtro-select {
+  min-width: 200px;
+  max-width: 320px;
+}

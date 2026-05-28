@@ -129,7 +129,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const [estoque, setEstoque] = useState([]);
   const [loadingEstoque, setLoadingEstoque] = useState(false);
   const [erroEstoque, setErroEstoque] = useState('');
-  const [filtrEstoque, setFiltrEstoque] = useState('todos');
+  const [filtrEstoque,    setFiltrEstoque]    = useState('todos');
+  const [filtrCategoria,  setFiltrCategoria]  = useState('');
 
   /* ── Carga inicial ── */
   useEffect(() => {
@@ -309,16 +310,22 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     return 'ok';
   }
 
-  const estoqueFiltrado = estoque.filter(p => filtrEstoque === 'todos' || estoqueStatus(p) === filtrEstoque);
+  const estoqueFiltrado = estoque.filter(p =>
+    (filtrEstoque === 'todos' || estoqueStatus(p) === filtrEstoque) &&
+    (filtrCategoria === '' || (p.categoria_id === filtrCategoria || p.nome_categoria === filtrCategoria))
+  );
   const totalEstoqueCusto = estoque.reduce((s, p) => s + parseFloat(p.preco_custo || 0) * parseFloat(p.estoque_atual || 0), 0);
   const totalEstoqueVenda = estoque.reduce((s, p) => s + parseFloat(p.preco_venda || 0) * parseFloat(p.estoque_atual || 0), 0);
   const qtdCritico = estoque.filter(p => estoqueStatus(p) === 'critico').length;
   const qtdBaixo   = estoque.filter(p => estoqueStatus(p) === 'baixo').length;
 
   function exportarEstoqueExcel() {
-    if (!estoque.length) return;
-    const dados = estoque.map(p => ({
-      'Produto': p.nome, 'Categoria': p.nome_categoria || 'Sem categoria',
+    if (!estoqueFiltrado.length) return;
+    const catLabel = filtrCategoria
+      ? (categorias.find(c => c.id === filtrCategoria)?.nome || filtrCategoria)
+      : 'Todas';
+    const dados = estoqueFiltrado.map(p => ({
+      'Produto': p.nome, 'Marca': p.marca || '', 'Categoria': p.nome_categoria || 'Sem categoria',
       'Unidade': p.unidade_medida, 'Estoque Atual': parseFloat(p.estoque_atual),
       'Estoque Mín.': parseFloat(p.estoque_minimo), 'Status': estoqueStatus(p),
       'Custo Unit.': parseFloat(p.preco_custo || 0), 'Venda Unit.': parseFloat(p.preco_venda || 0),
@@ -328,7 +335,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
-    XLSX.writeFile(wb, `Estoque_${dataHoje()}.xlsx`);
+    const sufixo = filtrCategoria ? `_${catLabel}` : '';
+    const sufixoStatus = filtrEstoque !== 'todos' ? `_${filtrEstoque}` : '';
+    XLSX.writeFile(wb, `Estoque${sufixo}${sufixoStatus}_${dataHoje()}.xlsx`);
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -643,16 +652,33 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               <span className="fin-estoque-resumo-valor">{qtdCritico} produtos</span>
             </div>
           </div>
-          <div className="fin-filtro-btns" style={{ marginBottom: 16 }}>
-            {[
-              { key: 'todos',   label: `Todos (${estoque.length})` },
-              { key: 'critico', label: `🔴 Crítico (${qtdCritico})` },
-              { key: 'baixo',   label: `⚠️ Baixo (${qtdBaixo})` },
-              { key: 'ok',      label: `✅ Normal (${estoque.length - qtdCritico - qtdBaixo})` },
-            ].map(f => (
-              <button key={f.key} className={`fin-filtro-btn${filtrEstoque === f.key ? ' ativo' : ''}`}
-                onClick={() => setFiltrEstoque(f.key)}>{f.label}</button>
-            ))}
+          <div className="rel-estoque-filtros">
+            <div className="rel-estoque-filtro-cat">
+              <label className="rel-filtro-label">Categoria</label>
+              <select
+                className="rel-filtro-select"
+                value={filtrCategoria}
+                onChange={e => setFiltrCategoria(e.target.value)}
+              >
+                <option value="">Todas as categorias</option>
+                {[...new Map(estoque.filter(p => p.nome_categoria).map(p => [p.categoria_id || p.nome_categoria, { id: p.categoria_id, nome: p.nome_categoria }])).values()]
+                  .sort((a, b) => a.nome.localeCompare(b.nome))
+                  .map(c => (
+                    <option key={c.id || c.nome} value={c.id || c.nome}>{c.nome}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="fin-filtro-btns">
+              {[
+                { key: 'todos',   label: `Todos (${estoqueFiltrado.length})` },
+                { key: 'critico', label: `🔴 Crítico (${estoqueFiltrado.filter(p => estoqueStatus(p) === 'critico').length})` },
+                { key: 'baixo',   label: `⚠️ Baixo (${estoqueFiltrado.filter(p => estoqueStatus(p) === 'baixo').length})` },
+                { key: 'ok',      label: `✅ Normal (${estoqueFiltrado.filter(p => estoqueStatus(p) === 'ok').length})` },
+              ].map(f => (
+                <button key={f.key} className={`fin-filtro-btn${filtrEstoque === f.key ? ' ativo' : ''}`}
+                  onClick={() => setFiltrEstoque(f.key)}>{f.label}</button>
+              ))}
+            </div>
           </div>
           {erroEstoque && <div className="fin-erro">⚠️ {erroEstoque}</div>}
           {loadingEstoque ? (
