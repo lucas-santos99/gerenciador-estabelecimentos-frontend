@@ -536,3 +536,317 @@
   flex-shrink: 0;
   margin-top: 1px;
 }
+/* ========================= */
+/*  CAMPOS SOMENTE LEITURA   */
+/* ========================= */
+
+.cfg-campo-valor {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  opacity: 0.85;
+}
+
+.cfg-campo-vazio {
+  color: var(--est-text-muted);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* ========================= */
+/*  BANNER SOMENTE LEITURA   */
+/* ========================= */
+
+.cfg-banner-leitura {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cfg-banner-icone {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.cfg-banner-titulo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--est-text);
+  margin-bottom: 2px;
+}
+
+.cfg-banner-desc {
+  font-size: 0.75rem;
+  color: var(--est-text-soft);
+  line-height: 1.45;
+  flex: 1;
+  min-width: 180px;
+}
+
+.cfg-banner-desc strong {
+  color: var(--est-accent);
+}
+
+.cfg-btn-solicitar {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--est-gradient);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.3);
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.cfg-btn-solicitar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(20,184,166,0.4);
+}
+
+.cfg-btn-solicitar--pequeno {
+  width: 100%;
+  padding: 9px 14px;
+  font-size: 0.75rem;
+  box-shadow: 0 3px 10px rgba(20,184,166,0.25);
+}
+
+/* ========================= */
+/*  MODAL SOLICITAR ALTERAÇÃO */
+/* ========================= */
+
+.cfg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--est-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+  animation: cfgOverlayIn 0.2s ease;
+  padding: 16px;
+}
+@keyframes cfgOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cfg-modal {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  animation: cfgModalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  scrollbar-width: thin;
+}
+@keyframes cfgModalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cfg-modal-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin-bottom: 6px;
+}
+
+.cfg-modal-desc {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.cfg-modal-campos {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cfg-modal-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+}
+
+.cfg-modal-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  padding: 3px 0;
+  transition: color 0.15s;
+}
+.cfg-modal-checkbox-label:hover { color: var(--est-text); }
+.cfg-modal-checkbox-label input[type="checkbox"] {
+  accent-color: var(--est-accent);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.cfg-modal-enviado {
+  padding: 10px 14px;
+  background: var(--est-success-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--est-success);
+  margin-bottom: 14px;
+}
+
+.cfg-modal-acoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--est-border);
+}
+
+.cfg-modal-btn-cancelar {
+  flex: 1;
+  min-width: 100px;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cfg-modal-btn-cancelar:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-text);
+}
+
+.cfg-modal-btn-copiar {
+  flex: 1;
+  min-width: 120px;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cfg-modal-btn-copiar:hover:not(:disabled) {
+  background: var(--est-accent);
+  color: #fff;
+  border-color: transparent;
+}
+.cfg-modal-btn-copiar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cfg-modal-btn-whatsapp {
+  flex: 1.2;
+  min-width: 140px;
+  padding: 11px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+  transition: all 0.18s;
+}
+.cfg-modal-btn-whatsapp:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37,211,102,0.4);
+}
+.cfg-modal-btn-whatsapp:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ========================= */
+/*  DESTAQUE NOS TUTORIAIS   */
+/* ========================= */
+
+.cfg-guia-destaque {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+
+.cfg-guia-destaque-icone {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.cfg-guia-destaque-titulo {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--est-accent);
+  margin-bottom: 4px;
+}
+
+.cfg-guia-destaque-desc {
+  font-size: 0.75rem;
+  color: var(--est-text-soft);
+  line-height: 1.5;
+}
+
+/* ========================= */
+/*  RESPONSIVO                */
+/* ========================= */
+
+@media (max-width: 600px) {
+  .cfg-banner-leitura { flex-direction: column; align-items: flex-start; }
+  .cfg-btn-solicitar  { width: 100%; text-align: center; }
+  .cfg-modal-acoes    { flex-direction: column; }
+  .cfg-modal-btn-cancelar,
+  .cfg-modal-btn-copiar,
+  .cfg-modal-btn-whatsapp { min-width: unset; width: 100%; }
+}

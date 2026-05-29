@@ -1,157 +1,178 @@
 // src/pages/Estabelecimento/Configuracoes/Configuracoes.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { supabase } from '../../../utils/supabaseClient';
 import '../Configuracoes.css';
 
+/* ════════════════════════════════════════════════════════════
+   MODAL — Solicitar Alteração ao Administrador
+   ════════════════════════════════════════════════════════════ */
+const CAMPOS_ALTERAVEIS = [
+  { key: 'nome_fantasia',     label: 'Nome do Estabelecimento' },
+  { key: 'cnpj',              label: 'CNPJ' },
+  { key: 'telefone',          label: 'Telefone' },
+  { key: 'email_contato',     label: 'E-mail de contato' },
+  { key: 'endereco_completo', label: 'Endereço' },
+  { key: 'logo',              label: 'Logo' },
+  { key: 'outro',             label: 'Outro (descreva abaixo)' },
+];
 
-/* ── Máscaras ──────────────────────────────────────────────── */
-function mascaraCNPJ(v) {
-  return v.replace(/\D/g, '')
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-    .replace(/(\d{4})(\d)/, '$1-$2')
-    .substring(0, 18);
+function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar }) {
+  const [camposSelecionados, setCamposSelecionados] = useState([]);
+  const [detalhes, setDetalhes]     = useState('');
+  const [enviado,  setEnviado]      = useState(false);
+
+  function toggleCampo(key) {
+    setCamposSelecionados(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
+
+  function gerarMensagem() {
+    const campos = camposSelecionados
+      .map(k => CAMPOS_ALTERAVEIS.find(c => c.key === k)?.label)
+      .filter(Boolean)
+      .join(', ');
+
+    const linhas = [
+      `*Solicitação de Alteração de Dados*`,
+      `Estabelecimento: *${nomeEstabelecimento}*`,
+      '',
+      `Campos a alterar: ${campos || '(não especificado)'}`,
+    ];
+
+    if (detalhes.trim()) {
+      linhas.push('', `Detalhes: ${detalhes.trim()}`);
+    }
+
+    // Dados atuais relevantes
+    linhas.push('', '*Dados atuais:*');
+    if (dadosAtuais.nome_fantasia)     linhas.push(`• Nome: ${dadosAtuais.nome_fantasia}`);
+    if (dadosAtuais.cnpj)             linhas.push(`• CNPJ: ${dadosAtuais.cnpj}`);
+    if (dadosAtuais.telefone)         linhas.push(`• Tel: ${dadosAtuais.telefone}`);
+    if (dadosAtuais.email_contato)    linhas.push(`• E-mail: ${dadosAtuais.email_contato}`);
+    if (dadosAtuais.endereco_completo) linhas.push(`• Endereço: ${dadosAtuais.endereco_completo}`);
+
+    return linhas.join('\n');
+  }
+
+  function enviarWhatsApp() {
+    const msg = gerarMensagem();
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    setEnviado(true);
+  }
+
+  function copiarMensagem() {
+    navigator.clipboard.writeText(gerarMensagem());
+    setEnviado(true);
+  }
+
+  useEffect(() => {
+    function handleEsc(e) { if (e.key === 'Escape') onFechar(); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onFechar]);
+
+  return (
+    <div className="cfg-modal-overlay" onClick={onFechar}>
+      <div className="cfg-modal" onClick={e => e.stopPropagation()}>
+        <div className="cfg-modal-titulo">📨 Solicitar Alteração de Dados</div>
+        <div className="cfg-modal-desc">
+          Selecione o que deseja alterar e envie a solicitação ao administrador do sistema.
+        </div>
+
+        <div className="cfg-modal-campos">
+          <span className="cfg-label">O que deseja alterar?</span>
+          <div className="cfg-modal-checkboxes">
+            {CAMPOS_ALTERAVEIS.map(c => (
+              <label key={c.key} className="cfg-modal-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={camposSelecionados.includes(c.key)}
+                  onChange={() => toggleCampo(c.key)}
+                />
+                {c.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="cfg-modal-campos">
+          <span className="cfg-label">Detalhes / novos valores</span>
+          <textarea
+            className="cfg-textarea"
+            rows={4}
+            placeholder="Ex: Novo nome: Mercearia do João&#10;Novo telefone: (54) 99999-8888"
+            value={detalhes}
+            onChange={e => setDetalhes(e.target.value)}
+          />
+        </div>
+
+        {enviado && (
+          <div className="cfg-modal-enviado">
+            ✓ Solicitação preparada! Envie a mensagem ao administrador.
+          </div>
+        )}
+
+        <div className="cfg-modal-acoes">
+          <button className="cfg-modal-btn-cancelar" onClick={onFechar}>
+            Cancelar (Esc)
+          </button>
+          <button
+            className="cfg-modal-btn-copiar"
+            onClick={copiarMensagem}
+            disabled={camposSelecionados.length === 0 && !detalhes.trim()}
+            title="Copiar mensagem para área de transferência"
+          >
+            📋 Copiar mensagem
+          </button>
+          <button
+            className="cfg-modal-btn-whatsapp"
+            onClick={enviarWhatsApp}
+            disabled={camposSelecionados.length === 0 && !detalhes.trim()}
+          >
+            💬 Enviar pelo WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function mascaraTelefone(v) {
-  let r = v.replace(/\D/g, '').replace(/^0/, '');
-  if (r.length > 10) return r.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-  if (r.length > 5)  return r.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-  if (r.length > 2)  return r.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-  return r.replace(/^(\d*)/, '($1');
-}
+/* ════════════════════════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+   ════════════════════════════════════════════════════════════ */
+export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp }) {
 
-/* ════════════════════════════════════════════════════════════ */
-export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, logoUrl: logoUrlProp }) {
+  const [dados,          setDados]          = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [erro,           setErro]           = useState('');
+  const [showSolicitar,  setShowSolicitar]  = useState(false);
 
-  const [form, setForm] = useState({
-    nome_fantasia:     '',
-    cnpj:              '',
-    telefone:          '',
-    email_contato:     '',
-    endereco_completo: '',
-    logo_url:          logoUrlProp || '',
-  });
-
-  const [loading,    setLoading]    = useState(true);
-  const [salvando,   setSalvando]   = useState(false);
-  const [uploading,  setUploading]  = useState(false);
-  const [erro,       setErro]       = useState('');
-  const [sucesso,    setSucesso]    = useState('');
-  const [abaGuia,    setAbaGuia]    = useState(null); // null = fechado
-
-  const fileInputRef = useRef(null);
+  // Acordeões independentes: null = fechado, string = aba ativa
+  const [abaImpressora,  setAbaImpressora]  = useState(null);
+  const [abaBipador,     setAbaBipador]     = useState(null);
+  const [abaCamera,      setAbaCamera]      = useState(null);
 
   /* ── Carregar dados ─────────────────────────────────────── */
   useEffect(() => {
-    async function carregarDados() {
+    async function carregar() {
       if (!estabelecimentoId) return;
       setLoading(true);
       setErro('');
       try {
         const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
         if (!resp.ok) throw new Error('Falha ao carregar dados.');
-        const data = await resp.json();
-        setForm({
-          nome_fantasia:     data.nome_fantasia     || '',
-          cnpj:              data.cnpj              || '',
-          telefone:          data.telefone          || '',
-          email_contato:     data.email_contato     || '',
-          endereco_completo: data.endereco_completo || '',
-          logo_url:          data.logo_url          || '',
-        });
+        setDados(await resp.json());
       } catch (err) {
         setErro(err.message);
       } finally {
         setLoading(false);
       }
     }
-    carregarDados();
+    carregar();
   }, [estabelecimentoId]);
 
-  /* ── Atualizar campo ─────────────────────────────────────── */
-  function atualizar(e) {
-    const { name, value } = e.target;
-    let v = value;
-    if (name === 'cnpj')     v = mascaraCNPJ(value);
-    if (name === 'telefone') v = mascaraTelefone(value);
-    setForm(prev => ({ ...prev, [name]: v }));
-  }
-
-  /* ── Upload de logo ──────────────────────────────────────── */
-  async function handleUploadLogo(e) {
-    if (!e.target.files?.[0]) return;
-    const file = e.target.files[0];
-
-    if (file.size > 2 * 1024 * 1024) {
-      setErro('Arquivo muito grande. Tamanho máximo: 2MB.');
-      e.target.value = null;
-      return;
-    }
-
-    const ext      = file.name.split('.').pop();
-    const filePath = `public/${estabelecimentoId}.${ext}`;
-
-    setUploading(true);
-    setErro('');
-    setSucesso('');
-
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath);
-
-      if (!publicData?.publicUrl) throw new Error('Falha ao obter URL pública.');
-
-      const novaUrl = publicData.publicUrl;
-      setForm(prev => ({ ...prev, logo_url: novaUrl }));
-      setSucesso('Logo enviada! Clique em Salvar para confirmar.');
-      onLogoAtualizada?.(novaUrl);
-    } catch (err) {
-      setErro(`Erro no upload: ${err.message}`);
-    } finally {
-      setUploading(false);
-      if (e.target) e.target.value = null;
-    }
-  }
-
-  /* ── Salvar dados ────────────────────────────────────────── */
-  async function salvar(e) {
-    e.preventDefault();
-    setSalvando(true);
-    setErro('');
-    setSucesso('');
-
-    try {
-      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`,
-        {
-          method:  'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(form),
-        }
-      );
-      const result = await resp.json();
-      if (!resp.ok) throw new Error(result.error || 'Erro ao salvar.');
-
-      setSucesso('Dados atualizados com sucesso!');
-      onLogoAtualizada?.(result.logo_url);
-      setTimeout(() => setSucesso(''), 4000);
-    } catch (err) {
-      setErro(err.message);
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  /* ── Loading ─────────────────────────────────────────────── */
   if (loading) {
     return (
       <div className="est-loading-screen">
@@ -161,272 +182,352 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
     );
   }
 
+  /* ── Helpers ─────────────────────────────────────────────── */
+  function Campo({ label, valor }) {
+    return (
+      <div className="cfg-form-group">
+        <span className="cfg-label">{label}</span>
+        <div className="cfg-campo-valor">
+          {valor || <span className="cfg-campo-vazio">Não informado</span>}
+        </div>
+      </div>
+    );
+  }
+
   /* ════════════════════════════════════════════════════════ */
   return (
     <div className="cfg-container">
 
+      {showSolicitar && dados && (
+        <ModalSolicitarAlteracao
+          nomeEstabelecimento={dados.nome_fantasia}
+          dadosAtuais={dados}
+          onFechar={() => setShowSolicitar(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="cfg-header">
         <span className="cfg-header-titulo">⚙️ Configurações</span>
-        <span className="cfg-header-sub">Dados do estabelecimento, logo e informações de contato</span>
+        <span className="cfg-header-sub">Dados do estabelecimento — somente visualização</span>
       </div>
 
-      {/* Conteúdo */}
-      <form onSubmit={salvar} style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div className="cfg-content">
-          <div className="cfg-grid">
+      <div className="cfg-content">
+        <div className="cfg-grid">
 
-            {/* Coluna esquerda — dados */}
-            <div>
+          {/* ── Coluna esquerda ── */}
+          <div>
 
-              {/* Alertas */}
-              {erro    && <div className="cfg-alert erro"    style={{ marginBottom: 16 }}>⚠️ {erro}</div>}
-              {sucesso && <div className="cfg-alert sucesso" style={{ marginBottom: 16 }}>✓ {sucesso}</div>}
-
-              {/* Identificação */}
-              <div className="cfg-section">
-                <span className="cfg-section-titulo">📋 Identificação</span>
-                <div className="cfg-form-grid">
-                  <div className="cfg-form-group cfg-form-full">
-                    <label className="cfg-label">Nome Fantasia *</label>
-                    <input
-                      className="cfg-input"
-                      name="nome_fantasia"
-                      placeholder="Nome do estabelecimento"
-                      value={form.nome_fantasia}
-                      onChange={atualizar}
-                      required
-                      disabled={salvando}
-                    />
-                  </div>
-                  <div className="cfg-form-group">
-                    <label className="cfg-label">CNPJ</label>
-                    <input
-                      className="cfg-input"
-                      name="cnpj"
-                      placeholder="00.000.000/0000-00"
-                      maxLength={18}
-                      value={form.cnpj}
-                      onChange={atualizar}
-                      disabled={salvando}
-                    />
-                  </div>
-                  <div className="cfg-form-group">
-                    <label className="cfg-label">Telefone / WhatsApp</label>
-                    <input
-                      className="cfg-input"
-                      name="telefone"
-                      placeholder="(00) 00000-0000"
-                      maxLength={15}
-                      value={form.telefone}
-                      onChange={atualizar}
-                      disabled={salvando}
-                    />
-                  </div>
+            {/* Banner somente leitura */}
+            <div className="cfg-banner-leitura">
+              <span className="cfg-banner-icone">🔒</span>
+              <div>
+                <div className="cfg-banner-titulo">Dados gerenciados pelo administrador</div>
+                <div className="cfg-banner-desc">
+                  Para alterar qualquer informação, clique em <strong>Solicitar Alteração</strong> e envie a solicitação ao administrador do sistema.
                 </div>
               </div>
-
-              {/* Contato */}
-              <div className="cfg-section">
-                <span className="cfg-section-titulo">📞 Contato & Endereço</span>
-                <div className="cfg-form-grid">
-                  <div className="cfg-form-group cfg-form-full">
-                    <label className="cfg-label">E-mail de contato</label>
-                    <input
-                      className="cfg-input"
-                      name="email_contato"
-                      type="email"
-                      placeholder="contato@estabelecimento.com"
-                      value={form.email_contato}
-                      onChange={atualizar}
-                      disabled={salvando}
-                    />
-                  </div>
-                  <div className="cfg-form-group cfg-form-full">
-                    <label className="cfg-label">Endereço completo</label>
-                    <textarea
-                      className="cfg-textarea"
-                      name="endereco_completo"
-                      placeholder="Rua, número, bairro, cidade — UF"
-                      value={form.endereco_completo}
-                      onChange={atualizar}
-                      disabled={salvando}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Impressora Térmica — accordion */}
-              <div className="cfg-section cfg-accordion">
-                <button
-                  type="button"
-                  className="cfg-accordion-header"
-                  onClick={() => setAbaGuia(abaGuia === null ? 'windows' : null)}
-                >
-                  <span className="cfg-section-titulo" style={{ margin: 0, padding: 0, border: 'none' }}>
-                    🖨️ Impressora Térmica
-                  </span>
-                  <span className={`cfg-accordion-chevron${abaGuia !== null ? ' aberto' : ''}`}>▼</span>
-                </button>
-
-                {abaGuia !== null && (
-                  <div className="cfg-accordion-body">
-                    <p className="cfg-guia-intro">
-                      Configure sua impressora para imprimir recibos de 80mm diretamente do navegador — sem instalar nenhum software extra.
-                    </p>
-
-                    {/* Sub-abas */}
-                    <div className="cfg-guia-tabs">
-                      {[
-                        { key: 'windows', label: '🖥️ Windows' },
-                        { key: 'android', label: '📱 Android' },
-                        { key: 'dicas',   label: '💡 Dicas' },
-                      ].map(t => (
-                        <button
-                          key={t.key}
-                          type="button"
-                          className={`cfg-guia-tab${abaGuia === t.key ? ' ativo' : ''}`}
-                          onClick={() => setAbaGuia(t.key)}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Conteúdo Windows */}
-                    {abaGuia === 'windows' && (
-                      <div className="cfg-guia-conteudo">
-                        <div className="cfg-guia-steps">
-                          {[
-                            { n: '1', titulo: 'Instale o driver da impressora', desc: 'Conecte a impressora via USB e instale o driver. Procure pelo modelo no site do fabricante (ex: Elgin, Epson, Bematech). O Windows geralmente detecta automaticamente.' },
-                            { n: '2', titulo: 'Defina como impressora padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → clique com o botão direito na impressora → "Definir como impressora padrão".' },
-                            { n: '3', titulo: 'Configure o papel para 80mm', desc: 'Clique com botão direito na impressora → Preferências de impressão → Tamanho do papel: selecione "Receipt 80mm" ou crie um tamanho personalizado de 80mm de largura.' },
-                            { n: '4', titulo: 'Ajuste o Chrome/Edge', desc: 'Ao imprimir, selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, e escala: 100%.' },
-                          ].map(s => (
-                            <div key={s.n} className="cfg-guia-step">
-                              <span className="cfg-guia-step-num">{s.n}</span>
-                              <div>
-                                <div className="cfg-guia-step-titulo">{s.titulo}</div>
-                                <div className="cfg-guia-step-desc">{s.desc}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="cfg-guia-dica">
-                          💡 <strong>Atalho:</strong> Win + I → Bluetooth e dispositivos → Impressoras e scanners
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Conteúdo Android */}
-                    {abaGuia === 'android' && (
-                      <div className="cfg-guia-conteudo">
-                        <div className="cfg-guia-steps">
-                          {[
-                            { n: '1', titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora e ative o Bluetooth no celular. Vá em Configurações → Bluetooth → pareie com a impressora (nome geralmente começa com "POS-" ou o modelo).' },
-                            { n: '2', titulo: 'Instale um app de impressão', desc: 'Baixe o app "RawBT" (gratuito) ou "PrinterShare" na Play Store. Eles funcionam como serviço de impressão para o Chrome Android.' },
-                            { n: '3', titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora Bluetooth → papel: 80mm. O app fica rodando em segundo plano.' },
-                            { n: '4', titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" ou "PrinterShare" como destino. O recibo será enviado diretamente para a térmica.' },
-                          ].map(s => (
-                            <div key={s.n} className="cfg-guia-step">
-                              <span className="cfg-guia-step-num">{s.n}</span>
-                              <div>
-                                <div className="cfg-guia-step-titulo">{s.titulo}</div>
-                                <div className="cfg-guia-step-desc">{s.desc}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="cfg-guia-dica">
-                          💡 Impressoras com WiFi funcionam ainda mais fácil — conecte na mesma rede e o Chrome detecta automaticamente.
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Dicas */}
-                    {abaGuia === 'dicas' && (
-                      <div className="cfg-guia-conteudo">
-                        <div className="cfg-guia-dicas-lista">
-                          {[
-                            { icone: '⚡', titulo: 'Teste antes de usar', desc: 'Clique em "Imprimir recibo" após uma venda de R$ 0,01 para testar o layout antes de usar no dia a dia.' },
-                            { icone: '📐', titulo: 'Papel 80mm é o padrão', desc: 'A maioria das impressoras térmicas usa rolo de 80mm. Se o recibo sair cortado, verifique o tamanho do papel nas preferências de impressão.' },
-                            { icone: '🌐', titulo: 'Use Google Chrome', desc: 'O Chrome tem o melhor suporte a impressão silenciosa. Evite Firefox e Safari para impressoras térmicas.' },
-                            { icone: '🔇', titulo: 'Impressão silenciosa', desc: 'Para não aparecer a janela de impressão, configure a impressora como padrão e marque "Impressão silenciosa" nas configurações do Chrome (chrome://settings/content/print).' },
-                            { icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos WiFi como Elgin i9 ou Epson TM-T20 se conectam direto na rede — sem fios, funciona no celular e no computador ao mesmo tempo.' },
-                            { icone: '📞', titulo: 'Suporte', desc: 'Dificuldades? Entre em contato com o suporte Lucas J. Systems pelo WhatsApp do sistema.' },
-                          ].map((d, i) => (
-                            <div key={i} className="cfg-guia-dica-item">
-                              <span className="cfg-guia-dica-icone">{d.icone}</span>
-                              <div>
-                                <div className="cfg-guia-step-titulo">{d.titulo}</div>
-                                <div className="cfg-guia-step-desc">{d.desc}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
+              <button
+                className="cfg-btn-solicitar"
+                onClick={() => setShowSolicitar(true)}
+              >
+                📨 Solicitar Alteração
+              </button>
             </div>
-            <div className="cfg-logo-section">
-              <span className="cfg-logo-titulo">🖼 Logo</span>
 
-              <div className="cfg-logo-preview">
-                {form.logo_url ? (
-                  <img src={form.logo_url} alt="Logo do estabelecimento" />
-                ) : (
-                  <div className="cfg-logo-preview-vazio">
-                    <span>🖼</span>
-                    <p>Sem logo</p>
+            {erro && <div className="cfg-alert erro">⚠️ {erro}</div>}
+
+            {/* Dados do estabelecimento */}
+            <div className="cfg-section">
+              <span className="cfg-section-titulo">🏪 Dados do Estabelecimento</span>
+              <div className="cfg-form-grid">
+                <Campo label="Nome Fantasia"     valor={dados?.nome_fantasia} />
+                <Campo label="CNPJ"              valor={dados?.cnpj} />
+                <Campo label="Telefone"          valor={dados?.telefone} />
+                <Campo label="E-mail de contato" valor={dados?.email_contato} />
+                <div className="cfg-form-group cfg-form-full">
+                  <span className="cfg-label">Endereço Completo</span>
+                  <div className="cfg-campo-valor">
+                    {dados?.endereco_completo || <span className="cfg-campo-vazio">Não informado</span>}
                   </div>
-                )}
+                </div>
               </div>
+            </div>
 
-              {/* Input file oculto */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="cfg-logo-file-input"
-                accept="image/png,image/jpeg,image/webp"
-                disabled={uploading || salvando}
-                onChange={handleUploadLogo}
+            {/* ── Accordeão: Impressora Térmica ── */}
+            <AccordionGuia
+              icone="🖨️"
+              titulo="Impressora Térmica"
+              aberto={abaImpressora !== null}
+              onToggle={() => setAbaImpressora(abaImpressora === null ? 'windows' : null)}
+            >
+              <p className="cfg-guia-intro">
+                Configure sua impressora para imprimir recibos de 80mm diretamente do navegador — sem instalar nenhum software extra.
+              </p>
+              <SubAbas
+                abas={[
+                  { key: 'windows', label: '🖥️ Windows' },
+                  { key: 'android', label: '📱 Android' },
+                  { key: 'dicas',   label: '💡 Dicas' },
+                ]}
+                ativa={abaImpressora}
+                onChange={setAbaImpressora}
               />
 
-              <label
-                className={`cfg-btn-upload${uploading ? ' uploading' : ''}`}
-                onClick={() => !uploading && !salvando && fileInputRef.current?.click()}
-              >
-                {uploading ? '⏳ Enviando…' : '📸 Escolher imagem'}
-              </label>
+              {abaImpressora === 'windows' && (
+                <GuiaSteps steps={[
+                  { titulo: 'Instale o driver da impressora', desc: 'Conecte via USB e instale o driver. O Windows geralmente detecta automaticamente. Se não, baixe no site do fabricante (Elgin, Epson, Bematech).' },
+                  { titulo: 'Defina como impressora padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → botão direito na impressora → "Definir como impressora padrão".' },
+                  { titulo: 'Configure o papel para 80mm', desc: 'Botão direito → Preferências de impressão → Tamanho do papel: "Receipt 80mm" ou crie um tamanho personalizado de 80mm de largura.' },
+                  { titulo: 'Ajuste no Chrome', desc: 'Ao imprimir: selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, escala: 100%.' },
+                ]} dica="💡 Atalho: Win + I → Bluetooth e dispositivos → Impressoras e scanners" />
+              )}
 
-              <span className="cfg-logo-hint">
-                PNG, JPG ou WEBP<br />
-                Tamanho máximo: 2MB
-              </span>
-            </div>
+              {abaImpressora === 'android' && (
+                <GuiaSteps steps={[
+                  { titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora e ative o Bluetooth. Configurações → Bluetooth → pareie com a impressora (nome começa com "POS-" ou o modelo).' },
+                  { titulo: 'Instale o RawBT', desc: 'Baixe o app "RawBT" (gratuito) na Play Store. Ele funciona como serviço de impressão para o Chrome Android.' },
+                  { titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora Bluetooth → papel: 80mm. O app fica em segundo plano.' },
+                  { titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" como destino. O recibo vai direto para a impressora.' },
+                ]} dica="💡 Impressoras WiFi são ainda mais fáceis — conecte na mesma rede e o Chrome detecta automaticamente." />
+              )}
+
+              {abaImpressora === 'dicas' && (
+                <GuiaDicas dicas={[
+                  { icone: '⚡', titulo: 'Teste antes de usar',      desc: 'Faça uma venda de R$ 0,01 e clique em Imprimir para conferir o layout.' },
+                  { icone: '📐', titulo: 'Papel 80mm é o padrão',    desc: 'Se o recibo sair cortado, verifique o tamanho do papel nas preferências.' },
+                  { icone: '🌐', titulo: 'Use Google Chrome',         desc: 'Chrome tem o melhor suporte a impressão. Evite Firefox e Safari.' },
+                  { icone: '🔇', titulo: 'Impressão silenciosa',      desc: 'Configure como impressora padrão e ative impressão silenciosa em chrome://settings/content/print.' },
+                  { icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos como Elgin i9 ou Epson TM-T20 funcionam sem fio em celular e computador.' },
+                ]} />
+              )}
+            </AccordionGuia>
+
+            {/* ── Accordeão: Bipador USB ── */}
+            <AccordionGuia
+              icone="📡"
+              titulo="Bipador USB (Leitor de Código de Barras)"
+              aberto={abaBipador !== null}
+              onToggle={() => setAbaBipador(abaBipador === null ? 'como-funciona' : null)}
+            >
+              <p className="cfg-guia-intro">
+                O bipador USB funciona automaticamente — não é necessário instalar nenhum software ou configurar nada no sistema.
+              </p>
+              <SubAbas
+                abas={[
+                  { key: 'como-funciona', label: '⚡ Como funciona' },
+                  { key: 'configurar',    label: '🔧 Configurar' },
+                  { key: 'dicas',         label: '💡 Dicas' },
+                ]}
+                ativa={abaBipador}
+                onChange={setAbaBipador}
+              />
+
+              {abaBipador === 'como-funciona' && (
+                <div className="cfg-guia-conteudo">
+                  <div className="cfg-guia-destaque">
+                    <span className="cfg-guia-destaque-icone">🎯</span>
+                    <div>
+                      <div className="cfg-guia-destaque-titulo">Plug & Play — só conectar e usar</div>
+                      <div className="cfg-guia-destaque-desc">O bipador se comporta como um teclado USB. Quando você bipa um produto, ele "digita" o código de barras no campo de busca do PDV automaticamente.</div>
+                    </div>
+                  </div>
+                  <GuiaSteps steps={[
+                    { titulo: 'Conecte o bipador na porta USB', desc: 'O sistema operacional reconhece automaticamente como teclado. Nenhum driver adicional é necessário na maioria dos modelos.' },
+                    { titulo: 'Abra o módulo PDV (Caixa)', desc: 'O cursor estará automaticamente no campo de busca. O PDV sempre volta o foco para esse campo após cada ação.' },
+                    { titulo: 'Aponte e bipe o produto', desc: 'O bipador vai "digitar" o código e pressionar Enter automaticamente. O sistema detecta a velocidade de digitação do bipador e busca o produto.' },
+                    { titulo: 'Produto selecionado automaticamente', desc: 'Se o código corresponder a exatamente 1 produto, ele é adicionado ao carrinho imediatamente. Se houver múltiplos resultados, a lista é exibida.' },
+                  ]} />
+                </div>
+              )}
+
+              {abaBipador === 'configurar' && (
+                <div className="cfg-guia-conteudo">
+                  <GuiaSteps steps={[
+                    { titulo: 'Cadastre o código de barras no produto', desc: 'Vá em Estoque → edite o produto → campo "Código de barras". Você pode digitar manualmente ou usar o botão 📷 para escanear pelo bipador ou câmera.' },
+                    { titulo: 'Teste no PDV', desc: 'Com o PDV aberto, bipe o produto. Se o código estiver cadastrado, o produto aparece na lista. Se não aparecer, verifique se o código foi salvo corretamente.' },
+                    { titulo: 'Bipador não lê?', desc: 'Alguns bipadores precisam de configuração para enviar Enter após o código. Consulte o manual do modelo — geralmente é bipar um QR Code especial que vem no manual para ativar o "modo Enter".' },
+                  ]} dica="💡 O campo de código de barras no cadastro de produto também aceita leitura direta do bipador — basta clicar no campo e bipar." />
+                </div>
+              )}
+
+              {abaBipador === 'dicas' && (
+                <GuiaDicas dicas={[
+                  { icone: '🔌', titulo: 'USB é o mais confiável',        desc: 'Bipadores USB funcionam em qualquer computador sem configuração. Bluetooth pode ter latência e desconexões.' },
+                  { icone: '📏', titulo: 'Distância ideal de leitura',    desc: 'Mantenha o bipador a 5–20cm do código. Muito perto ou muito longe pode dificultar a leitura.' },
+                  { icone: '💡', titulo: 'Iluminação ajuda',              desc: 'Em ambientes escuros, alguns bipadores têm dificuldade com códigos impressos em superfícies brilhantes. Use o bipador com luz de mira.' },
+                  { icone: '🏷️', titulo: 'Código não cadastrado',        desc: 'Se o bipador ler mas não encontrar o produto, o PDV mostrará "Código não encontrado". Cadastre o produto no Estoque com aquele código.' },
+                  { icone: '⚡', titulo: 'Leitura instantânea',          desc: 'O sistema detecta que o código veio do bipador pela velocidade de digitação (< 50ms entre teclas) e finiza a busca automaticamente.' },
+                  { icone: '🔁', titulo: 'Mesmo produto várias vezes',   desc: 'Bipe o mesmo código várias vezes para adicionar múltiplas unidades. Cada bipada soma +1 ao carrinho.' },
+                ]} />
+              )}
+            </AccordionGuia>
+
+            {/* ── Accordeão: Câmera ── */}
+            <AccordionGuia
+              icone="📷"
+              titulo="Câmera (Leitura pelo Computador ou Notebook)"
+              aberto={abaCamera !== null}
+              onToggle={() => setAbaCamera(abaCamera === null ? 'pdv' : null)}
+            >
+              <p className="cfg-guia-intro">
+                Use a câmera do computador, notebook ou tablet para ler códigos de barras diretamente no PDV e no cadastro de produtos — sem precisar de um bipador físico.
+              </p>
+              <SubAbas
+                abas={[
+                  { key: 'pdv',      label: '🛒 No PDV' },
+                  { key: 'estoque',  label: '📦 No Estoque' },
+                  { key: 'dicas',    label: '💡 Dicas' },
+                ]}
+                ativa={abaCamera}
+                onChange={setAbaCamera}
+              />
+
+              {abaCamera === 'pdv' && (
+                <div className="cfg-guia-conteudo">
+                  <div className="cfg-guia-destaque">
+                    <span className="cfg-guia-destaque-icone">📷</span>
+                    <div>
+                      <div className="cfg-guia-destaque-titulo">Botão 📷 ao lado do campo de busca</div>
+                      <div className="cfg-guia-destaque-desc">No PDV, há um botão de câmera ao lado do campo de busca. Clique nele para abrir o leitor de câmera.</div>
+                    </div>
+                  </div>
+                  <GuiaSteps steps={[
+                    { titulo: 'Clique no botão 📷 no PDV', desc: 'O botão fica ao lado direito do campo de busca de produtos. Uma janela com o feed da câmera será aberta.' },
+                    { titulo: 'Permita o acesso à câmera', desc: 'O navegador pedirá permissão de acesso à câmera na primeira vez. Clique em "Permitir". Essa permissão fica salva para as próximas vezes.' },
+                    { titulo: 'Aponte para o código de barras', desc: 'Centralize o código de barras na área de mira (cantos verdes). A câmera detecta automaticamente e fecha o modal ao ler.' },
+                    { titulo: 'Produto buscado automaticamente', desc: 'Após a leitura, o sistema busca o produto pelo código detectado — mesmo fluxo do bipador USB.' },
+                  ]} dica="💡 Para melhor leitura: boa iluminação, código limpo e centralizado na tela. Distância ideal: 15–30cm." />
+                </div>
+              )}
+
+              {abaCamera === 'estoque' && (
+                <div className="cfg-guia-conteudo">
+                  <GuiaSteps steps={[
+                    { titulo: 'Edite ou crie um produto no Estoque', desc: 'Vá em Estoque → clique em + Novo produto ou edite um existente.' },
+                    { titulo: 'Localize o campo "Código de barras"', desc: 'No formulário do produto, o campo de código de barras tem um botão 📷 ao lado.' },
+                    { titulo: 'Clique no botão 📷 e escaneie', desc: 'O modal da câmera abre. Aponte para o código de barras do produto físico e o código será preenchido automaticamente no campo.' },
+                    { titulo: 'Salve o produto', desc: 'Com o código preenchido, confira os demais dados e clique em Salvar. O produto agora pode ser buscado pelo bipador ou câmera no PDV.' },
+                  ]} dica="💡 Essa é a forma mais rápida de cadastrar o código de barras de vários produtos — sem digitar nada." />
+                </div>
+              )}
+
+              {abaCamera === 'dicas' && (
+                <GuiaDicas dicas={[
+                  { icone: '💡', titulo: 'Iluminação é essencial',         desc: 'Câmeras de notebook leem melhor com boa luz. Evite reflexos diretos no código de barras.' },
+                  { icone: '📐', titulo: 'Distância ideal: 15–30cm',       desc: 'Muito perto pode desfocar. Muito longe pode perder detalhes. Ajuste até a linha laser ficar sobre o código.' },
+                  { icone: '🔄', titulo: 'Botão de trocar câmera',         desc: 'Se o dispositivo tiver mais de uma câmera, há um botão 🔄 para alternar entre elas.' },
+                  { icone: '🖥️', titulo: 'Melhor no notebook/desktop',    desc: 'A câmera traseira do celular é melhor para leitura, mas em computadores a câmera frontal funciona bem para códigos impressos.' },
+                  { icone: '❌', titulo: 'Câmera não abre?',               desc: 'Verifique se o navegador tem permissão de câmera: clique no ícone de cadeado na barra de endereço → Câmera → Permitir.' },
+                  { icone: '🔌', titulo: 'Para uso intenso: use bipador',  desc: 'Para caixas com alto volume, um bipador USB físico é mais rápido e confiável. A câmera é ideal para uso esporádico.' },
+                ]} />
+              )}
+            </AccordionGuia>
 
           </div>
+
+          {/* ── Coluna direita: logo ── */}
+          <div className="cfg-logo-section">
+            <span className="cfg-logo-titulo">🖼 Logo</span>
+            <div className="cfg-logo-preview">
+              {(dados?.logo_url || logoUrlProp) ? (
+                <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" />
+              ) : (
+                <div className="cfg-logo-preview-vazio">
+                  <span>🖼</span>
+                  <p>Sem logo</p>
+                </div>
+              )}
+            </div>
+            <span className="cfg-logo-hint">
+              Para alterar a logo,<br />solicite ao administrador.
+            </span>
+            <button
+              className="cfg-btn-solicitar cfg-btn-solicitar--pequeno"
+              onClick={() => setShowSolicitar(true)}
+            >
+              📨 Solicitar alteração
+            </button>
+          </div>
+
         </div>
+      </div>
 
-        {/* Footer com botão salvar */}
-        <div className="cfg-footer">
-          {sucesso && (
-            <span className="cfg-btn-salvar-status">✓ Salvo com sucesso</span>
-          )}
-          <button
-            type="submit"
-            className="cfg-btn-salvar"
-            disabled={salvando || uploading}
-          >
-            {salvando ? '⏳ Salvando…' : '💾 Salvar alterações'}
-          </button>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   SUB-COMPONENTES INTERNOS
+   ════════════════════════════════════════════════════════════ */
+function AccordionGuia({ icone, titulo, aberto, onToggle, children }) {
+  return (
+    <div className="cfg-section cfg-accordion">
+      <button type="button" className="cfg-accordion-header" onClick={onToggle}>
+        <span className="cfg-section-titulo" style={{ margin: 0, padding: 0, border: 'none' }}>
+          {icone} {titulo}
+        </span>
+        <span className={`cfg-accordion-chevron${aberto ? ' aberto' : ''}`}>▼</span>
+      </button>
+      {aberto && (
+        <div className="cfg-accordion-body">
+          {children}
         </div>
+      )}
+    </div>
+  );
+}
 
-      </form>
+function SubAbas({ abas, ativa, onChange }) {
+  return (
+    <div className="cfg-guia-tabs">
+      {abas.map(t => (
+        <button
+          key={t.key}
+          type="button"
+          className={`cfg-guia-tab${ativa === t.key ? ' ativo' : ''}`}
+          onClick={() => onChange(t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
+function GuiaSteps({ steps, dica }) {
+  return (
+    <div className="cfg-guia-conteudo">
+      <div className="cfg-guia-steps">
+        {steps.map((s, i) => (
+          <div key={i} className="cfg-guia-step">
+            <span className="cfg-guia-step-num">{i + 1}</span>
+            <div>
+              <div className="cfg-guia-step-titulo">{s.titulo}</div>
+              <div className="cfg-guia-step-desc">{s.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {dica && <div className="cfg-guia-dica">{dica}</div>}
+    </div>
+  );
+}
+
+function GuiaDicas({ dicas }) {
+  return (
+    <div className="cfg-guia-conteudo">
+      <div className="cfg-guia-dicas-lista">
+        {dicas.map((d, i) => (
+          <div key={i} className="cfg-guia-dica-item">
+            <span className="cfg-guia-dica-icone">{d.icone}</span>
+            <div>
+              <div className="cfg-guia-step-titulo">{d.titulo}</div>
+              <div className="cfg-guia-step-desc">{d.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
