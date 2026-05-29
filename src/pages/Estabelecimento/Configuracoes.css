@@ -850,3 +850,14 @@
   .cfg-modal-btn-copiar,
   .cfg-modal-btn-whatsapp { min-width: unset; width: 100%; }
 }
+
+.cfg-logo-feedback {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+.cfg-logo-feedback.erro    { background: var(--est-danger-dim);  color: var(--est-danger);  border: 1px solid rgba(239,68,68,0.2); }
+.cfg-logo-feedback.sucesso { background: var(--est-success-dim); color: var(--est-success); border: 1px solid rgba(34,197,94,0.15); }

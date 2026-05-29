@@ -1,5 +1,6 @@
 // src/pages/Estabelecimento/Configuracoes/Configuracoes.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../../../utils/supabaseClient';
 import { apiFetch } from '../../../utils/api';
 import '../Configuracoes.css';
 
@@ -142,12 +143,17 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar })
 /* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ════════════════════════════════════════════════════════════ */
-export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp }) {
+export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, logoUrl: logoUrlProp }) {
 
   const [dados,          setDados]          = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [erro,           setErro]           = useState('');
   const [showSolicitar,  setShowSolicitar]  = useState(false);
+
+  const [uploading,     setUploading]     = useState(false);
+  const [uploadErro,    setUploadErro]    = useState('');
+  const [uploadSucesso, setUploadSucesso] = useState('');
+  const fileInputRef = useRef(null);
 
   // Acordeões independentes: null = fechado, string = aba ativa
   const [abaImpressora,  setAbaImpressora]  = useState(null);
@@ -172,6 +178,85 @@ export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp 
     }
     carregar();
   }, [estabelecimentoId]);
+
+  /* ── Upload de logo com deleção do arquivo antigo ──────── */
+  async function handleUploadLogo(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo
+    const tiposPermitidos = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!tiposPermitidos.includes(file.type)) {
+      setUploadErro('Formato inválido. Use PNG, JPG ou WEBP.');
+      e.target.value = null;
+      return;
+    }
+
+    // Validar tamanho (máx 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadErro('Arquivo muito grande. Tamanho máximo: 2MB.');
+      e.target.value = null;
+      return;
+    }
+
+    setUploading(true);
+    setUploadErro('');
+    setUploadSucesso('');
+
+    try {
+      // 1. Deletar logo antiga do storage (se existir)
+      const logoAtual = dados?.logo_url;
+      if (logoAtual) {
+        // Extrair o path relativo dentro do bucket "logos"
+        // URL formato: .../storage/v1/object/public/logos/CAMINHO
+        const match = logoAtual.match(/\/logos\/(.+)$/);
+        if (match?.[1]) {
+          await supabase.storage.from('logos').remove([match[1]]);
+        }
+      }
+
+      // 2. Upload do novo arquivo
+      const ext      = file.name.split('.').pop().toLowerCase();
+      const filePath = `public/${estabelecimentoId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 3. Obter URL pública
+      const { data: publicData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      if (!publicData?.publicUrl) throw new Error('Falha ao obter URL pública.');
+
+      const novaUrl = `${publicData.publicUrl}?t=${Date.now()}`; // cache-bust
+
+      // 4. Salvar no banco via API
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ ...dados, logo_url: novaUrl }),
+      });
+      if (!resp.ok) {
+        const r = await resp.json();
+        throw new Error(r.error || 'Erro ao salvar logo.');
+      }
+
+      // 5. Atualizar estado local
+      setDados(prev => ({ ...prev, logo_url: novaUrl }));
+      onLogoAtualizada?.(novaUrl);
+      setUploadSucesso('Logo atualizada com sucesso!');
+      setTimeout(() => setUploadSucesso(''), 4000);
+    } catch (err) {
+      setUploadErro(`Erro: ${err.message}`);
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = null;
+    }
+  }
 
   if (loading) {
     return (
@@ -344,7 +429,7 @@ export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp 
               {abaBipador === 'configurar' && (
                 <div className="cfg-guia-conteudo">
                   <GuiaSteps steps={[
-                    { titulo: 'Cadastre o código de barras no produto', desc: 'Vá em Estoque → edite o produto → campo "Código de barras". Você pode digitar manualmente ou usar o botão 📷 para escanear pelo bipador ou câmera.' },
+                    { titulo: 'Cadastre o código de barras no produto', desc: 'Vá em Estoque → edite o produto → campo "Código de barras". Digite manualmente, bipe direto no campo com o bipador USB, ou use o botão 📷 para escanear pela câmera.' },
                     { titulo: 'Teste no PDV', desc: 'Com o PDV aberto, bipe o produto. Se o código estiver cadastrado, o produto aparece na lista. Se não aparecer, verifique se o código foi salvo corretamente.' },
                     { titulo: 'Bipador não lê?', desc: 'Alguns bipadores precisam de configuração para enviar Enter após o código. Consulte o manual do modelo — geralmente é bipar um QR Code especial que vem no manual para ativar o "modo Enter".' },
                   ]} dica="💡 O campo de código de barras no cadastro de produto também aceita leitura direta do bipador — basta clicar no campo e bipar." />
@@ -429,6 +514,7 @@ export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp 
           {/* ── Coluna direita: logo ── */}
           <div className="cfg-logo-section">
             <span className="cfg-logo-titulo">🖼 Logo</span>
+
             <div className="cfg-logo-preview">
               {(dados?.logo_url || logoUrlProp) ? (
                 <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" />
@@ -439,15 +525,35 @@ export default function Configuracoes({ estabelecimentoId, logoUrl: logoUrlProp 
                 </div>
               )}
             </div>
-            <span className="cfg-logo-hint">
-              Para alterar a logo,<br />solicite ao administrador.
-            </span>
-            <button
-              className="cfg-btn-solicitar cfg-btn-solicitar--pequeno"
-              onClick={() => setShowSolicitar(true)}
+
+            {/* Input file oculto */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="cfg-logo-file-input"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={uploading}
+              onChange={handleUploadLogo}
+            />
+
+            <label
+              className={`cfg-btn-upload${uploading ? ' uploading' : ''}`}
+              onClick={() => !uploading && fileInputRef.current?.click()}
             >
-              📨 Solicitar alteração
-            </button>
+              {uploading ? '⏳ Enviando…' : '📸 Alterar logo'}
+            </label>
+
+            {uploadErro && (
+              <div className="cfg-logo-feedback erro">⚠️ {uploadErro}</div>
+            )}
+            {uploadSucesso && (
+              <div className="cfg-logo-feedback sucesso">✓ {uploadSucesso}</div>
+            )}
+
+            <span className="cfg-logo-hint">
+              PNG, JPG ou WEBP · máx. 2MB<br />
+              A logo anterior é removida automaticamente.
+            </span>
           </div>
 
         </div>
