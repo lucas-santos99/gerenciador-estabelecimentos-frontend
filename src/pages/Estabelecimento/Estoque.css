@@ -203,13 +203,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px 8px 12px;
-  border-radius: 9px;
-  font-size: 0.82rem;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 10px;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--est-text-soft);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.13s, color 0.13s, box-shadow 0.13s;
   border: none;
   background: none;
   width: 100%;
@@ -221,12 +222,33 @@
   background: var(--est-hover);
   color: var(--est-text);
 }
+.estoque-cat-item:hover .estoque-cat-count {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  padding: 2px 9px;
+  border-radius: 20px;
+  color: var(--est-text-muted);
+  flex-shrink: 0;
+  min-width: 26px;
+  text-align: center;
+  transition: all 0.13s;
+  line-height: 1.5;
+}
 
 .estoque-cat-item.ativo {
   background: var(--est-accent-dim);
   color: var(--est-accent);
   font-weight: 700;
-  padding-left: 14px;
+  box-shadow: inset 3px 0 0 var(--est-accent);
+}
+.estoque-cat-item.ativo .estoque-cat-count {
+  background: rgba(20,184,166,0.18);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  font-weight: 800;
 }
 
 /* Barra lateral teal no item ativo */
@@ -1196,4 +1218,45 @@
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--est-border);
+}
+
+/* ── Sidebar largura e header melhorado ── */
+.estoque-sidebar {
+  width: 250px;
+}
+
+.estoque-sidebar-header {
+  padding: 16px 14px 14px;
+}
+
+.estoque-sidebar-titulo {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--est-text-muted);
+}
+
+/* Lista de cats com gap uniforme */
+.estoque-cats {
+  padding: 8px 10px 12px;
+  gap: 2px;
+}
+
+/* "Todos os produtos" separador inferior */
+.estoque-cat-li--todos {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+/* "Todos os produtos" bold e destaque */
+.estoque-cat-item--todos {
+  font-weight: 700 !important;
+  color: var(--est-text) !important;
+}
+.estoque-cat-item--todos:hover {
+  background: var(--est-hover);
+}
+.estoque-cat-item--todos.ativo {
+  color: var(--est-accent) !important;
 }
