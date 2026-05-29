@@ -1539,3 +1539,49 @@
   .pdv-item-remover,
   .pdv-modal-overlay { display: none !important; }
 }
+
+/* ── Marca no modal de quantidade ── */
+.pdv-modal-qtd-marca {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--est-accent);
+  opacity: 0.85;
+}
+
+/* ── Modal de confirmação (remover / sair) ── */
+.pdv-modal-confirm {
+  max-width: 360px;
+  text-align: center;
+}
+
+.pdv-confirm-icone {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.pdv-confirm-titulo {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin-bottom: 8px;
+}
+
+.pdv-confirm-desc {
+  font-size: 0.85rem;
+  color: var(--est-text-soft);
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+
+.pdv-confirm-desc strong {
+  color: var(--est-text);
+}
+
+/* Variante destrutiva do botão confirmar */
+.pdv-modal-btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  box-shadow: 0 4px 14px rgba(239,68,68,0.3) !important;
+}
+.pdv-modal-btn-danger:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(239,68,68,0.45) !important;
+}

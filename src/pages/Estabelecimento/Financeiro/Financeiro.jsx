@@ -667,7 +667,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             {/* DRE */}
             <div className="fin-section-header">
-              <span className="fin-section-titulo">📊 Relatório DRE</span>
+              <span className="fin-section-titulo">📊 Relatório DRE - Demonstração do Relatório do Exercício</span>
             </div>
 
             <form className="fin-form-filtros" onSubmit={gerarDRE}>

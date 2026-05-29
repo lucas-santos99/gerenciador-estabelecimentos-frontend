@@ -426,7 +426,7 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
 /* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL — PDV
    ════════════════════════════════════════════════════════════ */
-export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
+export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar }) {
   const [termoBusca,      setTermoBusca]      = useState('');
   const [resultados,      setResultados]      = useState([]);
   const [carrinho,        setCarrinho]        = useState([]);
@@ -446,6 +446,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   const [showPagamento,   setShowPagamento]   = useState(false);
   const [vendaFinalizada, setVendaFinalizada] = useState(null);
   const [showCamera,      setShowCamera]      = useState(false);
+  const [confirmSaida,    setConfirmSaida]    = useState(false);  // confirmação de saída com carrinho cheio
+  const [confirmRemover,  setConfirmRemover]  = useState(null);   // idx do item a remover
 
   const inputBuscaRef   = useRef(null);
   const inputQtdRef     = useRef(null);
@@ -565,6 +567,10 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
   // Atalhos globais do PDV
   useEffect(() => {
     function handleGlobalKey(e) {
+      if (e.key === 'Escape') {
+        if (confirmRemover !== null) { setConfirmRemover(null); return; }
+        if (confirmSaida)            { setConfirmSaida(false);  return; }
+      }
       if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !showCamera && carrinho.length > 0) {
         e.preventDefault();
         setShowPagamento(true);
@@ -591,6 +597,20 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [carrinho]);
+
+  // Expõe interceptor de navegação para o painel pai
+  // O pai registra uma função; o PDV a preenche com o interceptor atual
+  const navegacaoPendenteRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!onNavegar) return;
+    onNavegar((abaDestino) => {
+      if (carrinho.length === 0) return true;  // carrinho vazio — pode navegar
+      navegacaoPendenteRef.current = abaDestino;
+      setConfirmSaida(true);
+      return false; // bloquear — modal decide
+    });
+  }, [onNavegar, carrinho]);
 
   useEffect(() => {
     if (itemQuantificar) {
@@ -680,7 +700,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
     setItemQuantificar(item); setEditIndex(idx);
   }
 
-  function removerItem(idx) { setCarrinho(prev => prev.filter((_, i) => i !== idx)); }
+  function removerItem(idx) { setConfirmRemover(idx); }
 
   async function finalizarVenda(meioPagamento, clienteId, dadosPagamento) {
     setLoadingVenda(true); setVendaStatus(null);
@@ -736,12 +756,84 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento }) {
         />
       )}
 
+      {/* Modal confirmação — sair com carrinho cheio */}
+      {confirmSaida && (
+        <div className="pdv-modal-overlay">
+          <div className="pdv-modal pdv-modal-confirm" onClick={e => e.stopPropagation()}>
+            <div className="pdv-confirm-icone">🛒</div>
+            <div className="pdv-confirm-titulo">Carrinho não finalizado</div>
+            <div className="pdv-confirm-desc">
+              Você tem <strong>{carrinho.length} {carrinho.length === 1 ? 'item' : 'itens'}</strong> no carrinho ({fmt(total)}).
+              <br />Se sair agora, o carrinho será perdido.
+            </div>
+            <div className="pdv-modal-acoes">
+              <button
+                className="pdv-modal-btn-cancelar"
+                onClick={() => setConfirmSaida(false)}
+              >
+                Voltar ao PDV
+              </button>
+              <button
+                className="pdv-modal-btn-confirmar pdv-modal-btn-danger"
+                onClick={() => {
+                  setConfirmSaida(false);
+                  setCarrinho([]);
+                  // Retomar a navegação bloqueada
+                  if (navegacaoPendenteRef.current && onNavegar) {
+                    const aba = navegacaoPendenteRef.current;
+                    navegacaoPendenteRef.current = null;
+                    // Re-registrar interceptor com carrinho vazio antes de navegar
+                    onNavegar(() => true);
+                    // Disparar a troca de aba via evento customizado
+                    window.dispatchEvent(new CustomEvent('pdv-navegar', { detail: aba }));
+                  }
+                }}
+              >
+                Sair e descartar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmação — remover item do carrinho */}
+      {confirmRemover !== null && (
+        <div className="pdv-modal-overlay">
+          <div className="pdv-modal pdv-modal-confirm" onClick={e => e.stopPropagation()}>
+            <div className="pdv-confirm-icone">🗑️</div>
+            <div className="pdv-confirm-titulo">Remover item?</div>
+            <div className="pdv-confirm-desc">
+              <strong>{carrinho[confirmRemover]?.nome}</strong>
+              {carrinho[confirmRemover]?.marca && <span> · {carrinho[confirmRemover].marca}</span>}
+              <br />será removido do carrinho.
+            </div>
+            <div className="pdv-modal-acoes">
+              <button
+                className="pdv-modal-btn-cancelar"
+                onClick={() => setConfirmRemover(null)}
+              >
+                Cancelar (Esc)
+              </button>
+              <button
+                className="pdv-modal-btn-confirmar pdv-modal-btn-danger"
+                onClick={() => {
+                  setCarrinho(prev => prev.filter((_, i) => i !== confirmRemover));
+                  setConfirmRemover(null);
+                }}
+              >
+                ✕ Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de quantidade */}
       {itemQuantificar && (
         <div className="pdv-modal-overlay">
           <div className="pdv-modal" onClick={e => e.stopPropagation()}>
             <div className="pdv-modal-qtd-titulo">{editIndex !== null ? '✏️ Editar item' : '➕ Adicionar item'}</div>
-            <div className="pdv-modal-qtd-produto">{itemQuantificar.nome}{' — '}<strong>{fmt(itemQuantificar.preco_venda)}</strong>{' / '}{itemQuantificar.unidade_medida}</div>
+            <div className="pdv-modal-qtd-produto">{itemQuantificar.nome}{itemQuantificar.marca && <span className="pdv-modal-qtd-marca"> · {itemQuantificar.marca}</span>}{' — '}<strong>{fmt(itemQuantificar.preco_venda)}</strong>{' / '}{itemQuantificar.unidade_medida}</div>
             <form onSubmit={confirmarQuantidade}>
               <label className="pdv-modal-qtd-label">{itemQuantificar.unidade_medida === 'kg' ? 'Peso (kg)' : 'Quantidade (un)'}</label>
               <input ref={inputQtdRef} className="pdv-modal-qtd-input" type="number" step={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'} min={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'} value={inputQtd} onChange={e => setInputQtd(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); fecharModalQtd(); } }} />

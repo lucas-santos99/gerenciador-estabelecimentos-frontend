@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/PainelEstabelecimento.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { apiFetch } from "../../utils/api";
@@ -25,6 +25,32 @@ export default function PainelEstabelecimento() {
   const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
 
   const isMerchant = profile?.role === 'merchant';
+
+  // Ref para o interceptor do PDV — preenchido pelo próprio PDV via prop onNavegar
+  const pdvInterceptorRef = useRef(null);
+
+  // Troca de aba com proteção: se o PDV tiver carrinho cheio, ele bloqueia
+  const handleAbaChange = useCallback((novaAba) => {
+    if (abaAtiva === 'pdv' && pdvInterceptorRef.current) {
+      const podeSair = pdvInterceptorRef.current(novaAba);
+      if (podeSair === false) return; // PDV vai mostrar o modal internamente
+    }
+    setAbaAtiva(novaAba);
+  }, [abaAtiva]);
+
+  // Callback passado ao PDV para registrar seu interceptor
+  const registrarInterceptorPDV = useCallback((fn) => {
+    pdvInterceptorRef.current = fn;
+  }, []);
+
+  /* ── Ouvir evento de navegação confirmada pelo PDV ─────── */
+  useEffect(() => {
+    function handlePdvNavegar(e) {
+      setAbaAtiva(e.detail);
+    }
+    window.addEventListener('pdv-navegar', handlePdvNavegar);
+    return () => window.removeEventListener('pdv-navegar', handlePdvNavegar);
+  }, []);
 
   /* ── Carregar dados do estabelecimento + permissões ─────── */
   useEffect(() => {
@@ -80,6 +106,7 @@ export default function PainelEstabelecimento() {
           <PDV
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
+            onNavegar={registrarInterceptorPDV}
           />
         );
 
@@ -157,7 +184,7 @@ export default function PainelEstabelecimento() {
   return (
     <LayoutEstabelecimento
       abaAtiva={abaAtiva}
-      onAbaChange={setAbaAtiva}
+      onAbaChange={handleAbaChange}
       nomeEstabelecimento={nomeEstabelecimento}
       logoUrl={logoUrl}
       permissoes={permissoes}
