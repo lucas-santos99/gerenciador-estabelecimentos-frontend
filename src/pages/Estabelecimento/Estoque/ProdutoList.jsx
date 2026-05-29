@@ -130,16 +130,20 @@ export default function ProdutoList({ estabelecimentoId, permissoes = [] }) {
   }, [produtoFocadoId, produtos]);
 
   /* ── Deletar produto ─────────────────────────────────────── */
-  async function deletarProduto(id) {
+  async function deletarProduto(produto) {
+    const nome  = produto.nome  || 'este produto';
+    const marca = produto.marca ? ` · ${produto.marca}` : '';
+    const ok = window.confirm(`Excluir "${nome}${marca}"?\n\nEssa ação não pode ser desfeita.`);
+    if (!ok) return;
     try {
-      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${id}`,
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produto.id}`,
         { method: 'DELETE' }
       );
       if (!resp.ok) {
         const data = await resp.json();
         throw new Error(data.error || 'Erro ao excluir');
       }
-      setProdutos(prev => prev.filter(p => p.id !== id));
+      setProdutos(prev => prev.filter(p => p.id !== produto.id));
     } catch (err) {
       setErro(err.message);
     }
@@ -561,7 +565,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = [] }) {
                 produto={produto}
                 focado={produto.id === produtoFocadoId}
                 onEditar={() => abrirEditar(produto)}
-                onDeletar={() => deletarProduto(produto.id)}
+                onDeletar={() => deletarProduto(produto)}
                 podeEditar={podeEditar}
                 podeExcluir={podeExcluir}
                 somenteLeitura={somenteLeitura}
