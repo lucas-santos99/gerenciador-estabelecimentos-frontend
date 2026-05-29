@@ -155,6 +155,8 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const [uploadSucesso, setUploadSucesso] = useState('');
   const fileInputRef = useRef(null);
 
+  const [abaCfg, setAbaCfg] = useState('dados'); // 'dados' | 'logo' | 'tutoriais'
+
   // Acordeões independentes: null = fechado, string = aba ativa
   const [abaImpressora,  setAbaImpressora]  = useState(null);
   const [abaBipador,     setAbaBipador]     = useState(null);
@@ -291,19 +293,32 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
         />
       )}
 
-      {/* Header */}
+      {/* Header com tabs */}
       <div className="cfg-header">
         <span className="cfg-header-titulo">⚙️ Configurações</span>
-        <span className="cfg-header-sub">Dados do estabelecimento — somente visualização</span>
+        <div className="cfg-tabs">
+          {[
+            { key: 'dados',     label: '🏪 Dados' },
+            { key: 'logo',      label: '🖼️ Logo' },
+            { key: 'tutoriais', label: '📚 Tutoriais' },
+          ].map(t => (
+            <button
+              key={t.key}
+              type="button"
+              className={`cfg-tab${abaCfg === t.key ? ' ativo' : ''}`}
+              onClick={() => setAbaCfg(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="cfg-content">
-        <div className="cfg-grid">
 
-          {/* ── Coluna esquerda ── */}
-          <div>
-
-            {/* Banner somente leitura */}
+        {/* ══ ABA DADOS ══ */}
+        {abaCfg === 'dados' && (
+          <div className="cfg-aba-maxwidth">
             <div className="cfg-banner-leitura">
               <span className="cfg-banner-icone">🔒</span>
               <div>
@@ -312,17 +327,13 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                   Para alterar qualquer informação, clique em <strong>Solicitar Alteração</strong> e envie a solicitação ao administrador do sistema.
                 </div>
               </div>
-              <button
-                className="cfg-btn-solicitar"
-                onClick={() => setShowSolicitar(true)}
-              >
+              <button className="cfg-btn-solicitar" onClick={() => setShowSolicitar(true)}>
                 📨 Solicitar Alteração
               </button>
             </div>
 
             {erro && <div className="cfg-alert erro">⚠️ {erro}</div>}
 
-            {/* Dados do estabelecimento */}
             <div className="cfg-section">
               <span className="cfg-section-titulo">🏪 Dados do Estabelecimento</span>
               <div className="cfg-form-grid">
@@ -338,227 +349,119 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* ── Accordeão: Impressora Térmica ── */}
+        {/* ══ ABA LOGO ══ */}
+        {abaCfg === 'logo' && (
+          <div className="cfg-aba-logo-centrada">
+            <div className="cfg-logo-card">
+              <span className="cfg-section-titulo">🖼️ Logo do Estabelecimento</span>
+              <p className="cfg-guia-intro">
+                Você pode alterar a logo diretamente. A imagem anterior é removida automaticamente do sistema para não ocupar espaço desnecessário.
+              </p>
+
+              <div className="cfg-logo-preview cfg-logo-preview--grande">
+                {(dados?.logo_url || logoUrlProp) ? (
+                  <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" />
+                ) : (
+                  <div className="cfg-logo-preview-vazio">
+                    <span>🖼</span>
+                    <p>Sem logo cadastrada</p>
+                  </div>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="cfg-logo-file-input"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={uploading}
+                onChange={handleUploadLogo}
+              />
+
+              <label
+                className={`cfg-btn-upload cfg-btn-upload--grande${uploading ? ' uploading' : ''}`}
+                onClick={() => !uploading && fileInputRef.current?.click()}
+              >
+                {uploading ? '⏳ Enviando…' : '📸 Escolher nova logo'}
+              </label>
+
+              {uploadErro    && <div className="cfg-logo-feedback erro">⚠️ {uploadErro}</div>}
+              {uploadSucesso && <div className="cfg-logo-feedback sucesso">✓ {uploadSucesso}</div>}
+
+              <div className="cfg-logo-requisitos">
+                <div className="cfg-logo-req-item">✅ Formatos aceitos: PNG, JPG, WEBP</div>
+                <div className="cfg-logo-req-item">✅ Tamanho máximo: 2MB</div>
+                <div className="cfg-logo-req-item">✅ Recomendado: imagem quadrada, fundo transparente</div>
+                <div className="cfg-logo-req-item">🗑️ A logo anterior é removida automaticamente</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ ABA TUTORIAIS ══ */}
+        {abaCfg === 'tutoriais' && (
+          <div className="cfg-aba-maxwidth">
             <AccordionGuia
               icone="🖨️"
               titulo="Impressora Térmica"
               aberto={abaImpressora !== null}
               onToggle={() => setAbaImpressora(abaImpressora === null ? 'windows' : null)}
             >
-              <p className="cfg-guia-intro">
-                Configure sua impressora para imprimir recibos de 80mm diretamente do navegador — sem instalar nenhum software extra.
-              </p>
-              <SubAbas
-                abas={[
-                  { key: 'windows', label: '🖥️ Windows' },
-                  { key: 'android', label: '📱 Android' },
-                  { key: 'dicas',   label: '💡 Dicas' },
-                ]}
-                ativa={abaImpressora}
-                onChange={setAbaImpressora}
-              />
-
-              {abaImpressora === 'windows' && (
-                <GuiaSteps steps={[
-                  { titulo: 'Instale o driver da impressora', desc: 'Conecte via USB e instale o driver. O Windows geralmente detecta automaticamente. Se não, baixe no site do fabricante (Elgin, Epson, Bematech).' },
-                  { titulo: 'Defina como impressora padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → botão direito na impressora → "Definir como impressora padrão".' },
-                  { titulo: 'Configure o papel para 80mm', desc: 'Botão direito → Preferências de impressão → Tamanho do papel: "Receipt 80mm" ou crie um tamanho personalizado de 80mm de largura.' },
-                  { titulo: 'Ajuste no Chrome', desc: 'Ao imprimir: selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, escala: 100%.' },
-                ]} dica="💡 Atalho: Win + I → Bluetooth e dispositivos → Impressoras e scanners" />
-              )}
-
-              {abaImpressora === 'android' && (
-                <GuiaSteps steps={[
-                  { titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora e ative o Bluetooth. Configurações → Bluetooth → pareie com a impressora (nome começa com "POS-" ou o modelo).' },
-                  { titulo: 'Instale o RawBT', desc: 'Baixe o app "RawBT" (gratuito) na Play Store. Ele funciona como serviço de impressão para o Chrome Android.' },
-                  { titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora Bluetooth → papel: 80mm. O app fica em segundo plano.' },
-                  { titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" como destino. O recibo vai direto para a impressora.' },
-                ]} dica="💡 Impressoras WiFi são ainda mais fáceis — conecte na mesma rede e o Chrome detecta automaticamente." />
-              )}
-
-              {abaImpressora === 'dicas' && (
-                <GuiaDicas dicas={[
-                  { icone: '⚡', titulo: 'Teste antes de usar',      desc: 'Faça uma venda de R$ 0,01 e clique em Imprimir para conferir o layout.' },
-                  { icone: '📐', titulo: 'Papel 80mm é o padrão',    desc: 'Se o recibo sair cortado, verifique o tamanho do papel nas preferências.' },
-                  { icone: '🌐', titulo: 'Use Google Chrome',         desc: 'Chrome tem o melhor suporte a impressão. Evite Firefox e Safari.' },
-                  { icone: '🔇', titulo: 'Impressão silenciosa',      desc: 'Configure como impressora padrão e ative impressão silenciosa em chrome://settings/content/print.' },
-                  { icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos como Elgin i9 ou Epson TM-T20 funcionam sem fio em celular e computador.' },
-                ]} />
-              )}
+              <p className="cfg-guia-intro">Configure sua impressora para imprimir recibos de 80mm diretamente do navegador.</p>
+              <SubAbas abas={[{ key: 'windows', label: '🖥️ Windows' },{ key: 'android', label: '📱 Android' },{ key: 'dicas', label: '💡 Dicas' }]} ativa={abaImpressora} onChange={setAbaImpressora} />
+              {abaImpressora === 'windows' && <GuiaSteps steps={[{ titulo: 'Instale o driver', desc: 'Conecte via USB. O Windows detecta automaticamente. Se não, baixe no site do fabricante (Elgin, Epson, Bematech).' },{ titulo: 'Defina como padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → botão direito → "Definir como impressora padrão".' },{ titulo: 'Configure papel 80mm', desc: 'Botão direito → Preferências → Tamanho: "Receipt 80mm" ou crie tamanho personalizado 80mm.' },{ titulo: 'Ajuste no Chrome', desc: 'Ao imprimir: selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, escala: 100%.' }]} dica="💡 Atalho: Win + I → Bluetooth e dispositivos → Impressoras e scanners" />}
+              {abaImpressora === 'android' && <GuiaSteps steps={[{ titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora, ative Bluetooth e pareie (nome começa com "POS-" ou modelo).' },{ titulo: 'Instale o RawBT', desc: 'Baixe "RawBT" (gratuito) na Play Store. Funciona como serviço de impressão para o Chrome.' },{ titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora → papel: 80mm. Fica em segundo plano.' },{ titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" como destino.' }]} dica="💡 Impressoras WiFi são mais fáceis — conecte na mesma rede e o Chrome detecta automaticamente." />}
+              {abaImpressora === 'dicas' && <GuiaDicas dicas={[{ icone: '⚡', titulo: 'Teste antes de usar', desc: 'Faça uma venda de R$ 0,01 e clique em Imprimir para conferir o layout.' },{ icone: '📐', titulo: 'Papel 80mm é o padrão', desc: 'Se o recibo sair cortado, verifique o tamanho nas preferências de impressão.' },{ icone: '🌐', titulo: 'Use Google Chrome', desc: 'Chrome tem o melhor suporte. Evite Firefox e Safari para impressoras térmicas.' },{ icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos como Elgin i9 ou Epson TM-T20 funcionam sem fio no celular e computador.' }]} />}
             </AccordionGuia>
 
-            {/* ── Accordeão: Bipador USB ── */}
             <AccordionGuia
               icone="📡"
               titulo="Bipador USB (Leitor de Código de Barras)"
               aberto={abaBipador !== null}
               onToggle={() => setAbaBipador(abaBipador === null ? 'como-funciona' : null)}
             >
-              <p className="cfg-guia-intro">
-                O bipador USB funciona automaticamente — não é necessário instalar nenhum software ou configurar nada no sistema.
-              </p>
-              <SubAbas
-                abas={[
-                  { key: 'como-funciona', label: '⚡ Como funciona' },
-                  { key: 'configurar',    label: '🔧 Configurar' },
-                  { key: 'dicas',         label: '💡 Dicas' },
-                ]}
-                ativa={abaBipador}
-                onChange={setAbaBipador}
-              />
-
+              <p className="cfg-guia-intro">O bipador USB funciona automaticamente — não é necessário instalar nenhum software ou configurar nada.</p>
+              <SubAbas abas={[{ key: 'como-funciona', label: '⚡ Como funciona' },{ key: 'configurar', label: '🔧 Configurar' },{ key: 'dicas', label: '💡 Dicas' }]} ativa={abaBipador} onChange={setAbaBipador} />
               {abaBipador === 'como-funciona' && (
                 <div className="cfg-guia-conteudo">
                   <div className="cfg-guia-destaque">
                     <span className="cfg-guia-destaque-icone">🎯</span>
-                    <div>
-                      <div className="cfg-guia-destaque-titulo">Plug & Play — só conectar e usar</div>
-                      <div className="cfg-guia-destaque-desc">O bipador se comporta como um teclado USB. Quando você bipa um produto, ele "digita" o código de barras no campo de busca do PDV automaticamente.</div>
-                    </div>
+                    <div><div className="cfg-guia-destaque-titulo">Plug & Play — só conectar e usar</div><div className="cfg-guia-destaque-desc">O bipador se comporta como teclado USB. Quando você bipa, ele "digita" o código no campo de busca do PDV automaticamente.</div></div>
                   </div>
-                  <GuiaSteps steps={[
-                    { titulo: 'Conecte o bipador na porta USB', desc: 'O sistema operacional reconhece automaticamente como teclado. Nenhum driver adicional é necessário na maioria dos modelos.' },
-                    { titulo: 'Abra o módulo PDV (Caixa)', desc: 'O cursor estará automaticamente no campo de busca. O PDV sempre volta o foco para esse campo após cada ação.' },
-                    { titulo: 'Aponte e bipe o produto', desc: 'O bipador vai "digitar" o código e pressionar Enter automaticamente. O sistema detecta a velocidade de digitação do bipador e busca o produto.' },
-                    { titulo: 'Produto selecionado automaticamente', desc: 'Se o código corresponder a exatamente 1 produto, ele é adicionado ao carrinho imediatamente. Se houver múltiplos resultados, a lista é exibida.' },
-                  ]} />
+                  <GuiaSteps steps={[{ titulo: 'Conecte o bipador USB', desc: 'O SO reconhece como teclado automaticamente. Nenhum driver necessário na maioria dos modelos.' },{ titulo: 'Abra o PDV (Caixa)', desc: 'O cursor já estará no campo de busca. O PDV sempre retorna o foco para esse campo após cada ação.' },{ titulo: 'Aponte e bipe o produto', desc: 'O bipador digita o código e pressiona Enter. O sistema detecta a velocidade e busca automaticamente.' },{ titulo: 'Produto selecionado', desc: 'Se 1 resultado: adicionado ao carrinho automaticamente. Se múltiplos: lista exibida para escolha.' }]} />
                 </div>
               )}
-
-              {abaBipador === 'configurar' && (
-                <div className="cfg-guia-conteudo">
-                  <GuiaSteps steps={[
-                    { titulo: 'Cadastre o código de barras no produto', desc: 'Vá em Estoque → edite o produto → campo "Código de barras". Digite manualmente, bipe direto no campo com o bipador USB, ou use o botão 📷 para escanear pela câmera.' },
-                    { titulo: 'Teste no PDV', desc: 'Com o PDV aberto, bipe o produto. Se o código estiver cadastrado, o produto aparece na lista. Se não aparecer, verifique se o código foi salvo corretamente.' },
-                    { titulo: 'Bipador não lê?', desc: 'Alguns bipadores precisam de configuração para enviar Enter após o código. Consulte o manual do modelo — geralmente é bipar um QR Code especial que vem no manual para ativar o "modo Enter".' },
-                  ]} dica="💡 O campo de código de barras no cadastro de produto também aceita leitura direta do bipador — basta clicar no campo e bipar." />
-                </div>
-              )}
-
-              {abaBipador === 'dicas' && (
-                <GuiaDicas dicas={[
-                  { icone: '🔌', titulo: 'USB é o mais confiável',        desc: 'Bipadores USB funcionam em qualquer computador sem configuração. Bluetooth pode ter latência e desconexões.' },
-                  { icone: '📏', titulo: 'Distância ideal de leitura',    desc: 'Mantenha o bipador a 5–20cm do código. Muito perto ou muito longe pode dificultar a leitura.' },
-                  { icone: '💡', titulo: 'Iluminação ajuda',              desc: 'Em ambientes escuros, alguns bipadores têm dificuldade com códigos impressos em superfícies brilhantes. Use o bipador com luz de mira.' },
-                  { icone: '🏷️', titulo: 'Código não cadastrado',        desc: 'Se o bipador ler mas não encontrar o produto, o PDV mostrará "Código não encontrado". Cadastre o produto no Estoque com aquele código.' },
-                  { icone: '⚡', titulo: 'Leitura instantânea',          desc: 'O sistema detecta que o código veio do bipador pela velocidade de digitação (< 50ms entre teclas) e finiza a busca automaticamente.' },
-                  { icone: '🔁', titulo: 'Mesmo produto várias vezes',   desc: 'Bipe o mesmo código várias vezes para adicionar múltiplas unidades. Cada bipada soma +1 ao carrinho.' },
-                ]} />
-              )}
+              {abaBipador === 'configurar' && <GuiaSteps steps={[{ titulo: 'Cadastre o código de barras', desc: 'Estoque → edite o produto → "Código de barras". Digite, bipe direto no campo, ou use 📷 para escanear pela câmera.' },{ titulo: 'Teste no PDV', desc: 'Com o PDV aberto, bipe o produto. Se cadastrado, o produto aparece. Se não, verifique se o código foi salvo.' },{ titulo: 'Bipador não funciona?', desc: 'Alguns modelos precisam de configuração para enviar Enter. Consulte o manual — geralmente é bipar um QR Code especial.' }]} dica="💡 O campo de código de barras no Estoque também aceita leitura direta do bipador — basta clicar no campo e bipar." />}
+              {abaBipador === 'dicas' && <GuiaDicas dicas={[{ icone: '🔌', titulo: 'USB é o mais confiável', desc: 'Funciona em qualquer computador sem configuração. Bluetooth pode ter latência.' },{ icone: '📏', titulo: 'Distância ideal: 5–20cm', desc: 'Muito perto ou longe dificulta a leitura. Ajuste conforme o modelo.' },{ icone: '🏷️', titulo: 'Código não encontrado', desc: 'PDV mostrará "Código não encontrado". Cadastre o produto no Estoque com aquele código.' },{ icone: '⚡', titulo: 'Leitura instantânea', desc: 'O sistema detecta o bipador pela velocidade de digitação (< 50ms entre teclas).' },{ icone: '🔁', titulo: 'Mesmo produto várias vezes', desc: 'Bipe várias vezes para adicionar múltiplas unidades — cada bipada soma +1.' }]} />}
             </AccordionGuia>
 
-            {/* ── Accordeão: Câmera ── */}
             <AccordionGuia
               icone="📷"
               titulo="Câmera (Leitura pelo Computador ou Notebook)"
               aberto={abaCamera !== null}
               onToggle={() => setAbaCamera(abaCamera === null ? 'pdv' : null)}
             >
-              <p className="cfg-guia-intro">
-                Use a câmera do computador, notebook ou tablet para ler códigos de barras diretamente no PDV e no cadastro de produtos — sem precisar de um bipador físico.
-              </p>
-              <SubAbas
-                abas={[
-                  { key: 'pdv',      label: '🛒 No PDV' },
-                  { key: 'estoque',  label: '📦 No Estoque' },
-                  { key: 'dicas',    label: '💡 Dicas' },
-                ]}
-                ativa={abaCamera}
-                onChange={setAbaCamera}
-              />
-
+              <p className="cfg-guia-intro">Use a câmera do computador ou notebook para ler códigos de barras no PDV e no cadastro de produtos.</p>
+              <SubAbas abas={[{ key: 'pdv', label: '🛒 No PDV' },{ key: 'estoque', label: '📦 No Estoque' },{ key: 'dicas', label: '💡 Dicas' }]} ativa={abaCamera} onChange={setAbaCamera} />
               {abaCamera === 'pdv' && (
                 <div className="cfg-guia-conteudo">
                   <div className="cfg-guia-destaque">
                     <span className="cfg-guia-destaque-icone">📷</span>
-                    <div>
-                      <div className="cfg-guia-destaque-titulo">Botão 📷 ao lado do campo de busca</div>
-                      <div className="cfg-guia-destaque-desc">No PDV, há um botão de câmera ao lado do campo de busca. Clique nele para abrir o leitor de câmera.</div>
-                    </div>
+                    <div><div className="cfg-guia-destaque-titulo">Botão 📷 ao lado do campo de busca</div><div className="cfg-guia-destaque-desc">No PDV, clique no botão de câmera ao lado do campo de busca para abrir o leitor.</div></div>
                   </div>
-                  <GuiaSteps steps={[
-                    { titulo: 'Clique no botão 📷 no PDV', desc: 'O botão fica ao lado direito do campo de busca de produtos. Uma janela com o feed da câmera será aberta.' },
-                    { titulo: 'Permita o acesso à câmera', desc: 'O navegador pedirá permissão de acesso à câmera na primeira vez. Clique em "Permitir". Essa permissão fica salva para as próximas vezes.' },
-                    { titulo: 'Aponte para o código de barras', desc: 'Centralize o código de barras na área de mira (cantos verdes). A câmera detecta automaticamente e fecha o modal ao ler.' },
-                    { titulo: 'Produto buscado automaticamente', desc: 'Após a leitura, o sistema busca o produto pelo código detectado — mesmo fluxo do bipador USB.' },
-                  ]} dica="💡 Para melhor leitura: boa iluminação, código limpo e centralizado na tela. Distância ideal: 15–30cm." />
+                  <GuiaSteps steps={[{ titulo: 'Clique no botão 📷 no PDV', desc: 'Fica ao lado direito do campo de busca. Uma janela com o feed da câmera será aberta.' },{ titulo: 'Permita o acesso à câmera', desc: 'O navegador pedirá permissão na primeira vez. Clique em "Permitir" — fica salva para as próximas.' },{ titulo: 'Aponte para o código', desc: 'Centralize na área de mira (cantos verdes). A câmera detecta e fecha o modal automaticamente.' },{ titulo: 'Produto buscado', desc: 'O sistema busca pelo código detectado — mesmo fluxo do bipador USB.' }]} dica="💡 Boa iluminação e código centralizado. Distância ideal: 15–30cm." />
                 </div>
               )}
-
-              {abaCamera === 'estoque' && (
-                <div className="cfg-guia-conteudo">
-                  <GuiaSteps steps={[
-                    { titulo: 'Edite ou crie um produto no Estoque', desc: 'Vá em Estoque → clique em + Novo produto ou edite um existente.' },
-                    { titulo: 'Localize o campo "Código de barras"', desc: 'No formulário do produto, o campo de código de barras tem um botão 📷 ao lado.' },
-                    { titulo: 'Clique no botão 📷 e escaneie', desc: 'O modal da câmera abre. Aponte para o código de barras do produto físico e o código será preenchido automaticamente no campo.' },
-                    { titulo: 'Salve o produto', desc: 'Com o código preenchido, confira os demais dados e clique em Salvar. O produto agora pode ser buscado pelo bipador ou câmera no PDV.' },
-                  ]} dica="💡 Essa é a forma mais rápida de cadastrar o código de barras de vários produtos — sem digitar nada." />
-                </div>
-              )}
-
-              {abaCamera === 'dicas' && (
-                <GuiaDicas dicas={[
-                  { icone: '💡', titulo: 'Iluminação é essencial',         desc: 'Câmeras de notebook leem melhor com boa luz. Evite reflexos diretos no código de barras.' },
-                  { icone: '📐', titulo: 'Distância ideal: 15–30cm',       desc: 'Muito perto pode desfocar. Muito longe pode perder detalhes. Ajuste até a linha laser ficar sobre o código.' },
-                  { icone: '🔄', titulo: 'Botão de trocar câmera',         desc: 'Se o dispositivo tiver mais de uma câmera, há um botão 🔄 para alternar entre elas.' },
-                  { icone: '🖥️', titulo: 'Melhor no notebook/desktop',    desc: 'A câmera traseira do celular é melhor para leitura, mas em computadores a câmera frontal funciona bem para códigos impressos.' },
-                  { icone: '❌', titulo: 'Câmera não abre?',               desc: 'Verifique se o navegador tem permissão de câmera: clique no ícone de cadeado na barra de endereço → Câmera → Permitir.' },
-                  { icone: '🔌', titulo: 'Para uso intenso: use bipador',  desc: 'Para caixas com alto volume, um bipador USB físico é mais rápido e confiável. A câmera é ideal para uso esporádico.' },
-                ]} />
-              )}
+              {abaCamera === 'estoque' && <GuiaSteps steps={[{ titulo: 'Edite ou crie um produto', desc: 'Vá em Estoque → + Novo produto ou edite um existente.' },{ titulo: 'Campo "Código de barras"', desc: 'O campo tem um botão 📷 ao lado.' },{ titulo: 'Clique em 📷 e escaneie', desc: 'O modal abre. Aponte para o código do produto físico — preenchido automaticamente.' },{ titulo: 'Salve o produto', desc: 'Com o código preenchido, clique em Salvar. Produto disponível para busca no PDV.' }]} dica="💡 Forma mais rápida de cadastrar código de barras — sem digitar nada." />}
+              {abaCamera === 'dicas' && <GuiaDicas dicas={[{ icone: '💡', titulo: 'Iluminação é essencial', desc: 'Câmeras de notebook leem melhor com boa luz. Evite reflexos no código.' },{ icone: '📐', titulo: 'Distância: 15–30cm', desc: 'Muito perto desenfoca. Muito longe perde detalhes.' },{ icone: '🔄', titulo: 'Trocar câmera', desc: 'Se tiver mais de uma câmera, o botão 🔄 alterna entre elas.' },{ icone: '❌', titulo: 'Câmera não abre?', desc: 'Ícone de cadeado na barra → Câmera → Permitir.' },{ icone: '🔌', titulo: 'Para uso intenso: bipador', desc: 'Para alto volume, bipador USB é mais rápido e confiável.' }]} />}
             </AccordionGuia>
-
           </div>
+        )}
 
-          {/* ── Coluna direita: logo ── */}
-          <div className="cfg-logo-section">
-            <span className="cfg-logo-titulo">🖼 Logo</span>
-
-            <div className="cfg-logo-preview">
-              {(dados?.logo_url || logoUrlProp) ? (
-                <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" />
-              ) : (
-                <div className="cfg-logo-preview-vazio">
-                  <span>🖼</span>
-                  <p>Sem logo</p>
-                </div>
-              )}
-            </div>
-
-            {/* Input file oculto */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="cfg-logo-file-input"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={uploading}
-              onChange={handleUploadLogo}
-            />
-
-            <label
-              className={`cfg-btn-upload${uploading ? ' uploading' : ''}`}
-              onClick={() => !uploading && fileInputRef.current?.click()}
-            >
-              {uploading ? '⏳ Enviando…' : '📸 Alterar logo'}
-            </label>
-
-            {uploadErro && (
-              <div className="cfg-logo-feedback erro">⚠️ {uploadErro}</div>
-            )}
-            {uploadSucesso && (
-              <div className="cfg-logo-feedback sucesso">✓ {uploadSucesso}</div>
-            )}
-
-            <span className="cfg-logo-hint">
-              PNG, JPG ou WEBP · máx. 2MB<br />
-              A logo anterior é removida automaticamente.
-            </span>
-          </div>
-
-        </div>
       </div>
-
     </div>
   );
 }
