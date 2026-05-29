@@ -600,7 +600,6 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 { key: 'total_fiado_recebido',label: '📋 Fiado Recebido', info: 'Quitação de dívidas' },
                 { key: 'total_dinheiro',      label: '💵 Dinheiro' },
                 { key: 'total_pix',           label: '📱 Pix' },
-                { key: 'total_cartao',        label: '💳 Cartão' },
               ].map(c => (
                 <div key={c.key} className={`fin-resumo-card${c.destaque ? ' destaque' : ''}`}>
                   <span className="fin-resumo-card-titulo">{c.label}</span>
@@ -611,6 +610,28 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   }
                 </div>
               ))}
+
+              {/* Card Cartão com breakdown débito/crédito */}
+              <div className="fin-resumo-card fin-resumo-card--cartao">
+                <span className="fin-resumo-card-titulo">💳 Cartão</span>
+                {loadingResumo
+                  ? <div className="fin-card-spinner" />
+                  : <>
+                      <span className="fin-resumo-card-valor">{fmt(resumo?.total_cartao)}</span>
+                      <div className="fin-cartao-breakdown">
+                        <div className="fin-cartao-breakdown-item">
+                          <span className="fin-cartao-breakdown-label">Débito</span>
+                          <span className="fin-cartao-breakdown-valor">{fmt(resumo?.total_debito)}</span>
+                        </div>
+                        <div className="fin-cartao-breakdown-divider" />
+                        <div className="fin-cartao-breakdown-item">
+                          <span className="fin-cartao-breakdown-label">Crédito</span>
+                          <span className="fin-cartao-breakdown-valor">{fmt(resumo?.total_credito)}</span>
+                        </div>
+                      </div>
+                    </>
+                }
+              </div>
             </div>
 
             {/* ── Pendências ── */}
