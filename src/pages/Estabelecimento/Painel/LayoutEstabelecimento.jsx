@@ -95,6 +95,14 @@ const Icons = {
       <line x1="22" y1="14" x2="16" y2="14"/>
     </svg>
   ),
+  Inventario: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+      <rect x="9" y="3" width="6" height="4" rx="2"/>
+      <line x1="9"  y1="12" x2="15" y2="12"/>
+      <line x1="9"  y1="16" x2="13" y2="16"/>
+    </svg>
+  ),
   Close: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6"  x2="6"  y2="18"/>
@@ -121,6 +129,10 @@ const ABA_OPERADORES = {
   key: "operadores", label: "Operadores", icon: Icons.Operadores, shortcut: null,
 };
 
+const ABA_INVENTARIO = {
+  key: "inventario", label: "Inventário", icon: Icons.Inventario, shortcut: null,
+};
+
 const SIDEBAR_KEY = "est_sidebar_collapsed";
 
 /* ════════════════════════════════════════════════════════════ */
@@ -139,7 +151,7 @@ export default function LayoutEstabelecimento({
   const isMerchant = profile?.role === 'merchant';
 
   const ABAS = (() => {
-    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_OPERADORES];
+    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_OPERADORES];
     // Operador: só mostra abas cujo key está nas permissões
     return ABAS_BASE.filter(aba => permissoes.includes(aba.key));
   })();
@@ -265,7 +277,7 @@ export default function LayoutEstabelecimento({
           {ABAS.map(aba => (
             <React.Fragment key={aba.key}>
               {/* Divisor antes de Relatórios e Operadores */}
-              {(aba.key === 'relatorios' || aba.key === 'operadores') && (
+              {(aba.key === 'relatorios' || aba.key === 'inventario' || aba.key === 'operadores') && (
                 <div className="est-nav-divider" />
               )}
               <li className={`est-nav-item${abaAtiva === aba.key ? " active" : ""}`}>

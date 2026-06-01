@@ -12,6 +12,7 @@ import Financeiro    from "./Financeiro/Financeiro";
 import Configuracoes from "./Configuracoes/Configuracoes";
 import OperadoresEstabelecimento from "./Operadores/OperadoresEstabelecimento";
 import Relatorios    from "./Relatorios/Relatorios";
+import Inventario    from "./Inventario/Inventario";
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -141,6 +142,14 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             onLogoAtualizada={handleLogoAtualizada}
             logoUrl={logoUrl}
+          />
+        );
+
+      case "inventario":
+        return (
+          <Inventario
+            estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
 
