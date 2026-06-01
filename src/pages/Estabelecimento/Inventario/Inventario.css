@@ -832,3 +832,25 @@
   .inv-tipos-ajuste { flex-direction: column; }
   .inv-tipo-ajuste-btn { text-align: left; }
 }
+
+/* ── Categoria no card de inventário ── */
+.inv-badge-categoria {
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  border: 1px solid var(--est-border-accent);
+}
+
+/* ── Coluna categoria nas movimentações ── */
+.inv-mov-col-cat {
+  width: 110px;
+  flex-shrink: 0;
+  font-size: calc(0.72rem * var(--inv-font-scale, 1));
+  color: var(--est-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .inv-mov-col-cat { display: none; }
+}

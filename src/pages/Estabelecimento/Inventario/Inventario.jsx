@@ -238,7 +238,9 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
           <div>
             <div className="inv-contagem-nome">{inventario.nome}</div>
             <div className="inv-contagem-meta">
-              {TIPO_LABEL[inventario.tipo]} · Iniciado por {inventario.usuario_nome} · {fmtData(inventario.iniciado_em)}
+              {TIPO_LABEL[inventario.tipo]}
+              {inventario.tipo === 'por_categoria' && inventario.categoria_nome && ` — ${inventario.categoria_nome}`}
+              {' · '}Iniciado por {inventario.usuario_nome} · {fmtData(inventario.iniciado_em)}
             </div>
           </div>
           <div className="inv-contagem-header-acoes">
@@ -423,6 +425,11 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
    ABA CONTAGENS — lista e gestão de inventários
 ════════════════════════════════════════════════════════════ */
 function AbaContagens({ estabelecimentoId, categorias }) {
+  // Helper: resolve nome da categoria pelo id
+  function nomeCat(catId) {
+    if (!catId) return null;
+    return categorias.find(c => c.id === catId)?.nome || null;
+  }
   const [inventarios,     setInventarios]     = useState([]);
   const [total,           setTotal]           = useState(0);
   const [loading,         setLoading]         = useState(true);
@@ -554,6 +561,9 @@ function AbaContagens({ estabelecimentoId, categorias }) {
                 <div className="inv-card-info">
                   <span className={`inv-badge ${STATUS_CLASSE[inv.status]}`}>{STATUS_LABEL[inv.status]}</span>
                   <span className="inv-badge inv-badge-tipo">{TIPO_LABEL[inv.tipo]}</span>
+                  {inv.tipo === 'por_categoria' && nomeCat(inv.categoria_id) && (
+                    <span className="inv-badge inv-badge-categoria">🗂️ {nomeCat(inv.categoria_id)}</span>
+                  )}
                 </div>
                 <div className="inv-card-acoes">
                   {inv.status === 'em_andamento' && (
@@ -571,6 +581,9 @@ function AbaContagens({ estabelecimentoId, categorias }) {
                 <span>👤 {inv.usuario_nome}</span>
                 <span>📅 {fmtData(inv.iniciado_em)}</span>
                 {inv.finalizado_em && <span>✓ {fmtData(inv.finalizado_em)}</span>}
+                {inv.tipo === 'por_categoria' && nomeCat(inv.categoria_id) && (
+                  <span>🗂️ {nomeCat(inv.categoria_id)}</span>
+                )}
               </div>
               <div className="inv-card-stats">
                 <div className="inv-stat">
@@ -657,6 +670,7 @@ function AbaMovimentacoes({ estabelecimentoId }) {
       'Data/Hora':          fmtData(m.created_at),
       'Produto':            m.produto_nome,
       'Marca':              m.produto_marca || '',
+      'Categoria':          m.categoria_nome || '',
       'Tipo':               TIPO_MOV_LABEL[m.tipo] || m.tipo,
       'Qtd. Anterior':      parseFloat(m.quantidade_anterior),
       'Movimentação':       parseFloat(m.quantidade_movimentacao),
@@ -728,6 +742,7 @@ function AbaMovimentacoes({ estabelecimentoId }) {
           <div className="inv-mov-tabela-header">
             <span className="inv-mov-col-data">Data/Hora</span>
             <span className="inv-mov-col-produto">Produto</span>
+            <span className="inv-mov-col-cat">Categoria</span>
             <span className="inv-mov-col-tipo">Tipo</span>
             <span className="inv-mov-col-antes">Antes</span>
             <span className="inv-mov-col-mov">Movimentação</span>
@@ -743,6 +758,7 @@ function AbaMovimentacoes({ estabelecimentoId }) {
                   <span className="inv-mov-produto-nome">{m.produto_nome}</span>
                   {m.produto_marca && <span className="inv-mov-produto-marca"> · {m.produto_marca}</span>}
                 </span>
+                <span className="inv-mov-col-cat">{m.categoria_nome || <span style={{color:'var(--est-text-muted)'}}>—</span>}</span>
                 <span className="inv-mov-col-tipo">
                   <span className={`inv-badge inv-badge-mov-${TIPO_MOV_COR[m.tipo] || 'teal'}`}>{TIPO_MOV_LABEL[m.tipo] || m.tipo}</span>
                 </span>
@@ -1018,8 +1034,9 @@ export default function Inventario({ estabelecimentoId }) {
 
   function changeFontScale(delta) {
     setFontScale(prev => {
-      const next = Math.min(1.4, Math.max(0.85, parseFloat((prev + delta).toFixed(1))));
-      localStorage.setItem('inv-font-scale', next);
+      // Multiplicar por 100, arredondar e dividir evita erros de ponto flutuante
+      const next = Math.min(1.4, Math.max(0.85, Math.round((prev + delta) * 100) / 100));
+      localStorage.setItem('inv-font-scale', String(next));
       return next;
     });
   }
