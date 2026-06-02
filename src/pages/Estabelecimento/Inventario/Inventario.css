@@ -924,3 +924,57 @@
   border-top-right-radius: 0;
   border-top: none;
 }
+
+/* ── Input de contagem com badge de unidade ── */
+.inv-item-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.inv-item-input-wrap .inv-item-input {
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.inv-item-input-wrap .inv-item-input:focus {
+  border-right: none;
+  z-index: 1;
+}
+
+.inv-item-input-unidade {
+  padding: 7px 9px;
+  border: 1px solid var(--est-border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  background: var(--est-sidebar);
+  color: var(--est-text-muted);
+  font-size: calc(0.72rem * var(--inv-font-scale, 1));
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: lowercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.6;
+  transition: border-color 0.18s;
+}
+
+/* Quando o input está em foco, a unidade acompanha a borda */
+.inv-item-input-wrap:focus-within .inv-item-input {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 2px var(--est-accent-dim);
+}
+.inv-item-input-wrap:focus-within .inv-item-input-unidade {
+  border-color: var(--est-border-accent);
+}
+
+.inv-item-saving {
+  position: absolute;
+  right: -22px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+}

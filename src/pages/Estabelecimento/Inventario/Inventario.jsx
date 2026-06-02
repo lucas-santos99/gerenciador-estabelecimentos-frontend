@@ -322,28 +322,30 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
                 <span className="inv-item-sistema">{fmtQ(item.estoque_sistema, item.unidade_medida)}</span>
               </div>
               <div className="inv-col-contado">
-                <input
-                  ref={el => inputRefs.current[item.id] = el}
-                  className="inv-item-input"
-                  type="number"
-                  min="0"
-                  step={item.unidade_medida === 'kg' ? '0.001' : '1'}
-                  value={val}
-                  onChange={e => setValores(p => ({ ...p, [item.id]: e.target.value }))}
-                  onBlur={() => salvarItem(item)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      salvarItem(item);
-                      // Focar no próximo input
-                      const idx = itensFiltrados.findIndex(i => i.id === item.id);
-                      const prox = itensFiltrados[idx + 1];
-                      if (prox) inputRefs.current[prox.id]?.focus();
-                    }
-                  }}
-                  placeholder={`0${item.unidade_medida === 'kg' ? '.000' : ''}`}
-                />
-                {salvando[item.id] && <span className="inv-item-saving">⏳</span>}
+                <div className="inv-item-input-wrap">
+                  <input
+                    ref={el => inputRefs.current[item.id] = el}
+                    className="inv-item-input"
+                    type="number"
+                    min="0"
+                    step={item.unidade_medida === 'kg' ? '0.001' : '1'}
+                    value={val}
+                    onChange={e => setValores(p => ({ ...p, [item.id]: e.target.value }))}
+                    onBlur={() => salvarItem(item)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        salvarItem(item);
+                        const idx = itensFiltrados.findIndex(i => i.id === item.id);
+                        const prox = itensFiltrados[idx + 1];
+                        if (prox) inputRefs.current[prox.id]?.focus();
+                      }
+                    }}
+                    placeholder={item.unidade_medida === 'kg' ? '0.000' : '0'}
+                  />
+                  <span className="inv-item-input-unidade">{item.unidade_medida}</span>
+                  {salvando[item.id] && <span className="inv-item-saving">⏳</span>}
+                </div>
               </div>
               <div className={`inv-col-diferenca ${difClass(difLocal ?? item.diferenca)}`}>
                 {(difLocal !== null || item.diferenca !== null) ? (
