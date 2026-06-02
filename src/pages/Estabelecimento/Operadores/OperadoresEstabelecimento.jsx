@@ -60,6 +60,14 @@ const MODULOS = [
       { id: 'config_editar_logo',  label: 'Alterar logo' },
     ],
   },
+  {
+    id: 'inventario', label: 'Inventário', icone: '📦', desc: 'Contagem física e movimentações de estoque',
+    acoes: [
+      { id: 'inventario_contar',    label: 'Realizar contagens (inventário físico)' },
+      { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque' },
+      { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque' },
+    ],
+  },
 ];
 
 const STATUS_LABEL = { ativo: 'Ativo', inativo: 'Inativo' };

@@ -77,6 +77,14 @@ export default function DetalhesOperador() {
         { id: 'config_editar_logo',  label: 'Alterar logo' },
       ],
     },
+    {
+      id: 'inventario', label: 'Inventário', icone: '📦',
+      acoes: [
+        { id: 'inventario_contar',    label: 'Realizar contagens (inventário físico)' },
+        { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque' },
+        { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque' },
+      ],
+    },
   ];
 
   async function carregar() {
