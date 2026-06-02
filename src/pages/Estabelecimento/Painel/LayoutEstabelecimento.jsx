@@ -153,7 +153,9 @@ export default function LayoutEstabelecimento({
   const ABAS = (() => {
     if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_OPERADORES];
     // Operador: só mostra abas cujo key está nas permissões
-    return ABAS_BASE.filter(aba => permissoes.includes(aba.key));
+    // Incluir abas extras (Relatórios, Inventário) no pool — operador vê se tiver permissão
+    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO];
+    return TODAS.filter(aba => permissoes.includes(aba.key));
   })();
 
   /* ── tema ─────────────────────────────────────────────────── */
