@@ -639,12 +639,12 @@ function AbaContagens({ estabelecimentoId, categorias }) {
 /* ════════════════════════════════════════════════════════════
    ABA MOVIMENTAÇÕES
 ════════════════════════════════════════════════════════════ */
-function AbaMovimentacoes({ estabelecimentoId }) {
+function AbaMovimentacoes({ estabelecimentoId, categorias }) {
   const [movs,    setMovs]    = useState([]);
   const [total,   setTotal]   = useState(0);
   const [loading, setLoading] = useState(false);
   const [pagina,  setPagina]  = useState(0);
-  const [filtros, setFiltros] = useState({ tipo: '', produto: '', data_inicio: hoje(), data_fim: hoje() });
+  const [filtros, setFiltros] = useState({ tipo: '', produto: '', data_inicio: hoje(), data_fim: hoje(), categoria: '' });
   const [busca,   setBusca]   = useState('');
   const LIMIT = 50;
 
@@ -656,6 +656,7 @@ function AbaMovimentacoes({ estabelecimentoId }) {
       if (busca.trim())        p.append('produto', busca.trim());
       if (filtros.data_inicio) p.append('data_inicio', filtros.data_inicio);
       if (filtros.data_fim)    p.append('data_fim', filtros.data_fim);
+      if (filtros.categoria)   p.append('categoria', filtros.categoria);
       const resp = await apiFetch(`/api/inventario/movimentacoes/listar?${p}`);
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error);
@@ -721,6 +722,19 @@ function AbaMovimentacoes({ estabelecimentoId }) {
           <select className="inv-select" value={filtros.tipo} onChange={e => setFiltros(p => ({ ...p, tipo: e.target.value }))}>
             <option value="">Todos os tipos</option>
             {Object.entries(TIPO_MOV_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+        <div className="inv-filtro-group">
+          <label className="inv-label">Categoria</label>
+          <select
+            className="inv-select inv-select-filtro"
+            value={filtros.categoria}
+            onChange={e => setFiltros(p => ({ ...p, categoria: e.target.value }))}
+          >
+            <option value="">Todas as categorias</option>
+            {categorias.map(c => (
+              <option key={c.id} value={c.nome}>{c.nome}</option>
+            ))}
           </select>
         </div>
         <div className="inv-filtro-group">
@@ -1111,7 +1125,7 @@ export default function Inventario({ estabelecimentoId }) {
 
       <div className="inv-body">
         {abaAtiva === 'contagens'     && <AbaContagens    estabelecimentoId={estabelecimentoId} categorias={categorias} />}
-        {abaAtiva === 'movimentacoes' && <AbaMovimentacoes estabelecimentoId={estabelecimentoId} />}
+        {abaAtiva === 'movimentacoes' && <AbaMovimentacoes estabelecimentoId={estabelecimentoId} categorias={categorias} />}
         {abaAtiva === 'ajuste'        && <AbaAjusteRapido  estabelecimentoId={estabelecimentoId} />}
       </div>
     </div>

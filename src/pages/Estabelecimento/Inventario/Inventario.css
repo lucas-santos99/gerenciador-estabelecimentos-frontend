@@ -995,3 +995,11 @@
   font-size: calc(0.9rem * var(--inv-font-scale, 1));
   line-height: 1;
 }
+
+/* ── Select compacto para filtros ── */
+.inv-select-filtro {
+  padding: 8px 11px;
+  height: 38px;
+  font-size: calc(0.82rem * var(--inv-font-scale, 1));
+  min-width: 160px;
+}
