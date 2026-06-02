@@ -739,39 +739,43 @@ function AbaMovimentacoes({ estabelecimentoId }) {
         </div>
       ) : (
         <>
-          <div className="inv-mov-tabela-header">
-            <span className="inv-mov-col-data">Data/Hora</span>
-            <span className="inv-mov-col-produto">Produto</span>
-            <span className="inv-mov-col-cat">Categoria</span>
-            <span className="inv-mov-col-tipo">Tipo</span>
-            <span className="inv-mov-col-antes">Antes</span>
-            <span className="inv-mov-col-mov">Movimentação</span>
-            <span className="inv-mov-col-depois">Depois</span>
-            <span className="inv-mov-col-motivo">Motivo</span>
-            <span className="inv-mov-col-user">Usuário</span>
-          </div>
-          <div className="inv-mov-lista">
-            {movs.map(m => (
-              <div key={m.id} className="inv-mov-row">
-                <span className="inv-mov-col-data">{fmtData(m.created_at)}</span>
-                <span className="inv-mov-col-produto">
-                  <span className="inv-mov-produto-nome">{m.produto_nome}</span>
-                  {m.produto_marca && <span className="inv-mov-produto-marca"> · {m.produto_marca}</span>}
-                </span>
-                <span className="inv-mov-col-cat">{m.categoria_nome || <span style={{color:'var(--est-text-muted)'}}>—</span>}</span>
-                <span className="inv-mov-col-tipo">
-                  <span className={`inv-badge inv-badge-mov-${TIPO_MOV_COR[m.tipo] || 'teal'}`}>{TIPO_MOV_LABEL[m.tipo] || m.tipo}</span>
-                </span>
-                <span className="inv-mov-col-antes inv-num">{fmtQ(m.quantidade_anterior, m.unidade_medida)}</span>
-                <span className={`inv-mov-col-mov inv-num ${['entrada','devolucao'].includes(m.tipo) ? 'inv-dif-mais' : 'inv-dif-menos'}`}>
-                  {['entrada','devolucao'].includes(m.tipo) ? '+' : ['correcao','inventario_ajuste'].includes(m.tipo) ? '±' : '-'}
-                  {fmtQ(m.quantidade_movimentacao, m.unidade_medida)}
-                </span>
-                <span className="inv-mov-col-depois inv-num">{fmtQ(m.quantidade_posterior, m.unidade_medida)}</span>
-                <span className="inv-mov-col-motivo">{m.motivo || '—'}</span>
-                <span className="inv-mov-col-user">{m.usuario_nome || '—'}</span>
+          <div className="inv-mov-tabela-wrap">
+            <div className="inv-mov-tabela-inner">
+              <div className="inv-mov-tabela-header">
+                <span className="inv-mov-col-data">Data/Hora</span>
+                <span className="inv-mov-col-produto">Produto</span>
+                <span className="inv-mov-col-cat">Categoria</span>
+                <span className="inv-mov-col-tipo">Tipo</span>
+                <span className="inv-mov-col-antes">Antes</span>
+                <span className="inv-mov-col-mov">Movimentação</span>
+                <span className="inv-mov-col-depois">Depois</span>
+                <span className="inv-mov-col-motivo">Motivo</span>
+                <span className="inv-mov-col-user">Usuário</span>
               </div>
-            ))}
+              <div className="inv-mov-lista">
+                {movs.map(m => (
+                  <div key={m.id} className="inv-mov-row">
+                    <span className="inv-mov-col-data">{fmtData(m.created_at)}</span>
+                    <span className="inv-mov-col-produto">
+                      <span className="inv-mov-produto-nome">{m.produto_nome}</span>
+                      {m.produto_marca && <span className="inv-mov-produto-marca">{m.produto_marca}</span>}
+                    </span>
+                    <span className="inv-mov-col-cat">{m.categoria_nome || '—'}</span>
+                    <span className="inv-mov-col-tipo">
+                      <span className={`inv-badge inv-badge-mov-${TIPO_MOV_COR[m.tipo] || 'teal'}`}>{TIPO_MOV_LABEL[m.tipo] || m.tipo}</span>
+                    </span>
+                    <span className="inv-mov-col-antes inv-num">{fmtQ(m.quantidade_anterior, m.unidade_medida)}</span>
+                    <span className={`inv-mov-col-mov inv-num ${['entrada','devolucao'].includes(m.tipo) ? 'inv-dif-mais' : 'inv-dif-menos'}`}>
+                      {['entrada','devolucao'].includes(m.tipo) ? '+' : ['correcao','inventario_ajuste'].includes(m.tipo) ? '±' : '−'}
+                      {fmtQ(m.quantidade_movimentacao, m.unidade_medida)}
+                    </span>
+                    <span className="inv-mov-col-depois inv-num">{fmtQ(m.quantidade_posterior, m.unidade_medida)}</span>
+                    <span className="inv-mov-col-motivo">{m.motivo || '—'}</span>
+                    <span className="inv-mov-col-user">{m.usuario_nome || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="inv-paginacao">
             <span className="inv-pag-info">{total} registro(s)</span>
@@ -800,6 +804,8 @@ function AbaAjusteRapido({ estabelecimentoId }) {
   const [salvando,     setSalvando]     = useState(false);
   const [sucesso,      setSucesso]      = useState('');
   const [erro,         setErro]         = useState('');
+  const [showPreview,  setShowPreview]  = useState(false);
+  const [showGuia,     setShowGuia]     = useState(false);
   const inputRef = useRef(null);
 
   async function buscarProdutos(termo) {
@@ -960,53 +966,74 @@ function AbaAjusteRapido({ estabelecimentoId }) {
           </form>
         </div>
 
-        {/* Coluna direita: preview */}
+        {/* Coluna direita: preview + guia (colapsáveis) */}
         <div className="inv-ajuste-preview-col">
-          <div className="inv-preview-card">
-            <div className="inv-preview-titulo">👁️ Pré-visualização</div>
-            {!produto ? (
-              <div className="inv-preview-vazio">Selecione um produto para ver o impacto do ajuste.</div>
-            ) : (
-              <>
-                <div className="inv-preview-produto">{produto.nome}{produto.marca ? ` · ${produto.marca}` : ''}</div>
-                <div className="inv-preview-valores">
-                  <div className="inv-preview-item">
-                    <span className="inv-preview-label">Estoque atual</span>
-                    <span className="inv-preview-val">{fmtQ(qtdAtual, produto.unidade_medida)}</span>
-                  </div>
-                  <div className="inv-preview-seta">→</div>
-                  <div className="inv-preview-item">
-                    <span className="inv-preview-label">Após ajuste</span>
-                    <span className={`inv-preview-val inv-preview-val-dest${qtdDepois > qtdAtual ? ' mais' : qtdDepois < qtdAtual ? ' menos' : ''}`}>
-                      {qtdNumerica > 0 ? fmtQ(qtdDepois, produto.unidade_medida) : '—'}
-                    </span>
-                  </div>
-                </div>
-                {qtdNumerica > 0 && (
-                  <div className={`inv-preview-diff${qtdDepois > qtdAtual ? ' mais' : qtdDepois < qtdAtual ? ' menos' : ' ok'}`}>
-                    {qtdDepois === qtdAtual ? '= Sem alteração'
-                      : qtdDepois > qtdAtual ? `▲ +${fmtQ(qtdDepois - qtdAtual, produto.unidade_medida)}`
-                      : `▼ ${fmtQ(qtdDepois - qtdAtual, produto.unidade_medida)}`}
-                  </div>
-                )}
-                <div className="inv-preview-tipo">
-                  <span className={`inv-badge inv-badge-mov-${tipoInfo?.cor}`}>{tipoInfo?.label}</span>
-                </div>
-                {motivo.trim() && <div className="inv-preview-motivo">"{motivo}"</div>}
-              </>
-            )}
-          </div>
 
-          {/* Info sobre tipos */}
-          <div className="inv-tipos-info">
-            <div className="inv-tipos-info-titulo">📖 Guia de tipos de ajuste</div>
-            {TIPOS_AJUSTE.map(t => (
-              <div key={t.key} className={`inv-tipos-info-item${tipo === t.key ? ' ativo' : ''}`} onClick={() => setTipo(t.key)}>
-                <span className={`inv-badge inv-badge-mov-${t.cor} inv-badge-sm`}>{t.label}</span>
-                <span className="inv-tipos-info-desc">{t.desc}</span>
-              </div>
-            ))}
-          </div>
+          {/* Pré-visualização */}
+          <button
+            type="button"
+            className={`inv-collapse-toggle${showPreview ? ' aberto' : ''}`}
+            onClick={() => setShowPreview(p => !p)}
+          >
+            <span>👁️ Pré-visualização</span>
+            <span className="inv-collapse-chevron">{showPreview ? '▲' : '▼'}</span>
+          </button>
+          {showPreview && (
+            <div className="inv-preview-card">
+              {!produto ? (
+                <div className="inv-preview-vazio">Selecione um produto para ver o impacto do ajuste.</div>
+              ) : (
+                <>
+                  <div className="inv-preview-produto">{produto.nome}{produto.marca ? ` · ${produto.marca}` : ''}</div>
+                  <div className="inv-preview-valores">
+                    <div className="inv-preview-item">
+                      <span className="inv-preview-label">Estoque atual</span>
+                      <span className="inv-preview-val">{fmtQ(qtdAtual, produto.unidade_medida)}</span>
+                    </div>
+                    <div className="inv-preview-seta">→</div>
+                    <div className="inv-preview-item">
+                      <span className="inv-preview-label">Após ajuste</span>
+                      <span className={`inv-preview-val inv-preview-val-dest${qtdDepois > qtdAtual ? ' mais' : qtdDepois < qtdAtual ? ' menos' : ''}`}>
+                        {qtdNumerica > 0 ? fmtQ(qtdDepois, produto.unidade_medida) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  {qtdNumerica > 0 && (
+                    <div className={`inv-preview-diff${qtdDepois > qtdAtual ? ' mais' : qtdDepois < qtdAtual ? ' menos' : ' ok'}`}>
+                      {qtdDepois === qtdAtual ? '= Sem alteração'
+                        : qtdDepois > qtdAtual ? `▲ +${fmtQ(qtdDepois - qtdAtual, produto.unidade_medida)}`
+                        : `▼ ${fmtQ(qtdDepois - qtdAtual, produto.unidade_medida)}`}
+                    </div>
+                  )}
+                  <div className="inv-preview-tipo">
+                    <span className={`inv-badge inv-badge-mov-${tipoInfo?.cor}`}>{tipoInfo?.label}</span>
+                  </div>
+                  {motivo.trim() && <div className="inv-preview-motivo">"{motivo}"</div>}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Guia de tipos */}
+          <button
+            type="button"
+            className={`inv-collapse-toggle${showGuia ? ' aberto' : ''}`}
+            onClick={() => setShowGuia(p => !p)}
+          >
+            <span>📖 Guia de tipos de ajuste</span>
+            <span className="inv-collapse-chevron">{showGuia ? '▲' : '▼'}</span>
+          </button>
+          {showGuia && (
+            <div className="inv-tipos-info inv-tipos-info--aberto">
+              {TIPOS_AJUSTE.map(t => (
+                <div key={t.key} className={`inv-tipos-info-item${tipo === t.key ? ' ativo' : ''}`} onClick={() => setTipo(t.key)}>
+                  <span className={`inv-badge inv-badge-mov-${t.cor} inv-badge-sm`}>{t.label}</span>
+                  <span className="inv-tipos-info-desc">{t.desc}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
     </div>

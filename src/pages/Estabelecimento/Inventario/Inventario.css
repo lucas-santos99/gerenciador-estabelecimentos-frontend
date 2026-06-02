@@ -638,11 +638,28 @@
 .inv-datas-row { display: flex; align-items: center; gap: 6px; }
 .inv-datas-sep { font-size: 0.78rem; color: var(--est-text-muted); }
 
+/* Wrapper com scroll horizontal para tabela de movimentações */
+.inv-mov-tabela-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--est-border) transparent;
+}
+.inv-mov-tabela-wrap::-webkit-scrollbar { height: 4px; }
+.inv-mov-tabela-wrap::-webkit-scrollbar-thumb { background: var(--est-border); border-radius: 4px; }
+
+.inv-mov-tabela-inner {
+  min-width: 900px;
+}
+
 .inv-mov-tabela-header {
   display: flex;
-  padding: 8px 0;
+  align-items: center;
+  padding: 9px 14px;
+  background: var(--est-sidebar);
   border-bottom: 1px solid var(--est-border);
-  flex-shrink: 0;
+  gap: 10px;
 }
 .inv-mov-tabela-header span {
   font-size: calc(0.62rem * var(--inv-font-scale, 1));
@@ -650,6 +667,7 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--est-text-muted);
+  flex-shrink: 0;
 }
 
 .inv-mov-lista { display: flex; flex-direction: column; }
@@ -657,23 +675,26 @@
 .inv-mov-row {
   display: flex;
   align-items: center;
-  padding: 10px 0;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--est-border);
-  gap: 8px;
+  gap: 10px;
   transition: background 0.12s;
 }
+.inv-mov-row:last-child { border-bottom: none; }
 .inv-mov-row:hover { background: var(--est-hover); }
 
-.inv-mov-col-data     { width: 130px; flex-shrink: 0; font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); font-family: 'JetBrains Mono', monospace; }
-.inv-mov-col-produto  { flex: 2; min-width: 0; }
-.inv-mov-col-tipo     { width: 130px; flex-shrink: 0; }
-.inv-mov-col-antes    { width: 80px; flex-shrink: 0; text-align: right; }
-.inv-mov-col-mov      { width: 90px; flex-shrink: 0; text-align: right; }
-.inv-mov-col-depois   { width: 80px; flex-shrink: 0; text-align: right; }
-.inv-mov-col-motivo   { flex: 1.5; min-width: 0; font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.inv-mov-col-user     { width: 110px; flex-shrink: 0; font-size: calc(0.68rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Larguras fixas — garantem que nada fique espremido */
+.inv-mov-col-data    { width: 128px; flex-shrink: 0; font-size: calc(0.7rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); font-family: 'JetBrains Mono', monospace; }
+.inv-mov-col-produto { flex: 1; min-width: 160px; }
+.inv-mov-col-cat     { width: 100px; flex-shrink: 0; font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-mov-col-tipo    { width: 120px; flex-shrink: 0; }
+.inv-mov-col-antes   { width: 100px; flex-shrink: 0; text-align: right; }
+.inv-mov-col-mov     { width: 105px; flex-shrink: 0; text-align: right; }
+.inv-mov-col-depois  { width: 100px; flex-shrink: 0; text-align: right; }
+.inv-mov-col-motivo  { flex: 1.2; min-width: 120px; font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-mov-col-user    { width: 120px; flex-shrink: 0; font-size: calc(0.68rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.inv-mov-produto-nome  { font-size: calc(0.82rem * var(--inv-font-scale, 1)); font-weight: 600; color: var(--est-text); }
+.inv-mov-produto-nome  { font-size: calc(0.82rem * var(--inv-font-scale, 1)); font-weight: 600; color: var(--est-text); display: block; }
 .inv-mov-produto-marca { font-size: calc(0.7rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); }
 
 /* ========================= */
@@ -853,4 +874,53 @@
 
 @media (max-width: 900px) {
   .inv-mov-col-cat { display: none; }
+}
+
+/* ── Toggle colapsável (preview e guia no Ajuste Rápido) ── */
+.inv-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-card);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.82rem * var(--inv-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.inv-collapse-toggle:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-hover);
+}
+.inv-collapse-toggle.aberto {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+}
+
+.inv-collapse-chevron {
+  font-size: 0.6rem;
+  opacity: 0.6;
+}
+
+/* Preview card quando aberto fica conectado ao toggle */
+.inv-collapse-toggle.aberto + .inv-preview-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
+}
+
+.inv-tipos-info--aberto {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
 }
