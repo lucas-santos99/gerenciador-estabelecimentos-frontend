@@ -937,16 +937,23 @@ function AbaAjusteRapido({ estabelecimentoId }) {
             <div className="inv-form-group">
               <label className="inv-label">
                 {tipo === 'correcao' ? 'Novo valor do estoque *' : 'Quantidade *'}
+                {produto && <span className="inv-label-unidade"> — {produto.unidade_medida === 'kg' ? 'em quilogramas (kg)' : 'em unidades (un)'}</span>}
               </label>
-              <input
-                className="inv-input inv-input-qtd"
-                type="number"
-                min="0"
-                step={produto?.unidade_medida === 'kg' ? '0.001' : '1'}
-                value={quantidade}
-                onChange={e => setQuantidade(e.target.value)}
-                placeholder={tipo === 'correcao' ? 'Valor final do estoque…' : 'Quantidade…'}
-              />
+              <div className="inv-item-input-wrap">
+                <input
+                  className="inv-input inv-input-qtd"
+                  style={{ borderRadius: '10px 0 0 10px', borderRight: 'none' }}
+                  type="number"
+                  min="0"
+                  step={produto?.unidade_medida === 'kg' ? '0.001' : '1'}
+                  value={quantidade}
+                  onChange={e => setQuantidade(e.target.value)}
+                  placeholder={produto?.unidade_medida === 'kg' ? '0.000' : '0'}
+                />
+                <span className="inv-item-input-unidade inv-item-input-unidade--grande">
+                  {produto?.unidade_medida || 'un'}
+                </span>
+              </div>
               {tipo === 'correcao' && <span className="inv-hint">Informe a quantidade exata que o produto deve ter no estoque após a correção.</span>}
             </div>
 

@@ -978,3 +978,20 @@
   transform: translateY(-50%);
   font-size: 0.75rem;
 }
+
+/* ── Unidade no label do Ajuste Rápido ── */
+.inv-label-unidade {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--est-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Badge maior para o Ajuste Rápido (input maior) */
+.inv-item-input-unidade--grande {
+  padding: 13px 14px;
+  font-size: calc(0.9rem * var(--inv-font-scale, 1));
+  line-height: 1;
+}
