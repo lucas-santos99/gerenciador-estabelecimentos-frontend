@@ -1585,3 +1585,50 @@
 .pdv-modal-btn-danger:hover:not(:disabled) {
   box-shadow: 0 6px 20px rgba(239,68,68,0.45) !important;
 }
+
+/* ════════════════════════════════════════════════════════════
+   BANNER DE PERMISSÃO LIMITADA — compartilhado entre módulos
+   Classe: mod-aviso-permissao
+   ════════════════════════════════════════════════════════════ */
+
+.mod-aviso-permissao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(251,191,36,0.1);
+  border-bottom: 1px solid rgba(251,191,36,0.25);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--est-warning);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  flex-shrink: 0;
+  animation: modAvisoIn 0.25s ease;
+}
+@keyframes modAvisoIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mod-aviso-pdv {
+  padding: 8px 16px;
+}
+
+/* Botão desabilitado por permissão — visual diferenciado */
+button:disabled[title*="Sem permissão"] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Item de menu bloqueado no PDV (fiado sem permissão) */
+.pdv-meio-item.bloqueado {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.pdv-meio-item.bloqueado::after {
+  content: ' 🔒';
+  font-size: 0.7em;
+}

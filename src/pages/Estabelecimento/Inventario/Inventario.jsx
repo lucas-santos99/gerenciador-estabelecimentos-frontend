@@ -426,7 +426,9 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
 /* ════════════════════════════════════════════════════════════
    ABA CONTAGENS — lista e gestão de inventários
 ════════════════════════════════════════════════════════════ */
-function AbaContagens({ estabelecimentoId, categorias }) {
+function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerchant = true }) {
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
   // Helper: resolve nome da categoria pelo id
   function nomeCat(catId) {
     if (!catId) return null;
@@ -526,11 +528,22 @@ function AbaContagens({ estabelecimentoId, categorias }) {
           <div className="inv-aba-titulo">📋 Contagens de Inventário</div>
           <div className="inv-aba-desc">Crie sessões de contagem física e compare com o estoque do sistema.</div>
         </div>
-        <button className="inv-btn-primary" onClick={() => setShowNovo(true)}>+ Nova contagem</button>
+        <button
+          className="inv-btn-primary"
+          onClick={() => setShowNovo(true)}
+          disabled={!pode('inventario_contar')}
+          title={!pode('inventario_contar') ? SEM_PERM : undefined}
+        >+ Nova contagem</button>
       </div>
 
       {sucesso && <div className="inv-sucesso">{sucesso}</div>}
       {erro    && <div className="inv-erro-bar">⚠️ {erro}</div>}
+
+      {!isMerchant && permissoes && (!pode('inventario_contar') || !pode('inventario_finalizar')) && (
+        <div className="mod-aviso-permissao">
+          🔒 Visualização limitada — algumas ações de inventário não estão disponíveis para o seu perfil.
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="inv-filtros-row">
@@ -569,7 +582,12 @@ function AbaContagens({ estabelecimentoId, categorias }) {
                 </div>
                 <div className="inv-card-acoes">
                   {inv.status === 'em_andamento' && (
-                    <button className="inv-btn-outline inv-btn-sm" onClick={() => abrirContagem(inv)} disabled={loadingAbrir === inv.id}>
+                    <button
+                      className="inv-btn-outline inv-btn-sm"
+                      onClick={() => abrirContagem(inv)}
+                      disabled={loadingAbrir === inv.id || !pode('inventario_contar')}
+                      title={!pode('inventario_contar') ? SEM_PERM : undefined}
+                    >
                       {loadingAbrir === inv.id ? '⏳' : '▶️ Continuar contagem'}
                     </button>
                   )}
@@ -813,7 +831,9 @@ function AbaMovimentacoes({ estabelecimentoId, categorias }) {
 /* ════════════════════════════════════════════════════════════
    ABA AJUSTE RÁPIDO
 ════════════════════════════════════════════════════════════ */
-function AbaAjusteRapido({ estabelecimentoId }) {
+function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = true }) {
+  const podeAjustar = isMerchant || !permissoes || permissoes.includes('inventario_ajuste');
+  const SEM_PERM = 'Sem permissão — contate o administrador';
   const [termoBusca,   setTermoBusca]   = useState('');
   const [resultados,   setResultados]   = useState([]);
   const [produto,      setProduto]      = useState(null);
@@ -892,7 +912,13 @@ function AbaAjusteRapido({ estabelecimentoId }) {
       {sucesso && <div className="inv-sucesso">{sucesso}</div>}
       {erro    && <div className="inv-erro-bar">⚠️ {erro}</div>}
 
-      <div className="inv-ajuste-layout">
+      {!podeAjustar && (
+        <div className="mod-aviso-permissao">
+          🔒 Sem permissão para realizar ajustes rápidos de estoque. Contate o administrador.
+        </div>
+      )}
+
+      <div className="inv-ajuste-layout" style={!podeAjustar ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
         {/* Coluna esquerda: formulário */}
         <div className="inv-ajuste-form-col">
           <form onSubmit={enviarAjuste}>
@@ -1070,7 +1096,7 @@ function AbaAjusteRapido({ estabelecimentoId }) {
 /* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
 ════════════════════════════════════════════════════════════ */
-export default function Inventario({ estabelecimentoId }) {
+export default function Inventario({ estabelecimentoId, permissoes = null, isMerchant = true }) {
   const [abaAtiva,   setAbaAtiva]   = useState('contagens');
   const [categorias, setCategorias] = useState([]);
   const [fontScale,  setFontScale]  = useState(() => parseFloat(localStorage.getItem('inv-font-scale') || '1'));
@@ -1124,9 +1150,9 @@ export default function Inventario({ estabelecimentoId }) {
       </div>
 
       <div className="inv-body">
-        {abaAtiva === 'contagens'     && <AbaContagens    estabelecimentoId={estabelecimentoId} categorias={categorias} />}
+        {abaAtiva === 'contagens'     && <AbaContagens    estabelecimentoId={estabelecimentoId} categorias={categorias} permissoes={permissoes} isMerchant={isMerchant} />}
         {abaAtiva === 'movimentacoes' && <AbaMovimentacoes estabelecimentoId={estabelecimentoId} categorias={categorias} />}
-        {abaAtiva === 'ajuste'        && <AbaAjusteRapido  estabelecimentoId={estabelecimentoId} />}
+        {abaAtiva === 'ajuste'        && <AbaAjusteRapido  estabelecimentoId={estabelecimentoId} permissoes={permissoes} isMerchant={isMerchant} />}
       </div>
     </div>
   );

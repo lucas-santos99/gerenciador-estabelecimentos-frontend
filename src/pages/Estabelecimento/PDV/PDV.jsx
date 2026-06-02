@@ -17,7 +17,7 @@ const MEIOS = [
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
    ════════════════════════════════════════════════════════════ */
-function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
+function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado = true }) {
 
   const [selectedIndex,      setSelectedIndex]      = useState(0);
   const [meioPagamento,      setMeioPagamento]      = useState('Dinheiro');
@@ -166,7 +166,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading }) {
             <span className="pdv-pagamento-label">Forma de pagamento  ↑ ↓ Enter</span>
             <ul className="pdv-meios-lista" ref={listaMeiosRef}>
               {MEIOS.map((m, i) => (
-                <li key={m.key} className={`pdv-meio-item${selectedIndex === i ? ' ativo' : ''}`} onClick={() => confirmarMetodo(m.key, i)}>
+                <li key={m.key} className={`pdv-meio-item${selectedIndex === i ? ' ativo' : ''}${m.key === 'Fiado' && !podeUsarFiado ? ' bloqueado' : ''}`} onClick={() => m.key === 'Fiado' && !podeUsarFiado ? null : confirmarMetodo(m.key, i)} title={m.key === 'Fiado' && !podeUsarFiado ? 'Sem permissão para vender no fiado' : undefined}>
                   <span className="pdv-meio-icone">{m.icone}</span>
                   <span style={{ flex: 1 }}>{m.label}</span>
                   {selectedIndex === i && <span className="pdv-meio-enter">↩ Enter</span>}
@@ -426,7 +426,9 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
 /* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL — PDV
    ════════════════════════════════════════════════════════════ */
-export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar }) {
+export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar, permissoes = null, isMerchant = true }) {
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
   const [termoBusca,      setTermoBusca]      = useState('');
   const [resultados,      setResultados]      = useState([]);
   const [carrinho,        setCarrinho]        = useState([]);
@@ -846,7 +848,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar 
         </div>
       )}
 
-      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} />}
+      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} podeUsarFiado={pode('pdv_fiado')} />}
 
       {vendaFinalizada && (
         <ModalPosVenda
@@ -857,6 +859,13 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar 
             mostrarStatus('sucesso', `✓ Venda de ${fmt(vendaFinalizada.total)} registrada!`);
           }}
         />
+      )}
+
+      {/* Banner permissão limitada */}
+      {!isMerchant && permissoes && !pode('pdv_realizar_venda') && (
+        <div className="mod-aviso-permissao mod-aviso-pdv">
+          🔒 Visualização limitada — finalização de vendas não está disponível para o seu perfil.
+        </div>
       )}
 
       <div className="pdv-busca">
@@ -942,7 +951,13 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar 
             <span className="pdv-total-label">Total</span>
             <span className="pdv-total-valor">{fmt(total)}</span>
           </div>
-          <button ref={btnFinalizarRef} className="pdv-btn-finalizar" onClick={() => setShowPagamento(true)} disabled={carrinho.length === 0 || loadingVenda} title="F10 ou F2">
+          <button
+            ref={btnFinalizarRef}
+            className="pdv-btn-finalizar"
+            onClick={() => setShowPagamento(true)}
+            disabled={carrinho.length === 0 || loadingVenda || !pode('pdv_realizar_venda')}
+            title={!pode('pdv_realizar_venda') ? SEM_PERM : 'F10 ou F2'}
+          >
             {loadingVenda ? '⏳ Processando…' : `✓ Finalizar Venda${carrinho.length > 0 ? ' (F10)' : ''}`}
           </button>
         </div>

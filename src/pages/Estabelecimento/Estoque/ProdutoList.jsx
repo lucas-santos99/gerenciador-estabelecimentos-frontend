@@ -30,14 +30,16 @@ function estoqueStatus(produto) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function ProdutoList({ estabelecimentoId, permissoes = [] }) {
+export default function ProdutoList({ estabelecimentoId, permissoes = null, isMerchant = true }) {
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
 
   // Permissões granulares — merchant/super_admin tem tudo
-  const podeAdicionar = permissoes.includes('estoque_adicionar');
-  const podeEditar    = permissoes.includes('estoque_editar');
-  const podeExcluir   = permissoes.includes('estoque_excluir');
+  const podeAdicionar = pode('estoque_adicionar');
+  const podeEditar    = pode('estoque_editar');
+  const podeExcluir   = pode('estoque_excluir');
   // Se tem o módulo mas nenhuma ação = somente leitura
-  const somenteLeitura = permissoes.includes('estoque') && !podeAdicionar && !podeEditar && !podeExcluir;
+  const somenteLeitura = pode('estoque') && !podeAdicionar && !podeEditar && !podeExcluir;
 
   const [produtos,         setProdutos]         = useState([]);
   const [categorias,       setCategorias]       = useState([]);
@@ -546,7 +548,12 @@ export default function ProdutoList({ estabelecimentoId, permissoes = [] }) {
         </div>
 
         {/* Erro */}
-        {erro && <div className="estoque-erro">⚠️ {erro}</div>}
+        {!isMerchant && permissoes && (!pode('estoque_adicionar') || !pode('estoque_editar') || !pode('estoque_excluir')) && (
+        <div className="mod-aviso-permissao">
+          🔒 Visualização limitada — algumas ações de estoque não estão disponíveis para o seu perfil.
+        </div>
+      )}
+      {erro && <div className="estoque-erro">⚠️ {erro}</div>}
 
         {/* Grid */}
         <div className="estoque-grid">

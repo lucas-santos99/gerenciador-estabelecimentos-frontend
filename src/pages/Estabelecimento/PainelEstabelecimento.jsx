@@ -26,6 +26,8 @@ export default function PainelEstabelecimento() {
   const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
 
   const isMerchant = profile?.role === 'merchant';
+  // null = merchant (acesso total); array = operador com permissões específicas
+  const permsParaModulo = isMerchant ? null : permissoes;
 
   // Ref para o interceptor do PDV — preenchido pelo próprio PDV via prop onNavegar
   const pdvInterceptorRef = useRef(null);
@@ -108,6 +110,8 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
             onNavegar={registrarInterceptorPDV}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 
@@ -115,7 +119,8 @@ export default function PainelEstabelecimento() {
         return (
           <ProdutoList
             estabelecimentoId={estabelecimentoId}
-            permissoes={isMerchant ? ['estoque','estoque_adicionar','estoque_editar','estoque_excluir'] : permissoes}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 
@@ -124,6 +129,8 @@ export default function PainelEstabelecimento() {
           <DividasList
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 
@@ -133,6 +140,8 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             logoUrl={logoUrl}
             nomeFantasia={nomeEstabelecimento}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 
@@ -150,6 +159,8 @@ export default function PainelEstabelecimento() {
           <Inventario
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 

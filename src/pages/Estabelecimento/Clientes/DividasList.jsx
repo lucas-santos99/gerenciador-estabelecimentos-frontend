@@ -202,7 +202,9 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) {
+export default function DividasList({ estabelecimentoId, nomeEstabelecimento, permissoes = null, isMerchant = true }) {
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
 
   const [viewMode,          setViewMode]          = useState('devedores');
   const [dividas,           setDividas]           = useState([]);
@@ -453,11 +455,23 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
           <button
             className="cli-btn primary"
             onClick={() => { setClienteModal(null); setModalAberto(true); }}
+            disabled={!pode('clientes_adicionar')}
+            title={!pode('clientes_adicionar') ? SEM_PERM : undefined}
           >
             + Cliente
           </button>
         </div>
       </div>
+
+      {/* ── BANNER PERMISSÃO LIMITADA ────────────────────── */}
+      {!isMerchant && permissoes && (
+        !pode('clientes_adicionar') || !pode('clientes_editar') ||
+        !pode('clientes_excluir')   || !pode('clientes_receber')
+      ) && (
+        <div className="mod-aviso-permissao">
+          🔒 Visualização limitada — algumas ações não estão disponíveis para o seu perfil.
+        </div>
+      )}
 
       {/* ── ALERTA FIADO VENCIDO ────────────────────────── */}
       {(fiadosVencidos.length > 0 || fiadosProximos.length > 0) && (
@@ -546,6 +560,10 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
                   onReceber={() => abrirRecebimento(cliente)}
                   onExcluir={() => excluirCliente(cliente)}
                   onWhatsApp={() => enviarWhatsApp(cliente)}
+                  podeEditar={pode('clientes_editar')}
+                  podeExcluir={pode('clientes_excluir')}
+                  podeReceber={pode('clientes_receber')}
+                  semPermMsg={SEM_PERM}
                 />
               ))
             )}
@@ -567,7 +585,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento }) 
 }
 
 /* ── Card de cliente ─────────────────────────────────────────*/
-function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp }) {
+function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
   const temDivida       = parseFloat(cliente.saldo_devedor) > 0.01;
   const limiteExcedido  = temDivida
     && parseFloat(cliente.limite_credito || 0) > 0
@@ -628,7 +646,7 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
       </div>
 
       <div className="cli-card-acoes">
-        <button className="cli-btn-acao config" onClick={onEditar}>⚙️</button>
+        <button className="cli-btn-acao config" onClick={podeEditar ? onEditar : undefined} disabled={!podeEditar} title={!podeEditar ? semPermMsg : 'Editar'}>⚙️</button>
 
         {temDivida && cliente.telefone && (
           <button className="cli-btn-acao whatsapp" onClick={onWhatsApp} title="Enviar cobrança via WhatsApp">
@@ -642,13 +660,14 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
 
         {temDivida
           ? <button className="cli-btn-acao detalhes" onClick={onDetalhes}>📋 Detalhes</button>
-          : <button className="cli-btn-acao excluir" onClick={onExcluir}>🗑 Excluir</button>
+          : <button className="cli-btn-acao excluir" onClick={podeExcluir ? onExcluir : undefined} disabled={!podeExcluir} title={!podeExcluir ? semPermMsg : 'Excluir'}>🗑 Excluir</button>
         }
 
         <button
           className="cli-btn-acao receber"
-          onClick={onReceber}
-          disabled={!temDivida}
+          onClick={podeReceber ? onReceber : undefined}
+          disabled={!podeReceber || !temDivida}
+          title={!podeReceber ? semPermMsg : undefined}
         >
           💰 Receber
         </button>
