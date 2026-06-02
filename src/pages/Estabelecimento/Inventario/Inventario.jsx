@@ -765,10 +765,14 @@ function AbaMovimentacoes({ estabelecimentoId }) {
                       <span className={`inv-badge inv-badge-mov-${TIPO_MOV_COR[m.tipo] || 'teal'}`}>{TIPO_MOV_LABEL[m.tipo] || m.tipo}</span>
                     </span>
                     <span className="inv-mov-col-antes inv-num">{fmtQ(m.quantidade_anterior, m.unidade_medida)}</span>
-                    <span className={`inv-mov-col-mov inv-num ${['entrada','devolucao'].includes(m.tipo) ? 'inv-dif-mais' : 'inv-dif-menos'}`}>
-                      {['entrada','devolucao'].includes(m.tipo) ? '+' : ['correcao','inventario_ajuste'].includes(m.tipo) ? '±' : '−'}
-                      {fmtQ(m.quantidade_movimentacao, m.unidade_medida)}
-                    </span>
+                    {(() => {
+                      const subiu = parseFloat(m.quantidade_posterior) >= parseFloat(m.quantidade_anterior);
+                      return (
+                        <span className={`inv-mov-col-mov inv-num ${subiu ? 'inv-dif-mais' : 'inv-dif-menos'}`}>
+                          {subiu ? '+' : '−'}{fmtQ(m.quantidade_movimentacao, m.unidade_medida)}
+                        </span>
+                      );
+                    })()}
                     <span className="inv-mov-col-depois inv-num">{fmtQ(m.quantidade_posterior, m.unidade_medida)}</span>
                     <span className="inv-mov-col-motivo">{m.motivo || '—'}</span>
                     <span className="inv-mov-col-user">{m.usuario_nome || '—'}</span>
