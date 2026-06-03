@@ -1148,12 +1148,11 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
           <input
             ref={inputRef}
             className="pdv-modal-qtd-input pdv-peso-input-grande"
-            type="number"
-            step={unidade === 'kg' ? '0.001' : '1'}
-            min={unidade === 'kg' ? '0.001' : '1'}
+            type="text"
+            inputMode="decimal"
             value={valorPeso}
-            onChange={e => { setValorPeso(e.target.value); setErro(''); }}
-            placeholder={unidade === 'kg' ? 'Ex: 1.350' : 'Ex: 1350'}
+            onChange={e => { setValorPeso(e.target.value); setErro(""); }}
+            placeholder={unidade === "kg" ? "Ex: 1,350" : "Ex: 1350"}
           />
           {erro && <div className="pdv-peso-erro">⚠️ {erro}</div>}
 
