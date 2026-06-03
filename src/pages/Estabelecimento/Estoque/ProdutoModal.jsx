@@ -28,6 +28,9 @@ export default function ProdutoModal({
     estoque_minimo:  10,
     preco_custo:     0,
     preco_venda:     0,
+    // ── Campos balança ──
+    vendido_por_peso: false,
+    plu_balanca:      '',
   });
 
   const [categorias,        setCategorias]        = useState(categoriasProp || []);
@@ -47,15 +50,17 @@ export default function ProdutoModal({
   useEffect(() => {
     if (isEdit) {
       setForm({
-        nome:           produtoEditar.nome           || '',
-        marca:          produtoEditar.marca          || '',
-        codigo_barras:  produtoEditar.codigo_barras  || '',
-        categoria_id:   produtoEditar.categoria_id   || '',
-        unidade_medida: produtoEditar.unidade_medida || 'un',
-        estoque_atual:  parseFloat(produtoEditar.estoque_atual)  || 0,
-        estoque_minimo: parseFloat(produtoEditar.estoque_minimo) || 10,
-        preco_custo:    parseFloat(produtoEditar.preco_custo)    || 0,
-        preco_venda:    parseFloat(produtoEditar.preco_venda)    || 0,
+        nome:             produtoEditar.nome             || '',
+        marca:            produtoEditar.marca            || '',
+        codigo_barras:    produtoEditar.codigo_barras    || '',
+        categoria_id:     produtoEditar.categoria_id     || '',
+        unidade_medida:   produtoEditar.unidade_medida   || 'un',
+        estoque_atual:    parseFloat(produtoEditar.estoque_atual)  || 0,
+        estoque_minimo:   parseFloat(produtoEditar.estoque_minimo) || 10,
+        preco_custo:      parseFloat(produtoEditar.preco_custo)    || 0,
+        preco_venda:      parseFloat(produtoEditar.preco_venda)    || 0,
+        vendido_por_peso: produtoEditar.vendido_por_peso || false,
+        plu_balanca:      produtoEditar.plu_balanca      || '',
       });
     }
     setTimeout(() => nomeRef.current?.focus(), 0);
@@ -70,7 +75,6 @@ export default function ProdutoModal({
   useEffect(() => {
     function handleEsc(e) {
       if (e.key === 'Escape') {
-        // Se a câmera estiver aberta, o próprio ModalCamera trata o Esc
         if (showCamera) return;
         if (novaCatAberta) setNovaCatAberta(false);
         else onClose();
@@ -82,26 +86,35 @@ export default function ProdutoModal({
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     const numericos = ['estoque_atual', 'estoque_minimo', 'preco_custo', 'preco_venda'];
-    setForm(prev => ({
-      ...prev,
-      [name]: numericos.includes(name)
-        ? value.replace(',', '.')
-        : value,
-    }));
+    setForm(prev => {
+      const novo = {
+        ...prev,
+        [name]: type === 'checkbox'
+          ? checked
+          : numericos.includes(name)
+            ? value.replace(',', '.')
+            : value,
+      };
+      // Ao desmarcar vendido_por_peso, limpa PLU
+      if (name === 'vendido_por_peso' && !checked) {
+        novo.plu_balanca = '';
+      }
+      // Se marcar vendido_por_peso, força unidade_medida para 'kg'
+      if (name === 'vendido_por_peso' && checked) {
+        novo.unidade_medida = 'kg';
+      }
+      return novo;
+    });
   }
 
   /* ── Callback da câmera: preenche campo codigo_barras ────── */
   function handleCodigoDetectado(codigo) {
     setShowCamera(false);
     setForm(prev => ({ ...prev, codigo_barras: codigo }));
-
-    // Flash visual no campo para confirmar leitura
     setScanFlash(true);
     setTimeout(() => setScanFlash(false), 1000);
-
-    // Foca no campo para o usuário ver o resultado
     setTimeout(() => codigoBarrasRef.current?.focus(), 100);
   }
 
@@ -357,6 +370,67 @@ export default function ProdutoModal({
                   />
                   <span className="prod-label-hint">Alerta de estoque baixo</span>
                 </div>
+
+              </div>
+            </div>
+
+            {/* ── Balança ───────────────────────────────── */}
+            <div className="prod-form-section">
+              <div className="prod-form-section-titulo">⚖️ Balança</div>
+              <div className="prod-form-grid">
+
+                <div className="prod-form-group prod-form-full">
+                  <label className="prod-balanca-checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="vendido_por_peso"
+                      checked={form.vendido_por_peso}
+                      onChange={atualizar}
+                      disabled={somenteLeitura}
+                      className="prod-balanca-checkbox"
+                    />
+                    <span>
+                      <strong>Produto pesável com etiqueta de balança</strong>
+                      <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
+                        A balança imprime etiqueta com código EAN-13. O caixa bipa e o preço é calculado pelo peso automaticamente.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                {form.vendido_por_peso && (
+                  <>
+                    <div className="prod-form-group prod-form-full">
+                      <div className="prod-balanca-info">
+                        <span>💡</span>
+                        <div>
+                          <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
+                          <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
+                          Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
+                          <code>00123</code>. O campo PLU abaixo é apenas referência para o atendente saber
+                          qual número digitar na balança.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="prod-form-group">
+                      <label className="prod-label">
+                        PLU na balança
+                        <span className="prod-label-unit"> (referência)</span>
+                      </label>
+                      <input
+                        className="prod-input"
+                        name="plu_balanca"
+                        readOnly={somenteLeitura}
+                        placeholder="Ex: 001, 042…"
+                        value={form.plu_balanca}
+                        onChange={atualizar}
+                        maxLength={20}
+                      />
+                      <span className="prod-label-hint">Código que o atendente digita na balança</span>
+                    </div>
+                  </>
+                )}
 
               </div>
             </div>

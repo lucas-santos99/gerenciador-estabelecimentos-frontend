@@ -6,6 +6,29 @@ import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/* ════════════════════════════════════════════════════════════
+   BALANÇA — decodificador EAN-13 pesável
+   Prefixo "2" = produto com peso embutido
+   Formato: 2 CCCCC PPPPP D
+     C = código interno do produto (5 dígitos)
+     P = peso em gramas (5 dígitos, ex: 01750 = 1,750 kg)
+     D = dígito verificador
+   ════════════════════════════════════════════════════════════ */
+function decodificarEAN13Pesavel(codigo) {
+  if (!codigo || codigo.length !== 13) return null;
+  if (!codigo.startsWith('2')) return null;
+  const codigoInterno = codigo.substring(1, 6);
+  const pesoGramas    = parseInt(codigo.substring(6, 11), 10);
+  if (isNaN(pesoGramas)) return null;
+  return { codigoInterno, pesoKg: pesoGramas / 1000 };
+}
+
+function fmtPeso(kg) {
+  return kg >= 1
+    ? `${kg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+    : `${Math.round(kg * 1000)} g`;
+}
+
 const MEIOS = [
   { key: 'Dinheiro', label: 'Dinheiro',          icone: '💵' },
   { key: 'Pix',      label: 'Pix',               icone: '📱' },
@@ -450,6 +473,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const [showCamera,      setShowCamera]      = useState(false);
   const [confirmSaida,    setConfirmSaida]    = useState(false);  // confirmação de saída com carrinho cheio
   const [confirmRemover,  setConfirmRemover]  = useState(null);   // idx do item a remover
+  const [modalPeso,       setModalPeso]       = useState(null);   // { produto } — peso manual de pesável
 
   const inputBuscaRef   = useRef(null);
   const inputQtdRef     = useRef(null);
@@ -524,6 +548,33 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   // ── Busca por código de barras exato ─────────────────────
   async function buscarProdutosPorCodigo(codigo) {
     if (!estabelecimentoId) return;
+
+    // ── Interceptar EAN-13 pesável (prefixo "2") ──────────
+    const pesavel = decodificarEAN13Pesavel(codigo);
+    if (pesavel) {
+      setLoadingBusca(true);
+      try {
+        const resp = await apiFetch(
+          `/api/estabelecimentos/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(pesavel.codigoInterno)}`
+        );
+        if (!resp.ok) throw new Error();
+        const data = await resp.json();
+        const produto = data[0];
+        if (!produto) {
+          mostrarStatus('erro', `Código pesável "${pesavel.codigoInterno}" não encontrado.`);
+          limparBusca(); return;
+        }
+        // Adiciona direto ao carrinho com o peso da etiqueta
+        adicionarProdutoPesavel(produto, pesavel.pesoKg, 'etiqueta');
+      } catch {
+        mostrarStatus('erro', 'Erro ao buscar produto pesável.');
+      } finally {
+        setLoadingBusca(false);
+        limparBusca();
+      }
+      return;
+    }
+    // ─────────────────────────────────────────────────────
     setTermoBusca(codigo);
     setLoadingBusca(true);
     setBuscaIndex(-1);
@@ -561,7 +612,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   }
 
   useEffect(() => {
-    if (!showPagamento && !itemQuantificar && editIndex === null && !showCamera) {
+    if (!showPagamento && !itemQuantificar && editIndex === null && !showCamera && !modalPeso) {
       inputBuscaRef.current?.focus();
     }
   }, [showPagamento, itemQuantificar, editIndex, showCamera]);
@@ -572,8 +623,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       if (e.key === 'Escape') {
         if (confirmRemover !== null) { setConfirmRemover(null); return; }
         if (confirmSaida)            { setConfirmSaida(false);  return; }
+        if (modalPeso)               { setModalPeso(null);      return; }
       }
-      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !showCamera && carrinho.length > 0) {
+      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !showCamera && !modalPeso && carrinho.length > 0) {
         e.preventDefault();
         setShowPagamento(true);
         return;
@@ -658,6 +710,23 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   function selecionarProduto(produto) {
     const estoque = parseFloat(produto.estoque_atual);
     if (estoque <= 0) { mostrarStatus('erro', `"${produto.nome}" sem estoque!`); limparBusca(); return; }
+
+    // ── Produto pesável selecionado manualmente → pedir peso ──
+    if (produto.vendido_por_peso || produto.unidade_medida === 'kg') {
+      limparBusca();
+      if (produto.vendido_por_peso) {
+        // Abre modal de peso manual (sem etiqueta de balança)
+        setModalPeso({ produto });
+        return;
+      }
+      // kg normal (granel sem balança) — comportamento original
+      setInputQtd('1.000');
+      setItemQuantificar(produto);
+      setEditIndex(null);
+      return;
+    }
+    // ─────────────────────────────────────────────────────────
+
     const qtdNoCarrinho = carrinho.filter(i => i.id === produto.id).reduce((acc, i) => acc + i.quantidade, 0);
     if (produto.unidade_medida !== 'kg' && qtdNoCarrinho + 1 > estoque) {
       mostrarStatus('erro', `Estoque máximo de "${produto.nome}" (${estoque} un.) atingido.`);
@@ -695,6 +764,21 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   function fecharModalQtd() {
     setItemQuantificar(null); setEditIndex(null); setInputQtd('1');
     setTimeout(() => inputBuscaRef.current?.focus(), 0);
+  }
+
+  // ── Adicionar produto pesável ao carrinho ─────────────────
+  // pesoKg: peso em kg | origem: 'etiqueta' | 'manual'
+  function adicionarProdutoPesavel(produto, pesoKg, origem = 'etiqueta') {
+    setCarrinho(prev => [
+      ...prev,
+      {
+        ...produto,
+        quantidade:    pesoKg,
+        pesavel:       true,
+        origem_peso:   origem,
+      },
+    ]);
+    mostrarStatus('sucesso', `✓ ${produto.nome} — ${fmtPeso(pesoKg)} adicionado`);
   }
 
   function editarItem(item, idx) {
@@ -861,6 +945,22 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         />
       )}
 
+      {/* ── Modal de peso manual (produto pesável sem etiqueta) ── */}
+      {modalPeso && (
+        <ModalPesoManual
+          produto={modalPeso.produto}
+          onConfirmar={(pesoKg) => {
+            adicionarProdutoPesavel(modalPeso.produto, pesoKg, 'manual');
+            setModalPeso(null);
+            setTimeout(() => inputBuscaRef.current?.focus(), 0);
+          }}
+          onCancelar={() => {
+            setModalPeso(null);
+            setTimeout(() => inputBuscaRef.current?.focus(), 0);
+          }}
+        />
+      )}
+
       {/* Banner permissão limitada */}
       {!isMerchant && permissoes && !pode('pdv_realizar_venda') && (
         <div className="mod-aviso-permissao mod-aviso-pdv">
@@ -935,10 +1035,24 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             <li className="pdv-carrinho-vazio"><span className="pdv-carrinho-vazio-icon">🛒</span><p>Carrinho vazio</p><small>Busque e selecione produtos ao lado</small></li>
           ) : (
             carrinho.map((item, idx) => (
-              <li key={`${item.id}-${idx}`} className="pdv-item">
-                <div className="pdv-item-info" onClick={() => editarItem(item, idx)}>
-                  <span className="pdv-item-nome">{item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}</span>
-                  <span className="pdv-item-qtde">{item.unidade_medida === 'kg' ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg` : `${parseFloat(item.quantidade).toFixed(0)} un`}{' @ '}{fmt(item.preco_venda)}</span>
+              <li key={`${item.id}-${idx}`} className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}`}>
+                <div className="pdv-item-info" onClick={() => !item.pesavel && editarItem(item, idx)}>
+                  <span className="pdv-item-nome">
+                    {item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}
+                    {item.pesavel && (
+                      <span className="pdv-item-badge-pesavel">
+                        {item.origem_peso === 'etiqueta' ? '⚖️ etiqueta' : '⚖️ manual'}
+                      </span>
+                    )}
+                  </span>
+                  <span className="pdv-item-qtde">
+                    {item.pesavel
+                      ? `${fmtPeso(item.quantidade)} @ ${fmt(item.preco_venda)}/kg`
+                      : item.unidade_medida === 'kg'
+                        ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg @ ${fmt(item.preco_venda)}`
+                        : `${parseFloat(item.quantidade).toFixed(0)} un @ ${fmt(item.preco_venda)}`
+                    }
+                  </span>
                 </div>
                 <span className="pdv-item-total">{fmt(item.preco_venda * item.quantidade)}</span>
                 <button className="pdv-item-remover" onClick={() => removerItem(idx)}>×</button>
@@ -961,6 +1075,108 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             {loadingVenda ? '⏳ Processando…' : `✓ Finalizar Venda${carrinho.length > 0 ? ' (F10)' : ''}`}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL DE PESO MANUAL
+   Abre quando produto pesável é selecionado sem etiqueta de balança
+   ════════════════════════════════════════════════════════════ */
+function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
+  const [unidade,    setUnidade]    = useState('kg');
+  const [valorPeso,  setValorPeso]  = useState('');
+  const [erro,       setErro]       = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
+  }, []);
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); onCancelar(); }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onCancelar]);
+
+  const pesoKg = (() => {
+    const v = parseFloat(valorPeso.replace(',', '.'));
+    if (isNaN(v) || v <= 0) return 0;
+    return unidade === 'g' ? v / 1000 : v;
+  })();
+
+  const totalPreview = pesoKg > 0 ? produto.preco_venda * pesoKg : 0;
+
+  function confirmar(e) {
+    e?.preventDefault();
+    if (pesoKg <= 0) { setErro('Informe um peso válido maior que zero.'); return; }
+    onConfirmar(pesoKg);
+  }
+
+  return (
+    <div className="pdv-modal-overlay">
+      <div className="pdv-modal pdv-modal-peso" onClick={e => e.stopPropagation()}>
+        <div className="pdv-modal-titulo">⚖️ Informar Peso</div>
+
+        <div className="pdv-peso-produto">
+          <strong>{produto.nome}</strong>
+          {produto.marca && <span className="pdv-item-marca"> · {produto.marca}</span>}
+        </div>
+        <div className="pdv-peso-preco-ref">
+          {fmt(produto.preco_venda)} / kg
+        </div>
+
+        {/* Toggle kg / g */}
+        <div className="pdv-peso-unidade-toggle">
+          {['kg', 'g'].map(u => (
+            <button
+              key={u}
+              type="button"
+              className={`pdv-peso-unidade-btn${unidade === u ? ' ativo' : ''}`}
+              onClick={() => { setUnidade(u); setValorPeso(''); setErro(''); setTimeout(() => inputRef.current?.focus(), 0); }}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={confirmar}>
+          <label className="pdv-modal-qtd-label">Peso ({unidade})</label>
+          <input
+            ref={inputRef}
+            className="pdv-modal-qtd-input pdv-peso-input-grande"
+            type="number"
+            step={unidade === 'kg' ? '0.001' : '1'}
+            min={unidade === 'kg' ? '0.001' : '1'}
+            value={valorPeso}
+            onChange={e => { setValorPeso(e.target.value); setErro(''); }}
+            placeholder={unidade === 'kg' ? 'Ex: 1.350' : 'Ex: 1350'}
+          />
+          {erro && <div className="pdv-peso-erro">⚠️ {erro}</div>}
+
+          {/* Preview do total */}
+          {pesoKg > 0 && (
+            <div className="pdv-peso-preview">
+              <span>{fmtPeso(pesoKg)}</span>
+              <span>×</span>
+              <span>{fmt(produto.preco_venda)}/kg</span>
+              <span>=</span>
+              <strong>{fmt(totalPreview)}</strong>
+            </div>
+          )}
+
+          <div className="pdv-modal-acoes">
+            <button type="button" className="pdv-modal-btn-cancelar" onClick={onCancelar}>
+              Cancelar (Esc)
+            </button>
+            <button type="submit" className="pdv-modal-btn-confirmar" disabled={pesoKg <= 0}>
+              ✓ Adicionar (Enter)
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
