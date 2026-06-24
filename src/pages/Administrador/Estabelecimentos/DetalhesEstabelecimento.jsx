@@ -22,6 +22,11 @@ export default function DetalhesEstabelecimento() {
   const [limiteEdit,   setLimiteEdit]   = useState(false);
   const [limiteVal,    setLimiteVal]    = useState(3);
   const [limiteSaving, setLimiteSaving] = useState(false);
+  // Liberação de acesso
+  const [modalLiberar, setModalLiberar] = useState(false);
+  const [diasLiberar,  setDiasLiberar]  = useState(30);
+  const [liberando,    setLiberando]    = useState(false);
+  const [liberarMsg,   setLiberarMsg]   = useState("");
 
   async function carregar() {
     setLoading(true);
@@ -73,6 +78,25 @@ export default function DetalhesEstabelecimento() {
       }
     } catch { alert("Erro interno."); }
     setLimiteSaving(false);
+  }
+
+  async function confirmarLiberar() {
+    setLiberando(true);
+    setLiberarMsg("");
+    try {
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/liberar-acesso`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ dias: parseInt(diasLiberar), motivo: "Liberação manual pelo SuperAdmin" }),
+        credentials: "include",
+      });
+      const json = await resp.json();
+      if (!resp.ok) { setLiberarMsg("❌ " + (json.error || "Erro.")); return; }
+      setLiberarMsg(`✓ Liberado até ${new Date(json.data_vencimento + "T12:00:00").toLocaleDateString("pt-BR")}`);
+      carregar();
+      setTimeout(() => { setModalLiberar(false); setLiberarMsg(""); }, 2000);
+    } catch { setLiberarMsg("❌ Erro interno."); }
+    setLiberando(false);
   }
 
   /* ── loading ──────────────────────────────────────────── */
@@ -180,8 +204,7 @@ export default function DetalhesEstabelecimento() {
         </div>
 
         {/* GRID DE INFO */}
-        <div className="est-info-grid">
-          <div className="est-info-block">
+        <div className="est-info-grid">          <div className="est-info-block">
             <div className="est-info-block-title">Dados da Empresa</div>
             {[
               { label: "CNPJ",     value: dados.cnpj,           mono: true  },
@@ -259,14 +282,78 @@ export default function DetalhesEstabelecimento() {
               <span className="est-info-row-label">Vencimento</span>
               <span className="est-info-row-value mono">
                 {dados.data_vencimento
-                  ? dados.data_vencimento.split("-").reverse().join("/")
+                  ? (() => {
+                      const diff = (new Date(dados.data_vencimento + "T12:00:00") - new Date()) / (1000 * 60 * 60 * 24);
+                      const dataFmt = dados.data_vencimento.split("-").reverse().join("/");
+                      if (diff < 0)     return <span style={{ color: "#ef4444" }}>🔴 {dataFmt} (vencido)</span>;
+                      if (diff <= 5)    return <span style={{ color: "#f59e0b" }}>🟡 {dataFmt} ({Math.ceil(diff)} dias)</span>;
+                      return <span style={{ color: "#22c55e" }}>🟢 {dataFmt}</span>;
+                    })()
                   : "—"}
               </span>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button
+                className="est-btn est-btn-success"
+                onClick={() => { setDiasLiberar(30); setLiberarMsg(""); setModalLiberar(true); }}
+              >
+                🔓 Liberar Acesso
+              </button>
             </div>
           </div>
         </div>
 
       </div>
+
+      {/* MODAL LIBERAR ACESSO */}
+      {modalLiberar && (
+        <div className="est-modal-overlay" onClick={() => setModalLiberar(false)}>
+          <div className="est-modal" onClick={e => e.stopPropagation()}>
+            <div className="est-modal-titulo">🔓 Liberar Acesso</div>
+            <div className="est-modal-subtitulo">
+              <strong>{dados.nome_fantasia}</strong><br />
+              Selecione por quantos dias deseja liberar o acesso.
+            </div>
+
+            <div className="est-form-group" style={{ marginTop: 16 }}>
+              <label className="est-label">Período de liberação</label>
+              <select
+                className="est-select"
+                value={diasLiberar}
+                onChange={e => setDiasLiberar(e.target.value)}
+                autoFocus
+              >
+                <option value={7}>7 dias</option>
+                <option value={15}>15 dias</option>
+                <option value={30}>30 dias</option>
+                <option value={60}>60 dias</option>
+                <option value={90}>90 dias</option>
+                <option value={180}>6 meses</option>
+                <option value={365}>1 ano</option>
+              </select>
+              <span className="est-label-hint" style={{ marginTop: 4 }}>
+                Vencerá em: {(() => { const d = new Date(); d.setDate(d.getDate() + parseInt(diasLiberar)); return d.toLocaleDateString("pt-BR"); })()}
+              </span>
+            </div>
+
+            {liberarMsg && (
+              <div className={`est-alert ${liberarMsg.startsWith("✓") ? "est-alert-success" : "est-alert-error"}`} style={{ marginTop: 12 }}>
+                {liberarMsg}
+              </div>
+            )}
+
+            <div className="est-modal-acoes">
+              <button className="est-btn est-btn-ghost" onClick={() => setModalLiberar(false)}>
+                Cancelar
+              </button>
+              <button className="est-btn est-btn-success" onClick={confirmarLiberar} disabled={liberando}>
+                {liberando ? "⏳ Liberando…" : "✓ Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </LayoutAdmin>
   );
 }

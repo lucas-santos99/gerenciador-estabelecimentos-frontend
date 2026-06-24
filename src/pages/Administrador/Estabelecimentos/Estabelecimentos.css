@@ -899,3 +899,81 @@
   .est-table th:nth-child(5),
   .est-table td:nth-child(5) { display: none; }
 }
+/* ════════════════════════════════════════════════════════════
+   ADIÇÕES — Licença, período de teste, liberar acesso
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Toggle período de teste (NovoEstabelecimento) ── */
+.est-periodo-toggle {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.est-periodo-btn {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all 0.15s;
+}
+.est-periodo-btn.ativo {
+  background: var(--gradient-brand);
+  color: #fff;
+}
+
+/* Preview da data calculada */
+.est-periodo-preview {
+  padding: 11px 14px;
+  border: 1px solid var(--border-accent);
+  border-radius: 10px;
+  background: var(--bg-badge);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--text-accent);
+  font-size: 0.95rem;
+}
+
+/* Hint de label */
+.est-label-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ── Modal título/subtítulo (liberar acesso) ── */
+.est-modal-titulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.est-modal-subtitulo {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+/* ── Botão verde no DashboardAdmin (dash-card-btn--green) ── */
+.dash-card-btn--green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.dash-card-btn--green:hover {
+  background: linear-gradient(135deg, #14532d, #22c55e);
+  color: #fff;
+  border-color: transparent;
+}
