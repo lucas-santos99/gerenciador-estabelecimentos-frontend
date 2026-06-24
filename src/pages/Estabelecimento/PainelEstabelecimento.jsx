@@ -22,6 +22,7 @@ export default function PainelEstabelecimento() {
   const [abaAtiva,            setAbaAtiva]           = useState("pdv");
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
   const [logoUrl,             setLogoUrl]            = useState("");
+  const [licencaInfo,         setLicencaInfo]        = useState(null); // { status_assinatura, data_vencimento }
   const [carregando,          setCarregando]         = useState(true);
   const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
 
@@ -74,8 +75,12 @@ export default function PainelEstabelecimento() {
 
         if (respDados.ok) {
           const data = await respDados.json();
-          setNomeEstabelecimento(data.nome_fantasia || "");
+          setNomeEstabelecimento(data.nome_fantasia || data.nome || "");
           setLogoUrl(data.logo_url || "");
+          setLicencaInfo({
+            status_assinatura: data.status_assinatura || null,
+            data_vencimento:   data.data_vencimento   || null,
+          });
         }
 
         if (respPerms && respPerms.ok) {
@@ -208,6 +213,7 @@ export default function PainelEstabelecimento() {
       nomeEstabelecimento={nomeEstabelecimento}
       logoUrl={logoUrl}
       permissoes={permissoes}
+      licencaInfo={licencaInfo}
     >
       {renderModulo()}
     </LayoutEstabelecimento>

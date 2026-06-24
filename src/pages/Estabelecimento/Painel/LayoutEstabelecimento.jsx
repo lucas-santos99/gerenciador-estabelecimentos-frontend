@@ -143,17 +143,18 @@ export default function LayoutEstabelecimento({
   nomeEstabelecimento,
   logoUrl,
   permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
+  licencaInfo = null, // { status_assinatura, data_vencimento } — vem do PainelEstabelecimento
 }) {
   const navigate  = useNavigate();
-  const { logout, profile, mercearia } = useAuth();
+  const { logout, profile } = useAuth();
 
   /* ── abas disponíveis para este role/permissões ───────────── */
   const isMerchant = profile?.role === 'merchant';
 
   /* ── status da licença (só exibido para merchant) ─────────── */
   const licenca = (() => {
-    if (!isMerchant || !mercearia) return null;
-    const { status_assinatura, data_vencimento } = mercearia;
+    if (!isMerchant || !licencaInfo) return null;
+    const { status_assinatura, data_vencimento } = licencaInfo;
     if (status_assinatura === 'bloqueada') return { tipo: 'bloqueada', texto: 'Licença bloqueada', dias: null };
     if (!data_vencimento) return null;
     const diff = Math.ceil((new Date(data_vencimento + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24));
