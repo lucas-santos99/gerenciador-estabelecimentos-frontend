@@ -22,6 +22,9 @@ export default function NovoEstabelecimento() {
     limite_operadores:    3,
   });
 
+  const [usarPeriodoTeste, setUsarPeriodoTeste] = useState(true);
+  const [diasTeste,        setDiasTeste]        = useState(30);
+
   const [tipoCustomizado,  setTipoCustomizado]  = useState("");
   const [tiposExistentes,  setTiposExistentes]  = useState([]);
   const [sugestoes,        setSugestoes]         = useState([]);
@@ -93,7 +96,14 @@ export default function NovoEstabelecimento() {
       setErro("A senha inicial é obrigatória.");
       return;
     }
-    if (form.status_assinatura === "ativa" && !form.data_vencimento) {
+
+    // Calcular data_vencimento a partir do período de teste
+    let dataVencimentoFinal = form.data_vencimento;
+    if (usarPeriodoTeste) {
+      const d = new Date();
+      d.setDate(d.getDate() + parseInt(diasTeste));
+      dataVencimentoFinal = d.toISOString().split("T")[0];
+    } else if (form.status_assinatura === "ativa" && !form.data_vencimento) {
       setErro("Data de vencimento é obrigatória para estabelecimentos ativos.");
       return;
     }
@@ -111,7 +121,12 @@ export default function NovoEstabelecimento() {
       const resp = await fetch(`${API_URL}/admin/estabelecimentos/criar`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ ...form, tipo_estabelecimento: tipoFinal, limite_operadores: parseInt(form.limite_operadores) || 3 }),
+        body:    JSON.stringify({
+          ...form,
+          data_vencimento:      dataVencimentoFinal,
+          tipo_estabelecimento: tipoFinal,
+          limite_operadores:    parseInt(form.limite_operadores) || 3,
+        }),
         credentials: "include",
       });
       const json = await resp.json();
@@ -305,31 +320,93 @@ export default function NovoEstabelecimento() {
             <div className="est-form-section-title">💳 Assinatura</div>
             <div className="est-form-grid">
 
-              <div className="est-form-group">
-                <label className="est-label">Status da Assinatura</label>
-                <select
-                  className="est-select"
-                  name="status_assinatura"
-                  value={form.status_assinatura}
-                  onChange={atualizar}
-                >
-                  <option value="ativa">Ativa</option>
-                  <option value="inativa">Inativa</option>
-                  <option value="bloqueada">Bloqueada</option>
-                </select>
+              {/* Toggle período de teste */}
+              <div className="est-form-group est-form-full">
+                <label className="est-label">Modo de ativação</label>
+                <div className="est-periodo-toggle">
+                  <button
+                    type="button"
+                    className={`est-periodo-btn${usarPeriodoTeste ? " ativo" : ""}`}
+                    onClick={() => setUsarPeriodoTeste(true)}
+                  >
+                    🧪 Período de teste
+                  </button>
+                  <button
+                    type="button"
+                    className={`est-periodo-btn${!usarPeriodoTeste ? " ativo" : ""}`}
+                    onClick={() => setUsarPeriodoTeste(false)}
+                  >
+                    📅 Data manual
+                  </button>
+                </div>
               </div>
 
-              {form.status_assinatura === "ativa" && (
-                <div className="est-form-group">
-                  <label className="est-label">Data de Vencimento *</label>
-                  <input
-                    className="est-input"
-                    type="date"
-                    name="data_vencimento"
-                    value={form.data_vencimento}
-                    onChange={atualizar}
-                  />
-                </div>
+              {usarPeriodoTeste ? (
+                <>
+                  <div className="est-form-group est-form-full">
+                    <label className="est-label">Duração do período</label>
+                    <div className="est-dias-atalhos">
+                      {[7, 15, 30, 60, 90, 180, 365].map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          className={`est-dias-btn${parseInt(diasTeste) === d ? " ativo" : ""}`}
+                          onClick={() => setDiasTeste(d)}
+                        >
+                          {d === 365 ? "1 ano" : d === 180 ? "6 meses" : `${d}d`}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="est-dias-input-row">
+                      <input
+                        className="est-input"
+                        type="number"
+                        min={1}
+                        max={3650}
+                        value={diasTeste}
+                        onChange={e => setDiasTeste(e.target.value)}
+                        style={{ width: 100 }}
+                      />
+                      <span className="est-dias-label">dias</span>
+                      <span className="est-periodo-preview">
+                        Vence em {(() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + (parseInt(diasTeste) || 0));
+                          return d.toLocaleDateString('pt-BR');
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="est-form-group">
+                    <label className="est-label">Status da Assinatura</label>
+                    <select
+                      className="est-select"
+                      name="status_assinatura"
+                      value={form.status_assinatura}
+                      onChange={atualizar}
+                    >
+                      <option value="ativa">Ativa</option>
+                      <option value="inativa">Inativa</option>
+                      <option value="bloqueada">Bloqueada</option>
+                    </select>
+                  </div>
+
+                  {form.status_assinatura === "ativa" && (
+                    <div className="est-form-group">
+                      <label className="est-label">Data de Vencimento *</label>
+                      <input
+                        className="est-input"
+                        type="date"
+                        name="data_vencimento"
+                        value={form.data_vencimento}
+                        onChange={atualizar}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
             </div>
