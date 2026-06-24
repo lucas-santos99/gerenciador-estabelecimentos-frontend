@@ -145,10 +145,24 @@ export default function LayoutEstabelecimento({
   permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
 }) {
   const navigate  = useNavigate();
-  const { logout, profile } = useAuth();
+  const { logout, profile, mercearia } = useAuth();
 
   /* ── abas disponíveis para este role/permissões ───────────── */
   const isMerchant = profile?.role === 'merchant';
+
+  /* ── status da licença (só exibido para merchant) ─────────── */
+  const licenca = (() => {
+    if (!isMerchant || !mercearia) return null;
+    const { status_assinatura, data_vencimento } = mercearia;
+    if (status_assinatura === 'bloqueada') return { tipo: 'bloqueada', texto: 'Licença bloqueada', dias: null };
+    if (!data_vencimento) return null;
+    const diff = Math.ceil((new Date(data_vencimento + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24));
+    const dataFmt = new Date(data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
+    if (diff < 0)   return { tipo: 'vencida',   texto: 'Licença vencida',         dias: diff,  dataFmt };
+    if (diff <= 7)  return { tipo: 'critica',   texto: `Vence em ${diff} dia${diff === 1 ? '' : 's'}`, dias: diff, dataFmt };
+    if (diff <= 30) return { tipo: 'atencao',   texto: `Vence em ${diff} dias`,   dias: diff,  dataFmt };
+    return               { tipo: 'ativa',      texto: `Ativa até ${dataFmt}`,     dias: diff,  dataFmt };
+  })();
 
   const ABAS = (() => {
     if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_OPERADORES];
@@ -301,6 +315,14 @@ export default function LayoutEstabelecimento({
 
         {/* Footer */}
         <div className="est-sidebar-footer">
+
+          {/* Badge de licença — só merchant */}
+          {licenca && (
+            <div className={`est-licenca-badge est-licenca-badge--${licenca.tipo}`} title={licenca.dataFmt ? `Vencimento: ${licenca.dataFmt}` : ''}>
+              <span className="est-licenca-dot" />
+              <span className="est-licenca-texto">{licenca.texto}</span>
+            </div>
+          )}
 
           {/* Identidade Lucas J. Systems */}
           <div className="est-ljs-badge">

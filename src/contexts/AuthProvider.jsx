@@ -1,14 +1,16 @@
 // src/contexts/AuthProvider.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../utils/supabaseClient";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [session,    setSession]    = useState(null);
+  const [user,       setUser]       = useState(null);
+  const [profile,    setProfile]    = useState(null);
+  const [mercearia,  setMercearia]  = useState(null); // dados da mercearia (licença)
+  const [loading,    setLoading]    = useState(true);
 
   // --- 1) Carregar sessão inicial ---
 useEffect(() => {
@@ -60,8 +62,21 @@ useEffect(() => {
         .single();
 
       if (!cancelled) {
-        if (!error) setProfile(data);
-        else setProfile(null);
+        if (!error) {
+          setProfile(data);
+          // Buscar dados da mercearia para exibir status de licença
+          if (data?.mercearia_id) {
+            const { data: merc } = await supabase
+              .from("mercearias")
+              .select("id, nome_fantasia, status_assinatura, data_vencimento, logo_url")
+              .eq("id", data.mercearia_id)
+              .single();
+            if (!cancelled) setMercearia(merc || null);
+          }
+        } else {
+          setProfile(null);
+          setMercearia(null);
+        }
       }
     }
 
@@ -81,6 +96,7 @@ useEffect(() => {
     setSession(null);
     setUser(null);
     setProfile(null);
+    setMercearia(null);
   }, []);
 
  if (loading) {
@@ -89,7 +105,7 @@ useEffect(() => {
 
 return (
   <AuthContext.Provider
-    value={{ session, user, profile, loading, login, logout }}
+    value={{ session, user, profile, mercearia, loading, login, logout }}
   >
     {children}
   </AuthContext.Provider>
