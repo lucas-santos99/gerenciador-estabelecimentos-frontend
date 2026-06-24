@@ -236,7 +236,6 @@ export default function DashboardAdmin() {
     carregarDados();
   }
 
-  /* ── liberar acesso manual ──────────────────────────────── */
   async function confirmarLiberar() {
     if (!modalLiberar) return;
     setLiberando(true);
@@ -249,7 +248,7 @@ export default function DashboardAdmin() {
         {
           method:  "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body:    JSON.stringify({ dias: parseInt(diasLiberar), motivo: "Liberação manual pelo SuperAdmin" }),
+          body:    JSON.stringify({ dias: parseInt(diasLiberar) || 30, motivo: "Liberação manual pelo SuperAdmin" }),
         }
       );
       const json = await resp.json();
@@ -513,28 +512,30 @@ export default function DashboardAdmin() {
 
                     {/* Ações */}
                     <div className="dash-est-card-acoes">
-                      <button
-                        className="dash-card-btn dash-card-btn--ghost"
-                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
-                      >👁 Detalhes</button>
-                      <button
-                        className="dash-card-btn dash-card-btn--outline"
-                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
-                      >✏️ Editar</button>
-                      <button
-                        className="dash-card-btn dash-card-btn--blue"
-                        onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
-                      >👥 Operadores</button>
-                      <button
-                        className="dash-card-btn dash-card-btn--green"
-                        onClick={() => { setDiasLiberar(30); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
-                        title="Liberar acesso"
-                      >🔓 Liberar</button>
-                      <button
-                        className="dash-card-btn dash-card-btn--danger"
-                        onClick={() => excluir(m.id, m.nome_fantasia)}
-                        title="Excluir"
-                      >🗑</button>
+                      <div className="dash-card-acoes-linha">
+                        <button
+                          className="dash-card-btn dash-card-btn--ghost"
+                          onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
+                        >👁 Detalhes</button>
+                        <button
+                          className="dash-card-btn dash-card-btn--outline"
+                          onClick={() => navigate(`/admin/estabelecimentos/${m.id}`)}
+                        >✏️ Editar</button>
+                        <button
+                          className="dash-card-btn dash-card-btn--blue"
+                          onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
+                        >👥 Operadores</button>
+                      </div>
+                      <div className="dash-card-acoes-linha">
+                        <button
+                          className="dash-card-btn dash-card-btn--green"
+                          onClick={() => { setDiasLiberar(30); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
+                        >🔓 Liberar Acesso</button>
+                        <button
+                          className="dash-card-btn dash-card-btn--danger"
+                          onClick={() => excluir(m.id, m.nome_fantasia)}
+                        >🗑 Excluir</button>
+                      </div>
                     </div>
 
                   </div>
@@ -550,41 +551,39 @@ export default function DashboardAdmin() {
       {modalLiberar && (
         <div className="dash-modal-overlay" onClick={() => setModalLiberar(null)}>
           <div className="dash-modal" onClick={e => e.stopPropagation()}>
-            <div className="dash-modal-icon">🔓</div>
+            <div className="dash-modal-icon" style={{ background: "rgba(34,197,94,0.12)", fontSize: "1.4rem" }}>🔓</div>
             <div className="dash-modal-title">Liberar Acesso</div>
             <div className="dash-modal-subtitle">
-              <strong>{modalLiberar.nome}</strong><br />
-              Selecione por quantos dias deseja liberar o acesso.
-              O sistema ativará o estabelecimento automaticamente.
+              <strong>{modalLiberar.nome}</strong> — selecione por quantos dias liberar.
             </div>
 
-            <div className="dash-config-item">
-              <div className="dash-config-info">
-                <span className="dash-config-label">⏱ Período de liberação</span>
-                <span className="dash-config-desc">
-                  A data de vencimento será atualizada a partir de hoje.
-                </span>
-              </div>
-              <div className="dash-config-control">
-                <select
-                  className="dash-config-input"
-                  style={{ width: "auto", padding: "6px 10px" }}
-                  value={diasLiberar}
-                  onChange={e => setDiasLiberar(e.target.value)}
-                  autoFocus
+            <div className="dash-dias-atalhos" style={{ marginBottom: 10 }}>
+              {[7, 15, 30, 60, 90, 180, 365].map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`dash-dias-btn${parseInt(diasLiberar) === d ? " ativo" : ""}`}
+                  onClick={() => setDiasLiberar(d)}
                 >
-                  <option value={7}>7 dias</option>
-                  <option value={15}>15 dias</option>
-                  <option value={30}>30 dias</option>
-                  <option value={60}>60 dias</option>
-                  <option value={90}>90 dias</option>
-                  <option value={180}>6 meses</option>
-                  <option value={365}>1 ano</option>
-                </select>
-                <span className="dash-config-unit" style={{ marginLeft: 8, fontSize: "0.8rem", opacity: 0.7 }}>
-                  até {(() => { const d = new Date(); d.setDate(d.getDate() + parseInt(diasLiberar)); return d.toLocaleDateString("pt-BR"); })()}
-                </span>
-              </div>
+                  {d === 365 ? "1 ano" : d === 180 ? "6 meses" : `${d}d`}
+                </button>
+              ))}
+            </div>
+            <div className="dash-dias-input-row" style={{ marginBottom: 16 }}>
+              <input
+                className="dash-config-input"
+                type="number"
+                min={1}
+                max={3650}
+                value={diasLiberar}
+                onChange={e => setDiasLiberar(e.target.value)}
+                autoFocus
+                style={{ width: 80 }}
+              />
+              <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>dias</span>
+              <span style={{ fontSize: "0.82rem", color: "var(--text-accent)", fontWeight: 600 }}>
+                → {(() => { const d = new Date(); d.setDate(d.getDate() + (parseInt(diasLiberar) || 0)); return d.toLocaleDateString("pt-BR"); })()}
+              </span>
             </div>
 
             {liberarMsg && (
@@ -594,14 +593,8 @@ export default function DashboardAdmin() {
             )}
 
             <div className="dash-modal-actions">
-              <button className="btn btn-ghost" onClick={() => setModalLiberar(null)}>
-                Cancelar
-              </button>
-              <button
-                className="btn btn-teal"
-                onClick={confirmarLiberar}
-                disabled={liberando}
-              >
+              <button className="btn btn-ghost" onClick={() => setModalLiberar(null)}>Cancelar</button>
+              <button className="btn btn-teal" onClick={confirmarLiberar} disabled={liberando || !diasLiberar}>
                 {liberando ? "⏳ Liberando…" : "🔓 Confirmar Liberação"}
               </button>
             </div>

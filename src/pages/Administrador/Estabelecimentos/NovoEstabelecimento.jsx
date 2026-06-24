@@ -343,30 +343,38 @@ export default function NovoEstabelecimento() {
 
               {usarPeriodoTeste ? (
                 <>
-                  <div className="est-form-group">
-                    <label className="est-label">Período de teste</label>
-                    <select
-                      className="est-select"
-                      value={diasTeste}
-                      onChange={e => setDiasTeste(e.target.value)}
-                    >
-                      <option value={7}>7 dias</option>
-                      <option value={15}>15 dias</option>
-                      <option value={30}>30 dias</option>
-                      <option value={60}>60 dias</option>
-                      <option value={90}>90 dias</option>
-                      <option value={180}>6 meses</option>
-                      <option value={365}>1 ano</option>
-                    </select>
-                  </div>
-                  <div className="est-form-group">
-                    <label className="est-label">Vencerá em</label>
-                    <div className="est-periodo-preview">
-                      {(() => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + parseInt(diasTeste));
-                        return d.toLocaleDateString('pt-BR');
-                      })()}
+                  <div className="est-form-group est-form-full">
+                    <label className="est-label">Duração do período</label>
+                    <div className="est-dias-atalhos">
+                      {[7, 15, 30, 60, 90, 180, 365].map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          className={`est-dias-btn${parseInt(diasTeste) === d ? " ativo" : ""}`}
+                          onClick={() => setDiasTeste(d)}
+                        >
+                          {d === 365 ? "1 ano" : d === 180 ? "6 meses" : `${d}d`}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="est-dias-input-row">
+                      <input
+                        className="est-input"
+                        type="number"
+                        min={1}
+                        max={3650}
+                        value={diasTeste}
+                        onChange={e => setDiasTeste(e.target.value)}
+                        style={{ width: 100 }}
+                      />
+                      <span className="est-dias-label">dias</span>
+                      <span className="est-periodo-preview">
+                        Vence em {(() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + (parseInt(diasTeste) || 0));
+                          return d.toLocaleDateString('pt-BR');
+                        })()}
+                      </span>
                     </div>
                   </div>
                 </>
