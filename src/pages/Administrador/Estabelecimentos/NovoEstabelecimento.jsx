@@ -20,9 +20,11 @@ export default function NovoEstabelecimento() {
     data_vencimento:      "",
     tipo_estabelecimento: "mercearia",
     limite_operadores:    3,
+    valor_mensalidade:    "", // vazio = usa o padrão global
   });
 
-  const [usarPeriodoTeste, setUsarPeriodoTeste] = useState(true);
+  const [usarPeriodoTeste,  setUsarPeriodoTeste]  = useState(true);
+  const [mensalidadePadrao, setMensalidadePadrao] = useState(49.90);
   const [diasTeste,        setDiasTeste]        = useState(30);
 
   const [tipoCustomizado,  setTipoCustomizado]  = useState("");
@@ -65,8 +67,13 @@ export default function NovoEstabelecimento() {
       const resp = await apiFetch('/superadmin/config');
       if (resp.ok) {
         const d = await resp.json();
-        const val = d.limite_operadores_padrao ?? 3;
-        setForm(prev => ({ ...prev, limite_operadores: val }));
+        setForm(prev => ({
+          ...prev,
+          limite_operadores: d.limite_operadores_padrao ?? 3,
+          // não preenche valor_mensalidade aqui — deixa vazio = "usar padrão"
+        }));
+        // Guarda o padrão para mostrar no placeholder
+        setMensalidadePadrao(d.valor_mensalidade ?? 49.90);
       }
     } catch {}
   }
@@ -126,6 +133,7 @@ export default function NovoEstabelecimento() {
           data_vencimento:      dataVencimentoFinal,
           tipo_estabelecimento: tipoFinal,
           limite_operadores:    parseInt(form.limite_operadores) || 3,
+          valor_mensalidade:    form.valor_mensalidade ? parseFloat(form.valor_mensalidade) : null,
         }),
         credentials: "include",
       });
@@ -432,6 +440,29 @@ export default function NovoEstabelecimento() {
                     Máximo de operadores ativos (0–50). Pré-preenchido com o padrão global.
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEÇÃO 5b — Mensalidade individual */}
+          <div className="est-form-section">
+            <div className="est-form-section-title">💰 Mensalidade</div>
+            <div className="est-form-grid">
+              <div className="est-form-group">
+                <label className="est-label">Valor da mensalidade (R$)</label>
+                <input
+                  className="est-input"
+                  type="number"
+                  name="valor_mensalidade"
+                  min="0"
+                  step="0.01"
+                  value={form.valor_mensalidade}
+                  onChange={atualizar}
+                  placeholder={`Padrão global: R$ ${mensalidadePadrao.toFixed(2).replace(".", ",")}`}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>
+                  Deixe em branco para usar o valor padrão global. Preencha para aplicar um preço diferenciado a este cliente.
+                </span>
               </div>
             </div>
           </div>

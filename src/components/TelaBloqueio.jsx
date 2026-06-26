@@ -8,6 +8,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
 
   // Modal de pagamento
   const [modalAberto,  setModalAberto]  = useState(false);
+  const [whatsapp,     setWhatsapp]     = useState("5500000000000");
   const [planos,       setPlanos]       = useState(null);
   const [planoSel,     setPlanoSel]     = useState("mensal");
   const [cobranca,     setCobranca]     = useState(null); // dados da cobrança gerada
@@ -113,7 +114,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         )}
         <a
           className="bloqueio-btn bloqueio-btn--whatsapp"
-          href="https://wa.me/5500000000000"
+          href={`https://wa.me/${whatsapp}`}
           target="_blank"
           rel="noreferrer"
         >

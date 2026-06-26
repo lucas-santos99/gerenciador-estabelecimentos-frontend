@@ -61,6 +61,11 @@ export default function DashboardAdmin() {
 
   // Modal configurações globais
   const [modalConfig,      setModalConfig]       = useState(false);
+  const [cfgLimite,        setCfgLimite]         = useState(3);
+  const [cfgMensalidade,   setCfgMensalidade]    = useState("49.90");
+  const [cfgWhatsapp,      setCfgWhatsapp]       = useState("");
+  const [cfgSalvando,      setCfgSalvando]       = useState(false);
+  const [cfgMsg,           setCfgMsg]            = useState("");
   // Modal liberação de acesso manual
   const [modalLiberar,     setModalLiberar]      = useState(null); // { id, nome }
   const [diasLiberar,      setDiasLiberar]       = useState(30);
@@ -78,12 +83,23 @@ export default function DashboardAdmin() {
       return next;
     });
   }
-  const [limiteGlobal,     setLimiteGlobal]      = useState(3);
-  const [limiteInput,      setLimiteInput]       = useState(3);
-  const [salvandoConfig,   setSalvandoConfig]    = useState(false);
-  const [configMsg,        setConfigMsg]         = useState("");
-
   /* ── carregar dados ─────────────────────────────────────── */
+  async function carregarConfigs() {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      const resp = await fetch(`${API_URL}/superadmin/config`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        setCfgLimite(d.limite_operadores_padrao ?? 3);
+        setCfgMensalidade(String(d.valor_mensalidade ?? "49.90"));
+        setCfgWhatsapp(d.whatsapp_suporte ?? "");
+      }
+    } catch {}
+  }
+
   async function carregarDados() {
     try {
       setLoading(true);
@@ -102,48 +118,9 @@ export default function DashboardAdmin() {
     }
   }
 
-  async function abrirConfig() {
-    setConfigMsg("");
-    // Busca o valor antes de abrir para evitar piscar o padrão 3
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const resp = await fetch(`${API_URL}/superadmin/config`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (resp.ok) {
-        const d = await resp.json();
-        const val = d.limite_operadores_padrao ?? 3;
-        setLimiteGlobal(val);
-        setLimiteInput(val);
-      }
-    } catch (err) { console.error(err); }
+  function abrirConfig() {
     setModalConfig(true);
-  }
-
-  async function salvarConfig() {
-    const val = parseInt(limiteInput);
-    if (isNaN(val) || val < 0 || val > 50) {
-      setConfigMsg("❌ Valor inválido (0–50)");
-      return;
-    }
-    setSalvandoConfig(true);
-    setConfigMsg("");
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const resp = await fetch(`${API_URL}/superadmin/config`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ limite_operadores_padrao: val }),
-      });
-      const json = await resp.json();
-      if (!resp.ok) { setConfigMsg("❌ " + (json.error || "Erro ao salvar")); return; }
-      setLimiteGlobal(val);
-      setConfigMsg("✓ Salvo! Novos estabelecimentos herdarão este limite.");
-      setTimeout(() => setConfigMsg(""), 4000);
-    } catch { setConfigMsg("❌ Erro interno"); }
-    setSalvandoConfig(false);
+    carregarConfigs();
   }
 
   useEffect(() => { carregarDados(); }, []);
@@ -605,53 +582,81 @@ export default function DashboardAdmin() {
       {/* ── MODAL CONFIG GLOBAL ────────────────────────────── */}
       {modalConfig && (
         <div className="dash-modal-overlay" onClick={() => setModalConfig(false)}>
-          <div className="dash-modal" onClick={e => e.stopPropagation()}>
+          <div className="dash-modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div className="dash-modal-icon">⚙️</div>
             <div className="dash-modal-title">Configurações Globais</div>
             <div className="dash-modal-subtitle">
-              Parâmetros padrão aplicados a <strong>novos</strong> estabelecimentos.
-              Estabelecimentos existentes não são afetados.
+              Afetam todos os estabelecimentos por padrão. Cada cliente pode ter valores individuais.
             </div>
 
             <div className="dash-config-item">
               <div className="dash-config-info">
                 <span className="dash-config-label">👥 Limite padrão de operadores</span>
-                <span className="dash-config-desc">
-                  Novos estabelecimentos criados herdarão este limite automaticamente.
-                  Para alterar individualmente, use ✏️ Editar no estabelecimento.
-                </span>
+                <span className="dash-config-desc">Aplicado em novos estabelecimentos. Pode ser sobrescrito individualmente.</span>
               </div>
               <div className="dash-config-control">
-                <input
-                  className="dash-config-input"
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={limiteInput}
-                  onChange={e => setLimiteInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && salvarConfig()}
-                  autoFocus
-                />
+                <input className="dash-config-input" type="number" min={0} max={50}
+                  value={cfgLimite} onChange={e => setCfgLimite(e.target.value)} />
                 <span className="dash-config-unit">operadores</span>
               </div>
             </div>
 
-            {configMsg && (
-              <div className={`dash-config-msg ${configMsg.startsWith('✓') ? 'sucesso' : 'erro'}`}>
-                {configMsg}
+            <div className="dash-config-item">
+              <div className="dash-config-info">
+                <span className="dash-config-label">💰 Valor padrão da mensalidade</span>
+                <span className="dash-config-desc">Usado na geração de cobranças. Pode ser diferente por estabelecimento.</span>
+              </div>
+              <div className="dash-config-control">
+                <span className="dash-config-unit">R$</span>
+                <input className="dash-config-input" type="number" min={0} max={9999} step="0.01"
+                  value={cfgMensalidade} onChange={e => setCfgMensalidade(e.target.value)}
+                  style={{ width: 90 }} />
+                <span className="dash-config-unit">/mês</span>
+              </div>
+            </div>
+
+            <div className="dash-config-item">
+              <div className="dash-config-info">
+                <span className="dash-config-label">💬 WhatsApp de suporte</span>
+                <span className="dash-config-desc">Exibido na tela de bloqueio. Só números com DDI+DDD (ex: 5553999998888).</span>
+              </div>
+              <div className="dash-config-control">
+                <input className="dash-config-input" type="text" placeholder="5553999998888"
+                  value={cfgWhatsapp} onChange={e => setCfgWhatsapp(e.target.value)}
+                  style={{ width: 160, fontFamily: 'JetBrains Mono, monospace' }} />
+              </div>
+            </div>
+
+            {cfgMsg && (
+              <div className={`dash-config-msg ${cfgMsg.startsWith("✓") ? "sucesso" : "erro"}`}>
+                {cfgMsg}
               </div>
             )}
 
             <div className="dash-modal-actions">
-              <button className="btn btn-ghost" onClick={() => setModalConfig(false)}>
-                Cancelar
-              </button>
-              <button
-                className="btn btn-teal"
-                onClick={salvarConfig}
-                disabled={salvandoConfig || parseInt(limiteInput) === limiteGlobal}
-              >
-                {salvandoConfig ? "⏳ Salvando…" : "✓ Salvar"}
+              <button className="btn btn-ghost" onClick={() => setModalConfig(false)}>Cancelar</button>
+              <button className="btn btn-teal" disabled={cfgSalvando} onClick={async () => {
+                setCfgSalvando(true); setCfgMsg("");
+                try {
+                  const { data: session } = await supabase.auth.getSession();
+                  const token = session.session?.access_token;
+                  const resp = await fetch(`${API_URL}/superadmin/config`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                      limite_operadores_padrao: parseInt(cfgLimite),
+                      valor_mensalidade:        parseFloat(cfgMensalidade),
+                      whatsapp_suporte:         cfgWhatsapp,
+                    }),
+                  });
+                  const d = await resp.json();
+                  if (!resp.ok) { setCfgMsg("❌ " + (d.error || "Erro ao salvar.")); return; }
+                  setCfgMsg("✓ Configurações salvas!");
+                  setTimeout(() => { setModalConfig(false); setCfgMsg(""); }, 1500);
+                } catch { setCfgMsg("❌ Erro interno."); }
+                finally { setCfgSalvando(false); }
+              }}>
+                {cfgSalvando ? "⏳ Salvando…" : "✓ Salvar Configurações"}
               </button>
             </div>
           </div>
