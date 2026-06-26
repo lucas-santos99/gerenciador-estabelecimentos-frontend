@@ -1,6 +1,6 @@
 // src/pages/Estabelecimento/PainelEstabelecimento.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { apiFetch } from "../../utils/api";
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
@@ -18,6 +18,7 @@ import Inventario    from "./Inventario/Inventario";
 export default function PainelEstabelecimento() {
   const { id: estabelecimentoId } = useParams();
   const { user, profile }         = useAuth();
+  const navigate                  = useNavigate();
 
   const [abaAtiva,            setAbaAtiva]           = useState("pdv");
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
@@ -75,6 +76,13 @@ export default function PainelEstabelecimento() {
 
         if (respDados.ok) {
           const data = await respDados.json();
+
+          // Redirecionar para tela de bloqueio se licença bloqueada
+          if (data.status_assinatura === "bloqueada" && profile?.role === "merchant") {
+            navigate("/bloqueado", { replace: true });
+            return;
+          }
+
           setNomeEstabelecimento(data.nome_fantasia || data.nome || "");
           setLogoUrl(data.logo_url || "");
           setLicencaInfo({

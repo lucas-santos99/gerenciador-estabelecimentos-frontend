@@ -43,6 +43,25 @@ import "./App.css";
 const savedTheme = localStorage.getItem("theme") || "dark";
 document.body.className = savedTheme;
 
+/* ── Wrapper que injeta dados no TelaBloqueio ──────────── */
+function TelaBloqueioWrapper() {
+  const { profile, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login", { replace: true });
+  }
+
+  return (
+    <TelaBloqueio
+      onLogout={handleLogout}
+      nomeFantasia={profile?.nome || ""}
+      mercearia_id={profile?.mercearia_id || null}
+    />
+  );
+}
+
 /* ══════════════════════════════════════════════════════════ */
 function App() {
   const { profile, loading, user } = useAuth();
@@ -147,7 +166,7 @@ function App() {
       }/>
 
       {/* Auxiliares */}
-      <Route path="/bloqueado"     element={<TelaBloqueio />} />
+      <Route path="/bloqueado"     element={<TelaBloqueioWrapper />} />
       <Route path="/unauthorized"  element={<div style={{ padding: 20 }}>Sem permissão.</div>} />
       <Route path="*"              element={<div style={{ padding: 20 }}>Página não encontrada.</div>} />
 
