@@ -1,18 +1,18 @@
 /* TelaBloqueio.css */
 body { margin: 0; }
 
-/* ── Variáveis que garantem funcionamento independente do tema ── */
+/* Variáveis por tema */
 body.dark  { --bl-bg: #0f172a; --bl-surface: #1e293b; --bl-text: #f1f5f9; --bl-text-muted: #94a3b8; --bl-border: #334155; }
 body.light { --bl-bg: #f8fafc; --bl-surface: #ffffff; --bl-text: #111827; --bl-text-muted: #6b7280; --bl-border: #e5e7eb; }
 
-/* ── Container principal ── */
+/* Container */
 .bloqueio-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.1rem;
   padding: 5rem 1rem 2rem;
   background: var(--bl-bg);
   color: var(--bl-text);
@@ -21,7 +21,7 @@ body.light { --bl-bg: #f8fafc; --bl-surface: #ffffff; --bl-text: #111827; --bl-t
   text-align: center;
 }
 
-/* ── Topbar LJS + toggle tema ── */
+/* Topbar */
 .bloqueio-topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -34,15 +34,13 @@ body.light { --bl-bg: #f8fafc; --bl-surface: #ffffff; --bl-text: #111827; --bl-t
   border-bottom: 1px solid var(--bl-border);
   z-index: 10;
 }
-
 .bloqueio-ljs {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .bloqueio-ljs-dot {
-  width: 8px;
-  height: 8px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: #14b8a6;
   box-shadow: 0 0 6px #14b8a6;
@@ -53,91 +51,101 @@ body.light { --bl-bg: #f8fafc; --bl-surface: #ffffff; --bl-text: #111827; --bl-t
   color: var(--bl-text-muted);
   letter-spacing: 0.04em;
 }
-
+.bloqueio-topbar-acoes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .bloqueio-tema-btn {
   background: none;
   border: 1px solid var(--bl-border);
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background 0.15s;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--bl-text-muted);
+  transition: all 0.15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
-.bloqueio-tema-btn:hover { background: var(--bl-border); }
+.bloqueio-tema-btn:hover { background: var(--bl-border); color: var(--bl-text); }
 
-/* ── Ícone e textos ── */
-.bloqueio-icone { font-size: 3rem; }
-
+/* Ícone e textos */
+.bloqueio-icone {
+  font-size: 4rem;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
 .bloqueio-titulo {
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: 2.2rem;
+  font-weight: 900;
   margin: 0;
   color: #ef4444;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 16px rgba(239,68,68,0.25);
 }
-
 .bloqueio-msg {
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: var(--bl-text);
-  max-width: 440px;
-  line-height: 1.6;
+  max-width: 480px;
+  line-height: 1.7;
   margin: 0;
 }
-
 .bloqueio-info {
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: var(--bl-text-muted);
-  max-width: 400px;
+  max-width: 440px;
   margin: 0;
 }
 
-/* ── Banner promoção ── */
+/* Promoção */
 .bloqueio-promo {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
   color: #b45309;
   border-radius: 10px;
   padding: 0.6rem 1.25rem;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  max-width: 380px;
+  max-width: 400px;
 }
 body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 
-/* ── Ações ── */
+/* Ações */
 .bloqueio-acoes {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.7rem;
   width: 100%;
-  max-width: 320px;
-  margin-top: 0.5rem;
+  max-width: 360px;
+  margin-top: 0.75rem;
 }
 
-/* ── Botões ── */
+/* Botões */
 .bloqueio-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
+  gap: 0.5rem;
+  padding: 0.9rem 2rem;
+  border-radius: 14px;
   border: none;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
   font-family: 'Plus Jakarta Sans', sans-serif;
   transition: all 0.15s;
+  letter-spacing: 0.01em;
 }
-.bloqueio-btn--primary            { background: #14b8a6; color: #fff; }
-.bloqueio-btn--primary:hover      { background: #0d9488; }
-.bloqueio-btn--primary:disabled   { opacity: 0.5; cursor: not-allowed; }
-.bloqueio-btn--whatsapp           { background: #25d366; color: #fff; }
-.bloqueio-btn--whatsapp:hover     { background: #128c7e; }
-.bloqueio-btn--ghost              { background: transparent; color: var(--bl-text-muted); border: 1px solid var(--bl-border); }
-.bloqueio-btn--ghost:hover        { background: var(--bl-border); }
+.bloqueio-btn--primary          { background: #14b8a6; color: #fff; }
+.bloqueio-btn--primary:hover    { background: #0d9488; transform: translateY(-1px); }
+.bloqueio-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.bloqueio-btn--whatsapp         { background: #25d366; color: #fff; }
+.bloqueio-btn--whatsapp:hover   { background: #128c7e; transform: translateY(-1px); }
+.bloqueio-btn--ghost            { background: transparent; color: var(--bl-text-muted); border: 1px solid var(--bl-border); }
+.bloqueio-btn--ghost:hover      { background: var(--bl-border); }
 
-/* ══ MODAL ══ */
+/* Modal overlay */
 .bloqueio-modal-overlay {
   position: fixed;
   inset: 0;
@@ -149,37 +157,36 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
   padding: 1rem;
 }
 
+/* Modal */
 .bloqueio-modal {
   background: var(--bl-surface);
   color: var(--bl-text);
   border-radius: 20px;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   padding: 2rem;
   box-shadow: 0 24px 64px rgba(0,0,0,0.35);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
   max-height: 90vh;
   overflow-y: auto;
 }
-
 .bloqueio-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 .bloqueio-modal-header h3 {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 800;
   margin: 0;
   color: var(--bl-text);
 }
-
 .modal-valor {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: #14b8a6;
 }
 .modal-valor small { font-size: 0.7rem; font-weight: 500; opacity: 0.7; }
@@ -196,46 +203,48 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 .bloqueio-modal-fechar:hover { background: var(--bl-border); }
 
 .bloqueio-modal-desc {
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: var(--bl-text-muted);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-/* ── Plano mensal único ── */
+/* Plano mensal único */
 .bloqueio-plano-unico {
   border: 2px solid #14b8a6;
-  border-radius: 14px;
-  padding: 1.25rem;
+  border-radius: 16px;
+  padding: 1.5rem;
   background: rgba(20,184,166,0.06);
   text-align: center;
 }
 .plano-unico-nome {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--bl-text-muted);
   margin-bottom: 6px;
 }
 .plano-unico-valor {
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 2.8rem;
+  font-weight: 900;
   color: var(--bl-text);
   font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -0.03em;
+  margin: 6px 0;
 }
 .plano-unico-valor span {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--bl-text-muted);
 }
 .plano-unico-desc {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   color: var(--bl-text-muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
-/* ── Tabs ── */
+/* Tabs */
 .bloqueio-tabs {
   display: flex;
   gap: 6px;
@@ -245,7 +254,7 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 .bloqueio-tab {
   padding: 6px 14px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -257,7 +266,7 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 .bloqueio-tab:hover { border-color: var(--bl-border); }
 .bloqueio-tab.ativo { background: rgba(20,184,166,0.1); color: #14b8a6; border-color: #14b8a6; }
 
-/* ── QR Code ── */
+/* QR Code Pix */
 .bloqueio-pix {
   display: flex;
   flex-direction: column;
@@ -265,20 +274,19 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
   gap: 0.75rem;
 }
 .bloqueio-qrcode {
-  width: 200px;
-  height: 200px;
+  width: 210px; height: 210px;
   border-radius: 12px;
   border: 3px solid #14b8a6;
   padding: 6px;
-  background: #fff; /* sempre fundo branco para o QR */
+  background: #fff;
 }
 .bloqueio-copiar-pix {
   background: var(--bl-bg);
   border: 1px solid var(--bl-border);
   color: var(--bl-text);
   border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.82rem;
+  padding: 8px 18px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -287,7 +295,7 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 .bloqueio-copiar-pix:hover { background: var(--bl-border); }
 
 .bloqueio-aguardando {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--bl-text-muted);
   margin: 0;
   animation: pulse 1.5s ease-in-out infinite;
@@ -295,35 +303,32 @@ body.dark .bloqueio-promo { color: #fbbf24; background: rgba(245,158,11,0.08); }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
 .bloqueio-venc-cobranca {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--bl-text-muted);
   text-align: center;
   margin: 0;
 }
 
-/* ── Sucesso ── */
+/* Sucesso */
 .bloqueio-modal-sucesso {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 0;
-  text-align: center;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1rem;
+  padding: 1rem 0; text-align: center;
 }
 .sucesso-icone { font-size: 3rem; }
-.bloqueio-modal-sucesso h3 { font-size: 1.2rem; font-weight: 800; color: #22c55e; margin: 0; }
-.bloqueio-modal-sucesso p  { font-size: 0.875rem; color: var(--bl-text-muted); margin: 0; }
+.bloqueio-modal-sucesso h3 { font-size: 1.3rem; font-weight: 800; color: #22c55e; margin: 0; }
+.bloqueio-modal-sucesso p  { font-size: 0.9rem; color: var(--bl-text-muted); margin: 0; }
 .sucesso-loader {
   width: 40px; height: 4px; border-radius: 99px; background: #22c55e;
   animation: loaderPulse 1s ease-in-out infinite;
 }
 @keyframes loaderPulse { 0%,100% { opacity:0.3; transform:scaleX(0.5); } 50% { opacity:1; transform:scaleX(1); } }
 
-/* ── Carregando / Erro ── */
-.bloqueio-carregando { text-align:center; color:var(--bl-text-muted); font-size:0.875rem; padding:1rem 0; }
+/* Carregando / Erro */
+.bloqueio-carregando { text-align:center; color:var(--bl-text-muted); font-size:0.9rem; padding:1rem 0; }
 .bloqueio-erro {
   background: #fee2e2; color: #991b1b;
   border-radius: 8px; padding: 0.6rem 0.75rem;
-  font-size: 0.82rem; font-weight: 600;
+  font-size: 0.85rem; font-weight: 600;
 }
 body.dark .bloqueio-erro { background: rgba(127,29,29,0.3); color: #fca5a5; }

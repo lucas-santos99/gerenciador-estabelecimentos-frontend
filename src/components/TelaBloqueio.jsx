@@ -9,21 +9,37 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
 
   const [modalAberto, setModalAberto] = useState(false);
   const [planos,      setPlanos]      = useState(null);
-  const [config,      setConfig]      = useState(null); // textos editáveis
+  const [config,      setConfig]      = useState(null);
   const [whatsapp,    setWhatsapp]    = useState("5500000000000");
   const [cobranca,    setCobranca]    = useState(null);
   const [carregando,  setCarregando]  = useState(false);
   const [erro,        setErro]        = useState("");
   const [pago,        setPago]        = useState(false);
   const [copiado,     setCopiado]     = useState(false);
+  const [zoom,        setZoom]        = useState(() => parseFloat(localStorage.getItem("bl-zoom") || "1"));
 
   useEffect(() => {
     btnRef.current?.focus();
-    // Aplica tema salvo
     const tema = localStorage.getItem("theme") || "dark";
     document.body.className = tema;
     return () => clearInterval(pollingRef.current);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${zoom * 16}px`;
+    localStorage.setItem("bl-zoom", zoom);
+    return () => { document.documentElement.style.fontSize = ""; };
+  }, [zoom]);
+
+  function changeZoom(delta) {
+    setZoom(prev => Math.min(1.4, Math.max(0.7, Math.round((prev + delta) * 10) / 10)));
+  }
+
+  function toggleTema() {
+    const novo = document.body.className === "dark" ? "light" : "dark";
+    document.body.className = novo;
+    localStorage.setItem("theme", novo);
+  }
 
   async function abrirModal() {
     setModalAberto(true);
@@ -40,7 +56,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         setErro("Erro ao carregar planos. Tente novamente.");
       }
     }
-    // Buscar textos editáveis da tela
     if (!config) {
       try {
         const resp = await apiFetch("/api/asaas/config-tela-bloqueio");
@@ -91,24 +106,15 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     setTimeout(() => setCopiado(false), 2000);
   }
 
-  function toggleTema() {
-    const atual = document.body.className;
-    const novo  = atual === "dark" ? "light" : "dark";
-    document.body.className = novo;
-    localStorage.setItem("theme", novo);
-  }
-
   const handleKeyDown = (e) => {
     if (!modalAberto && e.key === "Escape") { e.preventDefault(); onLogout(); }
   };
 
-  // Textos com fallback
   const titulo   = config?.titulo   || "Acesso Bloqueado";
   const mensagem = config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`;
   const info     = config?.info     || "Renove sua licença para continuar usando o sistema.";
   const promo    = config?.promo_ativa ? config.promo_texto : null;
 
-  // Renderizar mensagem com bold simples (**texto**)
   function renderTexto(texto) {
     const partes = texto.split(/\*\*(.+?)\*\*/g);
     return partes.map((p, i) => i % 2 === 1 ? <strong key={i}>{p}</strong> : p);
@@ -117,45 +123,36 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   return (
     <div className="bloqueio-container" onKeyDown={handleKeyDown} tabIndex={0}>
 
-      {/* Header LJS + toggle tema */}
+      {/* Topbar */}
       <div className="bloqueio-topbar">
         <div className="bloqueio-ljs">
           <span className="bloqueio-ljs-dot" />
           <span className="bloqueio-ljs-nome">Lucas J. Systems</span>
         </div>
-        <button className="bloqueio-tema-btn" onClick={toggleTema} title="Alternar tema">
-          {document.body.className === "dark" ? "☀️" : "🌙"}
-        </button>
+        <div className="bloqueio-topbar-acoes">
+          <button className="bloqueio-tema-btn" onClick={() => changeZoom(-0.1)} title="Diminuir texto">A−</button>
+          <button className="bloqueio-tema-btn" onClick={() => changeZoom(+0.1)} title="Aumentar texto">A+</button>
+          <button className="bloqueio-tema-btn" onClick={toggleTema} title="Alternar tema">
+            {document.body.className === "dark" ? "☀️" : "🌙"}
+          </button>
+        </div>
       </div>
 
-      {/* Ícone */}
       <div className="bloqueio-icone">🔒</div>
-
       <h2 className="bloqueio-titulo">{titulo}</h2>
-
       <p className="bloqueio-msg">{renderTexto(mensagem)}</p>
       <p className="bloqueio-info">{info}</p>
 
-      {/* Banner de promoção */}
-      {promo && (
-        <div className="bloqueio-promo">
-          🎉 {promo}
-        </div>
-      )}
+      {promo && <div className="bloqueio-promo">🎉 {promo}</div>}
 
-      {/* Ações */}
       <div className="bloqueio-acoes">
         {mercearia_id && (
           <button className="bloqueio-btn bloqueio-btn--primary" onClick={abrirModal}>
             💳 Renovar Licença
           </button>
         )}
-        <a
-          className="bloqueio-btn bloqueio-btn--whatsapp"
-          href={`https://wa.me/${whatsapp}`}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="bloqueio-btn bloqueio-btn--whatsapp"
+          href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">
           💬 Falar no WhatsApp
         </a>
         <button ref={btnRef} className="bloqueio-btn bloqueio-btn--ghost" onClick={onLogout}>
@@ -163,12 +160,11 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         </button>
       </div>
 
-      {/* ══ MODAL DE PAGAMENTO ══ */}
+      {/* Modal */}
       {modalAberto && (
         <div className="bloqueio-modal-overlay" onClick={() => !cobranca && setModalAberto(false)}>
           <div className="bloqueio-modal" onClick={e => e.stopPropagation()}>
 
-            {/* Sucesso */}
             {pago ? (
               <div className="bloqueio-modal-sucesso">
                 <div className="sucesso-icone">✅</div>
@@ -177,7 +173,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                 <div className="sucesso-loader" />
               </div>
 
-            /* QR Code gerado */
             ) : cobranca ? (
               <>
                 <div className="bloqueio-modal-header">
@@ -197,11 +192,8 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
 
                 {cobranca.pix_qr_code ? (
                   <div className="bloqueio-pix">
-                    <img
-                      src={`data:image/png;base64,${cobranca.pix_qr_code}`}
-                      alt="QR Code Pix"
-                      className="bloqueio-qrcode"
-                    />
+                    <img src={`data:image/png;base64,${cobranca.pix_qr_code}`}
+                      alt="QR Code Pix" className="bloqueio-qrcode" />
                     <button className="bloqueio-copiar-pix" onClick={copiarPix}>
                       {copiado ? "✓ Copiado!" : "📋 Copiar código Pix"}
                     </button>
@@ -225,7 +217,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                 </button>
               </>
 
-            /* Seleção — só plano mensal */
             ) : (
               <>
                 <div className="bloqueio-modal-header">
@@ -241,7 +232,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                       Pague via Pix ou Cartão de Crédito. Confirmação automática em segundos.
                     </p>
 
-                    {/* Plano mensal único */}
                     <div className="bloqueio-plano-unico">
                       <div className="plano-unico-nome">Plano Mensal</div>
                       <div className="plano-unico-valor">
