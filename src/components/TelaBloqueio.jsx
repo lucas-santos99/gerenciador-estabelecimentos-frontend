@@ -4,25 +4,27 @@ import { apiFetch } from '../utils/api';
 import './TelaBloqueio.css';
 
 export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
-  const btnRef = useRef(null);
-
-  // Modal de pagamento
-  const [modalAberto,  setModalAberto]  = useState(false);
-  const [whatsapp,     setWhatsapp]     = useState("5500000000000");
-  const [planos,       setPlanos]       = useState(null);
-  const [planoSel,     setPlanoSel]     = useState("mensal");
-  const [cobranca,     setCobranca]     = useState(null); // dados da cobrança gerada
-  const [carregando,   setCarregando]   = useState(false);
-  const [erro,         setErro]         = useState("");
-  const [pago,         setPago]         = useState(false);
+  const btnRef     = useRef(null);
   const pollingRef = useRef(null);
+
+  const [modalAberto, setModalAberto] = useState(false);
+  const [planos,      setPlanos]      = useState(null);
+  const [config,      setConfig]      = useState(null); // textos editáveis
+  const [whatsapp,    setWhatsapp]    = useState("5500000000000");
+  const [cobranca,    setCobranca]    = useState(null);
+  const [carregando,  setCarregando]  = useState(false);
+  const [erro,        setErro]        = useState("");
+  const [pago,        setPago]        = useState(false);
+  const [copiado,     setCopiado]     = useState(false);
 
   useEffect(() => {
     btnRef.current?.focus();
+    // Aplica tema salvo
+    const tema = localStorage.getItem("theme") || "dark";
+    document.body.className = tema;
     return () => clearInterval(pollingRef.current);
   }, []);
 
-  // Buscar planos ao abrir modal
   async function abrirModal() {
     setModalAberto(true);
     setErro("");
@@ -33,21 +35,28 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         const resp = await apiFetch("/api/asaas/planos");
         const data = await resp.json();
         setPlanos(data);
+        if (data.whatsapp) setWhatsapp(data.whatsapp);
       } catch {
         setErro("Erro ao carregar planos. Tente novamente.");
       }
     }
+    // Buscar textos editáveis da tela
+    if (!config) {
+      try {
+        const resp = await apiFetch("/api/asaas/config-tela-bloqueio");
+        if (resp.ok) setConfig(await resp.json());
+      } catch {}
+    }
   }
 
-  // Gerar cobrança
   async function gerarCobranca() {
     setCarregando(true);
     setErro("");
     try {
       const resp = await apiFetch(`/api/asaas/gerar-cobranca/${mercearia_id}`, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: planoSel }),
+        body:    JSON.stringify({ plano: "mensal" }),
       });
       const data = await resp.json();
       if (!resp.ok) { setErro(data.error || "Erro ao gerar cobrança."); return; }
@@ -60,7 +69,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     }
   }
 
-  // Polling de status — verifica a cada 5s se o pagamento foi confirmado
   function iniciarPolling(paymentId) {
     clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
@@ -70,40 +78,70 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         if (data.status === "RECEIVED" || data.status === "CONFIRMED") {
           clearInterval(pollingRef.current);
           setPago(true);
-          // Recarregar a página após 3s para entrar no sistema
           setTimeout(() => window.location.reload(), 3000);
         }
       } catch {}
     }, 5000);
   }
 
-  function copiarPixColaEcola() {
+  async function copiarPix() {
     if (!cobranca?.pix_copy_paste) return;
-    navigator.clipboard.writeText(cobranca.pix_copy_paste);
+    await navigator.clipboard.writeText(cobranca.pix_copy_paste);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  function toggleTema() {
+    const atual = document.body.className;
+    const novo  = atual === "dark" ? "light" : "dark";
+    document.body.className = novo;
+    localStorage.setItem("theme", novo);
   }
 
   const handleKeyDown = (e) => {
-    if (!modalAberto && (e.key === "Enter" || e.key === "Escape")) {
-      e.preventDefault();
-      onLogout();
-    }
+    if (!modalAberto && e.key === "Escape") { e.preventDefault(); onLogout(); }
   };
+
+  // Textos com fallback
+  const titulo   = config?.titulo   || "Acesso Bloqueado";
+  const mensagem = config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`;
+  const info     = config?.info     || "Renove sua licença para continuar usando o sistema.";
+  const promo    = config?.promo_ativa ? config.promo_texto : null;
+
+  // Renderizar mensagem com bold simples (**texto**)
+  function renderTexto(texto) {
+    const partes = texto.split(/\*\*(.+?)\*\*/g);
+    return partes.map((p, i) => i % 2 === 1 ? <strong key={i}>{p}</strong> : p);
+  }
 
   return (
     <div className="bloqueio-container" onKeyDown={handleKeyDown} tabIndex={0}>
 
+      {/* Header LJS + toggle tema */}
+      <div className="bloqueio-topbar">
+        <div className="bloqueio-ljs">
+          <span className="bloqueio-ljs-dot" />
+          <span className="bloqueio-ljs-nome">Lucas J. Systems</span>
+        </div>
+        <button className="bloqueio-tema-btn" onClick={toggleTema} title="Alternar tema">
+          {document.body.className === "dark" ? "☀️" : "🌙"}
+        </button>
+      </div>
+
       {/* Ícone */}
       <div className="bloqueio-icone">🔒</div>
 
-      <h2 className="bloqueio-titulo">Acesso Bloqueado</h2>
+      <h2 className="bloqueio-titulo">{titulo}</h2>
 
-      <p className="bloqueio-msg">
-        A assinatura de <strong>{nomeFantasia || "seu estabelecimento"}</strong> expirou ou não foi paga.
-      </p>
+      <p className="bloqueio-msg">{renderTexto(mensagem)}</p>
+      <p className="bloqueio-info">{info}</p>
 
-      <p className="bloqueio-info">
-        Renove sua licença para continuar usando o sistema ou entre em contato pelo WhatsApp.
-      </p>
+      {/* Banner de promoção */}
+      {promo && (
+        <div className="bloqueio-promo">
+          🎉 {promo}
+        </div>
+      )}
 
       {/* Ações */}
       <div className="bloqueio-acoes">
@@ -125,14 +163,12 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         </button>
       </div>
 
-      {/* ═══════════════════════════════════════════
-          MODAL DE PAGAMENTO
-      ═══════════════════════════════════════════ */}
+      {/* ══ MODAL DE PAGAMENTO ══ */}
       {modalAberto && (
         <div className="bloqueio-modal-overlay" onClick={() => !cobranca && setModalAberto(false)}>
           <div className="bloqueio-modal" onClick={e => e.stopPropagation()}>
 
-            {/* Pago com sucesso */}
+            {/* Sucesso */}
             {pago ? (
               <div className="bloqueio-modal-sucesso">
                 <div className="sucesso-icone">✅</div>
@@ -141,30 +177,24 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                 <div className="sucesso-loader" />
               </div>
 
-            /* Cobrança gerada — exibir QR Code e link */
+            /* QR Code gerado */
             ) : cobranca ? (
               <>
                 <div className="bloqueio-modal-header">
                   <h3>💳 Efetuar Pagamento</h3>
                   <span className="modal-valor">
                     R$ {cobranca.valor.toFixed(2).replace(".", ",")}
-                    <small> / {cobranca.plano === "anual" ? "ano" : "mês"}</small>
+                    <small>/mês</small>
                   </span>
                 </div>
 
                 <div className="bloqueio-tabs">
                   <div className="bloqueio-tab ativo">📱 Pix</div>
-                  <a
-                    className="bloqueio-tab"
-                    href={cobranca.invoice_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <a className="bloqueio-tab" href={cobranca.invoice_url} target="_blank" rel="noreferrer">
                     💳 Cartão / Boleto
                   </a>
                 </div>
 
-                {/* QR Code Pix */}
                 {cobranca.pix_qr_code ? (
                   <div className="bloqueio-pix">
                     <img
@@ -172,17 +202,15 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                       alt="QR Code Pix"
                       className="bloqueio-qrcode"
                     />
-                    <button className="bloqueio-copiar-pix" onClick={copiarPixColaEcola}>
-                      📋 Copiar código Pix
+                    <button className="bloqueio-copiar-pix" onClick={copiarPix}>
+                      {copiado ? "✓ Copiado!" : "📋 Copiar código Pix"}
                     </button>
-                    <p className="bloqueio-aguardando">
-                      ⏳ Aguardando confirmação do pagamento...
-                    </p>
+                    <p className="bloqueio-aguardando">⏳ Aguardando confirmação do pagamento...</p>
                   </div>
                 ) : (
                   <div className="bloqueio-pix">
-                    <p>QR Code não disponível. Use o link abaixo para pagar:</p>
-                    <a href={cobranca.invoice_url} target="_blank" rel="noreferrer" className="bloqueio-btn bloqueio-btn--primary">
+                    <a href={cobranca.invoice_url} target="_blank" rel="noreferrer"
+                      className="bloqueio-btn bloqueio-btn--primary">
                       Abrir página de pagamento
                     </a>
                   </div>
@@ -191,14 +219,13 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                 <p className="bloqueio-venc-cobranca">
                   Cobrança válida até {new Date(cobranca.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
                 </p>
-
-                <button className="bloqueio-btn bloqueio-btn--ghost" style={{ marginTop: 8 }}
+                <button className="bloqueio-btn bloqueio-btn--ghost" style={{ marginTop: 4 }}
                   onClick={() => { setCobranca(null); clearInterval(pollingRef.current); }}>
                   ← Voltar
                 </button>
               </>
 
-            /* Seleção de plano */
+            /* Seleção — só plano mensal */
             ) : (
               <>
                 <div className="bloqueio-modal-header">
@@ -207,49 +234,27 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                 </div>
 
                 {!planos ? (
-                  <div className="bloqueio-carregando">Carregando planos...</div>
+                  <div className="bloqueio-carregando">Carregando...</div>
                 ) : (
                   <>
                     <p className="bloqueio-modal-desc">
-                      Escolha o plano e pague via Pix ou Cartão de Crédito.
+                      Pague via Pix ou Cartão de Crédito. Confirmação automática em segundos.
                     </p>
 
-                    <div className="bloqueio-planos">
-                      {/* Plano Mensal */}
-                      <div
-                        className={`bloqueio-plano${planoSel === "mensal" ? " selecionado" : ""}`}
-                        onClick={() => setPlanoSel("mensal")}
-                      >
-                        <div className="plano-nome">Mensal</div>
-                        <div className="plano-valor">
-                          R$ {planos.mensal.valor.toFixed(2).replace(".", ",")}
-                          <span>/mês</span>
-                        </div>
-                        <div className="plano-desc">30 dias de acesso</div>
+                    {/* Plano mensal único */}
+                    <div className="bloqueio-plano-unico">
+                      <div className="plano-unico-nome">Plano Mensal</div>
+                      <div className="plano-unico-valor">
+                        R$ {planos.mensal.valor.toFixed(2).replace(".", ",")}
+                        <span>/mês</span>
                       </div>
-
-                      {/* Plano Anual */}
-                      <div
-                        className={`bloqueio-plano${planoSel === "anual" ? " selecionado" : ""}`}
-                        onClick={() => setPlanoSel("anual")}
-                      >
-                        <div className="plano-badge">💰 Economize R$ {planos.anual.economia.toFixed(2).replace(".", ",")}</div>
-                        <div className="plano-nome">Anual</div>
-                        <div className="plano-valor">
-                          R$ {planos.anual.valor.toFixed(2).replace(".", ",")}
-                          <span>/ano</span>
-                        </div>
-                        <div className="plano-desc">365 dias · 20% de desconto</div>
-                      </div>
+                      <div className="plano-unico-desc">30 dias de acesso completo ao sistema</div>
                     </div>
 
                     {erro && <div className="bloqueio-erro">{erro}</div>}
 
-                    <button
-                      className="bloqueio-btn bloqueio-btn--primary"
-                      onClick={gerarCobranca}
-                      disabled={carregando}
-                    >
+                    <button className="bloqueio-btn bloqueio-btn--primary"
+                      onClick={gerarCobranca} disabled={carregando}>
                       {carregando ? "⏳ Gerando cobrança..." : "Continuar para pagamento →"}
                     </button>
                   </>

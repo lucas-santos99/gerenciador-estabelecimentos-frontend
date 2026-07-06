@@ -23,10 +23,15 @@ export default function DetalhesEstabelecimento() {
   const [limiteVal,    setLimiteVal]    = useState(3);
   const [limiteSaving, setLimiteSaving] = useState(false);
   // Liberação de acesso
-  const [modalLiberar, setModalLiberar] = useState(false);
-  const [diasLiberar,  setDiasLiberar]  = useState(30);
-  const [liberando,    setLiberando]    = useState(false);
-  const [liberarMsg,   setLiberarMsg]   = useState("");
+  const [modalLiberar,  setModalLiberar]  = useState(false);
+  const [diasLiberar,   setDiasLiberar]   = useState(30);
+  const [formaPgto,     setFormaPgto]     = useState("dinheiro");
+  const [motivoLiberar, setMotivoLiberar] = useState("");
+  const [liberando,     setLiberando]     = useState(false);
+  const [liberarMsg,    setLiberarMsg]    = useState("");
+  // Histórico de liberações
+  const [historico,     setHistorico]     = useState([]);
+  const [loadHistorico, setLoadHistorico] = useState(false);
 
   async function carregar() {
     setLoading(true);
@@ -41,7 +46,18 @@ export default function DetalhesEstabelecimento() {
     setLoading(false);
   }
 
-  useEffect(() => { carregar(); }, [id]);
+  useEffect(() => { carregar(); carregarHistorico(); }, [id]);
+
+  async function carregarHistorico() {
+    setLoadHistorico(true);
+    try {
+      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/liberacoes`, {
+        credentials: "include",
+      });
+      if (resp.ok) setHistorico(await resp.json());
+    } catch {}
+    setLoadHistorico(false);
+  }
 
   async function restaurar() {
     if (!window.confirm("Restaurar este estabelecimento?")) return;
@@ -87,14 +103,20 @@ export default function DetalhesEstabelecimento() {
       const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/liberar-acesso`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ dias: parseInt(diasLiberar), motivo: "Liberação manual pelo SuperAdmin" }),
+        body:    JSON.stringify({
+          dias:            parseInt(diasLiberar),
+          forma_pagamento: formaPgto,
+          motivo:          motivoLiberar.trim() || null,
+          liberado_por:    "SuperAdmin",
+        }),
         credentials: "include",
       });
       const json = await resp.json();
       if (!resp.ok) { setLiberarMsg("❌ " + (json.error || "Erro.")); return; }
       setLiberarMsg(`✓ Liberado até ${new Date(json.data_vencimento + "T12:00:00").toLocaleDateString("pt-BR")}`);
       carregar();
-      setTimeout(() => { setModalLiberar(false); setLiberarMsg(""); }, 2000);
+      carregarHistorico();
+      setTimeout(() => { setModalLiberar(false); setLiberarMsg(""); setMotivoLiberar(""); setFormaPgto("dinheiro"); }, 2000);
     } catch { setLiberarMsg("❌ Erro interno."); }
     setLiberando(false);
   }
@@ -295,7 +317,7 @@ export default function DetalhesEstabelecimento() {
             <div style={{ marginTop: 12 }}>
               <button
                 className="est-btn est-btn-success"
-                onClick={() => { setDiasLiberar(30); setLiberarMsg(""); setModalLiberar(true); }}
+                onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar(true); }}
               >
                 🔓 Liberar Acesso
               </button>
@@ -303,6 +325,66 @@ export default function DetalhesEstabelecimento() {
           </div>
         </div>
 
+      </div>
+
+      {/* HISTÓRICO DE LIBERAÇÕES */}
+      <div className="est-card" style={{ marginTop: 16 }}>
+        <div className="est-info-block-title" style={{ padding: "12px 16px", borderBottom: "1px solid var(--border, #e5e7eb)" }}>
+          📋 Histórico de Liberações
+        </div>
+        {loadHistorico ? (
+          <div style={{ padding: 16, color: "var(--text-muted)", fontSize: "0.85rem" }}>Carregando...</div>
+        ) : historico.length === 0 ? (
+          <div style={{ padding: 16, color: "var(--text-muted)", fontSize: "0.85rem" }}>Nenhuma liberação registrada.</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="est-table" style={{ fontSize: "0.8rem" }}>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Período</th>
+                  <th>Vencimento</th>
+                  <th>Pagamento</th>
+                  <th>Motivo</th>
+                  <th>Liberado por</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historico.map(h => (
+                  <tr key={h.id}>
+                    <td style={{ fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>
+                      {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </td>
+                    <td style={{ fontFamily: "JetBrains Mono, monospace" }}>{h.dias}d</td>
+                    <td style={{ fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>
+                      {h.data_vencimento?.split("-").reverse().join("/")}
+                    </td>
+                    <td>
+                      <span style={{
+                        display: "inline-block", padding: "2px 8px", borderRadius: 999,
+                        fontSize: "0.72rem", fontWeight: 700,
+                        background: h.forma_pagamento === "cortesia" ? "rgba(245,158,11,0.12)" :
+                                    h.forma_pagamento === "pix"      ? "rgba(20,184,166,0.12)" :
+                                    h.forma_pagamento === "cartao"   ? "rgba(99,102,241,0.12)" :
+                                    "rgba(107,114,128,0.12)",
+                        color: h.forma_pagamento === "cortesia" ? "#b45309" :
+                               h.forma_pagamento === "pix"      ? "#0d9488" :
+                               h.forma_pagamento === "cartao"   ? "#4338ca" :
+                               "#6b7280",
+                      }}>
+                        {h.forma_pagamento}
+                      </span>
+                    </td>
+                    <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {h.motivo || <span style={{ opacity: 0.4 }}>—</span>}
+                    </td>
+                    <td>{h.liberado_por}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* MODAL LIBERAR ACESSO */}
@@ -315,37 +397,79 @@ export default function DetalhesEstabelecimento() {
               Selecione por quantos dias deseja liberar o acesso.
             </div>
 
-            <div className="est-form-group" style={{ marginTop: 16 }}>
-              <label className="est-label">Período de liberação</label>
-              <select
-                className="est-select"
-                value={diasLiberar}
-                onChange={e => setDiasLiberar(e.target.value)}
-                autoFocus
-              >
-                <option value={7}>7 dias</option>
-                <option value={15}>15 dias</option>
-                <option value={30}>30 dias</option>
-                <option value={60}>60 dias</option>
-                <option value={90}>90 dias</option>
-                <option value={180}>6 meses</option>
-                <option value={365}>1 ano</option>
-              </select>
-              <span className="est-label-hint" style={{ marginTop: 4 }}>
-                Vencerá em: {(() => { const d = new Date(); d.setDate(d.getDate() + parseInt(diasLiberar)); return d.toLocaleDateString("pt-BR"); })()}
-              </span>
+            {/* Período */}
+            <div className="est-form-group" style={{ marginTop: 4 }}>
+              <label className="est-label">⏱ Período de liberação</label>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", margin: "6px 0" }}>
+                {[7,15,30,60,90,180,365].map(d => (
+                  <button key={d} type="button"
+                    onClick={() => setDiasLiberar(d)}
+                    style={{
+                      padding: "4px 10px", borderRadius: 20, border: "1px solid",
+                      borderColor: parseInt(diasLiberar) === d ? "#14b8a6" : "var(--border, #e5e7eb)",
+                      background: parseInt(diasLiberar) === d ? "#14b8a6" : "transparent",
+                      color: parseInt(diasLiberar) === d ? "#fff" : "inherit",
+                      fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}>
+                    {d === 365 ? "1 ano" : d === 180 ? "6 meses" : `${d}d`}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input className="est-input" type="number" min={1} max={3650}
+                  value={diasLiberar} onChange={e => setDiasLiberar(e.target.value)}
+                  style={{ width: 80 }} autoFocus />
+                <span style={{ fontSize: "0.8rem" }}>dias</span>
+                <span style={{ fontSize: "0.8rem", color: "#14b8a6", fontWeight: 600 }}>
+                  → {(() => { const d = new Date(); d.setDate(d.getDate() + (parseInt(diasLiberar)||0)); return d.toLocaleDateString("pt-BR"); })()}
+                </span>
+              </div>
+            </div>
+
+            {/* Forma de pagamento */}
+            <div className="est-form-group">
+              <label className="est-label">💰 Forma de pagamento</label>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 }}>
+                {[
+                  { key: "dinheiro", label: "💵 Dinheiro" },
+                  { key: "pix",      label: "📱 Pix" },
+                  { key: "cartao",   label: "💳 Cartão" },
+                  { key: "cortesia", label: "🎁 Cortesia" },
+                  { key: "manual",   label: "📋 Outro" },
+                ].map(f => (
+                  <button key={f.key} type="button" onClick={() => setFormaPgto(f.key)}
+                    style={{
+                      padding: "4px 10px", borderRadius: 20, border: "1px solid",
+                      borderColor: formaPgto === f.key ? "#14b8a6" : "var(--border, #e5e7eb)",
+                      background: formaPgto === f.key ? "#14b8a6" : "transparent",
+                      color: formaPgto === f.key ? "#fff" : "inherit",
+                      fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Motivo */}
+            <div className="est-form-group">
+              <label className="est-label">📝 Motivo <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+              <textarea className="est-input" rows={2}
+                placeholder="Ex: Pagou em dinheiro, período de teste, cortesia..."
+                value={motivoLiberar} onChange={e => setMotivoLiberar(e.target.value)}
+                style={{ resize: "none", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: "0.85rem" }} />
             </div>
 
             {liberarMsg && (
-              <div className={`est-alert ${liberarMsg.startsWith("✓") ? "est-alert-success" : "est-alert-error"}`} style={{ marginTop: 12 }}>
+              <div className={`est-alert ${liberarMsg.startsWith("✓") ? "est-alert-success" : "est-alert-error"}`}>
                 {liberarMsg}
               </div>
             )}
 
             <div className="est-modal-acoes">
-              <button className="est-btn est-btn-ghost" onClick={() => setModalLiberar(false)}>
-                Cancelar
-              </button>
+              <button className="est-btn est-btn-ghost" onClick={() => setModalLiberar(false)}>Cancelar</button>
               <button className="est-btn est-btn-success" onClick={confirmarLiberar} disabled={liberando}>
                 {liberando ? "⏳ Liberando…" : "✓ Confirmar"}
               </button>

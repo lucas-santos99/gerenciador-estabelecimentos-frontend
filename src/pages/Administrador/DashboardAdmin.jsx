@@ -66,9 +66,19 @@ export default function DashboardAdmin() {
   const [cfgWhatsapp,      setCfgWhatsapp]       = useState("");
   const [cfgSalvando,      setCfgSalvando]       = useState(false);
   const [cfgMsg,           setCfgMsg]            = useState("");
+  // Tela de bloqueio — textos editáveis
+  const [telaAbaTela,      setTelaAbaTela]       = useState("geral"); // "geral" | "tela"
+  const [cfgTelaTitulo,    setCfgTelaTitulo]     = useState("Acesso Bloqueado");
+  const [cfgTelaMensagem,  setCfgTelaMensagem]   = useState("");
+  const [cfgTelaInfo,      setCfgTelaInfo]       = useState("");
+  const [cfgPromoAtiva,    setCfgPromoAtiva]     = useState(false);
+  const [cfgPromoTexto,    setCfgPromoTexto]     = useState("");
+  const [cfgPromoValidade, setCfgPromoValidade]  = useState("");
   // Modal liberação de acesso manual
   const [modalLiberar,     setModalLiberar]      = useState(null); // { id, nome }
   const [diasLiberar,      setDiasLiberar]       = useState(30);
+  const [formaPgto,        setFormaPgto]         = useState("dinheiro");
+  const [motivoLiberar,    setMotivoLiberar]     = useState("");
   const [liberando,        setLiberando]         = useState(false);
   const [liberarMsg,       setLiberarMsg]        = useState("");
   const [fontScale,        setFontScale]         = useState(() => {
@@ -96,6 +106,19 @@ export default function DashboardAdmin() {
         setCfgLimite(d.limite_operadores_padrao ?? 3);
         setCfgMensalidade(String(d.valor_mensalidade ?? "49.90"));
         setCfgWhatsapp(d.whatsapp_suporte ?? "");
+      }
+      // Carregar textos da tela de bloqueio
+      const respTela = await fetch(`${API_URL}/superadmin/config-tela-bloqueio`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (respTela.ok) {
+        const t = await respTela.json();
+        setCfgTelaTitulo(t.titulo || "Acesso Bloqueado");
+        setCfgTelaMensagem(t.mensagem || "");
+        setCfgTelaInfo(t.info || "");
+        setCfgPromoAtiva(t.promo_ativa || false);
+        setCfgPromoTexto(t.promo_texto || "");
+        setCfgPromoValidade(t.promo_validade || "");
       }
     } catch {}
   }
@@ -225,7 +248,13 @@ export default function DashboardAdmin() {
         {
           method:  "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body:    JSON.stringify({ dias: parseInt(diasLiberar) || 30, motivo: "Liberação manual pelo SuperAdmin" }),
+          body:    JSON.stringify({
+            dias:            parseInt(diasLiberar) || 30,
+            forma_pagamento: formaPgto,
+            motivo:          motivoLiberar.trim() || null,
+            liberado_por:    nomeUsuario || "SuperAdmin",
+            liberado_por_id: user?.id || null,
+          }),
         }
       );
       const json = await resp.json();
@@ -506,7 +535,7 @@ export default function DashboardAdmin() {
                       <div className="dash-card-acoes-linha">
                         <button
                           className="dash-card-btn dash-card-btn--green"
-                          onClick={() => { setDiasLiberar(30); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
+                          onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
                         >🔓 Liberar Acesso</button>
                         <button
                           className="dash-card-btn dash-card-btn--danger"
@@ -534,34 +563,55 @@ export default function DashboardAdmin() {
               <strong>{modalLiberar.nome}</strong> — selecione por quantos dias liberar.
             </div>
 
-            <div className="dash-dias-atalhos" style={{ marginBottom: 10 }}>
+            {/* Período */}
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>⏱ Período de liberação</div>
+            <div className="dash-dias-atalhos" style={{ marginBottom: 8 }}>
               {[7, 15, 30, 60, 90, 180, 365].map(d => (
-                <button
-                  key={d}
-                  type="button"
+                <button key={d} type="button"
                   className={`dash-dias-btn${parseInt(diasLiberar) === d ? " ativo" : ""}`}
-                  onClick={() => setDiasLiberar(d)}
-                >
+                  onClick={() => setDiasLiberar(d)}>
                   {d === 365 ? "1 ano" : d === 180 ? "6 meses" : `${d}d`}
                 </button>
               ))}
             </div>
             <div className="dash-dias-input-row" style={{ marginBottom: 16 }}>
-              <input
-                className="dash-config-input"
-                type="number"
-                min={1}
-                max={3650}
-                value={diasLiberar}
-                onChange={e => setDiasLiberar(e.target.value)}
-                autoFocus
-                style={{ width: 80 }}
-              />
+              <input className="dash-config-input" type="number" min={1} max={3650}
+                value={diasLiberar} onChange={e => setDiasLiberar(e.target.value)}
+                autoFocus style={{ width: 80 }} />
               <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>dias</span>
               <span style={{ fontSize: "0.82rem", color: "var(--text-accent)", fontWeight: 600 }}>
                 → {(() => { const d = new Date(); d.setDate(d.getDate() + (parseInt(diasLiberar) || 0)); return d.toLocaleDateString("pt-BR"); })()}
               </span>
             </div>
+
+            {/* Forma de pagamento */}
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>💰 Forma de pagamento</div>
+            <div className="dash-dias-atalhos" style={{ marginBottom: 16 }}>
+              {[
+                { key: "dinheiro",  label: "💵 Dinheiro" },
+                { key: "pix",       label: "📱 Pix" },
+                { key: "cartao",    label: "💳 Cartão" },
+                { key: "cortesia",  label: "🎁 Cortesia" },
+                { key: "manual",    label: "📋 Outro" },
+              ].map(f => (
+                <button key={f.key} type="button"
+                  className={`dash-dias-btn${formaPgto === f.key ? " ativo" : ""}`}
+                  onClick={() => setFormaPgto(f.key)}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Motivo */}
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>📝 Motivo <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></div>
+            <textarea
+              className="dash-config-input"
+              rows={2}
+              placeholder="Ex: Pagou em dinheiro na visita, período de teste, cortesia..."
+              value={motivoLiberar}
+              onChange={e => setMotivoLiberar(e.target.value)}
+              style={{ width: "100%", resize: "none", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: "0.82rem", padding: "8px 10px", borderRadius: 8, boxSizing: "border-box", marginBottom: 4 }}
+            />
 
             {liberarMsg && (
               <div className={`dash-config-msg ${liberarMsg.startsWith("✓") ? "sucesso" : "erro"}`}>
@@ -585,47 +635,104 @@ export default function DashboardAdmin() {
           <div className="dash-modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
             <div className="dash-modal-icon">⚙️</div>
             <div className="dash-modal-title">Configurações Globais</div>
-            <div className="dash-modal-subtitle">
-              Afetam todos os estabelecimentos por padrão. Cada cliente pode ter valores individuais.
+
+            {/* Abas */}
+            <div style={{ display:"flex", gap:4, borderBottom:"2px solid var(--border)", paddingBottom:8 }}>
+              {[{k:"geral",label:"⚙️ Geral"},{k:"tela",label:"🔒 Tela de Bloqueio"}].map(a => (
+                <button key={a.k} type="button" onClick={() => setTelaAbaTela(a.k)}
+                  style={{
+                    padding:"5px 14px", borderRadius:8, border:"1px solid",
+                    borderColor: telaAbaTela===a.k ? "var(--text-accent,#14b8a6)" : "transparent",
+                    background:  telaAbaTela===a.k ? "rgba(20,184,166,0.1)" : "transparent",
+                    color:       telaAbaTela===a.k ? "var(--text-accent,#14b8a6)" : "var(--text-secondary)",
+                    fontWeight:600, fontSize:"0.82rem", cursor:"pointer",
+                    fontFamily:"Plus Jakarta Sans, sans-serif",
+                  }}>
+                  {a.label}
+                </button>
+              ))}
             </div>
 
-            <div className="dash-config-item">
-              <div className="dash-config-info">
-                <span className="dash-config-label">👥 Limite padrão de operadores</span>
-                <span className="dash-config-desc">Aplicado em novos estabelecimentos. Pode ser sobrescrito individualmente.</span>
+            {/* Conteúdo da aba Geral */}
+            {telaAbaTela === "geral" && <>
+              <div className="dash-config-item">
+                <div className="dash-config-info">
+                  <span className="dash-config-label">👥 Limite padrão de operadores</span>
+                  <span className="dash-config-desc">Aplicado em novos estabelecimentos.</span>
+                </div>
+                <div className="dash-config-control">
+                  <input className="dash-config-input" type="number" min={0} max={50}
+                    value={cfgLimite} onChange={e => setCfgLimite(e.target.value)} />
+                  <span className="dash-config-unit">operadores</span>
+                </div>
               </div>
-              <div className="dash-config-control">
-                <input className="dash-config-input" type="number" min={0} max={50}
-                  value={cfgLimite} onChange={e => setCfgLimite(e.target.value)} />
-                <span className="dash-config-unit">operadores</span>
+              <div className="dash-config-item">
+                <div className="dash-config-info">
+                  <span className="dash-config-label">💰 Valor padrão da mensalidade</span>
+                  <span className="dash-config-desc">Pode ser diferente por estabelecimento.</span>
+                </div>
+                <div className="dash-config-control">
+                  <span className="dash-config-unit">R$</span>
+                  <input className="dash-config-input" type="number" min={0} max={9999} step="0.01"
+                    value={cfgMensalidade} onChange={e => setCfgMensalidade(e.target.value)} style={{ width:90 }} />
+                  <span className="dash-config-unit">/mês</span>
+                </div>
               </div>
-            </div>
+              <div className="dash-config-item">
+                <div className="dash-config-info">
+                  <span className="dash-config-label">💬 WhatsApp de suporte</span>
+                  <span className="dash-config-desc">Exibido na tela de bloqueio. Só números com DDI+DDD.</span>
+                </div>
+                <div className="dash-config-control">
+                  <input className="dash-config-input" type="text" placeholder="5553999998888"
+                    value={cfgWhatsapp} onChange={e => setCfgWhatsapp(e.target.value)}
+                    style={{ width:160, fontFamily:"JetBrains Mono, monospace" }} />
+                </div>
+              </div>
+            </>}
 
-            <div className="dash-config-item">
-              <div className="dash-config-info">
-                <span className="dash-config-label">💰 Valor padrão da mensalidade</span>
-                <span className="dash-config-desc">Usado na geração de cobranças. Pode ser diferente por estabelecimento.</span>
+            {/* Conteúdo da aba Tela de Bloqueio */}
+            {telaAbaTela === "tela" && <>
+              <div style={{ fontSize:"0.75rem", color:"var(--text-secondary)", marginBottom:4 }}>
+                Use <code style={{background:"var(--border)",padding:"1px 4px",borderRadius:4}}>**texto**</code> para negrito.
               </div>
-              <div className="dash-config-control">
-                <span className="dash-config-unit">R$</span>
-                <input className="dash-config-input" type="number" min={0} max={9999} step="0.01"
-                  value={cfgMensalidade} onChange={e => setCfgMensalidade(e.target.value)}
-                  style={{ width: 90 }} />
-                <span className="dash-config-unit">/mês</span>
+              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
+                <span className="dash-config-label">🔒 Título</span>
+                <input className="dash-config-input" value={cfgTelaTitulo}
+                  onChange={e => setCfgTelaTitulo(e.target.value)} style={{ width:"100%" }} />
               </div>
-            </div>
-
-            <div className="dash-config-item">
-              <div className="dash-config-info">
-                <span className="dash-config-label">💬 WhatsApp de suporte</span>
-                <span className="dash-config-desc">Exibido na tela de bloqueio. Só números com DDI+DDD (ex: 5553999998888).</span>
+              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
+                <span className="dash-config-label">📝 Mensagem principal</span>
+                <textarea className="dash-config-input" rows={2} value={cfgTelaMensagem}
+                  onChange={e => setCfgTelaMensagem(e.target.value)}
+                  placeholder="Ex: A assinatura de **{nome}** expirou."
+                  style={{ width:"100%", resize:"none", fontFamily:"Plus Jakarta Sans, sans-serif" }} />
               </div>
-              <div className="dash-config-control">
-                <input className="dash-config-input" type="text" placeholder="5553999998888"
-                  value={cfgWhatsapp} onChange={e => setCfgWhatsapp(e.target.value)}
-                  style={{ width: 160, fontFamily: 'JetBrains Mono, monospace' }} />
+              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
+                <span className="dash-config-label">ℹ️ Texto informativo</span>
+                <input className="dash-config-input" value={cfgTelaInfo}
+                  onChange={e => setCfgTelaInfo(e.target.value)} style={{ width:"100%" }}
+                  placeholder="Ex: Renove sua licença para continuar usando." />
               </div>
-            </div>
+              <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, marginTop:4 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <span className="dash-config-label">🎉 Banner de promoção</span>
+                  <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+                    <input type="checkbox" checked={cfgPromoAtiva} onChange={e => setCfgPromoAtiva(e.target.checked)}
+                      style={{ accentColor:"#14b8a6", width:16, height:16 }} />
+                    <span style={{ fontSize:"0.78rem", fontWeight:600 }}>{cfgPromoAtiva ? "Ativo" : "Inativo"}</span>
+                  </label>
+                </div>
+                {cfgPromoAtiva && <>
+                  <input className="dash-config-input" value={cfgPromoTexto}
+                    onChange={e => setCfgPromoTexto(e.target.value)} style={{ width:"100%", marginBottom:6 }}
+                    placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
+                  <input className="dash-config-input" type="date" value={cfgPromoValidade}
+                    onChange={e => setCfgPromoValidade(e.target.value)} style={{ width:"100%" }} />
+                  <span style={{ fontSize:"0.7rem", color:"var(--text-secondary)" }}>Validade da promoção (opcional)</span>
+                </>}
+              </div>
+            </>}
 
             {cfgMsg && (
               <div className={`dash-config-msg ${cfgMsg.startsWith("✓") ? "sucesso" : "erro"}`}>
@@ -651,6 +758,15 @@ export default function DashboardAdmin() {
                   });
                   const d = await resp.json();
                   if (!resp.ok) { setCfgMsg("❌ " + (d.error || "Erro ao salvar.")); return; }
+                  // Salvar também textos da tela de bloqueio
+                  await fetch(`${API_URL}/superadmin/config-tela-bloqueio`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                      titulo: cfgTelaTitulo, mensagem: cfgTelaMensagem, info: cfgTelaInfo,
+                      promo_ativa: cfgPromoAtiva, promo_texto: cfgPromoTexto, promo_validade: cfgPromoValidade,
+                    }),
+                  });
                   setCfgMsg("✓ Configurações salvas!");
                   setTimeout(() => { setModalConfig(false); setCfgMsg(""); }, 1500);
                 } catch { setCfgMsg("❌ Erro interno."); }
