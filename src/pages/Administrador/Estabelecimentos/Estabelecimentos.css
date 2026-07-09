@@ -1074,3 +1074,9 @@
   line-height: 1.6;
   margin-bottom: 4px;
 }
+
+/* Input com erro de validação */
+.est-input-erro {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}

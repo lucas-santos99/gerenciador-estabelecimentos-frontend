@@ -27,14 +27,15 @@ export default function EditarEstabelecimento() {
     status_assinatura: "ativa",
     data_vencimento:   "",
     logo_url:          "",
-    limite_operadores:  3,
-    valor_mensalidade:  "",
+    limite_operadores: 3,
   });
 
-  const [carregando, setCarregando] = useState(true);
-  const [salvando,   setSalvando]   = useState(false);
-  const [erro,       setErro]       = useState("");
-  const [logoFile,   setLogoFile]   = useState(null);
+  const [carregando,   setCarregando]   = useState(true);
+  const [salvando,     setSalvando]     = useState(false);
+  const [erro,         setErro]         = useState("");
+  const [logoFile,     setLogoFile]     = useState(null);
+  const [tipoCpfCnpj,  setTipoCpfCnpj]  = useState("cpf"); // "cpf" | "cnpj"
+  const [cpfCnpjErro,  setCpfCnpjErro]  = useState("");
 
   /* ── carregar ────────────────────────────────────────────── */
   async function carregarDados() {
@@ -45,6 +46,11 @@ export default function EditarEstabelecimento() {
       });
       const data = await resp.json();
       if (resp.ok) {
+        // Detectar se é CPF ou CNPJ pelo número de dígitos
+        const docLimpo = (data.cnpj || "").replace(/\D/g, "");
+        if (docLimpo.length === 14) setTipoCpfCnpj("cnpj");
+        else setTipoCpfCnpj("cpf");
+
         setForm({
           nome_fantasia:     data.nome_fantasia     || "",
           cnpj:              data.cnpj              || "",
@@ -54,8 +60,7 @@ export default function EditarEstabelecimento() {
           status_assinatura: data.status_assinatura || "ativa",
           data_vencimento:   data.data_vencimento   ?? "",
           logo_url:          data.logo_url          || "",
-          limite_operadores:  data.limite_operadores  ?? 3,
-          valor_mensalidade:  data.valor_mensalidade != null ? String(data.valor_mensalidade) : "",
+          limite_operadores: data.limite_operadores ?? 3,
         });
       } else {
         setErro(data.error || "Erro ao carregar.");
@@ -71,6 +76,41 @@ export default function EditarEstabelecimento() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
+  /* ── Máscara CPF/CNPJ ─────────────────────────────────────── */
+  function aplicarMascaraCpfCnpj(valor, tipo) {
+    const s = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+    if (tipo === "cpf") {
+      return s
+        .replace(/^(\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
+    }
+    return s
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+  }
+
+  function handleCpfCnpj(e) {
+    const valor = aplicarMascaraCpfCnpj(e.target.value, tipoCpfCnpj);
+    setForm(prev => ({ ...prev, cnpj: valor }));
+    // Validar tamanho esperado
+    const digits = valor.replace(/\D/g, "");
+    const esperado = tipoCpfCnpj === "cpf" ? 11 : 14;
+    if (digits.length > 0 && digits.length < esperado) {
+      setCpfCnpjErro(`${tipoCpfCnpj.toUpperCase()} incompleto — faltam ${esperado - digits.length} dígitos`);
+    } else {
+      setCpfCnpjErro("");
+    }
+  }
+
+  function handleTipoCpfCnpj(tipo) {
+    setTipoCpfCnpj(tipo);
+    setForm(prev => ({ ...prev, cnpj: "" }));
+    setCpfCnpjErro("");
+  }
+
   /* ── salvar ──────────────────────────────────────────────── */
   async function salvar(e) {
     e.preventDefault();
@@ -79,6 +119,14 @@ export default function EditarEstabelecimento() {
       setErro("Data de vencimento é obrigatória quando o status é Ativa.");
       return;
     }
+    // Validar CPF/CNPJ se preenchido
+    const docDigits = form.cnpj.replace(/\D/g, "");
+    const esperado = tipoCpfCnpj === "cpf" ? 11 : 14;
+    if (docDigits.length > 0 && docDigits.length !== esperado) {
+      setErro(`${tipoCpfCnpj.toUpperCase()} inválido — deve ter ${esperado} dígitos.`);
+      return;
+    }
+
     setSalvando(true);
     try {
       const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
@@ -89,7 +137,6 @@ export default function EditarEstabelecimento() {
           data_vencimento:
             form.status_assinatura === "ativa" ? form.data_vencimento : null,
           limite_operadores: parseInt(form.limite_operadores) || 3,
-          valor_mensalidade: form.valor_mensalidade ? parseFloat(form.valor_mensalidade) : null,
         }),
         credentials: "include",
       });
@@ -285,17 +332,9 @@ export default function EditarEstabelecimento() {
                   {form.limite_operadores ?? 3} operador(es)
                 </span>
               </div>
-            </div>
-
-            <div className="est-info-block">
-              <div className="est-info-block-title">💰 Mensalidade</div>
-              <div className="est-info-row">
-                <span className="est-info-row-label">Valor</span>
-                <span className="est-info-row-value mono">
-                  {form.valor_mensalidade
-                    ? `R$ ${parseFloat(form.valor_mensalidade).toFixed(2).replace(".", ",")}`
-                    : <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Padrão global</span>
-                  }
+              <div className="est-info-row" style={{ marginTop: 8 }}>
+                <span className="est-info-row-label" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  Para alterar, clique em ✏️ Editar
                 </span>
               </div>
             </div>
@@ -348,8 +387,38 @@ export default function EditarEstabelecimento() {
                 />
               </div>
               <div className="est-form-group">
-                <label className="est-label">CNPJ</label>
-                <input className="est-input" name="cnpj" value={form.cnpj} onChange={atualizar} />
+                <label className="est-label">CPF / CNPJ</label>
+                {/* Toggle CPF / CNPJ */}
+                <div style={{ display:"flex", gap:4, marginBottom:6 }}>
+                  {["cpf","cnpj"].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => handleTipoCpfCnpj(t)}
+                      style={{
+                        padding:"3px 14px", borderRadius:20, border:"1px solid",
+                        borderColor: tipoCpfCnpj===t ? "#14b8a6" : "var(--border,#334155)",
+                        background:  tipoCpfCnpj===t ? "#14b8a6" : "transparent",
+                        color:       tipoCpfCnpj===t ? "#fff" : "inherit",
+                        fontSize:"0.75rem", fontWeight:700, cursor:"pointer",
+                        fontFamily:"Plus Jakarta Sans, sans-serif",
+                      }}>
+                      {t.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className={`est-input${cpfCnpjErro ? " est-input-erro" : ""}`}
+                  name="cnpj"
+                  value={form.cnpj}
+                  onChange={handleCpfCnpj}
+                  placeholder={tipoCpfCnpj === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                  maxLength={tipoCpfCnpj === "cpf" ? 14 : 18}
+                  inputMode="numeric"
+                />
+                {cpfCnpjErro && (
+                  <span style={{ fontSize:"0.72rem", color:"#ef4444", marginTop:2, display:"block" }}>
+                    ⚠️ {cpfCnpjErro}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -443,48 +512,6 @@ export default function EditarEstabelecimento() {
           </div>
 
 
-
-          {/* SEÇÃO — Operadores */}
-          <div className="est-form-section">
-            <div className="est-form-section-title">👥 Operadores</div>
-            <div className="est-form-grid">
-              <div className="est-form-group">
-                <label className="est-label">Limite de operadores</label>
-                <input
-                  className="est-input"
-                  type="number"
-                  name="limite_operadores"
-                  min="0"
-                  max="50"
-                  value={form.limite_operadores}
-                  onChange={atualizar}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SEÇÃO — Mensalidade individual */}
-          <div className="est-form-section">
-            <div className="est-form-section-title">💰 Mensalidade</div>
-            <div className="est-form-grid">
-              <div className="est-form-group">
-                <label className="est-label">Valor da mensalidade (R$)</label>
-                <input
-                  className="est-input"
-                  type="number"
-                  name="valor_mensalidade"
-                  min="0"
-                  step="0.01"
-                  value={form.valor_mensalidade}
-                  onChange={atualizar}
-                  placeholder="Deixe em branco para usar o valor padrão global"
-                />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4, display: "block" }}>
-                  Preço diferenciado para este cliente. Em branco = usa o valor padrão configurado globalmente.
-                </span>
-              </div>
-            </div>
-          </div>
 
           {/* AÇÕES */}
           <div className="est-form-actions">

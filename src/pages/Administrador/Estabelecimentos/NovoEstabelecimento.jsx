@@ -24,6 +24,8 @@ export default function NovoEstabelecimento() {
   });
 
   const [usarPeriodoTeste,  setUsarPeriodoTeste]  = useState(true);
+  const [tipoCpfCnpj,      setTipoCpfCnpj]      = useState("cpf");
+  const [cpfCnpjErro,      setCpfCnpjErro]      = useState("");
   const [mensalidadePadrao, setMensalidadePadrao] = useState(49.90);
   const [diasTeste,        setDiasTeste]        = useState(30);
 
@@ -46,6 +48,39 @@ export default function NovoEstabelecimento() {
       .split(" ")
       .map(p => p.charAt(0).toUpperCase() + p.slice(1))
       .join(" ");
+  }
+
+  function aplicarMascaraCpfCnpj(valor, tipo) {
+    const s = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+    if (tipo === "cpf") {
+      return s
+        .replace(/^(\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
+    }
+    return s
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+  }
+
+  function handleCpfCnpj(e) {
+    const valor = aplicarMascaraCpfCnpj(e.target.value, tipoCpfCnpj);
+    setForm(prev => ({ ...prev, cnpj: valor }));
+    const digits = valor.replace(/\D/g, "");
+    const esperado = tipoCpfCnpj === "cpf" ? 11 : 14;
+    if (digits.length > 0 && digits.length < esperado) {
+      setCpfCnpjErro(`${tipoCpfCnpj.toUpperCase()} incompleto — faltam ${esperado - digits.length} dígitos`);
+    } else {
+      setCpfCnpjErro("");
+    }
+  }
+
+  function handleTipoCpfCnpj(tipo) {
+    setTipoCpfCnpj(tipo);
+    setForm(prev => ({ ...prev, cnpj: "" }));
+    setCpfCnpjErro("");
   }
 
   async function carregarTipos() {
@@ -247,14 +282,37 @@ export default function NovoEstabelecimento() {
               )}
 
               <div className="est-form-group">
-                <label className="est-label">CNPJ</label>
+                <label className="est-label">CPF / CNPJ</label>
+                <div style={{ display:"flex", gap:4, marginBottom:6 }}>
+                  {["cpf","cnpj"].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => handleTipoCpfCnpj(t)}
+                      style={{
+                        padding:"3px 14px", borderRadius:20, border:"1px solid",
+                        borderColor: tipoCpfCnpj===t ? "#14b8a6" : "var(--border,#e5e7eb)",
+                        background:  tipoCpfCnpj===t ? "#14b8a6" : "transparent",
+                        color:       tipoCpfCnpj===t ? "#fff" : "inherit",
+                        fontSize:"0.75rem", fontWeight:700, cursor:"pointer",
+                        fontFamily:"Plus Jakarta Sans, sans-serif",
+                      }}>
+                      {t.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
                 <input
-                  className="est-input"
+                  className={`est-input${cpfCnpjErro ? " est-input-erro" : ""}`}
                   name="cnpj"
-                  placeholder="00.000.000/0000-00"
                   value={form.cnpj}
-                  onChange={atualizar}
+                  onChange={handleCpfCnpj}
+                  placeholder={tipoCpfCnpj === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                  maxLength={tipoCpfCnpj === "cpf" ? 14 : 18}
+                  inputMode="numeric"
                 />
+                {cpfCnpjErro && (
+                  <span style={{ fontSize:"0.72rem", color:"#ef4444", marginTop:2, display:"block" }}>
+                    ⚠️ {cpfCnpjErro}
+                  </span>
+                )}
               </div>
 
             </div>
