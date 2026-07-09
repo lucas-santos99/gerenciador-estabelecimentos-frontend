@@ -185,9 +185,12 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
 
                 <div className="bloqueio-tabs">
                   <div className="bloqueio-tab ativo">📱 Pix</div>
-                  <a className="bloqueio-tab" href={cobranca.invoice_url} target="_blank" rel="noreferrer">
-                    💳 Cartão / Boleto
-                  </a>
+                  {cobranca.invoice_url_cartao && (
+                    <a className="bloqueio-tab" href={cobranca.invoice_url_cartao}
+                      target="_blank" rel="noreferrer">
+                      💳 Cartão de Crédito
+                    </a>
+                  )}
                 </div>
 
                 {cobranca.pix_qr_code ? (
