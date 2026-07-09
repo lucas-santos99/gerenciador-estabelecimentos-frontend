@@ -416,7 +416,7 @@ export default function DashboardAdmin() {
             <span className="search-icon"><Icon.Search /></span>
             <input
               className="dash-input"
-              placeholder="Buscar por nome ou CNPJ..."
+              placeholder="Buscar por nome ou CPF/CNPJ..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
             />
@@ -508,7 +508,7 @@ export default function DashboardAdmin() {
                       )}
                       {m.cnpj && (
                         <span className="dash-est-card-info mono">
-                          <span className="dash-est-card-info-label">CNPJ</span> {m.cnpj}
+                          <span className="dash-est-card-info-label">CPF/CNPJ</span> {m.cnpj}
                         </span>
                       )}
                       <span className={`dash-est-card-info venc-text ${classVenc(m.data_vencimento)}`}>

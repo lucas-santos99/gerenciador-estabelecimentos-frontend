@@ -48,12 +48,15 @@ export default function EditarEstabelecimento() {
       if (resp.ok) {
         // Detectar se é CPF ou CNPJ pelo número de dígitos
         const docLimpo = (data.cnpj || "").replace(/\D/g, "");
-        if (docLimpo.length === 14) setTipoCpfCnpj("cnpj");
-        else setTipoCpfCnpj("cpf");
+        const tipoDetectado = docLimpo.length === 14 ? "cnpj" : "cpf";
+        setTipoCpfCnpj(tipoDetectado);
+
+        // Aplicar máscara no documento existente ao carregar
+        const docComMascara = docLimpo ? aplicarMascaraCpfCnpjStatic(docLimpo, tipoDetectado) : "";
 
         setForm({
           nome_fantasia:     data.nome_fantasia     || "",
-          cnpj:              data.cnpj              || "",
+          cnpj:              docComMascara,
           telefone:          data.telefone          || "",
           email_contato:     data.email_contato     || "",
           endereco_completo: data.endereco_completo || "",
@@ -74,6 +77,22 @@ export default function EditarEstabelecimento() {
 
   function atualizar(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  /* ── Função estática de máscara (usada no carregarDados) ────── */
+  function aplicarMascaraCpfCnpjStatic(s, tipo) {
+    const d = s.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+    if (tipo === "cpf") {
+      return d
+        .replace(/^(\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
+    }
+    return d
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
   }
 
   /* ── Máscara CPF/CNPJ ─────────────────────────────────────── */
