@@ -236,6 +236,20 @@ export default function DashboardAdmin() {
     carregarDados();
   }
 
+  async function bloquearAcesso(id, nome) {
+    if (!window.confirm(`Bloquear acesso de "${nome}"?`)) return;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      await fetch(`${API_URL}/admin/estabelecimentos/${id}/bloquear-acesso`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ motivo: "Bloqueio manual pelo SuperAdmin" }),
+      });
+      carregarDados();
+    } catch { alert("Erro ao bloquear acesso."); }
+  }
+
   async function confirmarLiberar() {
     if (!modalLiberar) return;
     setLiberando(true);
@@ -536,7 +550,14 @@ export default function DashboardAdmin() {
                         <button
                           className="dash-card-btn dash-card-btn--green"
                           onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
-                        >🔓 Liberar Acesso</button>
+                        >🔓 Liberar</button>
+                        {m.status_assinatura === "ativa" && (
+                          <button
+                            className="dash-card-btn dash-card-btn--warning"
+                            onClick={() => bloquearAcesso(m.id, m.nome_fantasia)}
+                            title="Bloquear acesso"
+                          >🔴 Bloquear</button>
+                        )}
                         <button
                           className="dash-card-btn dash-card-btn--danger"
                           onClick={() => excluir(m.id, m.nome_fantasia)}

@@ -314,13 +314,31 @@ export default function DetalhesEstabelecimento() {
                   : "—"}
               </span>
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 className="est-btn est-btn-success"
                 onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar(true); }}
               >
                 🔓 Liberar Acesso
               </button>
+              {dados.status_assinatura === "ativa" && (
+                <button
+                  className="est-btn est-btn-danger"
+                  onClick={async () => {
+                    if (!window.confirm(`Bloquear acesso de "${dados.nome_fantasia}"?`)) return;
+                    const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/bloquear-acesso`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ motivo: "Bloqueio manual pelo SuperAdmin" }),
+                      credentials: "include",
+                    });
+                    if (resp.ok) carregar();
+                    else alert("Erro ao bloquear.");
+                  }}
+                >
+                  🔴 Bloquear Acesso
+                </button>
+              )}
             </div>
           </div>
         </div>
