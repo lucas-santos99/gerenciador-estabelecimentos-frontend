@@ -190,7 +190,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                       className="bloqueio-tab"
                       onClick={() => window.open(cobranca.invoice_url_cartao, "_blank", "noopener,noreferrer")}
                     >
-                      💳 Cartão de Crédito
+                      💳 Cartão de Crédito/Débito
                     </button>
                   )}
                 </div>
@@ -211,7 +211,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                         className="bloqueio-btn bloqueio-btn--primary"
                         onClick={() => window.open(cobranca.invoice_url_cartao, "_blank", "noopener,noreferrer")}
                       >
-                        💳 Pagar com Cartão de Crédito
+                        💳 Pagar com Cartão de Crédito/Débito
                       </button>
                     )}
                   </div>
