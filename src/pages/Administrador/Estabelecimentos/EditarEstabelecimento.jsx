@@ -9,6 +9,22 @@ function iniciais(nome) {
   return nome.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
 }
 
+/* ── Funções de máscara CPF/CNPJ — fora do componente para evitar problemas de closure ── */
+function aplicarMascaraDoc(s, tipo) {
+  const d = (s || "").replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+  if (tipo === "cpf") {
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
+  }
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+}
+
 export default function EditarEstabelecimento() {
   const { id }      = useParams();
   const navigate    = useNavigate();
@@ -52,7 +68,7 @@ export default function EditarEstabelecimento() {
         setTipoCpfCnpj(tipoDetectado);
 
         // Aplicar máscara no documento existente ao carregar
-        const docComMascara = docLimpo ? aplicarMascaraCpfCnpjStatic(docLimpo, tipoDetectado) : "";
+        const docComMascara = docLimpo ? aplicarMascaraDoc(docLimpo, tipoDetectado) : "";
 
         setForm({
           nome_fantasia:     data.nome_fantasia     || "",
@@ -79,40 +95,8 @@ export default function EditarEstabelecimento() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  /* ── Função estática de máscara (usada no carregarDados) ────── */
-  function aplicarMascaraCpfCnpjStatic(s, tipo) {
-    const d = s.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
-    if (tipo === "cpf") {
-      return d
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
-    }
-    return d
-      .replace(/^(\d{2})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
-  }
-
-  /* ── Máscara CPF/CNPJ ─────────────────────────────────────── */
-  function aplicarMascaraCpfCnpj(valor, tipo) {
-    const s = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
-    if (tipo === "cpf") {
-      return s
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
-    }
-    return s
-      .replace(/^(\d{2})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
-  }
-
   function handleCpfCnpj(e) {
-    const valor = aplicarMascaraCpfCnpj(e.target.value, tipoCpfCnpj);
+    const valor = aplicarMascaraDoc(e.target.value, tipoCpfCnpj);
     setForm(prev => ({ ...prev, cnpj: valor }));
     // Validar tamanho esperado
     const digits = valor.replace(/\D/g, "");
@@ -125,9 +109,17 @@ export default function EditarEstabelecimento() {
   }
 
   function handleTipoCpfCnpj(tipo) {
-    // Ao trocar de tipo, sempre limpa — usuário digita o documento correto
+    const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
+    const esperadoCpf  = digitsAtuais.length <= 11;
+    const esperadoCnpj = digitsAtuais.length === 14;
+
+    let novoValor = "";
+    if (tipo === "cpf"  && esperadoCpf)  novoValor = aplicarMascaraDoc(digitsAtuais, "cpf");
+    if (tipo === "cnpj" && esperadoCnpj) novoValor = aplicarMascaraDoc(digitsAtuais, "cnpj");
+    // Se não pertence ao novo tipo, limpa
+
     setTipoCpfCnpj(tipo);
-    setForm(prev => ({ ...prev, cnpj: "" }));
+    setForm(prev => ({ ...prev, cnpj: novoValor }));
     setCpfCnpjErro("");
   }
 

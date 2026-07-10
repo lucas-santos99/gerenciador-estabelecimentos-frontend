@@ -5,6 +5,22 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
 
+/* ── Máscara CPF/CNPJ — fora do componente ── */
+function aplicarMascaraDoc(s, tipo) {
+  const d = (s || "").replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+  if (tipo === "cpf") {
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
+  }
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
+}
+
 export default function NovoEstabelecimento() {
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
@@ -50,23 +66,10 @@ export default function NovoEstabelecimento() {
       .join(" ");
   }
 
-  function aplicarMascaraCpfCnpj(valor, tipo) {
-    const s = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
-    if (tipo === "cpf") {
-      return s
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, "$1-$2");
-    }
-    return s
-      .replace(/^(\d{2})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
-      .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
-  }
+  // máscara via aplicarMascaraDoc (função global acima)
 
   function handleCpfCnpj(e) {
-    const valor = aplicarMascaraCpfCnpj(e.target.value, tipoCpfCnpj);
+    const valor = aplicarMascaraDoc(e.target.value, tipoCpfCnpj);
     setForm(prev => ({ ...prev, cnpj: valor }));
     const digits = valor.replace(/\D/g, "");
     const esperado = tipoCpfCnpj === "cpf" ? 11 : 14;
@@ -78,9 +81,16 @@ export default function NovoEstabelecimento() {
   }
 
   function handleTipoCpfCnpj(tipo) {
-    // Ao trocar de tipo, sempre limpa — usuário digita o documento correto
     setTipoCpfCnpj(tipo);
-    setForm(prev => ({ ...prev, cnpj: "" }));
+    const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
+    const pertenceAoTipo =
+      (tipo === "cpf"  && digitsAtuais.length <= 11) ||
+      (tipo === "cnpj" && digitsAtuais.length > 11);
+    if (!pertenceAoTipo) {
+      setForm(prev => ({ ...prev, cnpj: "" }));
+    } else {
+      setForm(prev => ({ ...prev, cnpj: aplicarMascaraDoc(digitsAtuais, tipo) }));
+    }
     setCpfCnpjErro("");
   }
 
