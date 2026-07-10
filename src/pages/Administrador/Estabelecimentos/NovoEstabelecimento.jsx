@@ -5,7 +5,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
 
-/* ── Máscara CPF/CNPJ — fora do componente ── */
+/* ── Máscara CPF/CNPJ — global ── */
 function aplicarMascaraDoc(s, tipo) {
   const d = (s || "").replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
   if (tipo === "cpf") {
@@ -66,8 +66,6 @@ export default function NovoEstabelecimento() {
       .join(" ");
   }
 
-  // máscara via aplicarMascaraDoc (função global acima)
-
   function handleCpfCnpj(e) {
     const valor = aplicarMascaraDoc(e.target.value, tipoCpfCnpj);
     setForm(prev => ({ ...prev, cnpj: valor }));
@@ -81,16 +79,8 @@ export default function NovoEstabelecimento() {
   }
 
   function handleTipoCpfCnpj(tipo) {
+    // Só troca o tipo, não limpa o campo
     setTipoCpfCnpj(tipo);
-    const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
-    const pertenceAoTipo =
-      (tipo === "cpf"  && digitsAtuais.length <= 11) ||
-      (tipo === "cnpj" && digitsAtuais.length > 11);
-    if (!pertenceAoTipo) {
-      setForm(prev => ({ ...prev, cnpj: "" }));
-    } else {
-      setForm(prev => ({ ...prev, cnpj: aplicarMascaraDoc(digitsAtuais, tipo) }));
-    }
     setCpfCnpjErro("");
   }
 
