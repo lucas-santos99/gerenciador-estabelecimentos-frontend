@@ -125,18 +125,17 @@ export default function EditarEstabelecimento() {
   }
 
   function handleTipoCpfCnpj(tipo) {
-    setTipoCpfCnpj(tipo);
-    // Só limpa se o valor atual não pertence ao tipo selecionado
     const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
-    const pertenceAoTipo =
-      (tipo === "cpf"  && digitsAtuais.length <= 11) ||
-      (tipo === "cnpj" && digitsAtuais.length > 11);
-    if (!pertenceAoTipo) {
-      setForm(prev => ({ ...prev, cnpj: "" }));
-    } else {
-      // Reaplicar máscara no formato correto
-      setForm(prev => ({ ...prev, cnpj: aplicarMascaraCpfCnpjStatic(digitsAtuais, tipo) }));
-    }
+    const esperadoCpf  = digitsAtuais.length <= 11;
+    const esperadoCnpj = digitsAtuais.length === 14;
+
+    let novoValor = "";
+    if (tipo === "cpf"  && esperadoCpf)  novoValor = aplicarMascaraCpfCnpjStatic(digitsAtuais, "cpf");
+    if (tipo === "cnpj" && esperadoCnpj) novoValor = aplicarMascaraCpfCnpjStatic(digitsAtuais, "cnpj");
+    // Se não pertence ao novo tipo, limpa
+
+    setTipoCpfCnpj(tipo);
+    setForm(prev => ({ ...prev, cnpj: novoValor }));
     setCpfCnpjErro("");
   }
 
