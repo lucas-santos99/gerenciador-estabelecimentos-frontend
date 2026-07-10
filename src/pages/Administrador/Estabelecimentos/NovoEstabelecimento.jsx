@@ -79,13 +79,11 @@ export default function NovoEstabelecimento() {
 
   function handleTipoCpfCnpj(tipo) {
     const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
-    const esperadoCpf  = digitsAtuais.length <= 11;
-    const esperadoCnpj = digitsAtuais.length === 14;
 
-    let novoValor = "";
-    if (tipo === "cpf"  && esperadoCpf)  novoValor = aplicarMascaraCpfCnpj(digitsAtuais, "cpf");
-    if (tipo === "cnpj" && esperadoCnpj) novoValor = aplicarMascaraCpfCnpj(digitsAtuais, "cnpj");
-    // Se não pertence ao novo tipo, limpa
+    // Sempre reaplicar máscara com o novo tipo — nunca limpar ao trocar
+    const novoValor = digitsAtuais
+      ? aplicarMascaraCpfCnpj(digitsAtuais, tipo)
+      : "";
 
     setTipoCpfCnpj(tipo);
     setForm(prev => ({ ...prev, cnpj: novoValor }));
