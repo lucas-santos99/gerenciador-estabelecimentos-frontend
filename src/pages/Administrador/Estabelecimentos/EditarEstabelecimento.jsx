@@ -125,16 +125,9 @@ export default function EditarEstabelecimento() {
   }
 
   function handleTipoCpfCnpj(tipo) {
-    const digitsAtuais = (form.cnpj || "").replace(/\D/g, "");
-
-    // Sempre reaplicar máscara com o novo tipo — nunca limpar ao trocar
-    // O usuário vê o mesmo número reformatado, e pode corrigir se precisar
-    const novoValor = digitsAtuais
-      ? aplicarMascaraCpfCnpjStatic(digitsAtuais, tipo)
-      : "";
-
+    // Ao trocar de tipo, sempre limpa — usuário digita o documento correto
     setTipoCpfCnpj(tipo);
-    setForm(prev => ({ ...prev, cnpj: novoValor }));
+    setForm(prev => ({ ...prev, cnpj: "" }));
     setCpfCnpjErro("");
   }
 
