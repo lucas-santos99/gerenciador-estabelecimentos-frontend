@@ -494,8 +494,12 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
 
   const dispararBuscaBipador = useCallback((codigo) => {
     if (!codigo || codigo.length < BARCODE_MIN_LENGTH) return;
+    // Segunda camada de proteção: se já tem modal de quantidade/peso ou
+    // tela de pagamento aberta, ignora qualquer disparo de busca —
+    // evita reabrir o modal por causa de um timer/leitura fantasma
+    if (itemQuantificar || modalPeso || showPagamento) return;
     buscarProdutosPorCodigo(codigo.trim());
-  }, [estabelecimentoId]);
+  }, [estabelecimentoId, itemQuantificar, modalPeso, showPagamento]);
 
   function handleBuscaKeyDown(e) {
     const agora = Date.now();
@@ -511,9 +515,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     if (e.key === 'Enter') {
       e.preventDefault();
       const buffer = barcodeBufferRef.current;
+      // Sempre cancela o timer de flush pendente — evita que ele dispare
+      // "fantasma" mais tarde (ex: reabrindo o modal de quantidade sozinho)
+      clearTimeout(barcodeTimerRef.current);
       if (buffer.length >= BARCODE_MIN_LENGTH && intervalo < BARCODE_MAX_INTERVAL * 3) {
         // Enter vindo do bipador logo após uma sequência rápida
-        clearTimeout(barcodeTimerRef.current);
         barcodeBufferRef.current = '';
         dispararBuscaBipador(buffer);
       } else {
@@ -548,6 +554,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   // ── Busca por código de barras exato ─────────────────────
   async function buscarProdutosPorCodigo(codigo) {
     if (!estabelecimentoId) return;
+    // Mesma proteção aqui — essa função também é chamada direto pela câmera
+    if (itemQuantificar || modalPeso || showPagamento) return;
 
     // ── Interceptar EAN-13 pesável (prefixo "2") ──────────
     const pesavel = decodificarEAN13Pesavel(codigo);
@@ -615,7 +623,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     if (!showPagamento && !itemQuantificar && editIndex === null && !showCamera && !modalPeso) {
       inputBuscaRef.current?.focus();
     }
-  }, [showPagamento, itemQuantificar, editIndex, showCamera]);
+  }, [showPagamento, itemQuantificar, editIndex, showCamera, modalPeso]);
 
   // Atalhos globais do PDV
   useEffect(() => {
@@ -1067,6 +1075,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           </div>
           <button
             ref={btnFinalizarRef}
+            type="button"
             className="pdv-btn-finalizar"
             onClick={() => setShowPagamento(true)}
             disabled={carrinho.length === 0 || loadingVenda || !pode('pdv_realizar_venda')}

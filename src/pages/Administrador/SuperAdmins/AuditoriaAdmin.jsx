@@ -133,7 +133,7 @@ export default function AuditoriaAdmin() {
       setErro("Erro interno ao buscar auditoria.");
     }
     setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [API_URL, escopo, merceariaId, acao, usuario, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
@@ -161,7 +161,7 @@ export default function AuditoriaAdmin() {
     if (usuario)      next.usuario = usuario;
     setParams(next, { replace: true });
     setPagina(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [escopo, merceariaId, acao, usuario]);
 
   function nomeEstab(id) {

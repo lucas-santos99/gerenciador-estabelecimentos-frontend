@@ -47,7 +47,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const [erro,             setErro]             = useState('');
   const [categoriaAtiva,   setCategoriaAtiva]   = useState('todos');
   const [termoBusca,       setTermoBusca]       = useState('');
-  const [modoBusca,        setModoBusca]        = useState('nome'); // 'nome' | 'marca' | 'codigo'
+  const [modoBusca,        setModoBusca]        = useState('nome'); // 'nome' | 'marca' | 'codigo' | 'plu'
   const [produtoFocadoId,  setProdutoFocadoId]  = useState(null);
   const [modalAberto,      setModalAberto]      = useState(false);
   const [produtoEditar,    setProdutoEditar]    = useState(null);
@@ -191,6 +191,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       if (modoBusca === 'nome')   buscaOK = normalizar(p.nome).includes(busca);
       if (modoBusca === 'marca')  buscaOK = normalizar(p.marca || '').includes(busca);
       if (modoBusca === 'codigo') buscaOK = (p.codigo_barras || '').toLowerCase().includes(busca);
+      if (modoBusca === 'plu')    buscaOK = String(p.plu_balanca || '').toLowerCase().includes(busca);
     }
 
     return catOK && buscaOK;
@@ -491,6 +492,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               placeholder={
                 modoBusca === 'nome'   ? '🔍  Buscar por nome…' :
                 modoBusca === 'marca'  ? '🏷️  Buscar por marca…' :
+                modoBusca === 'plu'    ? '⚖️  Buscar por código PLU…' :
                                          '🔢  Buscar por código de barras…'
               }
               value={termoBusca}
@@ -501,6 +503,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 { key: 'nome',   label: 'Nome' },
                 { key: 'marca',  label: 'Marca' },
                 { key: 'codigo', label: 'Código' },
+                { key: 'plu',    label: 'PLU' },
               ].map(m => (
                 <button
                   key={m.key}
