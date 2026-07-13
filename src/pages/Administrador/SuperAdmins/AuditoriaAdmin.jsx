@@ -48,6 +48,7 @@ export default function AuditoriaAdmin() {
   const [exportando,   setExportando]  = useState(false);
   const [erro,         setErro]        = useState("");
   const [estabs,       setEstabs]      = useState([]);
+  const [opcoesFiltro, setOpcoesFiltro] = useState({ acoes: [], usuarios: [] });
   const [pagina,       setPagina]      = useState(0);
   const [tamanhoPagina, setTamanhoPagina] = useState(30);
 
@@ -75,6 +76,23 @@ export default function AuditoriaAdmin() {
       } catch { /* silencioso — filtro é acessório */ }
     })();
   }, [API_URL]);
+
+  /* ── carregar opções de Usuário/Ação — dependem do estabelecimento
+     e escopo selecionados, pra só mostrar o que existe de verdade ── */
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getToken();
+        const qs = new URLSearchParams();
+        if (merceariaId) qs.set("mercearia_id", merceariaId);
+        if (escopo)      qs.set("escopo", escopo);
+        const resp = await fetch(`${API_URL}/api/auditoria/admin/filtros?${qs.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (resp.ok) setOpcoesFiltro(await resp.json());
+      } catch { /* silencioso — filtro é acessório */ }
+    })();
+  }, [API_URL, merceariaId, escopo]);
 
   /* ── monta query string com os filtros/ordenação atuais ──── */
   function montarQuery({ semPaginacao = false } = {}) {
@@ -119,6 +137,20 @@ export default function AuditoriaAdmin() {
   }, [API_URL, escopo, merceariaId, acao, usuario, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  /* ── ao trocar o estabelecimento, os usuários/ações disponíveis
+     mudam — limpa a seleção pra não ficar um valor "fantasma"
+     (mas não na primeira renderização, senão perde o filtro que
+     veio de um link tipo ?mercearia_id=X&acao=login) ── */
+  const primeiraRenderMerceariaRef = React.useRef(true);
+  useEffect(() => {
+    if (primeiraRenderMerceariaRef.current) {
+      primeiraRenderMerceariaRef.current = false;
+      return;
+    }
+    setUsuario("");
+    setAcao("");
+  }, [merceariaId]);
 
   /* ── reflete filtros na URL (pra poder compartilhar/voltar) ── */
   useEffect(() => {
@@ -287,12 +319,18 @@ export default function AuditoriaAdmin() {
 
           <div className="aud-filter-group">
             <label className="aud-filter-label">Usuário</label>
-            <input className="aud-input" placeholder="nome ou e-mail" value={usuario} onChange={e => setUsuario(e.target.value)} />
+            <select className="aud-select" value={usuario} onChange={e => setUsuario(e.target.value)}>
+              <option value="">Todos</option>
+              {opcoesFiltro.usuarios.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
           </div>
 
           <div className="aud-filter-group">
             <label className="aud-filter-label">Ação</label>
-            <input className="aud-input" placeholder="ex: login, bloquear_acesso..." value={acao} onChange={e => setAcao(e.target.value)} />
+            <select className="aud-select" value={acao} onChange={e => setAcao(e.target.value)}>
+              <option value="">Todas</option>
+              {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </div>
 
           <div className="aud-filter-group">
