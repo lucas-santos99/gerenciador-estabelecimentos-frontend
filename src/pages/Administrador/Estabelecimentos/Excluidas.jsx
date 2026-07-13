@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
+import { apiFetch } from "../../../utils/api";
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -36,9 +37,7 @@ export default function Excluidas() {
   async function restaurar(id, nome) {
     if (!window.confirm(`Restaurar "${nome}"?`)) return;
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/restaurar`, {
-        method: "PUT", credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}/restaurar`, { method: "PUT" });
       if (resp.ok) carregar();
       else { const j = await resp.json(); alert("Erro: " + j.error); }
     } catch { alert("Erro ao restaurar."); }
@@ -53,9 +52,9 @@ export default function Excluidas() {
   async function excluirDefinitivo() {
     if (!idSelecionado) return;
     try {
-      const resp = await fetch(
-        `${API_URL}/admin/estabelecimentos/${idSelecionado}/apagar-definitivo`,
-        { method: "DELETE", credentials: "include" }
+      const resp = await apiFetch(
+        `/admin/estabelecimentos/${idSelecionado}/apagar-definitivo`,
+        { method: "DELETE" }
       );
       if (resp.ok) { setModalAtivo(false); carregar(); }
       else { const j = await resp.json(); alert("Erro: " + j.error); }

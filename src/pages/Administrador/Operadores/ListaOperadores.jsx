@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
+import { apiFetch } from "../../../utils/api";
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -47,11 +48,9 @@ export default function ListaOperadores() {
   async function salvarLimite() {
     setLimiteSaving(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${estabelecimentoId}/limite-operadores`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ limite: parseInt(limiteVal) || 0 }),
-        credentials: "include",
+      const resp = await apiFetch(`/admin/estabelecimentos/${estabelecimentoId}/limite-operadores`, {
+        method: "PUT",
+        body:   JSON.stringify({ limite: parseInt(limiteVal) || 0 }),
       });
       if (resp.ok) {
         setEstabelecimento(prev => ({ ...prev, limite_operadores: parseInt(limiteVal) }));
@@ -66,9 +65,7 @@ export default function ListaOperadores() {
   async function excluir(id, nome) {
     if (!window.confirm(`Excluir operador "${nome}"?`)) return;
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}`, {
-        method: "DELETE", credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/operadores/${id}`, { method: "DELETE" });
       if (resp.ok) carregar();
       else alert("Erro ao excluir operador.");
     } catch { alert("Erro interno."); }

@@ -4,6 +4,14 @@ import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
+import { supabase } from "../../../utils/supabaseClient";
+
+// apiFetch sempre manda Content-Type: application/json, o que quebra
+// upload de arquivo (FormData). Pra upload usamos o token direto.
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token;
+}
 
 /* ── Máscara CPF/CNPJ — global ── */
 function aplicarMascaraDoc(s, tipo) {
@@ -161,9 +169,8 @@ export default function NovoEstabelecimento() {
 
     setSalvando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/criar`, {
+      const resp = await apiFetch("/admin/estabelecimentos/criar", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           ...form,
           data_vencimento:      dataVencimentoFinal,
@@ -171,18 +178,18 @@ export default function NovoEstabelecimento() {
           limite_operadores:    parseInt(form.limite_operadores) || 3,
           valor_mensalidade:    form.valor_mensalidade ? parseFloat(form.valor_mensalidade) : null,
         }),
-        credentials: "include",
       });
       const json = await resp.json();
       if (!resp.ok) {
         setErro(json.error || "Erro ao criar estabelecimento.");
       } else {
         // Se tem logo, faz upload antes de navegar
-        if (logoFile && json.id) {
+        if (logoFile && json.estabelecimentoId) {
           const fd = new FormData();
           fd.append("logo", logoFile);
-          await fetch(`${API_URL}/admin/estabelecimentos/${json.id}/upload-logo`, {
-            method: "POST", body: fd, credentials: "include",
+          const token = await getToken();
+          await fetch(`${API_URL}/admin/estabelecimentos/${json.estabelecimentoId}/upload-logo`, {
+            method: "POST", body: fd, headers: { Authorization: `Bearer ${token}` },
           });
         }
         navigate("/admin");

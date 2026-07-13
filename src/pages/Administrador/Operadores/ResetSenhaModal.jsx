@@ -1,10 +1,9 @@
 // src/pages/Administrador/Operadores/ResetSenhaModal.jsx
 import React, { useState } from "react";
 import "./Operadores.css";
+import { apiFetch } from "../../../utils/api";
 
 export default function ResetSenhaModal({ id, onClose }) {
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const [senha,    setSenha]    = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -22,11 +21,9 @@ export default function ResetSenhaModal({ id, onClose }) {
     }
     setSalvando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}/reset-senha`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ senha }),
-        credentials: "include",
+      const resp = await apiFetch(`/admin/operadores/${id}/reset-senha`, {
+        method: "POST",
+        body:   JSON.stringify({ senha }),
       });
       const json = await resp.json().catch(() => ({}));
       if (resp.ok) onClose();

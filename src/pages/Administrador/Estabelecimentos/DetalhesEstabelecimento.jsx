@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
+import { apiFetch } from "../../../utils/api";
 import "./Estabelecimentos.css";
 
 function iniciais(nome) {
@@ -32,6 +33,11 @@ export default function DetalhesEstabelecimento() {
   // Histórico de liberações
   const [historico,     setHistorico]     = useState([]);
   const [loadHistorico, setLoadHistorico] = useState(false);
+  // Bloqueio de acesso
+  const [modalBloquear,  setModalBloquear]  = useState(false);
+  const [motivoBloquear, setMotivoBloquear] = useState("");
+  const [bloqueando,     setBloqueando]     = useState(false);
+  const [bloquearMsg,    setBloquearMsg]    = useState("");
 
   async function carregar() {
     setLoading(true);
@@ -61,18 +67,14 @@ export default function DetalhesEstabelecimento() {
 
   async function restaurar() {
     if (!window.confirm("Restaurar este estabelecimento?")) return;
-    const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/restaurar`, {
-      method: "PUT", credentials: "include",
-    });
+    const resp = await apiFetch(`/admin/estabelecimentos/${id}/restaurar`, { method: "PUT" });
     if (resp.ok) carregar();
     else alert("Erro ao restaurar.");
   }
 
   async function excluir() {
     if (!window.confirm(`Excluir "${dados?.nome_fantasia}"?`)) return;
-    const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-      method: "DELETE", credentials: "include",
-    });
+    const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     if (resp.ok) navigate("/admin");
     else alert("Erro ao excluir.");
   }
@@ -80,11 +82,9 @@ export default function DetalhesEstabelecimento() {
   async function salvarLimite() {
     setLimiteSaving(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/limite-operadores`, {
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}/limite-operadores`, {
         method:  "PUT",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ limite: parseInt(limiteVal) || 0 }),
-        credentials: "include",
       });
       if (resp.ok) {
         setDados(prev => ({ ...prev, limite_operadores: parseInt(limiteVal) }));
@@ -100,16 +100,13 @@ export default function DetalhesEstabelecimento() {
     setLiberando(true);
     setLiberarMsg("");
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/liberar-acesso`, {
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}/liberar-acesso`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           dias:            parseInt(diasLiberar),
           forma_pagamento: formaPgto,
           motivo:          motivoLiberar.trim() || null,
-          liberado_por:    "SuperAdmin",
         }),
-        credentials: "include",
       });
       const json = await resp.json();
       if (!resp.ok) { setLiberarMsg("❌ " + (json.error || "Erro.")); return; }
@@ -119,6 +116,29 @@ export default function DetalhesEstabelecimento() {
       setTimeout(() => { setModalLiberar(false); setLiberarMsg(""); setMotivoLiberar(""); setFormaPgto("dinheiro"); }, 2000);
     } catch { setLiberarMsg("❌ Erro interno."); }
     setLiberando(false);
+  }
+
+  async function confirmarBloquear() {
+    const motivo = motivoBloquear.trim();
+    if (motivo.length < 3) {
+      setBloquearMsg("❌ Informe o motivo do bloqueio (mínimo 3 caracteres).");
+      return;
+    }
+    setBloqueando(true);
+    setBloquearMsg("");
+    try {
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}/bloquear-acesso`, {
+        method:  "POST",
+        body:    JSON.stringify({ motivo }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) { setBloquearMsg("❌ " + (json.error || "Erro ao bloquear.")); return; }
+      setBloquearMsg("✓ Acesso bloqueado.");
+      carregar();
+      carregarHistorico();
+      setTimeout(() => { setModalBloquear(false); setBloquearMsg(""); setMotivoBloquear(""); }, 1500);
+    } catch { setBloquearMsg("❌ Erro interno."); }
+    setBloqueando(false);
   }
 
   /* ── loading ──────────────────────────────────────────── */
@@ -324,21 +344,18 @@ export default function DetalhesEstabelecimento() {
               {dados.status_assinatura === "ativa" && (
                 <button
                   className="est-btn est-btn-danger"
-                  onClick={async () => {
-                    if (!window.confirm(`Bloquear acesso de "${dados.nome_fantasia}"?`)) return;
-                    const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/bloquear-acesso`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ motivo: "Bloqueio manual pelo SuperAdmin" }),
-                      credentials: "include",
-                    });
-                    if (resp.ok) carregar();
-                    else alert("Erro ao bloquear.");
-                  }}
+                  onClick={() => { setMotivoBloquear(""); setBloquearMsg(""); setModalBloquear(true); }}
                 >
                   🔴 Bloquear Acesso
                 </button>
               )}
+              <button
+                className="est-btn est-btn-ghost"
+                onClick={() => navigate(`/admin/auditoria?mercearia_id=${id}&acao=login`)}
+                title="Ver histórico de logins deste estabelecimento"
+              >
+                🔍 Auditoria de Login
+              </button>
             </div>
           </div>
         </div>
@@ -490,6 +507,42 @@ export default function DetalhesEstabelecimento() {
               <button className="est-btn est-btn-ghost" onClick={() => setModalLiberar(false)}>Cancelar</button>
               <button className="est-btn est-btn-success" onClick={confirmarLiberar} disabled={liberando}>
                 {liberando ? "⏳ Liberando…" : "✓ Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BLOQUEAR ACESSO */}
+      {modalBloquear && (
+        <div className="est-modal-overlay" onClick={() => setModalBloquear(false)}>
+          <div className="est-modal" onClick={e => e.stopPropagation()}>
+            <div className="est-modal-titulo">🔴 Bloquear Acesso</div>
+            <div className="est-modal-subtitulo">
+              <strong>{dados.nome_fantasia}</strong> ficará sem acesso ao sistema até ser liberado novamente.
+            </div>
+
+            <div className="est-form-group" style={{ marginTop: 4 }}>
+              <label className="est-label">
+                📝 Motivo <span style={{ color: "#ef4444", fontWeight: 700 }}>*</span>
+              </label>
+              <textarea className="est-input" rows={3}
+                placeholder="Ex: Inadimplência, solicitação do cliente, teste encerrado..."
+                value={motivoBloquear} onChange={e => setMotivoBloquear(e.target.value)}
+                autoFocus
+                style={{ resize: "none", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: "0.85rem" }} />
+            </div>
+
+            {bloquearMsg && (
+              <div className={`est-alert ${bloquearMsg.startsWith("✓") ? "est-alert-success" : "est-alert-error"}`}>
+                {bloquearMsg}
+              </div>
+            )}
+
+            <div className="est-modal-acoes">
+              <button className="est-btn est-btn-ghost" onClick={() => setModalBloquear(false)}>Cancelar</button>
+              <button className="est-btn est-btn-danger" onClick={confirmarBloquear} disabled={bloqueando || motivoBloquear.trim().length < 3}>
+                {bloqueando ? "⏳ Bloqueando…" : "🔴 Confirmar Bloqueio"}
               </button>
             </div>
           </div>

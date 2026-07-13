@@ -3,6 +3,15 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
+import { apiFetch } from "../../../utils/api";
+import { supabase } from "../../../utils/supabaseClient";
+
+// apiFetch sempre manda Content-Type: application/json, o que quebra
+// upload de arquivo (FormData). Pra upload usamos o token direto.
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token;
+}
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -148,16 +157,14 @@ export default function EditarEstabelecimento() {
 
     setSalvando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}`, {
         method:  "PUT",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           ...form,
           data_vencimento:
             form.status_assinatura === "ativa" ? form.data_vencimento : null,
           limite_operadores: parseInt(form.limite_operadores) || 3,
         }),
-        credentials: "include",
       });
       const json = await resp.json();
       if (!resp.ok) { setErro(json.error || "Erro ao salvar."); }
@@ -172,8 +179,9 @@ export default function EditarEstabelecimento() {
     const fd = new FormData();
     fd.append("logo", logoFile);
     try {
+      const token = await getToken();
       const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/upload-logo`, {
-        method: "POST", body: fd, credentials: "include",
+        method: "POST", body: fd, headers: { Authorization: `Bearer ${token}` },
       });
       const json = await resp.json();
       if (resp.ok) {
@@ -185,10 +193,7 @@ export default function EditarEstabelecimento() {
 
   async function removerLogo() {
     if (!window.confirm("Remover logo?")) return;
-    const resp = await fetch(
-      `${API_URL}/admin/estabelecimentos/${id}/remover-logo`,
-      { method: "DELETE", credentials: "include" }
-    );
+    const resp = await apiFetch(`/admin/estabelecimentos/${id}/remover-logo`, { method: "DELETE" });
     if (resp.ok) setForm(s => ({ ...s, logo_url: "" }));
     else alert("Erro ao remover logo.");
   }
@@ -196,9 +201,7 @@ export default function EditarEstabelecimento() {
   /* ── excluir ─────────────────────────────────────────────── */
   async function excluir() {
     if (!window.confirm(`Excluir "${form.nome_fantasia}"?`)) return;
-    const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-      method: "DELETE", credentials: "include",
-    });
+    const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     if (resp.ok) navigate("/admin");
     else alert("Erro ao excluir.");
   }

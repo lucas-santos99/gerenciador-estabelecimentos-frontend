@@ -1,0 +1,276 @@
+/* ============================================================
+   AuditoriaAdmin.css — Lucas J. Systems
+   Design System: alinhado com DashboardAdmin.css / SuperAdmins.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+.aud-wrapper {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  padding: 32px;
+  min-height: 100vh;
+  color: var(--text-primary);
+}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+
+.aud-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.aud-page-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 640px;
+}
+
+.aud-breadcrumb {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-accent);
+}
+
+.aud-page-title {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.aud-page-title span { color: var(--text-accent); }
+
+.aud-page-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.aud-page-actions { display: flex; gap: 8px; }
+
+/* ── BOTÕES ─────────────────────────────────────────────── */
+
+.aud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.aud-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.aud-btn-ghost {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.aud-btn-ghost:hover:not(:disabled) {
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--bg-hover);
+}
+
+.aud-btn-sm { padding: 6px 12px; font-size: 0.76rem; border-radius: 8px; }
+
+/* ── FILTROS ────────────────────────────────────────────── */
+
+.aud-filters-box {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(20px);
+}
+
+.aud-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.aud-filter-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.aud-select, .aud-input {
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+}
+
+.aud-select:focus, .aud-input:focus {
+  outline: none;
+  border-color: var(--border-focus, #14b8a6);
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.12);
+}
+
+/* ── LISTA ──────────────────────────────────────────────── */
+
+.aud-list-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.aud-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.aud-list-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.aud-count-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--bg-badge);
+  color: var(--text-accent);
+}
+
+/* ── TABELA ─────────────────────────────────────────────── */
+
+.aud-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.aud-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.aud-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.aud-table tr:last-child td { border-bottom: none; }
+.aud-table tr:hover td { background: var(--bg-hover); }
+
+.aud-table .mono { font-family: 'JetBrains Mono', monospace; }
+.aud-table .nowrap { white-space: nowrap; }
+
+.aud-desc {
+  max-width: 420px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.aud-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── PAGINAÇÃO ──────────────────────────────────────────── */
+
+.aud-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.aud-page-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── LOADING / EMPTY ────────────────────────────────────── */
+
+.aud-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 48px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.aud-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--border);
+  border-top-color: var(--text-accent);
+  border-radius: 50%;
+  animation: audSpin 0.7s linear infinite;
+}
+
+@keyframes audSpin { to { transform: rotate(360deg); } }
+
+.aud-empty {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ── RESPONSIVO ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .aud-wrapper { padding: 16px; }
+  .aud-filters-box { flex-direction: column; align-items: stretch; }
+  .aud-filter-group { min-width: 0; }
+}

@@ -78,6 +78,16 @@ useEffect(() => {
   const login = useCallback(async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Registra o login na auditoria — best-effort, nunca bloqueia o login
+    const token = data.session?.access_token;
+    if (token) {
+      fetch(`${import.meta.env.VITE_API_URL}/api/auditoria/login`, {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+
     return data;
   }, []);
 

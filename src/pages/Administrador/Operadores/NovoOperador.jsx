@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
+import { apiFetch } from "../../../utils/api";
 
 export default function NovoOperador() {
   const navigate  = useNavigate();
@@ -49,11 +50,9 @@ export default function NovoOperador() {
     }
     setSalvando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/criar`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
-        credentials: "include",
+      const resp = await apiFetch("/admin/operadores/criar", {
+        method: "POST",
+        body:   JSON.stringify(form),
       });
       const json = await resp.json();
       if (!resp.ok) { setErro(json.error || "Erro ao criar operador."); }

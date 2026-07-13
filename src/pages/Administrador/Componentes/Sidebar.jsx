@@ -21,6 +21,12 @@ const Icons = {
       <path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
     </svg>
   ),
+  Audit: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  ),
   Logout: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -123,6 +129,7 @@ export default function Sidebar() {
       section: "Menu",
       items: [
         { label: "Dashboard",     path: "/admin",               icon: Icons.Dashboard },
+        { label: "Auditoria",     path: "/admin/auditoria",     icon: Icons.Audit     },
         { label: "Configurações", path: "/admin/configuracoes", icon: Icons.Settings  },
       ],
     },

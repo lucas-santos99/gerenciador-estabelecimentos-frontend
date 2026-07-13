@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import ResetSenhaModal from "./ResetSenhaModal";
 import "./Operadores.css";
+import { apiFetch } from "../../../utils/api";
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -127,11 +128,9 @@ export default function DetalhesOperador() {
   async function salvarPermissoes() {
     setPermSaving(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}/permissoes`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ permissoes }),
-        credentials: "include",
+      const resp = await apiFetch(`/admin/operadores/${id}/permissoes`, {
+        method: "PUT",
+        body:   JSON.stringify({ permissoes }),
       });
       if (resp.ok) setPermEditing(false);
       else alert("Erro ao salvar permissões.");
@@ -144,11 +143,9 @@ export default function DetalhesOperador() {
     const novoStatus = op.status === "ativo" ? "inativo" : "ativo";
     if (!window.confirm(`Alterar status para "${novoStatus}"?`)) return;
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}/status`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ status: novoStatus }),
-        credentials: "include",
+      const resp = await apiFetch(`/admin/operadores/${id}/status`, {
+        method: "PUT",
+        body:   JSON.stringify({ status: novoStatus }),
       });
       if (resp.ok) carregar();
       else alert("Erro ao alterar status.");
@@ -158,9 +155,7 @@ export default function DetalhesOperador() {
   async function excluir() {
     if (!window.confirm(`Excluir operador "${op?.nome}"?`)) return;
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}`, {
-        method: "DELETE", credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/operadores/${id}`, { method: "DELETE" });
       if (resp.ok) navigate(-1);
       else alert("Erro ao excluir operador.");
     } catch { alert("Erro ao excluir operador."); }

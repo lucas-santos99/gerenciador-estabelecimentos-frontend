@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
+import { apiFetch } from "../../../utils/api";
 
 export default function EditarOperador() {
   const { id }   = useParams();
@@ -47,11 +48,9 @@ export default function EditarOperador() {
     setErro("");
     setSalvando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/${id}`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
-        credentials: "include",
+      const resp = await apiFetch(`/admin/operadores/${id}`, {
+        method: "PUT",
+        body:   JSON.stringify(form),
       });
       if (resp.ok) navigate(`/admin/operadores/${id}`);
       else {

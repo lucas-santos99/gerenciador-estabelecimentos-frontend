@@ -4,6 +4,7 @@ import "./DashboardAdmin.css";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { supabase } from "../../utils/supabaseClient";
+import { apiFetch } from "../../utils/api";
 
 /* ── ícones inline leves (sem dep. extra) ─────────────────── */
 const Icon = {
@@ -81,6 +82,11 @@ export default function DashboardAdmin() {
   const [motivoLiberar,    setMotivoLiberar]     = useState("");
   const [liberando,        setLiberando]         = useState(false);
   const [liberarMsg,       setLiberarMsg]        = useState("");
+  // Modal bloqueio de acesso manual
+  const [modalBloquear,    setModalBloquear]     = useState(null); // { id, nome }
+  const [motivoBloquear,   setMotivoBloquear]    = useState("");
+  const [bloqueando,       setBloqueando]        = useState(false);
+  const [bloquearMsg,      setBloquearMsg]       = useState("");
   const [fontScale,        setFontScale]         = useState(() => {
     const s = localStorage.getItem('dash-font-scale');
     return s ? parseFloat(s) : 1;
@@ -232,22 +238,31 @@ export default function DashboardAdmin() {
   /* ── excluir ────────────────────────────────────────────── */
   async function excluir(id, nome) {
     if (!window.confirm(`Excluir "${nome}"?`)) return;
-    await fetch(`${API_URL}/admin/estabelecimentos/${id}`, { method: "DELETE" });
+    await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     carregarDados();
   }
 
-  async function bloquearAcesso(id, nome) {
-    if (!window.confirm(`Bloquear acesso de "${nome}"?`)) return;
+  async function confirmarBloquear() {
+    if (!modalBloquear) return;
+    const motivo = motivoBloquear.trim();
+    if (motivo.length < 3) {
+      setBloquearMsg("❌ Informe o motivo do bloqueio (mínimo 3 caracteres).");
+      return;
+    }
+    setBloqueando(true);
+    setBloquearMsg("");
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      await fetch(`${API_URL}/admin/estabelecimentos/${id}/bloquear-acesso`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ motivo: "Bloqueio manual pelo SuperAdmin" }),
+      const resp = await apiFetch(`/admin/estabelecimentos/${modalBloquear.id}/bloquear-acesso`, {
+        method: "POST",
+        body:   JSON.stringify({ motivo }),
       });
+      const json = await resp.json();
+      if (!resp.ok) { setBloquearMsg("❌ " + (json.error || "Erro ao bloquear.")); return; }
+      setBloquearMsg("✓ Acesso bloqueado.");
       carregarDados();
-    } catch { alert("Erro ao bloquear acesso."); }
+      setTimeout(() => { setModalBloquear(null); setBloquearMsg(""); }, 1500);
+    } catch { setBloquearMsg("❌ Erro interno."); }
+    setBloqueando(false);
   }
 
   async function confirmarLiberar() {
@@ -255,22 +270,14 @@ export default function DashboardAdmin() {
     setLiberando(true);
     setLiberarMsg("");
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      const resp = await fetch(
-        `${API_URL}/admin/estabelecimentos/${modalLiberar.id}/liberar-acesso`,
-        {
-          method:  "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body:    JSON.stringify({
-            dias:            parseInt(diasLiberar) || 30,
-            forma_pagamento: formaPgto,
-            motivo:          motivoLiberar.trim() || null,
-            liberado_por:    nomeUsuario || "SuperAdmin",
-            liberado_por_id: user?.id || null,
-          }),
-        }
-      );
+      const resp = await apiFetch(`/admin/estabelecimentos/${modalLiberar.id}/liberar-acesso`, {
+        method: "POST",
+        body:   JSON.stringify({
+          dias:            parseInt(diasLiberar) || 30,
+          forma_pagamento: formaPgto,
+          motivo:          motivoLiberar.trim() || null,
+        }),
+      });
       const json = await resp.json();
       if (!resp.ok) { setLiberarMsg("❌ " + (json.error || "Erro ao liberar.")); return; }
       setLiberarMsg(`✓ Liberado até ${new Date(json.data_vencimento + "T12:00:00").toLocaleDateString("pt-BR")}`);
@@ -554,7 +561,7 @@ export default function DashboardAdmin() {
                         {m.status_assinatura === "ativa" && (
                           <button
                             className="dash-card-btn dash-card-btn--warning"
-                            onClick={() => bloquearAcesso(m.id, m.nome_fantasia)}
+                            onClick={() => { setMotivoBloquear(""); setBloquearMsg(""); setModalBloquear({ id: m.id, nome: m.nome_fantasia }); }}
                             title="Bloquear acesso"
                           >🔴 Bloquear</button>
                         )}
@@ -644,6 +651,51 @@ export default function DashboardAdmin() {
               <button className="btn btn-ghost" onClick={() => setModalLiberar(null)}>Cancelar</button>
               <button className="btn btn-teal" onClick={confirmarLiberar} disabled={liberando || !diasLiberar}>
                 {liberando ? "⏳ Liberando…" : "🔓 Confirmar Liberação"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL BLOQUEAR ACESSO ──────────────────────────── */}
+      {modalBloquear && (
+        <div className="dash-modal-overlay" onClick={() => setModalBloquear(null)}>
+          <div className="dash-modal" onClick={e => e.stopPropagation()}>
+            <div className="dash-modal-icon" style={{ background: "rgba(239,68,68,0.12)", fontSize: "1.4rem" }}>🔴</div>
+            <div className="dash-modal-title">Bloquear Acesso</div>
+            <div className="dash-modal-subtitle">
+              <strong>{modalBloquear.nome}</strong> ficará sem acesso ao sistema até ser liberado novamente.
+            </div>
+
+            {/* Motivo — obrigatório */}
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>
+              📝 Motivo <span style={{ color: "var(--text-danger)", fontWeight: 700 }}>*</span>
+            </div>
+            <textarea
+              className="dash-config-input"
+              rows={3}
+              placeholder="Ex: Inadimplência, solicitação do cliente, teste encerrado..."
+              value={motivoBloquear}
+              onChange={e => setMotivoBloquear(e.target.value)}
+              autoFocus
+              style={{ width: "100%", resize: "none", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: "0.82rem", padding: "8px 10px", borderRadius: 8, boxSizing: "border-box", marginBottom: 4 }}
+            />
+
+            {bloquearMsg && (
+              <div className={`dash-config-msg ${bloquearMsg.startsWith("✓") ? "sucesso" : "erro"}`}>
+                {bloquearMsg}
+              </div>
+            )}
+
+            <div className="dash-modal-actions">
+              <button className="btn btn-ghost" onClick={() => setModalBloquear(null)}>Cancelar</button>
+              <button
+                className="btn"
+                style={{ background: "linear-gradient(135deg, #991b1b, #ef4444)", color: "#fff" }}
+                onClick={confirmarBloquear}
+                disabled={bloqueando || motivoBloquear.trim().length < 3}
+              >
+                {bloqueando ? "⏳ Bloqueando…" : "🔴 Confirmar Bloqueio"}
               </button>
             </div>
           </div>
