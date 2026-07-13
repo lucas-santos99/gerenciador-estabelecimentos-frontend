@@ -41,6 +41,8 @@ export default function ProdutoModal({
   const [erro,              setErro]              = useState('');
   const [showCamera,        setShowCamera]        = useState(false);
   const [scanFlash,         setScanFlash]         = useState(false);
+  const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
+  const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
 
   const nomeRef        = useRef(null);
   const novaCatRef     = useRef(null);
@@ -109,6 +111,30 @@ export default function ProdutoModal({
     });
   }
 
+  /* ── Auto-preenche nome/marca a partir do código de barras ──
+     Só entra em ação se os campos ainda estiverem vazios — nunca
+     sobrescreve o que o comerciante já digitou/editou. */
+  async function buscarPorCodigoBarras(codigo) {
+    if (isEdit || !codigo || codigo.trim().length < 6) return;
+    setAutoPreenchido(null);
+    setBuscandoCodigo(true);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/lookup-codigo?codigo=${encodeURIComponent(codigo.trim())}`);
+      const json = await resp.json();
+      if (resp.ok && json.encontrado) {
+        setForm(prev => ({
+          ...prev,
+          nome:  prev.nome.trim()  ? prev.nome  : json.nome,
+          marca: prev.marca.trim() ? prev.marca : (json.marca || prev.marca),
+        }));
+        setAutoPreenchido(json.fonte);
+      }
+    } catch {
+      // Falha silenciosa — comerciante preenche na mão normalmente
+    }
+    setBuscandoCodigo(false);
+  }
+
   /* ── Callback da câmera: preenche campo codigo_barras ────── */
   function handleCodigoDetectado(codigo) {
     setShowCamera(false);
@@ -116,6 +142,7 @@ export default function ProdutoModal({
     setScanFlash(true);
     setTimeout(() => setScanFlash(false), 1000);
     setTimeout(() => codigoBarrasRef.current?.focus(), 100);
+    buscarPorCodigoBarras(codigo);
   }
 
   /* ── Criar nova categoria ───────────────────────────────── */
@@ -239,7 +266,8 @@ export default function ProdutoModal({
                       placeholder="Digite ou escaneie…"
                       value={form.codigo_barras}
                       onChange={atualizar}
-                      onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                      onBlur={e => buscarPorCodigoBarras(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarPorCodigoBarras(e.target.value); } }}
                     />
                     {!somenteLeitura && (
                       <button
@@ -252,6 +280,16 @@ export default function ProdutoModal({
                       </button>
                     )}
                   </div>
+                  {buscandoCodigo && (
+                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-text-muted, #94a3b8)' }}>
+                      🔎 Buscando nome e marca…
+                    </small>
+                  )}
+                  {!buscandoCodigo && autoPreenchido && (
+                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-success, #16a34a)' }}>
+                      ✓ Preenchido automaticamente {autoPreenchido === 'catalogo' ? '(catálogo interno)' : '(Open Food Facts)'} — confira antes de salvar
+                    </small>
+                  )}
                 </div>
 
                 <div className="prod-form-group prod-form-full">
