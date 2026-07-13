@@ -191,7 +191,11 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       if (modoBusca === 'nome')   buscaOK = normalizar(p.nome).includes(busca);
       if (modoBusca === 'marca')  buscaOK = normalizar(p.marca || '').includes(busca);
       if (modoBusca === 'codigo') buscaOK = (p.codigo_barras || '').toLowerCase().includes(busca);
-      if (modoBusca === 'plu')    buscaOK = String(p.plu_balanca || '').toLowerCase().includes(busca);
+      if (modoBusca === 'plu') {
+        const pluNum   = parseInt(String(p.plu_balanca || '').trim(), 10);
+        const buscaNum = parseInt(busca, 10);
+        buscaOK = !isNaN(pluNum) && !isNaN(buscaNum) && pluNum === buscaNum;
+      }
     }
 
     return catOK && buscaOK;
