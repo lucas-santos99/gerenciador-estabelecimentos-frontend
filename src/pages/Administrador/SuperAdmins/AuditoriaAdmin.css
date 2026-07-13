@@ -202,6 +202,18 @@
 .aud-table tr:last-child td { border-bottom: none; }
 .aud-table tr:hover td { background: var(--bg-hover); }
 
+.aud-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.aud-th-sortable:hover { color: var(--text-accent); }
+
+.aud-sort-arrow {
+  color: var(--text-accent);
+  font-size: 0.65rem;
+}
+
 .aud-table .mono { font-family: 'JetBrains Mono', monospace; }
 .aud-table .nowrap { white-space: nowrap; }
 
