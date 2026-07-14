@@ -1,5 +1,6 @@
 // src/pages/Estabelecimento/Clientes/ModalRecebimento.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../../../utils/api';
 import '../Clientes.css';
 
 const MEIOS = [
@@ -12,7 +13,7 @@ const MEIOS = [
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 /* ════════════════════════════════════════════════════════════ */
-export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
+export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabelecimentoId, pixConfig = { modo: 'maquininha', disponivel: false } }) {
 
   const saldo = parseFloat(cliente.saldo_devedor || 0);
 
@@ -24,6 +25,14 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
   const [loading,       setLoading]       = useState(false);
   const [erro,          setErro]          = useState('');
 
+  // Pix pela tela do sistema
+  const [pixModo,     setPixModo]     = useState(pixConfig.modo === 'sistema' && pixConfig.disponivel ? 'sistema' : 'maquininha');
+  const [pixDados,    setPixDados]    = useState(null);
+  const [gerandoPix,  setGerandoPix]  = useState(false);
+  const [pixErro,     setPixErro]     = useState('');
+  const [pixRecebido, setPixRecebido] = useState(false);
+  const [pixCopiado,  setPixCopiado]  = useState(false);
+
   const inputRef    = useRef(null);
   const listaRef    = useRef(null);
   const btnRef      = useRef(null);
@@ -33,6 +42,41 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
   useEffect(() => {
     setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
   }, []);
+
+  /* ── Gera o Pix quando o meio selecionado é Pix-sistema ──── */
+  useEffect(() => {
+    if (meioPagamento !== 'Pix' || pixModo !== 'sistema') return;
+    gerarPixSistema();
+   
+  }, [meioPagamento, pixModo]);
+
+  async function gerarPixSistema() {
+    const valor = parseFloat(valorPago.toString().replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) return;
+    setGerandoPix(true);
+    setPixErro('');
+    setPixDados(null);
+    setPixRecebido(false);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/pix/gerar`, {
+        method: 'POST',
+        body:   JSON.stringify({ valor, descricao: `Recebimento fiado — ${cliente.nome}` }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'Erro ao gerar Pix.');
+      setPixDados(json);
+    } catch (e) {
+      setPixErro(e.message);
+    }
+    setGerandoPix(false);
+  }
+
+  function copiarPixCopiaECola() {
+    if (!pixDados?.payload) return;
+    navigator.clipboard?.writeText(pixDados.payload);
+    setPixCopiado(true);
+    setTimeout(() => setPixCopiado(false), 2000);
+  }
 
   /* ── Scroll na lista ──────────────────────────────────── */
   useEffect(() => {
@@ -82,6 +126,10 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
     if (valor > saldo + 0.01) {
       setErro('Valor não pode exceder a dívida.');
       inputRef.current?.focus();
+      return;
+    }
+    if (meioPagamento === 'Pix' && pixModo === 'sistema' && !pixRecebido) {
+      setErro('Confirme que o Pix foi recebido antes de finalizar.');
       return;
     }
 
@@ -152,6 +200,51 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar }) {
               </li>
             ))}
           </ul>
+
+          {meioPagamento === 'Pix' && (
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              {pixModo === 'maquininha' && (
+                <div style={{ fontSize: '0.82rem', color: 'var(--cli-text-muted, #64748b)' }}>
+                  📱 Pix pela maquininha — confirme normalmente
+                </div>
+              )}
+              {pixModo === 'sistema' && (
+                <>
+                  {gerandoPix && <div style={{ padding: 12 }}>⏳ Gerando QR Code…</div>}
+                  {pixErro && (
+                    <div style={{ color: '#dc2626', fontSize: '0.82rem', padding: '8px 0' }}>
+                      ⚠️ {pixErro}
+                      <div style={{ marginTop: 6 }}>
+                        <button type="button" onClick={gerarPixSistema} style={{ fontSize: '0.78rem', padding: '4px 12px', borderRadius: 6, cursor: 'pointer' }}>Tentar de novo</button>
+                      </div>
+                    </div>
+                  )}
+                  {pixDados && !gerandoPix && (
+                    <>
+                      <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 160, height: 160, margin: '0 auto', display: 'block', borderRadius: 8 }} />
+                      <button type="button" onClick={copiarPixCopiaECola}
+                        style={{ marginTop: 8, fontSize: '0.76rem', padding: '4px 12px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                        {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
+                      </button>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 12, fontSize: '0.82rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={pixRecebido} onChange={e => setPixRecebido(e.target.checked)} />
+                        Confirmo que o Pix caiu na conta
+                      </label>
+                    </>
+                  )}
+                </>
+              )}
+              {pixConfig.disponivel && (
+                <button
+                  type="button"
+                  onClick={() => setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema')}
+                  style={{ marginTop: 10, fontSize: '0.74rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
+                </button>
+              )}
+            </div>
+          )}
 
           {erro && <div className="cli-modal-erro">⚠️ {erro}</div>}
 

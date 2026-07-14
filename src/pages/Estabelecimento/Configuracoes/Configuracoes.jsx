@@ -155,7 +155,13 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const [uploadSucesso, setUploadSucesso] = useState('');
   const fileInputRef = useRef(null);
 
-  const [abaCfg, setAbaCfg] = useState('dados'); // 'dados' | 'logo' | 'tutoriais'
+  const [abaCfg, setAbaCfg] = useState('dados'); // 'dados' | 'logo' | 'pagamentos' | 'tutoriais'
+
+  // Configuração de Pix — carregada de `dados` quando chega da API
+  const [pixForm,      setPixForm]      = useState({ pix_chave: '', pix_tipo_chave: 'cpf', pix_cidade: '', pix_modo: 'maquininha' });
+  const [salvandoPix,  setSalvandoPix]  = useState(false);
+  const [pixErro,      setPixErro]      = useState('');
+  const [pixSucesso,   setPixSucesso]   = useState('');
 
   // Acordeões independentes: null = fechado, string = aba ativa
   const [abaImpressora,  setAbaImpressora]  = useState(null);
@@ -180,6 +186,46 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
     }
     carregar();
   }, [estabelecimentoId]);
+
+  /* ── Sincroniza o form de Pix quando os dados chegam ──────── */
+  useEffect(() => {
+    if (!dados) return;
+    setPixForm({
+      pix_chave:      dados.pix_chave      || '',
+      pix_tipo_chave: dados.pix_tipo_chave || 'cpf',
+      pix_cidade:     dados.pix_cidade     || '',
+      pix_modo:       dados.pix_modo       || 'maquininha',
+    });
+  }, [dados]);
+
+  /* ── Salvar configuração de Pix ────────────────────────────── */
+  async function salvarPix() {
+    setPixErro('');
+    setPixSucesso('');
+
+    if (pixForm.pix_modo === 'sistema' && (!pixForm.pix_chave.trim() || !pixForm.pix_cidade.trim())) {
+      setPixErro('Pra usar o Pix pelo sistema, preencha a chave Pix e a cidade.');
+      return;
+    }
+
+    setSalvandoPix(true);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(pixForm),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'Erro ao salvar.');
+      setDados(prev => ({ ...prev, ...pixForm }));
+      setPixSucesso('Configuração de Pix salva!');
+      setTimeout(() => setPixSucesso(''), 4000);
+    } catch (err) {
+      setPixErro(err.message);
+    } finally {
+      setSalvandoPix(false);
+    }
+  }
 
   /* ── Upload de logo com deleção do arquivo antigo ──────── */
   async function handleUploadLogo(e) {
@@ -298,9 +344,10 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
         <span className="cfg-header-titulo">⚙️ Configurações</span>
         <div className="cfg-tabs">
           {[
-            { key: 'dados',     label: '🏪 Dados' },
-            { key: 'logo',      label: '🖼️ Logo' },
-            { key: 'tutoriais', label: '📚 Tutoriais' },
+            { key: 'dados',      label: '🏪 Dados' },
+            { key: 'logo',       label: '🖼️ Logo' },
+            { key: 'pagamentos', label: '💳 Pagamentos' },
+            { key: 'tutoriais',  label: '📚 Tutoriais' },
           ].map(t => (
             <button
               key={t.key}
@@ -397,6 +444,91 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 <div className="cfg-logo-req-item">✅ Recomendado: imagem quadrada, fundo transparente</div>
                 <div className="cfg-logo-req-item">🗑️ A logo anterior é removida automaticamente</div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ ABA PAGAMENTOS ══ */}
+        {abaCfg === 'pagamentos' && (
+          <div className="cfg-aba-maxwidth">
+            <div className="cfg-section">
+              <span className="cfg-section-titulo">💳 Pix — como receber</span>
+              <p className="cfg-guia-intro">
+                Escolha o padrão de recebimento de Pix do seu estabelecimento. Isso vale tanto pro PDV quanto
+                pro recebimento de fiado — o caixa ainda pode trocar na hora se precisar, isso aqui só define
+                o que já vem selecionado.
+              </p>
+
+              <div className="cfg-form-grid" style={{ marginBottom: 18 }}>
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'maquininha' ? ' ativo' : ''}`}
+                  style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: 'pointer' }}>
+                  <input type="radio" checked={pixForm.pix_modo === 'maquininha'}
+                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'maquininha' }))} style={{ marginTop: 3 }} />
+                  <div>
+                    <strong>📟 Pela maquininha</strong>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)' }}>
+                      O caixa seleciona Pix e cobra na própria máquina de cartão. Nada muda no sistema.
+                    </div>
+                  </div>
+                </label>
+
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'sistema' ? ' ativo' : ''}`}
+                  style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: 'pointer' }}>
+                  <input type="radio" checked={pixForm.pix_modo === 'sistema'}
+                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'sistema' }))} style={{ marginTop: 3 }} />
+                  <div>
+                    <strong>🖥️ Pela tela do sistema</strong>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)' }}>
+                      O PDV gera um QR Code na hora, com o valor já preenchido. O caixa confirma manualmente
+                      quando o dinheiro cair na conta.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {pixForm.pix_modo === 'sistema' && (
+                <>
+                  <div className="cfg-form-grid">
+                    <div className="cfg-form-group">
+                      <span className="cfg-label">Tipo de chave Pix</span>
+                      <select className="cfg-input" value={pixForm.pix_tipo_chave}
+                        onChange={e => setPixForm(p => ({ ...p, pix_tipo_chave: e.target.value }))}>
+                        <option value="cpf">CPF</option>
+                        <option value="cnpj">CNPJ</option>
+                        <option value="email">E-mail</option>
+                        <option value="telefone">Telefone</option>
+                        <option value="aleatoria">Chave aleatória</option>
+                      </select>
+                    </div>
+                    <div className="cfg-form-group">
+                      <span className="cfg-label">Chave Pix</span>
+                      <input className="cfg-input" value={pixForm.pix_chave}
+                        placeholder="A chave que recebe o dinheiro"
+                        onChange={e => setPixForm(p => ({ ...p, pix_chave: e.target.value }))} />
+                    </div>
+                    <div className="cfg-form-group">
+                      <span className="cfg-label">Cidade (do beneficiário)</span>
+                      <input className="cfg-input" value={pixForm.pix_cidade}
+                        placeholder="Ex: PORTO ALEGRE" maxLength={15}
+                        onChange={e => setPixForm(p => ({ ...p, pix_cidade: e.target.value.toUpperCase() }))} />
+                      <span className="cfg-label-hint" style={{ fontSize: '0.75rem', color: 'var(--est-text-muted, #94a3b8)' }}>
+                        Exigido pelo padrão do Banco Central, máx. 15 caracteres
+                      </span>
+                    </div>
+                  </div>
+                  <div className="cfg-alert" style={{ background: 'rgba(59,130,246,0.08)', color: '#1d4ed8', border: '1px solid rgba(59,130,246,0.2)', marginTop: 12 }}>
+                    ℹ️ Essa chave é sua — o dinheiro cai direto na sua conta. O sistema só gera o código do
+                    QR, nunca recebe nem intermedia o valor.
+                  </div>
+                </>
+              )}
+
+              {pixErro    && <div className="cfg-alert erro" style={{ marginTop: 12 }}>⚠️ {pixErro}</div>}
+              {pixSucesso && <div className="cfg-alert" style={{ marginTop: 12, background: 'rgba(34,197,94,0.1)', color: '#15803d' }}>✓ {pixSucesso}</div>}
+
+              <button className="cfg-btn-solicitar" style={{ marginTop: 16 }} onClick={salvarPix} disabled={salvandoPix}>
+                {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
+              </button>
             </div>
           </div>
         )}

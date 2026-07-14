@@ -40,7 +40,7 @@ const MEIOS = [
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
    ════════════════════════════════════════════════════════════ */
-function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado = true }) {
+function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado = true, estabelecimentoId, pixConfig = { modo: 'maquininha', disponivel: false } }) {
 
   const [selectedIndex,      setSelectedIndex]      = useState(0);
   const [meioPagamento,      setMeioPagamento]      = useState('Dinheiro');
@@ -53,6 +53,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [loadingCliente,     setLoadingCliente]     = useState(false);
   const [clienteIndex,       setClienteIndex]       = useState(-1);
   const [erro,               setErro]               = useState('');
+
+  // Pix pela tela do sistema (BR Code direto da chave do estabelecimento)
+  const [pixModo,      setPixModo]      = useState(pixConfig.modo === 'sistema' && pixConfig.disponivel ? 'sistema' : 'maquininha');
+  const [pixDados,      setPixDados]      = useState(null); // { payload, qrcode_base64 }
+  const [gerandoPix,    setGerandoPix]    = useState(false);
+  const [pixErro,       setPixErro]       = useState('');
+  const [pixRecebido,   setPixRecebido]   = useState(false);
+  const [pixCopiado,    setPixCopiado]    = useState(false);
 
   const overlayRef       = useRef(null);
   const inputDinheiroRef = useRef(null);
@@ -93,6 +101,39 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (!listaMeiosRef.current) return;
     listaMeiosRef.current.children[selectedIndex]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [selectedIndex]);
+
+  useEffect(() => {
+    if (!metodoConfirmado || meioPagamento !== 'Pix' || pixModo !== 'sistema') return;
+    gerarPixSistema();
+
+  }, [metodoConfirmado, meioPagamento, pixModo]);
+
+  async function gerarPixSistema() {
+    setGerandoPix(true);
+    setPixErro('');
+    setPixDados(null);
+    setPixRecebido(false);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/pix/gerar`, {
+        method: 'POST',
+        body:   JSON.stringify({ valor: total, descricao: 'Venda PDV' }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'Erro ao gerar Pix.');
+      setPixDados(json);
+    } catch (e) {
+      setPixErro(e.message);
+    }
+    setGerandoPix(false);
+  }
+
+  function copiarPixCopiaECola() {
+    if (!pixDados?.payload) return;
+    navigator.clipboard?.writeText(pixDados.payload);
+    setPixCopiado(true);
+    setTimeout(() => setPixCopiado(false), 2000);
+  }
+
 
   async function buscarCliente(termo) {
     setTermoBuscaCliente(termo);
@@ -146,6 +187,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       const recebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
       if (recebido < parseFloat(total.toFixed(2))) { setErro('Valor recebido insuficiente.'); return; }
       onFinalizar('Dinheiro', null, { valorRecebido: recebido, troco });
+    } else if (meioPagamento === 'Pix' && pixModo === 'sistema') {
+      if (!pixRecebido) { setErro('Confirme que o Pix foi recebido antes de finalizar.'); return; }
+      onFinalizar('Pix', null, {});
     } else {
       onFinalizar(meioPagamento, null, {});
     }
@@ -210,7 +254,53 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 </div>
               </>
             )}
-            {['Pix', 'Debito', 'Credito'].includes(meioPagamento) && (
+            {meioPagamento === 'Pix' && (
+              <div className="pdv-pagamento-digital">
+                {pixModo === 'maquininha' && (
+                  <>
+                    <span className="pdv-pagamento-digital-icone">📱</span>
+                    <span className="pdv-pagamento-digital-nome">Pix (maquininha)</span>
+                    <span className="pdv-pagamento-digital-hint">Pressione Enter para confirmar</span>
+                  </>
+                )}
+                {pixModo === 'sistema' && (
+                  <div style={{ width: '100%', textAlign: 'center' }}>
+                    {gerandoPix && <div style={{ padding: 20 }}>⏳ Gerando QR Code…</div>}
+                    {pixErro && (
+                      <div style={{ color: '#dc2626', fontSize: '0.85rem', padding: '10px 0' }}>
+                        ⚠️ {pixErro}
+                        <div style={{ marginTop: 8 }}>
+                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: '0.8rem', padding: '4px 12px', borderRadius: 6, cursor: 'pointer' }}>Tentar de novo</button>
+                        </div>
+                      </div>
+                    )}
+                    {pixDados && !gerandoPix && (
+                      <>
+                        <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8 }} />
+                        <button type="button" onClick={copiarPixCopiaECola}
+                          style={{ marginTop: 10, fontSize: '0.78rem', padding: '5px 14px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                          {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
+                        </button>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 16, fontSize: '0.85rem', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={pixRecebido} onChange={e => setPixRecebido(e.target.checked)} />
+                          Confirmo que o Pix caiu na conta
+                        </label>
+                      </>
+                    )}
+                  </div>
+                )}
+                {pixConfig.disponivel && (
+                  <button
+                    type="button"
+                    onClick={() => setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema')}
+                    style={{ marginTop: 14, fontSize: '0.75rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
+                  </button>
+                )}
+              </div>
+            )}
+            {['Debito', 'Credito'].includes(meioPagamento) && (
               <div className="pdv-pagamento-digital">
                 <span className="pdv-pagamento-digital-icone">{MEIOS.find(m => m.key === meioPagamento)?.icone}</span>
                 <span className="pdv-pagamento-digital-nome">{MEIOS.find(m => m.key === meioPagamento)?.label}</span>
@@ -474,6 +564,23 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const [confirmSaida,    setConfirmSaida]    = useState(false);  // confirmação de saída com carrinho cheio
   const [confirmRemover,  setConfirmRemover]  = useState(null);   // idx do item a remover
   const [modalPeso,       setModalPeso]       = useState(null);   // { produto } — peso manual de pesável
+  const [pixConfig,       setPixConfig]       = useState({ modo: 'maquininha', disponivel: false });
+
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
+        if (resp.ok) {
+          const d = await resp.json();
+          setPixConfig({
+            modo: d.pix_modo || 'maquininha',
+            disponivel: !!(d.pix_chave && d.pix_cidade),
+          });
+        }
+      } catch { /* Pix pela maquininha continua funcionando mesmo se isso falhar */ }
+    })();
+  }, [estabelecimentoId]);
 
   const inputBuscaRef   = useRef(null);
   const inputQtdRef     = useRef(null);
@@ -940,7 +1047,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         </div>
       )}
 
-      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} podeUsarFiado={pode('pdv_fiado')} />}
+      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} podeUsarFiado={pode('pdv_fiado')} estabelecimentoId={estabelecimentoId} pixConfig={pixConfig} />}
 
       {vendaFinalizada && (
         <ModalPosVenda

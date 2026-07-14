@@ -218,6 +218,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const [modalAberto,       setModalAberto]       = useState(false);
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
+  const [pixConfig,         setPixConfig]         = useState({ modo: 'maquininha', disponivel: false });
   const [fontScale,         setFontScale]         = useState(() => {
     const saved = localStorage.getItem('cli-font-scale');
     return saved ? parseFloat(saved) : 1;
@@ -254,6 +255,23 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   }
 
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
+
+  /* ── Config de Pix (maquininha vs. sistema) ──────────────── */
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
+        if (resp.ok) {
+          const d = await resp.json();
+          setPixConfig({
+            modo: d.pix_modo || 'maquininha',
+            disponivel: !!(d.pix_chave && d.pix_cidade),
+          });
+        }
+      } catch { /* Pix pela maquininha continua funcionando mesmo se isso falhar */ }
+    })();
+  }, [estabelecimentoId]);
 
   /* ── Handlers recebimento ───────────────────────────────── */
   function abrirRecebimento(cliente) {
@@ -411,6 +429,8 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           cliente={clienteReceber}
           onClose={() => { setModalRecebimento(false); setClienteReceber(null); }}
           onConfirmar={confirmarRecebimento}
+          estabelecimentoId={estabelecimentoId}
+          pixConfig={pixConfig}
         />
       )}
 
