@@ -4,6 +4,60 @@ import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import '../Estoque.css';
 
+/* ── Comparação "inteligente" de marcas ──────────────────────
+   Normaliza (remove acento, caixa, espaços/hífen/pontuação) e mede
+   a distância de edição (Levenshtein) contra as marcas já cadastradas,
+   pra sugerir a grafia certa em vez de deixar duplicar por engano. */
+function normalizarMarca(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ''); // remove espaço, hífen, pontuação etc.
+}
+
+function distanciaLevenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Retorna { marca, exata: true }  se for a mesma marca escrita diferente
+// Retorna { marca, exata: false } se for só "parecida" (possível typo)
+// Retorna null se não achou nada relevante
+function encontrarMarcaParecida(valorDigitado, marcasExistentes) {
+  const norm = normalizarMarca(valorDigitado);
+  if (norm.length < 3) return null;
+
+  let melhor = null;
+  let melhorDist = Infinity;
+
+  for (const marca of marcasExistentes) {
+    const normMarca = normalizarMarca(marca);
+    if (normMarca === norm) {
+      if (marca === valorDigitado.trim()) return null; // já é exatamente igual, nada a sugerir
+      return { marca, exata: true };
+    }
+    const dist = distanciaLevenshtein(norm, normMarca);
+    const limite = Math.max(1, Math.floor(Math.max(norm.length, normMarca.length) * 0.25));
+    if (dist <= limite && dist < melhorDist) {
+      melhor = marca;
+      melhorDist = dist;
+    }
+  }
+  return melhor ? { marca: melhor, exata: false } : null;
+}
+
 
 
 /* ════════════════════════════════════════════════════════════ */
@@ -43,6 +97,8 @@ export default function ProdutoModal({
   const [scanFlash,         setScanFlash]         = useState(false);
   const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
+  const [marcasExistentes,  setMarcasExistentes]  = useState([]);
+  const [sugestaoMarca,     setSugestaoMarca]     = useState(null); // { marca, exata } | null
 
   const nomeRef        = useRef(null);
   const novaCatRef     = useRef(null);
@@ -65,13 +121,29 @@ export default function ProdutoModal({
         plu_balanca:      produtoEditar.plu_balanca      || '',
       });
     }
-    setTimeout(() => nomeRef.current?.focus(), 0);
+    // Produto novo: foco direto em código de barras, já que o fluxo normal
+    // é bipar/digitar primeiro pra puxar nome/marca automaticamente.
+    // Editando um produto existente: foco em nome, como já era.
+    setTimeout(() => {
+      if (isEdit) nomeRef.current?.focus();
+      else codigoBarrasRef.current?.focus();
+    }, 0);
   }, []);
 
   /* ── Foco na nova categoria ─────────────────────────────── */
   useEffect(() => {
     if (novaCatAberta) setTimeout(() => novaCatRef.current?.focus(), 0);
   }, [novaCatAberta]);
+
+  /* ── Carregar marcas já cadastradas (sugestão no campo Marca) ── */
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/marcas`);
+        if (resp.ok) setMarcasExistentes(await resp.json());
+      } catch { /* sugestão é acessório, falha silenciosa */ }
+    })();
+  }, [estabelecimentoId]);
 
   /* ── ESC fecha ──────────────────────────────────────────── */
   useEffect(() => {
@@ -135,7 +207,21 @@ export default function ProdutoModal({
     setBuscandoCodigo(false);
   }
 
-  /* ── Callback da câmera: preenche campo codigo_barras ────── */
+  /* ── Verifica se a marca digitada é igual/parecida com uma que
+     já existe, pra evitar cadastrar "Coca Cola" e "Coca-Cola" como
+     coisas diferentes ── */
+  function checarMarcaParecida(valor) {
+    if (!valor || !valor.trim()) { setSugestaoMarca(null); return; }
+    setSugestaoMarca(encontrarMarcaParecida(valor, marcasExistentes));
+  }
+
+  function usarMarcaSugerida() {
+    if (!sugestaoMarca) return;
+    setForm(prev => ({ ...prev, marca: sugestaoMarca.marca }));
+    setSugestaoMarca(null);
+  }
+
+
   function handleCodigoDetectado(codigo) {
     setShowCamera(false);
     setForm(prev => ({ ...prev, codigo_barras: codigo }));
@@ -230,32 +316,6 @@ export default function ProdutoModal({
               <div className="prod-form-grid">
 
                 <div className="prod-form-group prod-form-full">
-                  <label className="prod-label">Nome do produto *</label>
-                  <input
-                    ref={nomeRef}
-                    className="prod-input"
-                    name="nome"
-                    readOnly={somenteLeitura}
-                    placeholder="Ex: Arroz Tipo 1 5kg"
-                    value={form.nome}
-                    onChange={atualizar}
-                    required
-                  />
-                </div>
-
-                <div className="prod-form-group">
-                  <label className="prod-label">Marca</label>
-                  <input
-                    className="prod-input"
-                    name="marca"
-                    readOnly={somenteLeitura}
-                    placeholder="Ex: Tio João, Camil…"
-                    value={form.marca}
-                    onChange={atualizar}
-                  />
-                </div>
-
-                <div className="prod-form-group">
                   <label className="prod-label">Código de barras</label>
                   <div className="prod-codigo-row">
                     <input
@@ -289,6 +349,85 @@ export default function ProdutoModal({
                     <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-success, #16a34a)' }}>
                       ✓ Preenchido automaticamente {autoPreenchido === 'catalogo' ? '(catálogo interno)' : '(Open Food Facts)'} — confira antes de salvar
                     </small>
+                  )}
+                </div>
+
+                {form.vendido_por_peso && (
+                  <div className="prod-form-group prod-form-full">
+                    <label className="prod-label">
+                      ⚖️ PLU na balança
+                      <span className="prod-label-unit"> (referência)</span>
+                    </label>
+                    <input
+                      className="prod-input"
+                      name="plu_balanca"
+                      readOnly={somenteLeitura}
+                      placeholder="Ex: 001, 042…"
+                      value={form.plu_balanca}
+                      onChange={atualizar}
+                      maxLength={20}
+                    />
+                    <span className="prod-label-hint">Código que o atendente digita na balança quando ela estiver fora do ar</span>
+                  </div>
+                )}
+
+                <div className="prod-form-group prod-form-full">
+                  <label className="prod-label">Nome do produto *</label>
+                  <input
+                    ref={nomeRef}
+                    className="prod-input"
+                    name="nome"
+                    readOnly={somenteLeitura}
+                    placeholder="Ex: Arroz Tipo 1 5kg"
+                    value={form.nome}
+                    onChange={atualizar}
+                    required
+                  />
+                </div>
+
+                <div className="prod-form-group">
+                  <label className="prod-label">Marca</label>
+                  <input
+                    className="prod-input"
+                    name="marca"
+                    list="marcas-existentes-datalist"
+                    readOnly={somenteLeitura}
+                    placeholder="Ex: Tio João, Camil…"
+                    value={form.marca}
+                    onChange={e => { atualizar(e); setSugestaoMarca(null); }}
+                    onBlur={e => checarMarcaParecida(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <datalist id="marcas-existentes-datalist">
+                    {marcasExistentes.map(m => <option key={m} value={m} />)}
+                  </datalist>
+                  {sugestaoMarca && (
+                    <div className="prod-sugestao-marca" style={{
+                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
+                      padding: '6px 10px', borderRadius: 8,
+                      background: 'var(--est-bg-warning, rgba(245,158,11,0.1))',
+                      border: '1px solid var(--est-border-warning, rgba(245,158,11,0.3))',
+                    }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--est-text-warning, #b45309)' }}>
+                        {sugestaoMarca.exata
+                          ? <>Essa marca já existe como <strong>"{sugestaoMarca.marca}"</strong> — usar essa grafia?</>
+                          : <>Marca parecida encontrada: <strong>"{sugestaoMarca.marca}"</strong>. Era essa?</>
+                        }
+                      </span>
+                      <button type="button" onClick={usarMarcaSugerida}
+                        style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: '#f59e0b', color: '#fff' }}>
+                        Usar
+                      </button>
+                      <button type="button" onClick={() => setSugestaoMarca(null)}
+                        style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 6, border: '1px solid var(--est-border, #ddd)', background: 'transparent', cursor: 'pointer' }}>
+                        Não, é nova
+                      </button>
+                    </div>
+                  )}
+                  {!sugestaoMarca && marcasExistentes.length > 0 && (
+                    <span className="prod-label-hint">
+                      {marcasExistentes.length} marca(s) já cadastrada(s) — comece a digitar pra ver sugestões
+                    </span>
                   )}
                 </div>
 
@@ -437,37 +576,18 @@ export default function ProdutoModal({
                 </div>
 
                 {form.vendido_por_peso && (
-                  <>
-                    <div className="prod-form-group prod-form-full">
-                      <div className="prod-balanca-info">
-                        <span>💡</span>
-                        <div>
-                          <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
-                          <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
-                          Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
-                          <code>00123</code>. O campo PLU abaixo é apenas referência para o atendente saber
-                          qual número digitar na balança.
-                        </div>
+                  <div className="prod-form-group prod-form-full">
+                    <div className="prod-balanca-info">
+                      <span>💡</span>
+                      <div>
+                        <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
+                        <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
+                        Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
+                        <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
+                        apenas referência para o atendente saber qual número digitar na balança.
                       </div>
                     </div>
-
-                    <div className="prod-form-group">
-                      <label className="prod-label">
-                        PLU na balança
-                        <span className="prod-label-unit"> (referência)</span>
-                      </label>
-                      <input
-                        className="prod-input"
-                        name="plu_balanca"
-                        readOnly={somenteLeitura}
-                        placeholder="Ex: 001, 042…"
-                        value={form.plu_balanca}
-                        onChange={atualizar}
-                        maxLength={20}
-                      />
-                      <span className="prod-label-hint">Código que o atendente digita na balança</span>
-                    </div>
-                  </>
+                  </div>
                 )}
 
               </div>
