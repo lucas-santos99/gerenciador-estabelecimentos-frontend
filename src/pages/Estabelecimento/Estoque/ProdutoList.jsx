@@ -107,6 +107,16 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
 
+  // Recarrega só as categorias — usado ao criar uma categoria nova de
+  // dentro do modal de produto. Não mexe em `loading`, então a tela não
+  // some e o modal não é desmontado (o que perderia o que já foi digitado).
+  async function recarregarCategorias() {
+    try {
+      const rCat = await apiFetch(`/api/categorias`);
+      if (rCat.ok) setCategorias(await rCat.json());
+    } catch { /* silencioso — não é crítico */ }
+  }
+
   /* ── Foco automático no campo de busca ──────────────────── */
   useEffect(() => {
     if (!loading) setTimeout(() => searchRef.current?.focus(), 100);
@@ -301,7 +311,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
           categorias={categorias}
           onClose={fecharModal}
           onSalvo={onProdutoSalvo}
-          onCategoriaCriada={() => carregarDados()}
+          onCategoriaCriada={recarregarCategorias}
           somenteLeitura={produtoEditar ? !podeEditar : false}
         />
       )}

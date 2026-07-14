@@ -103,6 +103,7 @@ export default function ProdutoModal({
   const nomeRef        = useRef(null);
   const novaCatRef     = useRef(null);
   const codigoBarrasRef = useRef(null);
+  const debounceMarcaRef = useRef(null);
 
   /* ── Preencher form no modo editar ──────────────────────── */
   useEffect(() => {
@@ -146,6 +147,10 @@ export default function ProdutoModal({
   }, [estabelecimentoId]);
 
   /* ── ESC fecha ──────────────────────────────────────────── */
+  useEffect(() => {
+    return () => clearTimeout(debounceMarcaRef.current);
+  }, []);
+
   useEffect(() => {
     function handleEsc(e) {
       if (e.key === 'Escape') {
@@ -367,7 +372,7 @@ export default function ProdutoModal({
                       onChange={atualizar}
                       maxLength={20}
                     />
-                    <span className="prod-label-hint">Código que o atendente digita na balança quando ela estiver fora do ar</span>
+                    <span className="prod-label-hint">Código padrão que o atendente digita na balança pra selecionar esse produto</span>
                   </div>
                 )}
 
@@ -394,7 +399,13 @@ export default function ProdutoModal({
                     readOnly={somenteLeitura}
                     placeholder="Ex: Tio João, Camil…"
                     value={form.marca}
-                    onChange={e => { atualizar(e); setSugestaoMarca(null); }}
+                    onChange={e => {
+                      atualizar(e);
+                      const valor = e.target.value;
+                      clearTimeout(debounceMarcaRef.current);
+                      if (!valor.trim()) { setSugestaoMarca(null); return; }
+                      debounceMarcaRef.current = setTimeout(() => checarMarcaParecida(valor), 400);
+                    }}
                     onBlur={e => checarMarcaParecida(e.target.value)}
                     autoComplete="off"
                   />
