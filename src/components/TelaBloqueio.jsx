@@ -68,15 +68,41 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     setCarregando(true);
     setErro("");
     try {
-      const resp = await apiFetch(`/api/asaas/gerar-cobranca/${mercearia_id}`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ plano: "mensal" }),
+      // Cartão (Asaas) e Pix (Efí) são gerados em paralelo — cada um no
+      // provedor mais barato pra esse meio de pagamento específico.
+      const [respCartao, respPix] = await Promise.all([
+        apiFetch(`/api/asaas/gerar-cobranca/${mercearia_id}`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ plano: "mensal" }),
+        }),
+        apiFetch(`/api/efi/gerar-cobranca-pix/${mercearia_id}`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ plano: "mensal" }),
+        }),
+      ]);
+
+      const dataCartao = await respCartao.json().catch(() => ({}));
+      const dataPix     = await respPix.json().catch(() => ({}));
+
+      if (!respCartao.ok && !respPix.ok) {
+        setErro(dataPix.error || dataCartao.error || "Erro ao gerar cobrança.");
+        return;
+      }
+
+      // Mescla os dois — se um dos dois falhar, ainda mostra o outro
+      setCobranca({
+        valor:              dataPix.valor ?? dataCartao.valor,
+        plano:              dataPix.plano ?? dataCartao.plano,
+        dias:               dataPix.dias ?? dataCartao.dias,
+        due_date:           dataCartao.due_date,
+        invoice_url_cartao: dataCartao.invoice_url_cartao || null,
+        pix_qr_code:        dataPix.pix_qr_code || null,
+        pix_copy_paste:     dataPix.pix_copy_paste || null,
+        pix_erro:           !respPix.ok ? (dataPix.error || "Pix indisponível no momento.") : null,
       });
-      const data = await resp.json();
-      if (!resp.ok) { setErro(data.error || "Erro ao gerar cobrança."); return; }
-      setCobranca(data);
-      iniciarPolling(data.payment_id);
+      iniciarPolling();
     } catch {
       setErro("Erro ao gerar cobrança. Verifique sua conexão.");
     } finally {
@@ -84,13 +110,15 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     }
   }
 
-  function iniciarPolling(paymentId) {
+  // Confirmação genérica — não importa se veio do Efí (Pix) ou do Asaas
+  // (cartão), o resultado final é o mesmo: status_assinatura vira "ativa".
+  function iniciarPolling() {
     clearInterval(pollingRef.current);
     pollingRef.current = setInterval(async () => {
       try {
-        const resp = await apiFetch(`/api/asaas/status-pagamento/${paymentId}`);
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
         const data = await resp.json();
-        if (data.status === "RECEIVED" || data.status === "CONFIRMED") {
+        if (data.status_assinatura === "ativa") {
           clearInterval(pollingRef.current);
           setPago(true);
           setTimeout(() => window.location.reload(), 3000);
@@ -197,7 +225,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
 
                 {cobranca.pix_qr_code ? (
                   <div className="bloqueio-pix">
-                    <img src={`data:image/png;base64,${cobranca.pix_qr_code}`}
+                    <img src={cobranca.pix_qr_code}
                       alt="QR Code Pix" className="bloqueio-qrcode" />
                     <button className="bloqueio-copiar-pix" onClick={copiarPix}>
                       {copiado ? "✓ Copiado!" : "📋 Copiar código Pix"}
@@ -206,6 +234,9 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                   </div>
                 ) : (
                   <div className="bloqueio-pix">
+                    {cobranca.pix_erro && (
+                      <p className="bloqueio-erro">{cobranca.pix_erro} Tente pelo cartão abaixo.</p>
+                    )}
                     {cobranca.invoice_url_cartao && (
                       <button
                         className="bloqueio-btn bloqueio-btn--primary"
@@ -217,9 +248,11 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                   </div>
                 )}
 
-                <p className="bloqueio-venc-cobranca">
-                  Cobrança válida até {new Date(cobranca.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                </p>
+                {cobranca.due_date && (
+                  <p className="bloqueio-venc-cobranca">
+                    Cobrança válida até {new Date(cobranca.due_date + "T12:00:00").toLocaleDateString("pt-BR")}
+                  </p>
+                )}
                 <button className="bloqueio-btn bloqueio-btn--ghost" style={{ marginTop: 4 }}
                   onClick={() => { setCobranca(null); clearInterval(pollingRef.current); }}>
                   ← Voltar
