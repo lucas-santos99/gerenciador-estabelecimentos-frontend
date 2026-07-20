@@ -1,9 +1,11 @@
 // src/components/TelaBloqueio.jsx
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import './TelaBloqueio.css';
 
 export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
+  const navigate   = useNavigate();
   const btnRef     = useRef(null);
   const pollingRef = useRef(null);
 
@@ -128,7 +130,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
           console.log("[polling] ATIVA detectada — liberando!");
           clearInterval(pollingRef.current);
           setPago(true);
-          setTimeout(() => window.location.reload(), 3000);
+          setTimeout(() => navigate(`/estabelecimentos/${mercearia_id}`, { replace: true }), 3000);
         }
       } catch (err) {
         console.error("[polling] erro na requisição:", err);
