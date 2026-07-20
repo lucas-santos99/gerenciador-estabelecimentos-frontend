@@ -114,16 +114,25 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   // (cartão), o resultado final é o mesmo: status_assinatura vira "ativa".
   function iniciarPolling() {
     clearInterval(pollingRef.current);
+    console.log("[polling] iniciado, checando a cada 5s...");
     pollingRef.current = setInterval(async () => {
       try {
         const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
         const data = await resp.json();
+        console.log("[polling] resposta:", resp.status, "status_assinatura:", data.status_assinatura, data);
+        if (!resp.ok) {
+          console.error("[polling] requisição falhou:", data);
+          return;
+        }
         if (data.status_assinatura === "ativa") {
+          console.log("[polling] ATIVA detectada — liberando!");
           clearInterval(pollingRef.current);
           setPago(true);
           setTimeout(() => window.location.reload(), 3000);
         }
-      } catch {}
+      } catch (err) {
+        console.error("[polling] erro na requisição:", err);
+      }
     }, 5000);
   }
 
