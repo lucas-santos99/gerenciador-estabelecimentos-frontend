@@ -18,7 +18,14 @@ function digitarValorMascarado(valorBruto) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
   if (!digitos) return '';
   const numero = parseInt(digitos, 10) / 100;
-  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Converte um número no formato brasileiro (com ponto de milhar e vírgula
+// decimal) pra float de verdade — usar sempre no lugar de um simples
+// .replace(',', '.'), que quebra se tiver ponto de milhar no meio.
+function paraFloatBR(valor) {
+  return parseFloat(String(valor).replace(/\./g, '').replace(',', '.'));
 }
 
 /* ════════════════════════════════════════════════════════════ */
@@ -27,7 +34,7 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
   const saldo = parseFloat(cliente.saldo_devedor || 0);
 
   const [valorPago,     setValorPago]     = useState(
-    saldo.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 })
+    saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [meioPagamento, setMeioPagamento] = useState('Dinheiro');
@@ -59,7 +66,7 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
   }, [meioPagamento, pixModo]);
 
   async function gerarPixSistema() {
-    const valor = parseFloat(valorPago.toString().replace(',', '.'));
+    const valor = paraFloatBR(valorPago);
     if (isNaN(valor) || valor <= 0) return;
     setGerandoPix(true);
     setPixErro('');
@@ -125,7 +132,7 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
     e.preventDefault();
     setErro('');
 
-    const valor = parseFloat(valorPago.toString().replace(',', '.'));
+    const valor = paraFloatBR(valorPago);
     if (isNaN(valor) || valor <= 0) {
       setErro('Valor inválido.');
       inputRef.current?.focus();

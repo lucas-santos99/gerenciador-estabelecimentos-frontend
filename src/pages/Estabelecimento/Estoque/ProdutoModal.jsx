@@ -67,14 +67,21 @@ function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
   if (!digitos) return '';
   const numero = parseInt(digitos, 10) / Math.pow(10, casasDecimais);
-  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+}
+
+// Converte um número no formato brasileiro (com ponto de milhar e vírgula
+// decimal) pra float de verdade — usar sempre no lugar de um simples
+// .replace(',', '.'), que quebra se tiver ponto de milhar no meio.
+function paraFloatBR(valor) {
+  return parseFloat(String(valor).replace(/\./g, '').replace(',', '.'));
 }
 
 // Formata um número (vindo do banco) pro mesmo padrão de vírgula, usado
 // só na hora de popular o formulário ao editar um produto existente.
 function formatarValorBR(valor, casasDecimais) {
-  const numero = typeof valor === 'string' ? parseFloat(valor.replace(',', '.')) : parseFloat(valor);
-  return (numero || 0).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+  const numero = typeof valor === 'string' ? paraFloatBR(valor) : parseFloat(valor);
+  return (numero || 0).toLocaleString('pt-BR', { minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
 }
 
 /* ════════════════════════════════════════════════════════════ */
@@ -299,10 +306,10 @@ export default function ProdutoModal({
     try {
       const payload = {
         ...form,
-        estoque_atual:  parseFloat(String(form.estoque_atual).replace(',', '.'))  || 0,
-        estoque_minimo: parseFloat(String(form.estoque_minimo).replace(',', '.')) || 0,
-        preco_custo:    parseFloat(String(form.preco_custo).replace(',', '.'))    || 0,
-        preco_venda:    parseFloat(String(form.preco_venda).replace(',', '.'))    || 0,
+        estoque_atual:  paraFloatBR(form.estoque_atual)  || 0,
+        estoque_minimo: paraFloatBR(form.estoque_minimo) || 0,
+        preco_custo:    paraFloatBR(form.preco_custo)    || 0,
+        preco_venda:    paraFloatBR(form.preco_venda)    || 0,
       };
       const resp = await apiFetch(url, {
         method:  isEdit ? 'PUT' : 'POST',
@@ -642,11 +649,11 @@ export default function ProdutoModal({
             <div className="prod-form-section">
               <div className="prod-form-section-titulo">💰 Preços</div>
 
-              {parseFloat(form.preco_venda.replace(',', '.')) > 0 && parseFloat(form.preco_custo.replace(',', '.')) > 0 && (
+              {paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
                 <div className="prod-margem-preview">
                   {(() => {
-                    const custo = parseFloat(form.preco_custo.replace(',', '.'));
-                    const venda = parseFloat(form.preco_venda.replace(',', '.'));
+                    const custo = paraFloatBR(form.preco_custo);
+                    const venda = paraFloatBR(form.preco_venda);
                     const lucro = venda - custo;
                     const margem = ((lucro / venda) * 100).toFixed(1);
                     return (

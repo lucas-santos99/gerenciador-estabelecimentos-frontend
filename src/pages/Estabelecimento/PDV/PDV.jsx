@@ -37,7 +37,14 @@ function digitarPesoMascarado(valorBruto) {
   const digitos = valorBruto.replace(/\D/g, '').slice(-6); // até 999,999 kg
   if (!digitos) return '';
   const numero = parseInt(digitos, 10) / 1000;
-  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+}
+
+// Converte um número no formato brasileiro (com ponto de milhar e vírgula
+// decimal) pra float de verdade — usar sempre no lugar de um simples
+// .replace(',', '.'), que quebra se tiver ponto de milhar no meio.
+function paraFloatBR(valor) {
+  return parseFloat(String(valor).replace(/\./g, '').replace(',', '.'));
 }
 
 const MEIOS = [
@@ -105,7 +112,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   useEffect(() => {
     if (meioPagamento !== 'Dinheiro') return;
-    const recebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
+    const recebido = paraFloatBR(valorRecebido) || 0;
     setTroco(recebido >= total ? recebido - total : 0);
   }, [valorRecebido, total, meioPagamento]);
 
@@ -207,7 +214,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
       onFinalizar('Fiado', clienteSelecionado.id, { clienteNome: clienteSelecionado.nome });
     } else if (meioPagamento === 'Dinheiro') {
-      const recebido = parseFloat(valorRecebido.replace(',', '.')) || 0;
+      const recebido = paraFloatBR(valorRecebido) || 0;
       if (recebido < parseFloat(total.toFixed(2))) { setErro('Valor recebido insuficiente.'); return; }
       onFinalizar('Dinheiro', null, { valorRecebido: recebido, troco });
     } else if (meioPagamento === 'Pix' && pixModo === 'sistema') {
@@ -913,7 +920,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   function confirmarQuantidade(e) {
     e?.preventDefault();
     const produto = itemQuantificar;
-    const qtd     = parseFloat(String(inputQtd).replace(',', '.')) || 0;
+    const qtd     = paraFloatBR(inputQtd) || 0;
     if (qtd <= 0) { fecharModalQtd(); return; }
     const estoque = parseFloat(produto.estoque_atual);
     if (editIndex !== null) {
@@ -1281,7 +1288,7 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
   }, [onCancelar]);
 
   const pesoKg = (() => {
-    const v = parseFloat(valorPeso.replace(',', '.'));
+    const v = paraFloatBR(valorPeso);
     if (isNaN(v) || v <= 0) return 0;
     return unidade === 'g' ? v / 1000 : v;
   })();
