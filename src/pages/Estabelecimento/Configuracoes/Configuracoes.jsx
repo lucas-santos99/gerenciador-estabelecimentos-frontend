@@ -17,6 +17,25 @@ const CAMPOS_ALTERAVEIS = [
   { key: 'outro',             label: 'Outro (descreva abaixo)' },
 ];
 
+// Formata chave Pix do tipo telefone pro padrão exigido: +55DDDNUMERO,
+// sem espaço/traço. Se já vier com o +55, não mexe; se faltar, completa.
+function formatarChavePixTelefone(valor) {
+  const digitos = (valor || '').replace(/\D/g, ''); // só números
+  if (!digitos) return valor;
+
+  // Já tem o 55 na frente (com 12 ou 13 dígitos: 55 + DDD + 8/9 dígitos)?
+  if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) {
+    return `+${digitos}`;
+  }
+  // Só DDD + número (10 ou 11 dígitos) — completa com 55 na frente
+  if (digitos.length === 10 || digitos.length === 11) {
+    return `+55${digitos}`;
+  }
+  // Não bateu com nenhum padrão esperado — devolve só com o + na frente,
+  // pra pelo menos não ficar sem o símbolo exigido pelo Bacen
+  return `+${digitos}`;
+}
+
 function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar }) {
   const [camposSelecionados, setCamposSelecionados] = useState([]);
   const [detalhes, setDetalhes]     = useState('');
@@ -503,8 +522,25 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     <div className="cfg-form-group">
                       <span className="cfg-label">Chave Pix</span>
                       <input className="cfg-input" value={pixForm.pix_chave}
-                        placeholder="A chave que recebe o dinheiro"
-                        onChange={e => setPixForm(p => ({ ...p, pix_chave: e.target.value }))} />
+                        placeholder={
+                          pixForm.pix_tipo_chave === 'telefone' ? '+5553999999999' :
+                          pixForm.pix_tipo_chave === 'cpf'       ? '12345678900' :
+                          pixForm.pix_tipo_chave === 'cnpj'      ? '12345678000199' :
+                          pixForm.pix_tipo_chave === 'email'     ? 'seu@email.com' :
+                                                                    'Chave aleatória gerada pelo banco'
+                        }
+                        onChange={e => setPixForm(p => ({ ...p, pix_chave: e.target.value }))}
+                        onBlur={e => {
+                          if (pixForm.pix_tipo_chave !== 'telefone') return;
+                          const formatada = formatarChavePixTelefone(e.target.value);
+                          if (formatada !== pixForm.pix_chave) setPixForm(p => ({ ...p, pix_chave: formatada }));
+                        }}
+                      />
+                      {pixForm.pix_tipo_chave === 'telefone' && (
+                        <span className="cfg-label-hint" style={{ fontSize: '0.75rem', color: 'var(--est-text-muted, #94a3b8)' }}>
+                          Precisa do código do país (+55) na frente — se você digitar só o DDD e o número, a gente completa sozinho ao sair do campo.
+                        </span>
+                      )}
                     </div>
                     <div className="cfg-form-group">
                       <span className="cfg-label">Cidade (do beneficiário)</span>
