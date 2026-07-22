@@ -106,7 +106,6 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   useEffect(() => {
     if (!metodoConfirmado || meioPagamento !== 'Pix' || pixModo !== 'sistema') return;
     gerarPixSistema();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metodoConfirmado, meioPagamento, pixModo]);
 
   // Assim que o QR fica pronto, foca no checkbox — Enter já confirma na hora
@@ -230,7 +229,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   return (
     <div className="pdv-modal-overlay" ref={overlayRef} tabIndex={-1} onKeyDown={handleOverlayKey}>
-      <div className="pdv-modal" onClick={e => e.stopPropagation()}>
+      <div className="pdv-modal pdv-modal-pagamento" onClick={e => e.stopPropagation()}>
         <div className="pdv-modal-titulo">💳 Finalizar Venda</div>
         <div className="pdv-pagamento-total">
           <span className="pdv-pagamento-total-label">Total a pagar</span>
@@ -273,28 +272,29 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 )}
                 {pixModo === 'sistema' && (
                   <div style={{ width: '100%', textAlign: 'center' }}>
-                    {gerandoPix && <div style={{ padding: 20 }}>⏳ Gerando QR Code…</div>}
+                    {gerandoPix && <div style={{ padding: 28, fontSize: '1.05rem' }}>⏳ Gerando QR Code…</div>}
                     {pixErro && (
-                      <div style={{ color: '#dc2626', fontSize: '0.85rem', padding: '10px 0' }}>
+                      <div style={{ color: '#dc2626', fontSize: '1rem', padding: '12px 0' }}>
                         ⚠️ {pixErro}
-                        <div style={{ marginTop: 8 }}>
-                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: '0.8rem', padding: '4px 12px', borderRadius: 6, cursor: 'pointer' }}>Tentar de novo</button>
+                        <div style={{ marginTop: 10 }}>
+                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: '0.95rem', padding: '8px 18px', borderRadius: 8, cursor: 'pointer' }}>Tentar de novo</button>
                         </div>
                       </div>
                     )}
                     {pixDados && !gerandoPix && (
                       <>
-                        <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8 }} />
+                        <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 260, height: 260, margin: '0 auto', display: 'block', borderRadius: 10 }} />
                         <button type="button" onClick={copiarPixCopiaECola}
-                          style={{ marginTop: 10, fontSize: '0.78rem', padding: '5px 14px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                          style={{ marginTop: 14, fontSize: '0.95rem', padding: '9px 20px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
                           {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
                         </button>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 16, fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 22, fontSize: '1.05rem', cursor: 'pointer' }}>
                           <input
                             ref={pixCheckboxRef}
                             type="checkbox"
                             checked={pixRecebido}
                             onChange={e => setPixRecebido(e.target.checked)}
+                            style={{ width: 20, height: 20, cursor: 'pointer' }}
                             onKeyDown={e => {
                               if (e.key !== 'Enter') return;
                               e.preventDefault();
@@ -323,9 +323,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema');
                       setTimeout(() => btnConfirmarRef.current?.focus(), 0);
                     }}
-                    style={{ marginTop: 14, fontSize: '0.75rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ marginTop: 18, fontSize: '0.9rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    {pixModo === 'sistema' ? 'Usar a maquininha em vez disso (Enter)' : 'Gerar QR Code pelo sistema em vez disso (Enter)'}
+                    {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
                   </button>
                 )}
               </div>

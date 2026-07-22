@@ -894,15 +894,33 @@
 /*  MODAL PAGAMENTO           */
 /* ========================= */
 
+/* Modal de pagamento é bem maior que os outros modais do PDV — é a tela
+   mais importante da venda, o comerciante precisa ler tudo de longe/rápido. */
+.pdv-modal-pagamento {
+  max-width: 560px;
+  padding: 40px;
+}
+
+.pdv-modal-pagamento .pdv-modal-titulo {
+  font-size: 1.35rem;
+  margin-bottom: 24px;
+}
+
+.pdv-modal-pagamento .pdv-modal-btn-cancelar,
+.pdv-modal-pagamento .pdv-modal-btn-confirmar {
+  padding: 16px;
+  font-size: 1.05rem;
+}
+
 .pdv-pagamento-total {
   text-align: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
   border-bottom: 1px solid var(--est-border);
 }
 
 .pdv-pagamento-total-label {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -912,7 +930,7 @@
 }
 
 .pdv-pagamento-total-valor {
-  font-size: 2.8rem;
+  font-size: 3.6rem;
   font-weight: 800;
   color: var(--est-accent);
   font-family: 'JetBrains Mono', monospace;
@@ -923,7 +941,7 @@
 
 /* Lista de meios de pagamento */
 .pdv-pagamento-label {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -945,8 +963,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 16px;
-  font-size: 0.9rem;
+  padding: 18px 20px;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--est-text);
   cursor: pointer;
@@ -963,16 +981,16 @@
 }
 
 .pdv-meio-icone {
-  font-size: 1.1rem;
+  font-size: 1.35rem;
 }
 
 .pdv-meio-enter {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-family: 'JetBrains Mono', monospace;
   color: var(--est-accent);
   background: var(--est-accent-dim);
   border: 1px solid var(--est-border-accent);
-  padding: 2px 6px;
+  padding: 3px 9px;
   border-radius: 5px;
 }
 
@@ -994,9 +1012,9 @@
 
 .pdv-troco-input {
   width: 100%;
-  padding: 13px 16px;
+  padding: 16px 18px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1.5rem;
+  font-size: 1.9rem;
   font-weight: 700;
   text-align: right;
   border: 1px solid var(--est-border);
@@ -1018,14 +1036,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 14px 18px;
   background: var(--est-success-dim);
   border: 1px solid rgba(34,197,94,0.2);
   border-radius: 10px;
 }
 
 .pdv-troco-display span {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1033,7 +1051,7 @@
 }
 
 .pdv-troco-display strong {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--est-success);
   font-family: 'JetBrains Mono', monospace;
@@ -1042,21 +1060,21 @@
 /* Digital/cartão */
 .pdv-pagamento-digital {
   text-align: center;
-  padding: 20px;
+  padding: 28px;
   background: var(--est-accent-dim);
   border: 1px solid var(--est-border-accent);
   border-radius: 12px;
 }
 
-.pdv-pagamento-digital-icone { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+.pdv-pagamento-digital-icone { font-size: 2.4rem; display: block; margin-bottom: 12px; }
 .pdv-pagamento-digital-nome  {
-  font-size: 1rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: var(--est-accent);
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
-.pdv-pagamento-digital-hint  { font-size: 0.78rem; color: var(--est-text-soft); }
+.pdv-pagamento-digital-hint  { font-size: 0.95rem; color: var(--est-text-soft); }
 
 /* Fiado — busca de cliente */
 .pdv-cliente-busca-input {
