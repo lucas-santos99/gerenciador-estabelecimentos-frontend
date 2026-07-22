@@ -29,6 +29,17 @@ function fmtPeso(kg) {
     : `${Math.round(kg * 1000)} g`;
 }
 
+// Máscara "tipo calculadora" pro peso: os dígitos entram da direita pra
+// esquerda e a vírgula fica sempre fixa em 3 casas decimais — digita
+// "1350" e já vira "1,350" sozinho, sem precisar digitar a vírgula.
+// Se o usuário digitar a vírgula na mão, ela é só ignorada (não quebra).
+function digitarPesoMascarado(valorBruto) {
+  const digitos = valorBruto.replace(/\D/g, '').slice(-6); // até 999,999 kg
+  if (!digitos) return '';
+  const numero = parseInt(digitos, 10) / 1000;
+  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 3, maximumFractionDigits: 3 });
+}
+
 const MEIOS = [
   { key: 'Dinheiro', label: 'Dinheiro',          icone: '💵' },
   { key: 'Pix',      label: 'Pix',               icone: '📱' },
@@ -61,6 +72,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [pixErro,       setPixErro]       = useState('');
   const [pixRecebido,   setPixRecebido]   = useState(false);
   const [pixCopiado,    setPixCopiado]    = useState(false);
+  const [pagZoom,       setPagZoom]       = useState(1);
+
+  function mudarZoom(delta) {
+    setPagZoom(z => Math.min(1.6, Math.max(0.75, Math.round((z + delta) * 20) / 20)));
+  }
 
   const overlayRef       = useRef(null);
   const inputDinheiroRef = useRef(null);
@@ -229,8 +245,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   return (
     <div className="pdv-modal-overlay" ref={overlayRef} tabIndex={-1} onKeyDown={handleOverlayKey}>
-      <div className="pdv-modal pdv-modal-pagamento" onClick={e => e.stopPropagation()}>
-        <div className="pdv-modal-titulo">💳 Finalizar Venda</div>
+      <div className="pdv-modal pdv-modal-pagamento" style={{ '--pdv-pag-zoom': pagZoom }} onClick={e => e.stopPropagation()}>
+        <div className="pdv-modal-pagamento-header">
+          <div className="pdv-modal-titulo" style={{ marginBottom: 0 }}>💳 Finalizar Venda</div>
+          <div className="pdv-modal-pagamento-zoom">
+            <button type="button" onClick={() => mudarZoom(-0.05)} title="Diminuir">A−</button>
+            <button type="button" onClick={() => mudarZoom(0.05)} title="Aumentar">A+</button>
+          </div>
+        </div>
         <div className="pdv-pagamento-total">
           <span className="pdv-pagamento-total-label">Total a pagar</span>
           <span className="pdv-pagamento-total-valor">{fmt(total)}</span>
@@ -272,29 +294,29 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 )}
                 {pixModo === 'sistema' && (
                   <div style={{ width: '100%', textAlign: 'center' }}>
-                    {gerandoPix && <div style={{ padding: 28, fontSize: '1.05rem' }}>⏳ Gerando QR Code…</div>}
+                    {gerandoPix && <div style={{ padding: 'calc(28px * var(--pdv-pag-zoom, 1))', fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))' }}>⏳ Gerando QR Code…</div>}
                     {pixErro && (
-                      <div style={{ color: '#dc2626', fontSize: '1rem', padding: '12px 0' }}>
+                      <div style={{ color: '#dc2626', fontSize: 'calc(1rem * var(--pdv-pag-zoom, 1))', padding: '12px 0' }}>
                         ⚠️ {pixErro}
                         <div style={{ marginTop: 10 }}>
-                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: '0.95rem', padding: '8px 18px', borderRadius: 8, cursor: 'pointer' }}>Tentar de novo</button>
+                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '8px 18px', borderRadius: 8, cursor: 'pointer' }}>Tentar de novo</button>
                         </div>
                       </div>
                     )}
                     {pixDados && !gerandoPix && (
                       <>
-                        <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 260, height: 260, margin: '0 auto', display: 'block', borderRadius: 10 }} />
+                        <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 'calc(260px * var(--pdv-pag-zoom, 1))', height: 'calc(260px * var(--pdv-pag-zoom, 1))', margin: '0 auto', display: 'block', borderRadius: 10 }} />
                         <button type="button" onClick={copiarPixCopiaECola}
-                          style={{ marginTop: 14, fontSize: '0.95rem', padding: '9px 20px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                          style={{ marginTop: 14, fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '9px 20px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
                           {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
                         </button>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 22, fontSize: '1.05rem', cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 22, fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))', cursor: 'pointer' }}>
                           <input
                             ref={pixCheckboxRef}
                             type="checkbox"
                             checked={pixRecebido}
                             onChange={e => setPixRecebido(e.target.checked)}
-                            style={{ width: 20, height: 20, cursor: 'pointer' }}
+                            style={{ width: 'calc(20px * var(--pdv-pag-zoom, 1))', height: 'calc(20px * var(--pdv-pag-zoom, 1))', cursor: 'pointer' }}
                             onKeyDown={e => {
                               if (e.key !== 'Enter') return;
                               e.preventDefault();
@@ -307,7 +329,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                               }
                             }}
                           />
-                          Confirmo que o Pix caiu na conta <span style={{ opacity: 0.6 }}>(Enter)</span>
+                          Confirmo que o Pix caiu na conta
                         </label>
                       </>
                     )}
@@ -323,7 +345,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema');
                       setTimeout(() => btnConfirmarRef.current?.focus(), 0);
                     }}
-                    style={{ marginTop: 18, fontSize: '0.9rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ marginTop: 18, fontSize: 'calc(0.9rem * var(--pdv-pag-zoom, 1))', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
                   >
                     {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
                   </button>
@@ -877,7 +899,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       mostrarStatus('erro', `Estoque máximo de "${produto.nome}" (${estoque} un.) atingido.`);
       limparBusca(); return;
     }
-    setInputQtd(produto.unidade_medida === 'kg' ? '1.000' : '1');
+    setInputQtd(produto.unidade_medida === 'kg' ? '1,000' : '1');
     setItemQuantificar(produto);
     setEditIndex(null);
     limparBusca();
@@ -891,7 +913,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   function confirmarQuantidade(e) {
     e?.preventDefault();
     const produto = itemQuantificar;
-    const qtd     = parseFloat(inputQtd) || 0;
+    const qtd     = parseFloat(String(inputQtd).replace(',', '.')) || 0;
     if (qtd <= 0) { fecharModalQtd(); return; }
     const estoque = parseFloat(produto.estoque_atual);
     if (editIndex !== null) {
@@ -1067,7 +1089,17 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             <div className="pdv-modal-qtd-produto">{itemQuantificar.nome}{itemQuantificar.marca && <span className="pdv-modal-qtd-marca"> · {itemQuantificar.marca}</span>}{' — '}<strong>{fmt(itemQuantificar.preco_venda)}</strong>{' / '}{itemQuantificar.unidade_medida}</div>
             <form onSubmit={confirmarQuantidade}>
               <label className="pdv-modal-qtd-label">{itemQuantificar.unidade_medida === 'kg' ? 'Peso (kg)' : 'Quantidade (un)'}</label>
-              <input ref={inputQtdRef} className="pdv-modal-qtd-input" type="number" step={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'} min={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'} value={inputQtd} onChange={e => setInputQtd(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); fecharModalQtd(); } }} />
+              <input
+                ref={inputQtdRef}
+                className="pdv-modal-qtd-input"
+                type={itemQuantificar.unidade_medida === 'kg' ? 'text' : 'number'}
+                inputMode={itemQuantificar.unidade_medida === 'kg' ? 'decimal' : undefined}
+                step={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'}
+                min={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'}
+                value={inputQtd}
+                onChange={e => setInputQtd(itemQuantificar.unidade_medida === 'kg' ? digitarPesoMascarado(e.target.value) : e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); fecharModalQtd(); } }}
+              />
               <div className="pdv-modal-acoes">
                 <button type="button" className="pdv-modal-btn-cancelar" onClick={fecharModalQtd}>Cancelar (Esc)</button>
                 <button type="submit" className="pdv-modal-btn-confirmar">{editIndex !== null ? '✓ Atualizar (Enter)' : '✓ Adicionar (Enter)'}</button>
@@ -1297,7 +1329,13 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
             type="text"
             inputMode="decimal"
             value={valorPeso}
-            onChange={e => { setValorPeso(e.target.value); setErro(""); }}
+            onChange={e => {
+              const novo = unidade === 'kg'
+                ? digitarPesoMascarado(e.target.value)
+                : e.target.value.replace(/\D/g, ''); // gramas: só dígitos, sem casa decimal
+              setValorPeso(novo);
+              setErro("");
+            }}
             placeholder={unidade === "kg" ? "Ex: 1,350" : "Ex: 1350"}
           />
           {erro && <div className="pdv-peso-erro">⚠️ {erro}</div>}
