@@ -66,6 +66,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const inputDinheiroRef = useRef(null);
   const inputClienteRef  = useRef(null);
   const btnConfirmarRef  = useRef(null);
+  const pixCheckboxRef   = useRef(null);
   const listaClienteRef  = useRef(null);
   const listaMeiosRef    = useRef(null);
 
@@ -105,8 +106,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   useEffect(() => {
     if (!metodoConfirmado || meioPagamento !== 'Pix' || pixModo !== 'sistema') return;
     gerarPixSistema();
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metodoConfirmado, meioPagamento, pixModo]);
+
+  // Assim que o QR fica pronto, foca no checkbox — Enter já confirma na hora
+  useEffect(() => {
+    if (pixDados && !gerandoPix) {
+      setTimeout(() => pixCheckboxRef.current?.focus(), 0);
+    }
+  }, [pixDados, gerandoPix]);
 
   async function gerarPixSistema() {
     setGerandoPix(true);
@@ -282,8 +290,24 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
                         </button>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 16, fontSize: '0.85rem', cursor: 'pointer' }}>
-                          <input type="checkbox" checked={pixRecebido} onChange={e => setPixRecebido(e.target.checked)} />
-                          Confirmo que o Pix caiu na conta
+                          <input
+                            ref={pixCheckboxRef}
+                            type="checkbox"
+                            checked={pixRecebido}
+                            onChange={e => setPixRecebido(e.target.checked)}
+                            onKeyDown={e => {
+                              if (e.key !== 'Enter') return;
+                              e.preventDefault();
+                              if (!pixRecebido) {
+                                setPixRecebido(true);
+                                // Enter de novo já finaliza a venda
+                                setTimeout(() => btnConfirmarRef.current?.focus(), 0);
+                              } else {
+                                confirmarFinal();
+                              }
+                            }}
+                          />
+                          Confirmo que o Pix caiu na conta <span style={{ opacity: 0.6 }}>(Enter)</span>
                         </label>
                       </>
                     )}
@@ -292,10 +316,16 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 {pixConfig.disponivel && (
                   <button
                     type="button"
-                    onClick={() => setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema')}
+                    onClick={() => { setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema'); setTimeout(() => btnConfirmarRef.current?.focus(), 0); }}
+                    onKeyDown={e => {
+                      if (e.key !== 'Enter') return;
+                      e.preventDefault();
+                      setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema');
+                      setTimeout(() => btnConfirmarRef.current?.focus(), 0);
+                    }}
                     style={{ marginTop: 14, fontSize: '0.75rem', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
+                    {pixModo === 'sistema' ? 'Usar a maquininha em vez disso (Enter)' : 'Gerar QR Code pelo sistema em vez disso (Enter)'}
                   </button>
                 )}
               </div>
