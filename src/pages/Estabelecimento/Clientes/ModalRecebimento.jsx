@@ -12,6 +12,15 @@ const MEIOS = [
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Máscara "tipo calculadora": os dígitos entram da direita pra esquerda e
+// a vírgula fica fixa em 2 casas — digita "5350" e já vira "53,50" sozinho.
+function digitarValorMascarado(valorBruto) {
+  const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
+  if (!digitos) return '';
+  const numero = parseInt(digitos, 10) / 100;
+  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabelecimentoId, pixConfig = { modo: 'maquininha', disponivel: false } }) {
 
@@ -47,7 +56,6 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
   useEffect(() => {
     if (meioPagamento !== 'Pix' || pixModo !== 'sistema') return;
     gerarPixSistema();
-   
   }, [meioPagamento, pixModo]);
 
   async function gerarPixSistema() {
@@ -171,7 +179,7 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
             className="cli-receb-input"
             type="text"
             value={valorPago}
-            onChange={e => setValorPago(e.target.value)}
+            onChange={e => setValorPago(digitarValorMascarado(e.target.value))}
             onKeyDown={handleInputKey}
             disabled={loading}
           />

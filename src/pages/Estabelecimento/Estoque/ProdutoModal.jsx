@@ -60,6 +60,23 @@ function encontrarMarcaParecida(valorDigitado, marcasExistentes) {
 
 
 
+// Máscara "tipo calculadora": os dígitos entram da direita pra esquerda
+// e a vírgula fica fixa nas casas decimais informadas — digita "1100" com
+// 2 casas e já vira "11,00" sozinho. Vírgula digitada na mão é ignorada.
+function digitarValorMascarado(valorBruto, casasDecimais) {
+  const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
+  if (!digitos) return '';
+  const numero = parseInt(digitos, 10) / Math.pow(10, casasDecimais);
+  return numero.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+}
+
+// Formata um número (vindo do banco) pro mesmo padrão de vírgula, usado
+// só na hora de popular o formulário ao editar um produto existente.
+function formatarValorBR(valor, casasDecimais) {
+  const numero = typeof valor === 'string' ? parseFloat(valor.replace(',', '.')) : parseFloat(valor);
+  return (numero || 0).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoModal({
   estabelecimentoId,
@@ -78,10 +95,10 @@ export default function ProdutoModal({
     codigo_barras:   '',
     categoria_id:    '',
     unidade_medida:  'un',
-    estoque_atual:   0,
-    estoque_minimo:  10,
-    preco_custo:     0,
-    preco_venda:     0,
+    estoque_atual:   '0',
+    estoque_minimo:  '10',
+    preco_custo:     '0,00',
+    preco_venda:     '0,00',
     // ── Campos balança ──
     vendido_por_peso: false,
     plu_balanca:      '',
@@ -114,10 +131,10 @@ export default function ProdutoModal({
         codigo_barras:    produtoEditar.codigo_barras    || '',
         categoria_id:     produtoEditar.categoria_id     || '',
         unidade_medida:   produtoEditar.unidade_medida   || 'un',
-        estoque_atual:    parseFloat(produtoEditar.estoque_atual)  || 0,
-        estoque_minimo:   parseFloat(produtoEditar.estoque_minimo) || 10,
-        preco_custo:      parseFloat(produtoEditar.preco_custo)    || 0,
-        preco_venda:      parseFloat(produtoEditar.preco_venda)    || 0,
+        estoque_atual:    formatarValorBR(produtoEditar.estoque_atual,  produtoEditar.unidade_medida === 'kg' ? 3 : 0),
+        estoque_minimo:   formatarValorBR(produtoEditar.estoque_minimo, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
+        preco_custo:      formatarValorBR(produtoEditar.preco_custo, 2),
+        preco_venda:      formatarValorBR(produtoEditar.preco_venda, 2),
         vendido_por_peso: produtoEditar.vendido_por_peso || false,
         plu_balanca:      produtoEditar.plu_balanca      || '',
       });
@@ -166,14 +183,20 @@ export default function ProdutoModal({
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
     const { name, value, type, checked } = e.target;
-    const numericos = ['estoque_atual', 'estoque_minimo', 'preco_custo', 'preco_venda'];
+    // Preço sempre com 2 casas; estoque com 3 casas se for kg, senão inteiro
+    const casasPorCampo = {
+      preco_custo:    2,
+      preco_venda:    2,
+      estoque_atual:  form.unidade_medida === 'kg' ? 3 : 0,
+      estoque_minimo: form.unidade_medida === 'kg' ? 3 : 0,
+    };
     setForm(prev => {
       const novo = {
         ...prev,
         [name]: type === 'checkbox'
           ? checked
-          : numericos.includes(name)
-            ? value.replace(',', '.')
+          : casasPorCampo[name] !== undefined
+            ? digitarValorMascarado(value, casasPorCampo[name])
             : value,
       };
       // Ao desmarcar vendido_por_peso, limpa PLU
@@ -183,6 +206,8 @@ export default function ProdutoModal({
       // Se marcar vendido_por_peso, força unidade_medida para 'kg'
       if (name === 'vendido_por_peso' && checked) {
         novo.unidade_medida = 'kg';
+        novo.estoque_atual  = formatarValorBR(prev.estoque_atual, 3);
+        novo.estoque_minimo = formatarValorBR(prev.estoque_minimo, 3);
       }
       return novo;
     });
@@ -272,10 +297,17 @@ export default function ProdutoModal({
       : `/api/estabelecimentos/${estabelecimentoId}/produtos`;
 
     try {
+      const payload = {
+        ...form,
+        estoque_atual:  parseFloat(String(form.estoque_atual).replace(',', '.'))  || 0,
+        estoque_minimo: parseFloat(String(form.estoque_minimo).replace(',', '.')) || 0,
+        preco_custo:    parseFloat(String(form.preco_custo).replace(',', '.'))    || 0,
+        preco_venda:    parseFloat(String(form.preco_venda).replace(',', '.'))    || 0,
+      };
       const resp = await apiFetch(url, {
         method:  isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(form),
+        body:    JSON.stringify(payload),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao salvar produto');
@@ -289,7 +321,6 @@ export default function ProdutoModal({
 
   /* ── Labels dinâmicos por unidade ───────────────────────── */
   const isKg        = form.unidade_medida === 'kg';
-  const stepEstoque = isKg ? '0.001' : '1';
   const labelVenda  = isKg ? 'Preço de venda (R$/kg) *' : 'Preço de venda (R$/un) *';
   const labelCusto  = isKg ? 'Preço de custo (R$/kg)' : 'Preço de custo (R$/un)';
 
@@ -515,7 +546,12 @@ export default function ProdutoModal({
                         key={op.value}
                         type="button"
                         className={`prod-unidade-btn${form.unidade_medida === op.value ? ' ativo' : ''}`}
-                        onClick={() => !somenteLeitura && setForm(prev => ({ ...prev, unidade_medida: op.value }))}
+                        onClick={() => !somenteLeitura && setForm(prev => ({
+                          ...prev,
+                          unidade_medida: op.value,
+                          estoque_atual:  formatarValorBR(prev.estoque_atual,  op.value === 'kg' ? 3 : 0),
+                          estoque_minimo: formatarValorBR(prev.estoque_minimo, op.value === 'kg' ? 3 : 0),
+                        }))}
                       >
                         <span className="prod-unidade-icon">{op.icon}</span>
                         <span className="prod-unidade-label">{op.label}</span>
@@ -531,13 +567,12 @@ export default function ProdutoModal({
                   </label>
                   <input
                     className="prod-input"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="estoque_atual"
                     readOnly={somenteLeitura}
                     value={form.estoque_atual}
                     onChange={atualizar}
-                    min="0"
-                    step={stepEstoque}
                     required
                   />
                 </div>
@@ -548,13 +583,12 @@ export default function ProdutoModal({
                   </label>
                   <input
                     className="prod-input"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="estoque_minimo"
                     readOnly={somenteLeitura}
                     value={form.estoque_minimo}
                     onChange={atualizar}
-                    min="0"
-                    step={stepEstoque}
                   />
                   <span className="prod-label-hint">Alerta de estoque baixo</span>
                 </div>
@@ -608,11 +642,11 @@ export default function ProdutoModal({
             <div className="prod-form-section">
               <div className="prod-form-section-titulo">💰 Preços</div>
 
-              {parseFloat(form.preco_venda) > 0 && parseFloat(form.preco_custo) > 0 && (
+              {parseFloat(form.preco_venda.replace(',', '.')) > 0 && parseFloat(form.preco_custo.replace(',', '.')) > 0 && (
                 <div className="prod-margem-preview">
                   {(() => {
-                    const custo = parseFloat(form.preco_custo);
-                    const venda = parseFloat(form.preco_venda);
+                    const custo = parseFloat(form.preco_custo.replace(',', '.'));
+                    const venda = parseFloat(form.preco_venda.replace(',', '.'));
                     const lucro = venda - custo;
                     const margem = ((lucro / venda) * 100).toFixed(1);
                     return (
@@ -632,13 +666,12 @@ export default function ProdutoModal({
                   <label className="prod-label">{labelCusto}</label>
                   <input
                     className="prod-input"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="preco_custo"
                     readOnly={somenteLeitura}
                     value={form.preco_custo}
                     onChange={atualizar}
-                    min="0"
-                    step="0.01"
                   />
                 </div>
 
@@ -646,13 +679,12 @@ export default function ProdutoModal({
                   <label className="prod-label">{labelVenda}</label>
                   <input
                     className="prod-input"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="preco_venda"
                     readOnly={somenteLeitura}
                     value={form.preco_venda}
                     onChange={atualizar}
-                    min="0"
-                    step="0.01"
                     required
                   />
                 </div>
