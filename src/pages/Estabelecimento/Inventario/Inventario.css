@@ -876,6 +876,37 @@
   .inv-mov-col-cat { display: none; }
 }
 
+/* ── Toggle kg/gramas no Ajuste Rápido ── */
+.inv-unidade-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.inv-unidade-toggle-btn {
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.75rem * var(--inv-font-scale, 1));
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.inv-unidade-toggle-btn:hover { border-color: var(--est-border-accent); }
+.inv-unidade-toggle-btn.ativo {
+  background: var(--est-accent-dim);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  font-weight: 700;
+}
+
+/* ── Campos mais compactos (Quantidade/Motivo não precisam ocupar
+   a largura toda da coluna do formulário) ── */
+.inv-item-input-wrap--compacta { max-width: 220px; }
+.inv-form-group--compacta .inv-input { max-width: 340px; }
+
 /* ── Stats clicáveis no card de inventário ── */
 .inv-stat-clicavel {
   cursor: pointer;

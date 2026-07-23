@@ -991,7 +991,20 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
   const [erro,         setErro]         = useState('');
   const [showPreview,  setShowPreview]  = useState(true);
   const [showGuia,     setShowGuia]     = useState(false);
+  const [unidadeInput, setUnidadeInput] = useState('kg'); // 'kg' | 'g' — só relevante pra produto por peso
   const inputRef = useRef(null);
+
+  // Máscara "tipo calculadora": dígitos entram da direita pra esquerda,
+  // vírgula/ponto de milhar ficam automáticos.
+  function digitarQtdMascarada(valorBruto, casasDecimais) {
+    const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
+    if (!digitos) return '';
+    const numero = parseInt(digitos, 10) / Math.pow(10, casasDecimais);
+    return numero.toLocaleString('pt-BR', { minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
+  }
+  function paraFloatBR(valor) {
+    return parseFloat(String(valor).replace(/\./g, '').replace(',', '.')) || 0;
+  }
 
   async function buscarProdutos(termo) {
     setTermoBusca(termo);
@@ -1005,17 +1018,34 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
     finally { setLoadingBusca(false); }
   }
 
+  function handleBuscaKeyDown(e) {
+    if (e.key === 'Enter' && resultados.length > 0) {
+      e.preventDefault();
+      selecionarProduto(resultados[0]);
+    }
+  }
+
   function selecionarProduto(p) {
     setProduto(p);
     setTermoBusca('');
     setResultados([]);
     setQuantidade('');
     setMotivo('');
+    setUnidadeInput('kg');
   }
 
   const tipoInfo = TIPOS_AJUSTE.find(t => t.key === tipo);
 
-  const qtdNumerica = parseFloat(String(quantidade).replace(',', '.')) || 0;
+  // Casas decimais conforme unidade do produto E a unidade escolhida (kg/g)
+  const casasQtd = produto?.unidade_medida === 'kg'
+    ? (unidadeInput === 'g' ? 0 : 3)
+    : 0;
+
+  const qtdDigitada = paraFloatBR(quantidade);
+  // Se o operador está digitando em gramas, converte pra kg antes de qualquer conta
+  const qtdNumerica = (produto?.unidade_medida === 'kg' && unidadeInput === 'g')
+    ? qtdDigitada / 1000
+    : qtdDigitada;
   const qtdAtual    = parseFloat(produto?.estoque_atual || 0);
   const qtdDepois   = tipo === 'correcao' ? qtdNumerica
     : ['entrada', 'devolucao'].includes(tipo) ? qtdAtual + qtdNumerica
@@ -1087,7 +1117,8 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
                     className="inv-input"
                     value={termoBusca}
                     onChange={e => buscarProdutos(e.target.value)}
-                    placeholder="Digite o nome ou código do produto…"
+                    onKeyDown={handleBuscaKeyDown}
+                    placeholder="Digite o nome ou código do produto… (Enter seleciona)"
                     autoComplete="off"
                   />
                   {loadingBusca && <span className="inv-busca-loading">⏳</span>}
@@ -1122,28 +1153,37 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
             <div className="inv-form-group">
               <label className="inv-label">
                 {tipo === 'correcao' ? 'Novo valor do estoque *' : 'Quantidade *'}
-                {produto && <span className="inv-label-unidade"> — {produto.unidade_medida === 'kg' ? 'em quilogramas (kg)' : 'em unidades (un)'}</span>}
+                {produto && produto.unidade_medida !== 'kg' && <span className="inv-label-unidade"> — em unidades (un)</span>}
               </label>
-              <div className="inv-item-input-wrap">
+
+              {produto?.unidade_medida === 'kg' && (
+                <div className="inv-unidade-toggle">
+                  <button type="button" className={`inv-unidade-toggle-btn${unidadeInput === 'kg' ? ' ativo' : ''}`}
+                    onClick={() => { setUnidadeInput('kg'); setQuantidade(''); }}>kg</button>
+                  <button type="button" className={`inv-unidade-toggle-btn${unidadeInput === 'g' ? ' ativo' : ''}`}
+                    onClick={() => { setUnidadeInput('g'); setQuantidade(''); }}>gramas</button>
+                </div>
+              )}
+
+              <div className="inv-item-input-wrap inv-item-input-wrap--compacta">
                 <input
                   className="inv-input inv-input-qtd"
                   style={{ borderRadius: '10px 0 0 10px', borderRight: 'none' }}
-                  type="number"
-                  min="0"
-                  step={produto?.unidade_medida === 'kg' ? '0.001' : '1'}
+                  type="text"
+                  inputMode="decimal"
                   value={quantidade}
-                  onChange={e => setQuantidade(e.target.value)}
-                  placeholder={produto?.unidade_medida === 'kg' ? '0.000' : '0'}
+                  onChange={e => setQuantidade(digitarQtdMascarada(e.target.value, casasQtd))}
+                  placeholder={casasQtd === 3 ? '0,000' : '0'}
                 />
                 <span className="inv-item-input-unidade inv-item-input-unidade--grande">
-                  {produto?.unidade_medida || 'un'}
+                  {produto?.unidade_medida === 'kg' ? unidadeInput : 'un'}
                 </span>
               </div>
               {tipo === 'correcao' && <span className="inv-hint">Informe a quantidade exata que o produto deve ter no estoque após a correção.</span>}
             </div>
 
             {/* Motivo */}
-            <div className="inv-form-group">
+            <div className="inv-form-group inv-form-group--compacta">
               <label className="inv-label">Motivo *</label>
               <input
                 className="inv-input"
