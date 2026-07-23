@@ -175,7 +175,15 @@ export default function DashboardAdmin() {
       const diff = calcularDiff(m.data_vencimento);
       return diff !== null && diff < 0;
     }
-    if (filtro && m.status_assinatura !== filtro) return false;
+    if (filtro === "proximos") {
+      const diff = calcularDiff(m.data_vencimento);
+      return diff !== null && diff >= 0 && diff <= 5;
+    }
+    if (filtro === "inativas") {
+      if (!["inativa", "bloqueada"].includes(m.status_assinatura)) return false;
+    } else if (filtro && m.status_assinatura !== filtro) {
+      return false;
+    }
     if (!busca) return true;
     const q = busca.toLowerCase();
     return (
@@ -293,15 +301,6 @@ export default function DashboardAdmin() {
             </button>
 
             <button
-              className="btn btn-config"
-              onClick={() => navigate("/admin/configuracoes-globais")}
-              title="Configurações globais do sistema"
-            >
-              <Icon.Config /> Configurações
-            </button>
-
-
-            <button
               className="btn btn-ghost"
               onClick={() => navigate("/admin/estabelecimentos/excluidas")}
             >
@@ -327,12 +326,22 @@ export default function DashboardAdmin() {
         {mostrarAlertas && (alertas.vencidos > 0 || alertas.proximos > 0) && (
           <div className="dash-alertas-box">
             {alertas.vencidos > 0 && (
-              <div className="alerta-item alerta-danger">
+              <div
+                className="alerta-item alerta-danger"
+                onClick={() => { setFiltro("vencidas"); setFiltroTipo(""); }}
+                style={{ cursor: "pointer" }}
+                title="Ver estabelecimentos com assinatura vencida"
+              >
                 🔴 {alertas.vencidos} estabelecimento{alertas.vencidos > 1 ? "s" : ""} com assinatura vencida
               </div>
             )}
             {alertas.proximos > 0 && (
-              <div className="alerta-item alerta-warning">
+              <div
+                className="alerta-item alerta-warning"
+                onClick={() => { setFiltro("proximos"); setFiltroTipo(""); }}
+                style={{ cursor: "pointer" }}
+                title="Ver estabelecimentos vencendo em breve"
+              >
                 🟡 {alertas.proximos} vencendo nos próximos 5 dias
               </div>
             )}
@@ -341,7 +350,12 @@ export default function DashboardAdmin() {
 
         {/* ── STAT CARDS ─────────────────────────────────── */}
         <div className="dash-cards">
-          <div className="dash-stat-card card-total">
+          <div
+            className="dash-stat-card card-total"
+            onClick={() => { setFiltro(""); setFiltroTipo(""); setBusca(""); }}
+            style={{ cursor: "pointer" }}
+            title="Ver todos os estabelecimentos"
+          >
             <div className="stat-card-inner">
               <div className="stat-info">
                 <span className="stat-label">Total</span>
@@ -351,7 +365,12 @@ export default function DashboardAdmin() {
             </div>
           </div>
 
-          <div className="dash-stat-card card-ativas">
+          <div
+            className="dash-stat-card card-ativas"
+            onClick={() => { setFiltro("ativa"); setFiltroTipo(""); }}
+            style={{ cursor: "pointer" }}
+            title="Ver estabelecimentos ativos"
+          >
             <div className="stat-card-inner">
               <div className="stat-info">
                 <span className="stat-label">Ativas</span>
@@ -361,7 +380,12 @@ export default function DashboardAdmin() {
             </div>
           </div>
 
-          <div className="dash-stat-card card-inativas">
+          <div
+            className="dash-stat-card card-inativas"
+            onClick={() => { setFiltro("inativas"); setFiltroTipo(""); }}
+            style={{ cursor: "pointer" }}
+            title="Ver estabelecimentos inativos ou bloqueados"
+          >
             <div className="stat-card-inner">
               <div className="stat-info">
                 <span className="stat-label">Inativas</span>
@@ -371,7 +395,12 @@ export default function DashboardAdmin() {
             </div>
           </div>
 
-          <div className="dash-stat-card card-excluidas">
+          <div
+            className="dash-stat-card card-excluidas"
+            onClick={() => navigate("/admin/estabelecimentos/excluidas")}
+            style={{ cursor: "pointer" }}
+            title="Ver estabelecimentos excluídos"
+          >
             <div className="stat-card-inner">
               <div className="stat-info">
                 <span className="stat-label">Excluídas</span>
@@ -400,10 +429,12 @@ export default function DashboardAdmin() {
             onChange={e => setFiltro(e.target.value)}
           >
             <option value="">Todos os status</option>
-            <option value="ativa">Ativa</option>
-            <option value="inativa">Inativa</option>
-            <option value="bloqueada">Bloqueada</option>
+            <option value="ativa">Ativa 🟢</option>
+            <option value="inativa">Inativa 🟡</option>
+            <option value="bloqueada">Bloqueada 🟠</option>
+            <option value="inativas">Inativas + Bloqueadas 🟡🟠</option>
             <option value="vencidas">Vencidas 🔴</option>
+            <option value="proximos">Vencendo em breve 🟡</option>
           </select>
 
           <select

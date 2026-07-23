@@ -128,7 +128,7 @@ export default function Sidebar() {
     {
       section: "Menu",
       items: [
-        { label: "Dashboard",            path: "/admin",                     icon: Icons.Dashboard },
+        { label: "Painel",               path: "/admin",                     icon: Icons.Dashboard },
         { label: "Auditoria",            path: "/admin/auditoria",           icon: Icons.Audit     },
         { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings  },
       ],
