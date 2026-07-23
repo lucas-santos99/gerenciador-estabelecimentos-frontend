@@ -229,6 +229,46 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
     XLSX.writeFile(wb, `${inventario.nome.replace(/\s+/g, '_')}.xlsx`);
   }
 
+  function exportarPDF() {
+    const linhas = itens.map(i => ({
+      'Produto':   i.produto_nome + (i.produto_marca ? ` · ${i.produto_marca}` : ''),
+      'Unidade':   i.unidade_medida,
+      'Sistema':   parseFloat(i.estoque_sistema),
+      'Contado':   i.estoque_contado !== null ? parseFloat(i.estoque_contado) : '—',
+      'Diferença': i.diferenca !== null ? parseFloat(i.diferenca) : '—',
+      'Status':    i.estoque_contado === null ? 'Não contado' : i.diferenca === 0 ? 'OK' : i.diferenca > 0 ? 'Sobra' : 'Falta',
+    }));
+
+    const html = `
+      <html><head><title>${inventario.nome}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+        h1 { font-size: 16px; margin-bottom: 2px; }
+        p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+        th { background: #f0f0f0; }
+        tr:nth-child(even) { background: #fafafa; }
+      </style>
+      </head><body>
+      <h1>${inventario.nome}</h1>
+      <p class="sub">Iniciado por ${inventario.usuario_nome} em ${fmtData(inventario.iniciado_em)} · ${linhas.length} produto(s)</p>
+      <table>
+        <thead><tr>${Object.keys(linhas[0] || { 'Sem dados': '' }).map(k => `<th>${k}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${linhas.map(l => `<tr>${Object.values(l).map(v => `<td>${String(v).replace(/</g, '&lt;')}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+      </body></html>
+    `;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
+  }
+
   return (
     <div className="inv-contagem-tela">
 
@@ -245,6 +285,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
           </div>
           <div className="inv-contagem-header-acoes">
             <button className="inv-btn-outline" onClick={exportarExcel} title="Exportar como Excel">📊 Excel</button>
+            <button className="inv-btn-outline" onClick={exportarPDF} title="Exportar como PDF">🖨️ PDF</button>
             <button className="inv-btn-outline inv-btn-perigo" onClick={() => setConfirmCancel(true)}>✕ Cancelar</button>
             <button className="inv-btn-finalizar" onClick={() => setConfirmarFin(true)} disabled={contadores.contados === 0}>
               ✓ Finalizar inventário
@@ -492,23 +533,87 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
     carregar();
   }
 
-  function exportarExcel(inv) {
-    // Exporta o histórico de inventários
-    const dados = [{
-      'Nome': inv.nome,
-      'Status': STATUS_LABEL[inv.status],
-      'Tipo': TIPO_LABEL[inv.tipo],
-      'Total Produtos': inv.total_produtos,
-      'Contados': inv.produtos_contados,
-      'Divergências': inv.total_divergencias,
-      'Iniciado por': inv.usuario_nome,
-      'Iniciado em': fmtData(inv.iniciado_em),
-      'Finalizado em': inv.finalizado_em ? fmtData(inv.finalizado_em) : '—',
-    }];
-    const ws = XLSX.utils.json_to_sheet(dados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Inventário');
-    XLSX.writeFile(wb, `${inv.nome.replace(/\s+/g, '_')}.xlsx`);
+  const [exportando, setExportando] = useState(null); // id do inventário sendo exportado, ou null
+
+  async function buscarItensParaExportar(inv) {
+    const resp = await apiFetch(`/api/inventario/${inv.id}`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro ao buscar itens do inventário.');
+    return data.itens || [];
+  }
+
+  function linhasParaExportar(itens) {
+    return itens.map(i => ({
+      'Produto':         i.produto_nome,
+      'Marca':           i.produto_marca || '',
+      'Unidade':         i.unidade_medida,
+      'Estoque Sistema': parseFloat(i.estoque_sistema),
+      'Estoque Contado': i.estoque_contado !== null ? parseFloat(i.estoque_contado) : '',
+      'Diferença':       i.diferenca !== null ? parseFloat(i.diferenca) : '',
+      'Status':          i.estoque_contado === null ? 'Não contado' : i.diferenca === 0 ? 'OK' : i.diferenca > 0 ? 'Sobra' : 'Falta',
+    }));
+  }
+
+  async function exportarExcel(inv) {
+    setExportando(inv.id + '-xlsx');
+    try {
+      const itens = await buscarItensParaExportar(inv);
+      const linhas = linhasParaExportar(itens);
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      ws['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
+      XLSX.writeFile(wb, `${inv.nome.replace(/\s+/g, '_')}.xlsx`);
+    } catch (err) {
+      alert(err.message || 'Erro ao exportar Excel.');
+    }
+    setExportando(null);
+  }
+
+  async function exportarPDF(inv) {
+    setExportando(inv.id + '-pdf');
+    try {
+      const itens = await buscarItensParaExportar(inv);
+      const linhas = linhasParaExportar(itens);
+
+      const html = `
+        <html><head><title>${inv.nome}</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+          h1 { font-size: 16px; margin-bottom: 2px; }
+          p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+          th { background: #f0f0f0; }
+          tr:nth-child(even) { background: #fafafa; }
+          .status-Falta { color: #dc2626; font-weight: 700; }
+          .status-Sobra { color: #16a34a; font-weight: 700; }
+        </style>
+        </head><body>
+        <h1>${inv.nome}</h1>
+        <p class="sub">
+          Status: ${STATUS_LABEL[inv.status]} · Iniciado por ${inv.usuario_nome} em ${fmtData(inv.iniciado_em)}
+          ${inv.finalizado_em ? ` · Finalizado em ${fmtData(inv.finalizado_em)}` : ''}
+          · ${linhas.length} produto(s)
+        </p>
+        <table>
+          <thead><tr>${Object.keys(linhas[0] || { 'Sem dados': '' }).map(k => `<th>${k}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${linhas.map(l => `<tr>${Object.entries(l).map(([k, v]) => `<td class="status-${k === 'Status' ? v : ''}">${String(v).replace(/</g, '&lt;')}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+        </body></html>
+      `;
+
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 300);
+    } catch (err) {
+      alert(err.message || 'Erro ao exportar PDF.');
+    }
+    setExportando(null);
   }
 
   if (inventarioAtivo) {
@@ -593,7 +698,14 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
                     </button>
                   )}
                   {inv.status === 'finalizado' && (
-                    <button className="inv-btn-outline inv-btn-sm" onClick={() => exportarExcel(inv)} title="Exportar Excel">📊</button>
+                    <>
+                      <button className="inv-btn-outline inv-btn-sm" onClick={() => exportarExcel(inv)} disabled={exportando === inv.id + '-xlsx'} title="Exportar Excel">
+                        {exportando === inv.id + '-xlsx' ? '⏳' : '📊'}
+                      </button>
+                      <button className="inv-btn-outline inv-btn-sm" onClick={() => exportarPDF(inv)} disabled={exportando === inv.id + '-pdf'} title="Exportar PDF">
+                        {exportando === inv.id + '-pdf' ? '⏳' : '🖨️'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
