@@ -12,7 +12,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [planos,      setPlanos]      = useState(null);
   const [config,      setConfig]      = useState(null);
-  const [whatsapp,    setWhatsapp]    = useState("5500000000000");
+  const [contatosSuporte, setContatosSuporte] = useState([]);
   const [cobranca,    setCobranca]    = useState(null);
   const [carregando,  setCarregando]  = useState(false);
   const [erro,        setErro]        = useState("");
@@ -24,6 +24,13 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     btnRef.current?.focus();
     const tema = localStorage.getItem("theme") || "dark";
     document.body.className = tema;
+    // Carrega os contatos de suporte já na entrada, não só quando abre o modal
+    (async () => {
+      try {
+        const resp = await apiFetch("/superadmin/contatos-suporte");
+        if (resp.ok) setContatosSuporte(await resp.json());
+      } catch { /* botão de WhatsApp simplesmente não aparece se falhar */ }
+    })();
     return () => clearInterval(pollingRef.current);
   }, []);
 
@@ -53,7 +60,6 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         const resp = await apiFetch("/api/asaas/planos");
         const data = await resp.json();
         setPlanos(data);
-        if (data.whatsapp) setWhatsapp(data.whatsapp);
       } catch {
         setErro("Erro ao carregar planos. Tente novamente.");
       }
@@ -182,10 +188,17 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
             💳 Renovar Licença
           </button>
         )}
-        <a className="bloqueio-btn bloqueio-btn--whatsapp"
-          href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">
-          💬 Falar no WhatsApp
-        </a>
+        {contatosSuporte.filter(c => c.tipo === 'whatsapp').map(c => (
+          <a key={c.id} className="bloqueio-btn bloqueio-btn--whatsapp"
+            href={`https://wa.me/${c.valor}`} target="_blank" rel="noreferrer">
+            💬 {c.label || 'Falar no WhatsApp'}
+          </a>
+        ))}
+        {contatosSuporte.filter(c => c.tipo === 'email').map(c => (
+          <a key={c.id} className="bloqueio-btn bloqueio-btn--ghost" href={`mailto:${c.valor}`}>
+            ✉️ {c.label || c.valor}
+          </a>
+        ))}
         <button ref={btnRef} className="bloqueio-btn bloqueio-btn--ghost" onClick={onLogout}>
           Sair da Conta
         </button>

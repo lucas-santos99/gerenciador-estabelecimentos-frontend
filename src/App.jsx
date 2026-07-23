@@ -14,6 +14,7 @@ import RoleRoute from "./components/RoleRoute";
 import DashboardAdmin from "./pages/Administrador/DashboardAdmin";
 import SuperAdmins from "./pages/Administrador/SuperAdmins/SuperAdmins";
 import AuditoriaAdmin from "./pages/Administrador/SuperAdmins/AuditoriaAdmin";
+import ConfiguracoesGlobais from "./pages/Administrador/SuperAdmins/ConfiguracoesGlobais";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
@@ -103,6 +104,12 @@ function App() {
       <Route path="/admin/auditoria" element={
         <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
           <AuditoriaAdmin />
+        </RoleRoute></ProtectedRoute>
+      }/>
+
+      <Route path="/admin/configuracoes-globais" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <ConfiguracoesGlobais />
         </RoleRoute></ProtectedRoute>
       }/>
 

@@ -256,6 +256,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
 
+
   /* ── Config de Pix (maquininha vs. sistema) ──────────────── */
   useEffect(() => {
     if (!estabelecimentoId) return;
@@ -630,17 +631,28 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
     return 'ok';
   }
 
+  // Texto "vence em X dias" / "venceu há X dias" pra acompanhar a data
+  function textoDiasVencimento(data) {
+    if (!data) return '';
+    const hoje = new Date();
+    const venc = new Date(data);
+    const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+    if (diff < 0)  return ` (venceu há ${Math.abs(diff)} dia${Math.abs(diff) === 1 ? '' : 's'})`;
+    if (diff === 0) return ' (vence hoje)';
+    return ` (vence em ${diff} dia${diff === 1 ? '' : 's'})`;
+  }
+
   const svStatus = statusVencimento(cliente.data_vencimento);
 
   return (
     <div className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}`}>
 
-      <div className="cli-card-header" onClick={temDivida ? onDetalhes : undefined}>
+      <div className="cli-card-header" onClick={onDetalhes} style={{ cursor: "pointer" }}>
         <span className="cli-card-nome">{cliente.nome}</span>
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
       </div>
 
-      <div className="cli-card-corpo" onClick={temDivida ? onDetalhes : undefined}>
+      <div className="cli-card-corpo" onClick={onDetalhes} style={{ cursor: "pointer" }}>
         {limiteExcedido && (
           <span className="cli-badge-limite">⚠️ Limite excedido</span>
         )}
@@ -652,6 +664,9 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
             <span className="cli-info-label">Vencimento</span>
             <span className={`cli-info-valor${svStatus === 'vencido' ? ' vencido' : svStatus === 'proximo' ? ' proximo' : ''}`}>
               {temDivida ? formatarData(cliente.data_vencimento) : '—'}
+              {temDivida && cliente.data_vencimento && (
+                <small style={{ fontWeight: 500, opacity: 0.8 }}>{textoDiasVencimento(cliente.data_vencimento)}</small>
+              )}
               {svStatus === 'vencido' && ' 🔴'}
               {svStatus === 'proximo' && ' ⚠️'}
             </span>
@@ -678,10 +693,11 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
           </button>
         )}
 
-        {temDivida
-          ? <button className="cli-btn-acao detalhes" onClick={onDetalhes}>📋 Detalhes</button>
-          : <button className="cli-btn-acao excluir" onClick={podeExcluir ? onExcluir : undefined} disabled={!podeExcluir} title={!podeExcluir ? semPermMsg : 'Excluir'}>🗑 Excluir</button>
-        }
+        <button className="cli-btn-acao detalhes" onClick={onDetalhes} title="Ver histórico de compras e pagamentos">📋 Detalhes</button>
+
+        {!temDivida && (
+          <button className="cli-btn-acao excluir" onClick={podeExcluir ? onExcluir : undefined} disabled={!podeExcluir} title={!podeExcluir ? semPermMsg : 'Excluir'}>🗑 Excluir</button>
+        )}
 
         <button
           className="cli-btn-acao receber"

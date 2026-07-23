@@ -60,21 +60,6 @@ export default function DashboardAdmin() {
   const [mostrarAlertas,   setMostrarAlertas]    = useState(true);
   const [ordenacao,        setOrdenacao]         = useState({ campo: "", direcao: "asc" });
 
-  // Modal configurações globais
-  const [modalConfig,      setModalConfig]       = useState(false);
-  const [cfgLimite,        setCfgLimite]         = useState(3);
-  const [cfgMensalidade,   setCfgMensalidade]    = useState("49.90");
-  const [cfgWhatsapp,      setCfgWhatsapp]       = useState("");
-  const [cfgSalvando,      setCfgSalvando]       = useState(false);
-  const [cfgMsg,           setCfgMsg]            = useState("");
-  // Tela de bloqueio — textos editáveis
-  const [telaAbaTela,      setTelaAbaTela]       = useState("geral"); // "geral" | "tela"
-  const [cfgTelaTitulo,    setCfgTelaTitulo]     = useState("Acesso Bloqueado");
-  const [cfgTelaMensagem,  setCfgTelaMensagem]   = useState("");
-  const [cfgTelaInfo,      setCfgTelaInfo]       = useState("");
-  const [cfgPromoAtiva,    setCfgPromoAtiva]     = useState(false);
-  const [cfgPromoTexto,    setCfgPromoTexto]     = useState("");
-  const [cfgPromoValidade, setCfgPromoValidade]  = useState("");
   // Modal liberação de acesso manual
   const [modalLiberar,     setModalLiberar]      = useState(null); // { id, nome }
   const [diasLiberar,      setDiasLiberar]       = useState(30);
@@ -100,35 +85,6 @@ export default function DashboardAdmin() {
     });
   }
   /* ── carregar dados ─────────────────────────────────────── */
-  async function carregarConfigs() {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      const resp = await fetch(`${API_URL}/superadmin/config`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (resp.ok) {
-        const d = await resp.json();
-        setCfgLimite(d.limite_operadores_padrao ?? 3);
-        setCfgMensalidade(String(d.valor_mensalidade ?? "49.90"));
-        setCfgWhatsapp(d.whatsapp_suporte ?? "");
-      }
-      // Carregar textos da tela de bloqueio
-      const respTela = await fetch(`${API_URL}/superadmin/config-tela-bloqueio`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (respTela.ok) {
-        const t = await respTela.json();
-        setCfgTelaTitulo(t.titulo || "Acesso Bloqueado");
-        setCfgTelaMensagem(t.mensagem || "");
-        setCfgTelaInfo(t.info || "");
-        setCfgPromoAtiva(t.promo_ativa || false);
-        setCfgPromoTexto(t.promo_texto || "");
-        setCfgPromoValidade(t.promo_validade || "");
-      }
-    } catch {}
-  }
-
   async function carregarDados() {
     try {
       setLoading(true);
@@ -145,11 +101,6 @@ export default function DashboardAdmin() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function abrirConfig() {
-    setModalConfig(true);
-    carregarConfigs();
   }
 
   useEffect(() => { carregarDados(); }, []);
@@ -343,7 +294,7 @@ export default function DashboardAdmin() {
 
             <button
               className="btn btn-config"
-              onClick={abrirConfig}
+              onClick={() => navigate("/admin/configuracoes-globais")}
               title="Configurações globais do sistema"
             >
               <Icon.Config /> Configurações
@@ -696,156 +647,6 @@ export default function DashboardAdmin() {
                 disabled={bloqueando || motivoBloquear.trim().length < 3}
               >
                 {bloqueando ? "⏳ Bloqueando…" : "🔴 Confirmar Bloqueio"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL CONFIG GLOBAL ────────────────────────────── */}
-      {modalConfig && (
-        <div className="dash-modal-overlay" onClick={() => setModalConfig(false)}>
-          <div className="dash-modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-            <div className="dash-modal-icon">⚙️</div>
-            <div className="dash-modal-title">Configurações Globais</div>
-
-            {/* Abas */}
-            <div style={{ display:"flex", gap:4, borderBottom:"2px solid var(--border)", paddingBottom:8 }}>
-              {[{k:"geral",label:"⚙️ Geral"},{k:"tela",label:"🔒 Tela de Bloqueio"}].map(a => (
-                <button key={a.k} type="button" onClick={() => setTelaAbaTela(a.k)}
-                  style={{
-                    padding:"5px 14px", borderRadius:8, border:"1px solid",
-                    borderColor: telaAbaTela===a.k ? "var(--text-accent,#14b8a6)" : "transparent",
-                    background:  telaAbaTela===a.k ? "rgba(20,184,166,0.1)" : "transparent",
-                    color:       telaAbaTela===a.k ? "var(--text-accent,#14b8a6)" : "var(--text-secondary)",
-                    fontWeight:600, fontSize:"0.82rem", cursor:"pointer",
-                    fontFamily:"Plus Jakarta Sans, sans-serif",
-                  }}>
-                  {a.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Conteúdo da aba Geral */}
-            {telaAbaTela === "geral" && <>
-              <div className="dash-config-item">
-                <div className="dash-config-info">
-                  <span className="dash-config-label">👥 Limite padrão de operadores</span>
-                  <span className="dash-config-desc">Aplicado em novos estabelecimentos.</span>
-                </div>
-                <div className="dash-config-control">
-                  <input className="dash-config-input" type="number" min={0} max={50}
-                    value={cfgLimite} onChange={e => setCfgLimite(e.target.value)} />
-                  <span className="dash-config-unit">operadores</span>
-                </div>
-              </div>
-              <div className="dash-config-item">
-                <div className="dash-config-info">
-                  <span className="dash-config-label">💰 Valor padrão da mensalidade</span>
-                  <span className="dash-config-desc">Pode ser diferente por estabelecimento.</span>
-                </div>
-                <div className="dash-config-control">
-                  <span className="dash-config-unit">R$</span>
-                  <input className="dash-config-input" type="number" min={0} max={9999} step="0.01"
-                    value={cfgMensalidade} onChange={e => setCfgMensalidade(e.target.value)} style={{ width:90 }} />
-                  <span className="dash-config-unit">/mês</span>
-                </div>
-              </div>
-              <div className="dash-config-item">
-                <div className="dash-config-info">
-                  <span className="dash-config-label">💬 WhatsApp de suporte</span>
-                  <span className="dash-config-desc">Exibido na tela de bloqueio. Só números com DDI+DDD.</span>
-                </div>
-                <div className="dash-config-control">
-                  <input className="dash-config-input" type="text" placeholder="5553999998888"
-                    value={cfgWhatsapp} onChange={e => setCfgWhatsapp(e.target.value)}
-                    style={{ width:160, fontFamily:"JetBrains Mono, monospace" }} />
-                </div>
-              </div>
-            </>}
-
-            {/* Conteúdo da aba Tela de Bloqueio */}
-            {telaAbaTela === "tela" && <>
-              <div style={{ fontSize:"0.75rem", color:"var(--text-secondary)", marginBottom:4 }}>
-                Use <code style={{background:"var(--border)",padding:"1px 4px",borderRadius:4}}>**texto**</code> para negrito.
-              </div>
-              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
-                <span className="dash-config-label">🔒 Título</span>
-                <input className="dash-config-input" value={cfgTelaTitulo}
-                  onChange={e => setCfgTelaTitulo(e.target.value)} style={{ width:"100%" }} />
-              </div>
-              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
-                <span className="dash-config-label">📝 Mensagem principal</span>
-                <textarea className="dash-config-input" rows={2} value={cfgTelaMensagem}
-                  onChange={e => setCfgTelaMensagem(e.target.value)}
-                  placeholder="Ex: A assinatura de **{nome}** expirou."
-                  style={{ width:"100%", resize:"none", fontFamily:"Plus Jakarta Sans, sans-serif" }} />
-              </div>
-              <div className="dash-config-item" style={{ flexDirection:"column", alignItems:"stretch", gap:4 }}>
-                <span className="dash-config-label">ℹ️ Texto informativo</span>
-                <input className="dash-config-input" value={cfgTelaInfo}
-                  onChange={e => setCfgTelaInfo(e.target.value)} style={{ width:"100%" }}
-                  placeholder="Ex: Renove sua licença para continuar usando." />
-              </div>
-              <div style={{ borderTop:"1px solid var(--border)", paddingTop:12, marginTop:4 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <span className="dash-config-label">🎉 Banner de promoção</span>
-                  <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
-                    <input type="checkbox" checked={cfgPromoAtiva} onChange={e => setCfgPromoAtiva(e.target.checked)}
-                      style={{ accentColor:"#14b8a6", width:16, height:16 }} />
-                    <span style={{ fontSize:"0.78rem", fontWeight:600 }}>{cfgPromoAtiva ? "Ativo" : "Inativo"}</span>
-                  </label>
-                </div>
-                {cfgPromoAtiva && <>
-                  <input className="dash-config-input" value={cfgPromoTexto}
-                    onChange={e => setCfgPromoTexto(e.target.value)} style={{ width:"100%", marginBottom:6 }}
-                    placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
-                  <input className="dash-config-input" type="date" value={cfgPromoValidade}
-                    onChange={e => setCfgPromoValidade(e.target.value)} style={{ width:"100%" }} />
-                  <span style={{ fontSize:"0.7rem", color:"var(--text-secondary)" }}>Validade da promoção (opcional)</span>
-                </>}
-              </div>
-            </>}
-
-            {cfgMsg && (
-              <div className={`dash-config-msg ${cfgMsg.startsWith("✓") ? "sucesso" : "erro"}`}>
-                {cfgMsg}
-              </div>
-            )}
-
-            <div className="dash-modal-actions">
-              <button className="btn btn-ghost" onClick={() => setModalConfig(false)}>Cancelar</button>
-              <button className="btn btn-teal" disabled={cfgSalvando} onClick={async () => {
-                setCfgSalvando(true); setCfgMsg("");
-                try {
-                  const { data: session } = await supabase.auth.getSession();
-                  const token = session.session?.access_token;
-                  const resp = await fetch(`${API_URL}/superadmin/config`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({
-                      limite_operadores_padrao: parseInt(cfgLimite),
-                      valor_mensalidade:        parseFloat(cfgMensalidade),
-                      whatsapp_suporte:         cfgWhatsapp,
-                    }),
-                  });
-                  const d = await resp.json();
-                  if (!resp.ok) { setCfgMsg("❌ " + (d.error || "Erro ao salvar.")); return; }
-                  // Salvar também textos da tela de bloqueio
-                  await fetch(`${API_URL}/superadmin/config-tela-bloqueio`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({
-                      titulo: cfgTelaTitulo, mensagem: cfgTelaMensagem, info: cfgTelaInfo,
-                      promo_ativa: cfgPromoAtiva, promo_texto: cfgPromoTexto, promo_validade: cfgPromoValidade,
-                    }),
-                  });
-                  setCfgMsg("✓ Configurações salvas!");
-                  setTimeout(() => { setModalConfig(false); setCfgMsg(""); }, 1500);
-                } catch { setCfgMsg("❌ Erro interno."); }
-                finally { setCfgSalvando(false); }
-              }}>
-                {cfgSalvando ? "⏳ Salvando…" : "✓ Salvar Configurações"}
               </button>
             </div>
           </div>

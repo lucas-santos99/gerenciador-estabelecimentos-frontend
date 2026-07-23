@@ -861,23 +861,45 @@ body.light select {
 .est-licenca-badge--bloqueada .est-licenca-dot { background: var(--est-danger); box-shadow: 0 0 6px var(--est-danger); }
 
 /* Texto */
+.est-licenca-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
 .est-licenca-texto {
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-family: 'Plus Jakarta Sans', sans-serif;
   transition: opacity 0.2s, transform 0.2s;
 }
-.est-licenca-badge--ativa    .est-licenca-texto { color: var(--est-success); }
-.est-licenca-badge--atencao  .est-licenca-texto { color: var(--est-warning); }
+
+.est-licenca-data {
+  font-size: 0.6rem;
+  font-weight: 600;
+  opacity: 0.75;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.est-licenca-badge--ativa    .est-licenca-texto,
+.est-licenca-badge--ativa    .est-licenca-data    { color: var(--est-success); }
+.est-licenca-badge--atencao  .est-licenca-texto,
+.est-licenca-badge--atencao  .est-licenca-data    { color: var(--est-warning); }
 .est-licenca-badge--critica  .est-licenca-texto,
+.est-licenca-badge--critica  .est-licenca-data,
 .est-licenca-badge--vencida  .est-licenca-texto,
-.est-licenca-badge--bloqueada .est-licenca-texto { color: var(--est-danger); }
+.est-licenca-badge--vencida  .est-licenca-data,
+.est-licenca-badge--bloqueada .est-licenca-texto,
+.est-licenca-badge--bloqueada .est-licenca-data    { color: var(--est-danger); }
 
 /* Esconder texto quando collapsed */
-.est-sidebar.collapsed .est-licenca-texto {
+.est-sidebar.collapsed .est-licenca-textos {
   opacity: 0;
   width: 0;
   transform: translateX(-4px);

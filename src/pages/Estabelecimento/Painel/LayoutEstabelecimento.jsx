@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
+import { apiFetch } from "../../../utils/api";
 import "./LayoutEstabelecimento.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -199,6 +200,18 @@ export default function LayoutEstabelecimento({
 
   /* ── modal logout ────────────────────────────────────────── */
   const [modalLogout, setModalLogout] = useState(false);
+  const [modalFaleConosco, setModalFaleConosco] = useState(false);
+  const [contatosSuporte, setContatosSuporte] = useState(null); // null = ainda não buscou
+
+  async function abrirFaleConosco() {
+    setModalFaleConosco(true);
+    if (contatosSuporte === null) {
+      try {
+        const resp = await apiFetch('/superadmin/contatos-suporte');
+        setContatosSuporte(resp.ok ? await resp.json() : []);
+      } catch { setContatosSuporte([]); }
+    }
+  }
 
   /* ── atalhos de teclado F2–F6 ────────────────────────────── */
   useEffect(() => {
@@ -321,7 +334,10 @@ export default function LayoutEstabelecimento({
           {licenca && (
             <div className={`est-licenca-badge est-licenca-badge--${licenca.tipo}`} title={licenca.dataFmt ? `Vencimento: ${licenca.dataFmt}` : ''}>
               <span className="est-licenca-dot" />
-              <span className="est-licenca-texto">{licenca.texto}</span>
+              <span className="est-licenca-textos">
+                <span className="est-licenca-texto">{licenca.texto}</span>
+                {licenca.dataFmt && <span className="est-licenca-data">{licenca.dataFmt}</span>}
+              </span>
             </div>
           )}
 
@@ -330,6 +346,14 @@ export default function LayoutEstabelecimento({
             <span className="est-ljs-dot" />
             <span className="est-ljs-label">Lucas J. Systems</span>
           </div>
+
+          <div className="est-footer-divider" />
+
+          {/* Fale Conosco */}
+          <button className="est-theme-btn" onClick={abrirFaleConosco}>
+            <span className="est-nav-icon">💬</span>
+            <span className="est-footer-label">Fale Conosco</span>
+          </button>
 
           <div className="est-footer-divider" />
 
@@ -381,6 +405,49 @@ export default function LayoutEstabelecimento({
               </button>
               <button className="est-modal-confirm" onClick={confirmarLogout}>
                 Sim, sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL FALE CONOSCO ─────────────────────────────── */}
+      {modalFaleConosco && (
+        <div className="est-modal-overlay" onClick={() => setModalFaleConosco(false)}>
+          <div className="est-modal" onClick={e => e.stopPropagation()}>
+            <span className="est-modal-icon">💬</span>
+            <div className="est-modal-title">Fale Conosco</div>
+            {contatosSuporte === null ? (
+              <div className="est-modal-desc">Carregando...</div>
+            ) : contatosSuporte.length === 0 ? (
+              <div className="est-modal-desc">Nenhum contato de suporte cadastrado.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '4px 0 20px' }}>
+                {contatosSuporte.map(c => (
+                  <a
+                    key={c.id}
+                    href={c.tipo === 'whatsapp' ? `https://wa.me/${c.valor}` : `mailto:${c.valor}`}
+                    target={c.tipo === 'whatsapp' ? '_blank' : undefined}
+                    rel="noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+                      borderRadius: 10, textDecoration: 'none', textAlign: 'left',
+                      background: c.tipo === 'whatsapp' ? 'rgba(37,211,102,0.1)' : 'rgba(59,130,246,0.1)',
+                      color: c.tipo === 'whatsapp' ? '#128c7e' : '#1d4ed8', fontWeight: 600,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2rem' }}>{c.tipo === 'whatsapp' ? '📱' : '✉️'}</span>
+                    <div>
+                      <div>{c.label || (c.tipo === 'whatsapp' ? 'WhatsApp' : 'E-mail')}</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 400, opacity: 0.85 }}>{c.valor}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+            <div className="est-modal-actions">
+              <button className="est-modal-cancel" onClick={() => setModalFaleConosco(false)}>
+                Fechar
               </button>
             </div>
           </div>

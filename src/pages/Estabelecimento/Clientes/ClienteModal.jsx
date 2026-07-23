@@ -6,6 +6,15 @@ import '../Clientes.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Máscara "tipo calculadora": dígitos entram da direita pra esquerda,
+// vírgula fixa em 2 casas — digita "5000" e já vira "50,00" sozinho.
+function digitarValorMascarado(valorBruto) {
+  const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
+  if (!digitos) return '';
+  const numero = parseInt(digitos, 10) / 100;
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatarDataInput(s) {
   if (!s) return '';
   try { return s.includes('T') ? s.split('T')[0] : s; }
@@ -28,7 +37,7 @@ export default function ClienteModal({
     !cliente || parseFloat(cliente?.limite_credito || 0) === 0
   );
   const [limiteCredito,  setLimiteCredito]  = useState(
-    parseFloat(cliente?.limite_credito || 0).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 })
+    parseFloat(cliente?.limite_credito || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   );
   const [dataVencimento, setDataVencimento] = useState(formatarDataInput(cliente?.data_vencimento));
   const [salvando,       setSalvando]       = useState(false);
@@ -176,7 +185,7 @@ export default function ClienteModal({
                   type="text"
                   placeholder="0,00"
                   value={limiteCredito}
-                  onChange={e => setLimiteCredito(e.target.value)}
+                  onChange={e => setLimiteCredito(digitarValorMascarado(e.target.value))}
                   disabled={salvando}
                   style={{ marginTop: 8 }}
                 />
