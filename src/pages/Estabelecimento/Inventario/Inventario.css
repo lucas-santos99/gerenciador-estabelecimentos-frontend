@@ -876,6 +876,121 @@
   .inv-mov-col-cat { display: none; }
 }
 
+/* ── Stats clicáveis no card de inventário ── */
+.inv-stat-clicavel {
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  border-radius: 8px;
+}
+.inv-stat-clicavel:hover {
+  background: var(--est-hover);
+  transform: translateY(-1px);
+}
+
+/* ── Modal de detalhes da contagem (lista de produtos) ── */
+.inv-modal-detalhes {
+  max-width: 720px;
+}
+
+.inv-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inv-modal-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: calc(0.75rem * var(--inv-font-scale, 1));
+  color: var(--est-text-muted);
+}
+
+.inv-modal-fechar {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--est-text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.inv-modal-fechar:hover { background: var(--est-hover); color: var(--est-text); }
+
+.inv-modal-busca-row { display: flex; }
+
+.inv-modal-filtros {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inv-modal-body {
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.inv-modal-tabela {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.inv-modal-tabela-header,
+.inv-modal-tabela-linha {
+  display: grid;
+  grid-template-columns: 1fr 100px 100px 100px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.inv-modal-tabela-header {
+  background: var(--est-input);
+  font-size: calc(0.68rem * var(--inv-font-scale, 1));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--est-text-muted);
+}
+
+.inv-modal-tabela-linha {
+  border-top: 1px solid var(--est-border);
+  font-size: calc(0.82rem * var(--inv-font-scale, 1));
+}
+.inv-modal-tabela-linha:hover { background: var(--est-hover); }
+
+.inv-modal-tabela-produto {
+  font-weight: 600;
+  color: var(--est-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-modal-tabela-marca { font-weight: 400; color: var(--est-text-muted); }
+
+.inv-modal-tabela-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: calc(0.78rem * var(--inv-font-scale, 1));
+  color: var(--est-text-soft);
+  text-align: right;
+}
+
+.inv-dif-mais  { color: var(--est-success); font-weight: 700; }
+.inv-dif-menos { color: var(--est-danger);  font-weight: 700; }
+.inv-dif-ok    { color: var(--est-text-muted); }
+
+@media (max-width: 640px) {
+  .inv-modal-tabela-header, .inv-modal-tabela-linha { grid-template-columns: 1fr 70px 70px 70px; font-size: 0.72rem; }
+}
+
 /* ── Toggle colapsável (preview e guia no Ajuste Rápido) ── */
 .inv-collapse-toggle {
   display: flex;

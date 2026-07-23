@@ -444,6 +444,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
   const [sucesso,         setSucesso]         = useState('');
   const [erro,            setErro]            = useState('');
   const [pagina,          setPagina]          = useState(0);
+  const [modalDetalhes,   setModalDetalhes]   = useState(null); // { inv, filtroInicial }
   const LIMIT = 10;
 
   const carregar = useCallback(async () => {
@@ -606,15 +607,18 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
                 )}
               </div>
               <div className="inv-card-stats">
-                <div className="inv-stat">
+                <div className="inv-stat inv-stat-clicavel" onClick={() => setModalDetalhes({ inv, filtroInicial: 'todos' })}>
                   <span className="inv-stat-val">{inv.total_produtos}</span>
                   <span className="inv-stat-label">Produtos</span>
                 </div>
-                <div className="inv-stat">
+                <div className="inv-stat inv-stat-clicavel" onClick={() => setModalDetalhes({ inv, filtroInicial: 'contados' })}>
                   <span className="inv-stat-val">{inv.produtos_contados}</span>
                   <span className="inv-stat-label">Contados</span>
                 </div>
-                <div className={`inv-stat${inv.total_divergencias > 0 ? ' inv-stat-alerta' : ''}`}>
+                <div
+                  className={`inv-stat inv-stat-clicavel${inv.total_divergencias > 0 ? ' inv-stat-alerta' : ''}`}
+                  onClick={() => setModalDetalhes({ inv, filtroInicial: 'divergencias' })}
+                >
                   <span className="inv-stat-val">{inv.total_divergencias}</span>
                   <span className="inv-stat-label">Divergências</span>
                 </div>
@@ -650,6 +654,147 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
           onFechar={() => setShowNovo(false)}
         />
       )}
+
+      {modalDetalhes && (
+        <ModalDetalhesContagem
+          inv={modalDetalhes.inv}
+          filtroInicial={modalDetalhes.filtroInicial}
+          onFechar={() => setModalDetalhes(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL — DETALHES DA CONTAGEM (lista de produtos, somente leitura)
+════════════════════════════════════════════════════════════ */
+function ModalDetalhesContagem({ inv, filtroInicial = 'todos', onFechar }) {
+  const [itens,   setItens]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [erro,    setErro]    = useState('');
+  const [filtro,  setFiltro]  = useState(filtroInicial);
+  const [busca,   setBusca]   = useState('');
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setLoading(true);
+      setErro('');
+      try {
+        const resp = await apiFetch(`/api/inventario/${inv.id}`);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error);
+        if (!cancelado) setItens(data.itens || []);
+      } catch (err) { if (!cancelado) setErro(err.message); }
+      finally { if (!cancelado) setLoading(false); }
+    })();
+    return () => { cancelado = true; };
+  }, [inv.id]);
+
+  useEffect(() => {
+    function esc(e) { if (e.key === 'Escape') onFechar(); }
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onFechar]);
+
+  const itensFiltrados = itens.filter(item => {
+    const matchBusca = !busca
+      || item.produto_nome.toLowerCase().includes(busca.toLowerCase())
+      || (item.produto_marca || '').toLowerCase().includes(busca.toLowerCase());
+    if (!matchBusca) return false;
+    if (filtro === 'contados')      return item.estoque_contado !== null;
+    if (filtro === 'nao_contados')  return item.estoque_contado === null;
+    if (filtro === 'divergencias')  return item.diferenca !== null && item.diferenca !== 0;
+    return true;
+  });
+
+  const FILTROS = [
+    { k: 'todos',         label: `Todos (${itens.length})` },
+    { k: 'contados',      label: `✓ Contados (${itens.filter(i => i.estoque_contado !== null).length})` },
+    { k: 'nao_contados',  label: `⬜ Não contados (${itens.filter(i => i.estoque_contado === null).length})` },
+    { k: 'divergencias',  label: `⚠️ Divergências (${itens.filter(i => i.diferenca !== null && i.diferenca !== 0).length})` },
+  ];
+
+  function difClasse(d) {
+    if (d === null) return '';
+    if (d > 0) return 'inv-dif-mais';
+    if (d < 0) return 'inv-dif-menos';
+    return 'inv-dif-ok';
+  }
+
+  return (
+    <div className="inv-modal-overlay" onClick={onFechar}>
+      <div className="inv-modal inv-modal-detalhes" onClick={e => e.stopPropagation()}>
+        <div className="inv-modal-header">
+          <div>
+            <div className="inv-modal-titulo">📋 {inv.nome}</div>
+            <div className="inv-modal-subtitulo">
+              <span className={`inv-badge ${STATUS_CLASSE[inv.status]}`}>{STATUS_LABEL[inv.status]}</span>
+              <span>👤 {inv.usuario_nome}</span>
+              <span>📅 {fmtData(inv.iniciado_em)}</span>
+            </div>
+          </div>
+          <button className="inv-modal-fechar" onClick={onFechar}>✕</button>
+        </div>
+
+        <div className="inv-modal-busca-row">
+          <input
+            className="inv-input"
+            placeholder="🔍 Buscar produto…"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+          />
+        </div>
+
+        <div className="inv-modal-filtros">
+          {FILTROS.map(f => (
+            <button
+              key={f.k}
+              className={`inv-filtro-btn${filtro === f.k ? ' ativo' : ''}`}
+              onClick={() => setFiltro(f.k)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="inv-modal-body">
+          {loading ? (
+            <div className="inv-loading">⏳ Carregando…</div>
+          ) : erro ? (
+            <div className="inv-erro-bar">⚠️ {erro}</div>
+          ) : itensFiltrados.length === 0 ? (
+            <div className="inv-vazio"><span className="inv-vazio-icon">🔍</span><p>Nenhum produto encontrado com esse filtro.</p></div>
+          ) : (
+            <div className="inv-modal-tabela">
+              <div className="inv-modal-tabela-header">
+                <span>Produto</span>
+                <span>Sistema</span>
+                <span>Contado</span>
+                <span>Diferença</span>
+              </div>
+              {itensFiltrados.map(item => (
+                <div key={item.id} className="inv-modal-tabela-linha">
+                  <span className="inv-modal-tabela-produto">
+                    {item.produto_nome}
+                    {item.produto_marca && <span className="inv-modal-tabela-marca"> · {item.produto_marca}</span>}
+                  </span>
+                  <span className="inv-modal-tabela-mono">{fmtQ(item.estoque_sistema, item.unidade_medida)}</span>
+                  <span className="inv-modal-tabela-mono">
+                    {item.estoque_contado !== null ? fmtQ(item.estoque_contado, item.unidade_medida) : '—'}
+                  </span>
+                  <span className={`inv-modal-tabela-mono ${difClasse(item.diferenca)}`}>
+                    {item.diferenca !== null
+                      ? `${item.diferenca > 0 ? '+' : ''}${fmtQ(item.diferenca, item.unidade_medida)}`
+                      : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -844,7 +989,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
   const [salvando,     setSalvando]     = useState(false);
   const [sucesso,      setSucesso]      = useState('');
   const [erro,         setErro]         = useState('');
-  const [showPreview,  setShowPreview]  = useState(false);
+  const [showPreview,  setShowPreview]  = useState(true);
   const [showGuia,     setShowGuia]     = useState(false);
   const inputRef = useRef(null);
 
