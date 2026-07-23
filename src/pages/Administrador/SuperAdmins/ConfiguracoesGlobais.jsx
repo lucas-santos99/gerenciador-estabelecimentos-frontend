@@ -15,6 +15,7 @@ export default function ConfiguracoesGlobais() {
   const API_URL  = import.meta.env.VITE_API_URL;
 
   const [carregando,   setCarregando]   = useState(true);
+  const [aba,          setAba]          = useState("geral"); // 'geral' | 'tela' | 'contatos'
 
   // Config geral
   const [cfgLimite,       setCfgLimite]       = useState(3);
@@ -175,7 +176,38 @@ export default function ConfiguracoesGlobais() {
           <div className="sa-loading"><div className="sa-spinner" /> Carregando...</div>
         ) : (
           <>
+            {/* ── NAVEGAÇÃO DE ABAS ───────────────────────────── */}
+            <div style={{ display: "flex", gap: 6, borderBottom: "2px solid var(--border)", marginBottom: 20, paddingBottom: 2 }}>
+              {[
+                { k: "geral",    label: "⚙️ Padrões do Sistema" },
+                { k: "tela",     label: "🔒 Tela de Bloqueio" },
+                { k: "contatos", label: "💬 Contatos de Suporte" },
+              ].map(t => (
+                <button
+                  key={t.k}
+                  onClick={() => setAba(t.k)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "8px 8px 0 0",
+                    border: "none",
+                    borderBottom: aba === t.k ? "2px solid #14b8a6" : "2px solid transparent",
+                    marginBottom: -2,
+                    background: aba === t.k ? "var(--bg-hover)" : "transparent",
+                    color: aba === t.k ? "var(--text-accent)" : "var(--text-secondary)",
+                    fontWeight: aba === t.k ? 700 : 600,
+                    fontSize: "0.85rem",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* ── GERAL ────────────────────────────────────── */}
+            {aba === "geral" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
@@ -216,8 +248,10 @@ export default function ConfiguracoesGlobais() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* ── TELA DE BLOQUEIO ────────────────────────────── */}
+            {aba === "tela" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
@@ -270,15 +304,17 @@ export default function ConfiguracoesGlobais() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* ── CONTATOS DE SUPORTE ─────────────────────────── */}
+            {aba === "contatos" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
                   <span className="sa-config-icon">💬</span>
                   <div>
                     <div className="sa-config-title">Contatos de Suporte</div>
-                    <div className="sa-config-subtitle">Aparecem no "Fale Conosco" (Clientes/Fiado) e na tela de bloqueio. Pode cadastrar quantos quiser.</div>
+                    <div className="sa-config-subtitle">Aparecem no "Fale Conosco" (barra lateral do estabelecimento) e na tela de bloqueio. Pode cadastrar quantos quiser.</div>
                   </div>
                 </div>
               </div>
@@ -291,7 +327,7 @@ export default function ConfiguracoesGlobais() {
                     <div key={c.id} className="sa-config-item">
                       <div className="sa-config-item-info">
                         <span className="sa-config-item-label">
-                          {c.tipo === "whatsapp" ? "📱" : "✉️"} {c.label || (c.tipo === "whatsapp" ? "WhatsApp" : "E-mail")}
+                          {c.tipo === "whatsapp" ? "🟢" : "✉️"} {c.label || (c.tipo === "whatsapp" ? "WhatsApp" : "E-mail")}
                         </span>
                         <span className="sa-config-item-desc">{c.valor}</span>
                       </div>
@@ -302,7 +338,7 @@ export default function ConfiguracoesGlobais() {
 
                 <div className="sa-config-item" style={{ flexWrap: "wrap", gap: 10 }}>
                   <select className="sa-config-input" value={novoTipo} onChange={e => setNovoTipo(e.target.value)} style={{ width: 120 }}>
-                    <option value="whatsapp">📱 WhatsApp</option>
+                    <option value="whatsapp">🟢 WhatsApp</option>
                     <option value="email">✉️ E-mail</option>
                   </select>
                   <input className="sa-config-input" placeholder={novoTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
@@ -316,6 +352,7 @@ export default function ConfiguracoesGlobais() {
                 {msgContato && <div className="sa-config-msg erro">{msgContato}</div>}
               </div>
             </div>
+            )}
           </>
         )}
 

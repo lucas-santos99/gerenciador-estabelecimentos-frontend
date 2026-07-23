@@ -429,17 +429,29 @@ export default function LayoutEstabelecimento({
                     href={c.tipo === 'whatsapp' ? `https://wa.me/${c.valor}` : `mailto:${c.valor}`}
                     target={c.tipo === 'whatsapp' ? '_blank' : undefined}
                     rel="noreferrer"
+                    className="est-contato-suporte-link"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
-                      borderRadius: 10, textDecoration: 'none', textAlign: 'left',
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+                      borderRadius: 12, textDecoration: 'none', textAlign: 'left',
                       background: c.tipo === 'whatsapp' ? 'rgba(37,211,102,0.1)' : 'rgba(59,130,246,0.1)',
+                      border: `1px solid ${c.tipo === 'whatsapp' ? 'rgba(37,211,102,0.3)' : 'rgba(59,130,246,0.3)'}`,
                       color: c.tipo === 'whatsapp' ? '#128c7e' : '#1d4ed8', fontWeight: 600,
+                      transition: 'transform 0.15s, box-shadow 0.15s',
                     }}
                   >
-                    <span style={{ fontSize: '1.2rem' }}>{c.tipo === 'whatsapp' ? '📱' : '✉️'}</span>
+                    {c.tipo === 'whatsapp' ? (
+                      <svg viewBox="0 0 24 24" width="26" height="26" fill="#25D366" style={{ flexShrink: 0 }}>
+                        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.48 1.32 5.01L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.92 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m0 1.67c2.2 0 4.26.86 5.82 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.24-8.24 8.24a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24m-4.53 4.7c-.16 0-.42.06-.64.3-.22.24-.85.83-.85 2.02s.87 2.34 1 2.5c.12.16 1.7 2.6 4.14 3.64.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.44-.59 1.64-1.15.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28-.24-.12-1.44-.71-1.66-.79-.22-.08-.39-.12-.55.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.36-.76-1.86-.2-.48-.4-.42-.55-.43z"/>
+                      </svg>
+                    ) : (
+                      <span style={{ fontSize: '1.3rem' }}>✉️</span>
+                    )}
                     <div>
                       <div>{c.label || (c.tipo === 'whatsapp' ? 'WhatsApp' : 'E-mail')}</div>
                       <div style={{ fontSize: '0.8rem', fontWeight: 400, opacity: 0.85 }}>{c.valor}</div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, marginTop: 3 }}>
+                        {c.tipo === 'whatsapp' ? '👉 Clique aqui para conversar no WhatsApp' : '👉 Clique aqui para enviar um e-mail'}
+                      </div>
                     </div>
                   </a>
                 ))}

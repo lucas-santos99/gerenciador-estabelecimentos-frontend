@@ -905,3 +905,8 @@ body.light select {
   transform: translateX(-4px);
   pointer-events: none;
 }
+/* ── Fale Conosco: destaca que o card é clicável ── */
+.est-contato-suporte-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
