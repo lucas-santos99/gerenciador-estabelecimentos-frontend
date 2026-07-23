@@ -413,6 +413,16 @@ export default function ProdutoModal({
 
   /* ── Labels dinâmicos por unidade ───────────────────────── */
   const isKg        = form.unidade_medida === 'kg';
+
+  /* ── Prévia do ajuste de estoque, ao vivo conforme digita ── */
+  const ajusteQtdDigitada  = paraFloatBR(ajusteQtd);
+  const ajusteQtdConvertida = (isKg && ajusteUnidade === 'g') ? ajusteQtdDigitada / 1000 : ajusteQtdDigitada;
+  const estoqueAtualNum = paraFloatBR(form.estoque_atual);
+  const estoqueDepois = ajusteQtd.trim()
+    ? (ajusteTipo === 'correcao' ? ajusteQtdConvertida
+        : ['entrada', 'devolucao'].includes(ajusteTipo) ? estoqueAtualNum + ajusteQtdConvertida
+        : Math.max(0, estoqueAtualNum - ajusteQtdConvertida))
+    : null;
   const labelVenda  = isKg ? 'Preço de venda (R$/kg) *' : 'Preço de venda (R$/un) *';
   const labelCusto  = isKg ? 'Preço de custo (R$/kg)' : 'Preço de custo (R$/un)';
 
@@ -660,7 +670,6 @@ export default function ProdutoModal({
                   {isEdit ? (
                     <div className="prod-estoque-readonly">
                       {fmtQ(paraFloatBR(form.estoque_atual), form.unidade_medida)}
-                      <span className="prod-estoque-readonly-hint">Ajuste abaixo — não dá mais pra editar direto aqui</span>
                     </div>
                   ) : (
                     <input
@@ -710,7 +719,7 @@ export default function ProdutoModal({
                       </div>
 
                       <div className="prod-ajuste-linha">
-                        {form.unidade_medida === 'kg' && (
+                        {isKg && (
                           <div className="prod-unidade-toggle">
                             {['kg', 'g'].map(u => (
                               <button key={u} type="button"
@@ -721,14 +730,17 @@ export default function ProdutoModal({
                             ))}
                           </div>
                         )}
-                        <input
-                          className="prod-input prod-ajuste-qtd"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder={form.unidade_medida === 'kg' && ajusteUnidade === 'kg' ? '0,000' : '0'}
-                          value={ajusteQtd}
-                          onChange={e => digitarAjusteQtd(e.target.value)}
-                        />
+                        <div className="prod-ajuste-qtd-wrap">
+                          <input
+                            className="prod-input prod-ajuste-qtd"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder={isKg && ajusteUnidade === 'kg' ? '0,000' : '0'}
+                            value={ajusteQtd}
+                            onChange={e => digitarAjusteQtd(e.target.value)}
+                          />
+                          {!isKg && <span className="prod-ajuste-qtd-unidade">un</span>}
+                        </div>
                         <input
                           className="prod-input prod-ajuste-motivo"
                           placeholder="Motivo…"
@@ -740,6 +752,18 @@ export default function ProdutoModal({
                           {(MOTIVOS_SUGERIDOS_PRODUTO[ajusteTipo] || []).map(m => <option key={m} value={m} />)}
                         </datalist>
                       </div>
+
+                      {estoqueDepois !== null && (
+                        <div className="prod-ajuste-preview">
+                          <span>Estoque atual: <strong>{fmtQ(estoqueAtualNum, form.unidade_medida)}</strong></span>
+                          <span className="prod-ajuste-preview-seta">→</span>
+                          <span>Após ajuste: <strong className={
+                            estoqueDepois > estoqueAtualNum ? 'prod-ajuste-preview-mais'
+                            : estoqueDepois < estoqueAtualNum ? 'prod-ajuste-preview-menos' : ''
+                          }>{fmtQ(estoqueDepois, form.unidade_medida)}</strong></span>
+                        </div>
+                      )}
+
                       <span className="prod-ajuste-hint">Preenchendo aqui, é registrado como movimentação — igual ao Ajuste Rápido do Inventário.</span>
                     </div>
                   </div>

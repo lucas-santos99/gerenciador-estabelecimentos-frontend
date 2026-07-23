@@ -878,15 +878,6 @@
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 0.95rem;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.prod-estoque-readonly-hint {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 400;
-  font-size: 0.72rem;
-  color: var(--est-text-muted);
 }
 
 /* ── Ajustar estoque (dentro do modal de produto) ────────── */
@@ -967,6 +958,44 @@
 
 .prod-ajuste-qtd { max-width: 140px; }
 .prod-ajuste-motivo { flex: 1; min-width: 160px; }
+
+.prod-ajuste-qtd-wrap {
+  display: flex;
+  align-items: stretch;
+}
+.prod-ajuste-qtd-wrap .prod-ajuste-qtd {
+  border-radius: 10px 0 0 10px;
+  border-right: none;
+}
+.prod-ajuste-qtd-unidade {
+  padding: 0 10px;
+  border: 1px solid var(--est-border);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  background: var(--est-sidebar, var(--est-input));
+  color: var(--est-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+}
+
+.prod-ajuste-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--est-input);
+  font-size: 0.78rem;
+  color: var(--est-text-soft);
+}
+.prod-ajuste-preview strong { color: var(--est-text); font-family: 'JetBrains Mono', monospace; }
+.prod-ajuste-preview-seta { color: var(--est-text-muted); }
+.prod-ajuste-preview-mais { color: var(--est-success, #22c55e) !important; }
+.prod-ajuste-preview-menos { color: var(--est-danger, #ef4444) !important; }
 
 .prod-ajuste-hint {
   font-size: 0.72rem;
