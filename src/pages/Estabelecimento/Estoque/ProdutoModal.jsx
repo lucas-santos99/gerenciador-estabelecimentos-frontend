@@ -63,6 +63,28 @@ function encontrarMarcaParecida(valorDigitado, marcasExistentes) {
 // Máscara "tipo calculadora": os dígitos entram da direita pra esquerda
 // e a vírgula fica fixa nas casas decimais informadas — digita "1100" com
 // 2 casas e já vira "11,00" sozinho. Vírgula digitada na mão é ignorada.
+function fmtQ(v, u) {
+  return u === 'kg'
+    ? parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kg'
+    : Math.trunc(parseFloat(v || 0)) + ' un';
+}
+
+const MOTIVOS_SUGERIDOS_PRODUTO = {
+  entrada:   ['Compra de fornecedor', 'Reposição de estoque', 'Transferência entre lojas'],
+  saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas'],
+  perda:     ['Produto vencido', 'Produto danificado', 'Produto extraviado', 'Furto/roubo'],
+  devolucao: ['Devolução de cliente insatisfeito', 'Devolução ao fornecedor'],
+  correcao:  ['Acerto de contagem manual', 'Corrigir erro de cadastro'],
+};
+
+const TIPOS_AJUSTE = [
+  { key: 'entrada',   label: '📦 Entrada',   cor: 'verde',    desc: 'Reposição de mercadoria, compra de fornecedor.' },
+  { key: 'saida',     label: '📤 Saída',      cor: 'azul',     desc: 'Saída não registrada como venda.' },
+  { key: 'perda',     label: '🗑️ Perda',      cor: 'vermelho', desc: 'Produto vencido, danificado ou extraviado.' },
+  { key: 'devolucao', label: '↩️ Devolução',  cor: 'roxo',     desc: 'Devolução de cliente ou ao fornecedor.' },
+  { key: 'correcao',  label: '✏️ Correção',   cor: 'amarelo',  desc: 'Define o estoque exatamente no valor informado.' },
+];
+
 function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
   if (!digitos) return '';
@@ -123,6 +145,14 @@ export default function ProdutoModal({
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
   const [marcasExistentes,  setMarcasExistentes]  = useState([]);
   const [sugestaoMarca,     setSugestaoMarca]     = useState(null); // { marca, exata } | null
+
+  // ── Ajuste de estoque (só no modo edição — substitui a edição livre) ──
+  const [ajusteTipo,     setAjusteTipo]     = useState('entrada');
+  const [ajusteQtd,      setAjusteQtd]      = useState('');
+  const [ajusteMotivo,   setAjusteMotivo]   = useState('');
+  const [ajusteUnidade,  setAjusteUnidade]  = useState('kg'); // 'kg' | 'g'
+  const [ajustando,      setAjustando]      = useState(false);
+  const [ajusteMsg,      setAjusteMsg]      = useState('');
 
   const nomeRef        = useRef(null);
   const novaCatRef     = useRef(null);
@@ -293,10 +323,49 @@ export default function ProdutoModal({
     }
   }
 
+  /* ── Ajuste de estoque (edição) — mesma rota do Ajuste Rápido ── */
+  function digitarAjusteQtd(valorBruto) {
+    const casas = form.unidade_medida === 'kg' ? (ajusteUnidade === 'g' ? 0 : 3) : 0;
+    setAjusteQtd(digitarValorMascarado(valorBruto, casas));
+  }
+
+  async function enviarAjusteEstoque() {
+    const qtdDigitada = paraFloatBR(ajusteQtd);
+    const qtdConvertida = (form.unidade_medida === 'kg' && ajusteUnidade === 'g') ? qtdDigitada / 1000 : qtdDigitada;
+
+    const resp = await apiFetch('/api/inventario/ajuste-rapido', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        produto_id: produtoEditar.id,
+        tipo:       ajusteTipo,
+        quantidade: qtdConvertida,
+        motivo:     ajusteMotivo.trim(),
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro ao ajustar estoque');
+    return data;
+  }
+
   /* ── Salvar produto ─────────────────────────────────────── */
   async function salvar(e) {
     e.preventDefault();
     setErro('');
+
+    // Validação do ajuste de estoque, se o comerciante começou a preencher
+    const temAjustePreenchido = isEdit && (ajusteQtd.trim() || ajusteMotivo.trim());
+    if (temAjustePreenchido) {
+      if (!ajusteQtd.trim() || paraFloatBR(ajusteQtd) <= 0) {
+        setErro('Informe uma quantidade válida para o ajuste de estoque.');
+        return;
+      }
+      if (!ajusteMotivo.trim()) {
+        setErro('Informe o motivo do ajuste de estoque.');
+        return;
+      }
+    }
+
     setSalvando(true);
 
     const url = isEdit
@@ -318,6 +387,22 @@ export default function ProdutoModal({
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao salvar produto');
+
+      // Produto salvo — se tinha ajuste de estoque preenchido, aplica agora
+      if (temAjustePreenchido) {
+        try {
+          setAjustando(true);
+          await enviarAjusteEstoque();
+        } catch (ajusteErr) {
+          // O produto já foi salvo — avisa que só o ajuste de estoque falhou
+          setErro(`Produto salvo, mas o ajuste de estoque falhou: ${ajusteErr.message}`);
+          setSalvando(false);
+          setAjustando(false);
+          return;
+        }
+        setAjustando(false);
+      }
+
       onSalvo(data);
     } catch (err) {
       setErro(err.message);
@@ -572,16 +657,23 @@ export default function ProdutoModal({
                   <label className="prod-label">
                     Estoque atual * <span className="prod-label-unit">({form.unidade_medida})</span>
                   </label>
-                  <input
-                    className="prod-input"
-                    type="text"
-                    inputMode="decimal"
-                    name="estoque_atual"
-                    readOnly={somenteLeitura}
-                    value={form.estoque_atual}
-                    onChange={atualizar}
-                    required
-                  />
+                  {isEdit ? (
+                    <div className="prod-estoque-readonly">
+                      {fmtQ(paraFloatBR(form.estoque_atual), form.unidade_medida)}
+                      <span className="prod-estoque-readonly-hint">Ajuste abaixo — não dá mais pra editar direto aqui</span>
+                    </div>
+                  ) : (
+                    <input
+                      className="prod-input"
+                      type="text"
+                      inputMode="decimal"
+                      name="estoque_atual"
+                      readOnly={somenteLeitura}
+                      value={form.estoque_atual}
+                      onChange={atualizar}
+                      required
+                    />
+                  )}
                 </div>
 
                 <div className="prod-form-group">
@@ -599,6 +691,59 @@ export default function ProdutoModal({
                   />
                   <span className="prod-label-hint">Alerta de estoque baixo</span>
                 </div>
+
+                {isEdit && !somenteLeitura && (
+                  <div className="prod-form-group prod-form-full">
+                    <div className="prod-ajuste-box">
+                      <div className="prod-ajuste-titulo">
+                        📦 Ajustar estoque <span className="prod-label-unit">(opcional)</span>
+                      </div>
+
+                      <div className="prod-tipos-ajuste">
+                        {TIPOS_AJUSTE.map(t => (
+                          <button key={t.key} type="button"
+                            className={`prod-tipo-ajuste-btn prod-cor-${t.cor}${ajusteTipo === t.key ? ' ativo' : ''}`}
+                            onClick={() => setAjusteTipo(t.key)}>
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="prod-ajuste-linha">
+                        {form.unidade_medida === 'kg' && (
+                          <div className="prod-unidade-toggle">
+                            {['kg', 'g'].map(u => (
+                              <button key={u} type="button"
+                                className={`prod-unidade-toggle-btn${ajusteUnidade === u ? ' ativo' : ''}`}
+                                onClick={() => { setAjusteUnidade(u); setAjusteQtd(''); }}>
+                                {u === 'kg' ? 'kg' : 'gramas'}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <input
+                          className="prod-input prod-ajuste-qtd"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={form.unidade_medida === 'kg' && ajusteUnidade === 'kg' ? '0,000' : '0'}
+                          value={ajusteQtd}
+                          onChange={e => digitarAjusteQtd(e.target.value)}
+                        />
+                        <input
+                          className="prod-input prod-ajuste-motivo"
+                          placeholder="Motivo…"
+                          value={ajusteMotivo}
+                          onChange={e => setAjusteMotivo(e.target.value)}
+                          list="motivos-ajuste-produto"
+                        />
+                        <datalist id="motivos-ajuste-produto">
+                          {(MOTIVOS_SUGERIDOS_PRODUTO[ajusteTipo] || []).map(m => <option key={m} value={m} />)}
+                        </datalist>
+                      </div>
+                      <span className="prod-ajuste-hint">Preenchendo aqui, é registrado como movimentação — igual ao Ajuste Rápido do Inventário.</span>
+                    </div>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -704,8 +849,8 @@ export default function ProdutoModal({
                 {somenteLeitura ? 'Fechar' : 'Cancelar (Esc)'}
               </button>
               {!somenteLeitura && (
-                <button type="submit" className="prod-modal-btn-salvar" disabled={salvando}>
-                  {salvando ? '⏳ Salvando…' : isEdit ? '✓ Atualizar produto' : '✓ Criar produto'}
+                <button type="submit" className="prod-modal-btn-salvar" disabled={salvando || ajustando}>
+                  {ajustando ? '⏳ Ajustando estoque…' : salvando ? '⏳ Salvando…' : isEdit ? '✓ Atualizar produto' : '✓ Criar produto'}
                 </button>
               )}
             </div>
