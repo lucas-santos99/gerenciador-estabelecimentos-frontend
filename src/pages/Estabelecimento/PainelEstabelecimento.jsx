@@ -13,6 +13,7 @@ import Configuracoes from "./Configuracoes/Configuracoes";
 import OperadoresEstabelecimento from "./Operadores/OperadoresEstabelecimento";
 import Relatorios    from "./Relatorios/Relatorios";
 import Inventario    from "./Inventario/Inventario";
+import Fornecedores  from "./Fornecedores/Fornecedores";
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -172,6 +173,15 @@ export default function PainelEstabelecimento() {
           <Inventario
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
+          />
+        );
+
+      case "fornecedores":
+        return (
+          <Fornecedores
+            estabelecimentoId={estabelecimentoId}
             permissoes={permsParaModulo}
             isMerchant={isMerchant}
           />

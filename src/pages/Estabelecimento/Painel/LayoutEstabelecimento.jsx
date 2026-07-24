@@ -104,6 +104,14 @@ const Icons = {
       <line x1="9"  y1="16" x2="13" y2="16"/>
     </svg>
   ),
+  Fornecedores: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="15" height="13" rx="1"/>
+      <path d="M16 8h4l3 3v5h-7V8z"/>
+      <circle cx="5.5" cy="18.5" r="2.5"/>
+      <circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+  ),
   Close: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6"  x2="6"  y2="18"/>
@@ -132,6 +140,10 @@ const ABA_OPERADORES = {
 
 const ABA_INVENTARIO = {
   key: "inventario", label: "Inventário", icon: Icons.Inventario, shortcut: null,
+};
+
+const ABA_FORNECEDORES = {
+  key: "fornecedores", label: "Fornecedores", icon: Icons.Fornecedores, shortcut: null,
 };
 
 const SIDEBAR_KEY = "est_sidebar_collapsed";
@@ -167,10 +179,10 @@ export default function LayoutEstabelecimento({
   })();
 
   const ABAS = (() => {
-    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_OPERADORES];
+    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES];
     // Operador: só mostra abas cujo key está nas permissões
-    // Incluir abas extras (Relatórios, Inventário) no pool — operador vê se tiver permissão
-    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO];
+    // Incluir abas extras (Relatórios, Inventário, Fornecedores) no pool — operador vê se tiver permissão
+    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES];
     return TODAS.filter(aba => permissoes.includes(aba.key));
   })();
 

@@ -1,0 +1,359 @@
+/* Fornecedores.css — módulo de fornecedores e lançamento de compras */
+
+/* ── Grid de cards de fornecedor ─────────────────────────── */
+.forn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.forn-card {
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.forn-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+
+.forn-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 8px;
+}
+.forn-card-nome {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--est-text);
+}
+.forn-card-condicao {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  white-space: nowrap;
+}
+
+.forn-card-contato {
+  font-size: 0.82rem;
+  color: var(--est-text-soft);
+  cursor: pointer;
+}
+
+.forn-card-stats {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--est-border);
+  border-bottom: 1px solid var(--est-border);
+  cursor: pointer;
+}
+.forn-card-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.forn-card-stat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--est-text-muted);
+}
+.forn-card-stat-valor {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--est-text);
+}
+
+.forn-card-acoes {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Formulário (cadastro/edição de fornecedor) ──────────── */
+.forn-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+.forn-full { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .forn-form-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Lançar Compra: fornecedor selecionado / dropdown de busca ── */
+.forn-selecionado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-weight: 700;
+}
+.forn-selecionado button {
+  background: none;
+  border: 1px solid var(--est-accent);
+  color: var(--est-accent);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.forn-resultados-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.forn-resultado-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--est-text);
+  border-bottom: 1px solid var(--est-border);
+}
+.forn-resultado-item:last-child { border-bottom: none; }
+.forn-resultado-item:hover { background: var(--est-hover); }
+
+/* ── Forma de pagamento (toggle) ──────────────────────────── */
+.forn-forma-pgto-toggle {
+  display: flex;
+  gap: 8px;
+}
+.forn-forma-pgto-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.forn-forma-pgto-btn:hover { border-color: var(--est-border-accent); }
+.forn-forma-pgto-btn.ativo {
+  border-color: var(--est-border-accent);
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+}
+
+/* ── Lista de itens (carrinho de compra) ─────────────────── */
+.forn-itens-lista {
+  margin-top: 12px;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.forn-itens-vazio {
+  padding: 24px;
+  text-align: center;
+  color: var(--est-text-muted);
+  font-size: 0.85rem;
+}
+.forn-itens-header,
+.forn-item-linha {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.9fr 0.8fr 28px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+}
+.forn-itens-header {
+  background: var(--est-input);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--est-text-muted);
+}
+.forn-item-linha { border-top: 1px solid var(--est-border); }
+.forn-item-nome {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--est-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.forn-item-nome small { font-weight: 400; color: var(--est-text-muted); }
+
+.forn-item-qtd-wrap, .forn-item-preco-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.forn-item-input {
+  width: 100%;
+  padding: 6px 8px !important;
+  font-size: 0.82rem !important;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+.forn-item-unidade {
+  font-size: 0.7rem;
+  color: var(--est-text-muted);
+  font-weight: 700;
+}
+.forn-item-preco-wrap span {
+  font-size: 0.75rem;
+  color: var(--est-text-muted);
+}
+.forn-item-subtotal {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--est-text);
+  text-align: right;
+}
+.forn-item-remover {
+  background: none;
+  border: none;
+  color: var(--est-danger, #ef4444);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+}
+
+@media (max-width: 640px) {
+  .forn-itens-header, .forn-item-linha {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* ── Total da compra ──────────────────────────────────────── */
+.forn-total-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--est-accent-dim);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-text);
+}
+.forn-total-box strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.2rem;
+  color: var(--est-accent);
+}
+
+/* ── Modais maiores (compra tem muito conteúdo) ──────────── */
+.forn-modal-compra { max-width: 640px; max-height: 88vh; overflow-y: auto; }
+.forn-modal-detalhes { max-width: 620px; max-height: 85vh; overflow-y: auto; }
+
+/* ── Detalhes do fornecedor ───────────────────────────────── */
+.forn-detalhes-sub {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--est-text-muted);
+  margin-top: -6px;
+}
+
+.forn-detalhes-resumo {
+  display: flex;
+  gap: 24px;
+  padding: 12px 0;
+  border-top: 1px solid var(--est-border);
+  border-bottom: 1px solid var(--est-border);
+  margin: 10px 0;
+}
+.forn-detalhes-resumo div { display: flex; flex-direction: column; gap: 2px; }
+.forn-detalhes-resumo span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--est-text-muted); }
+.forn-detalhes-resumo strong { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--est-text); }
+
+.forn-abas {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--est-border);
+  margin-bottom: 10px;
+}
+.forn-aba-btn {
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--est-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+.forn-aba-btn.ativo { color: var(--est-accent); border-bottom-color: var(--est-accent); font-weight: 700; }
+
+.forn-detalhes-body {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.forn-compra-linha {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.8fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+.forn-compra-linha.cancelada { opacity: 0.55; }
+.forn-compra-nota { color: var(--est-text-muted); font-weight: 400; }
+.forn-compra-tag-cancelada { color: var(--est-danger, #ef4444); font-weight: 700; }
+.forn-compra-forma { color: var(--est-text-soft); }
+.forn-compra-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
+.forn-compra-cancelar {
+  background: none;
+  border: 1px solid var(--est-danger, #ef4444);
+  color: var(--est-danger, #ef4444);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.forn-produto-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+.forn-produto-nome small { color: var(--est-text-muted); font-weight: 400; }
+.forn-produto-preco { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--est-text-soft); white-space: nowrap; }
