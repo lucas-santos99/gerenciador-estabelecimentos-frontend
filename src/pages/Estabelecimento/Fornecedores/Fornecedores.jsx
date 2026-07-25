@@ -171,6 +171,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           fornecedor={modalForm === 'novo' ? null : modalForm}
           onClose={() => setModalForm(null)}
           onSalvo={carregar}
+          fontScale={fontScale}
         />
       )}
 
@@ -180,6 +181,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           fornecedorPreselecionado={fornecedorParaCompra}
           onClose={() => { setModalCompra(false); setFornecedorParaCompra(null); }}
           onSalvo={carregar}
+          fontScale={fontScale}
         />
       )}
 
@@ -245,18 +247,31 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
 
   function linhasParaExportar() {
     if (aba === 'compras') {
-      return (dados.compras || []).map(c => ({
-        'Data':    fmtData(c.data_compra),
-        'Nota':    c.numero_nota || '—',
-        'Forma':   c.forma_pagamento === 'a_vista' ? 'À vista' : 'A prazo',
-        'Valor':   parseFloat(c.valor_total) || 0,
-        'Status':  c.status === 'cancelada' ? 'Cancelada' : 'Ativa',
-      }));
+      const linhas = [];
+      (dados.compras || []).forEach(c => {
+        const itensDaCompra = (c.itens && c.itens.length > 0) ? c.itens : [null];
+        itensDaCompra.forEach(i => {
+          linhas.push({
+            'Data':                  fmtData(c.data_compra),
+            'Nota':                  c.numero_nota || '—',
+            'Forma':                 c.forma_pagamento === 'a_vista' ? 'À vista' : 'A prazo',
+            'Status':                c.status === 'cancelada' ? 'Cancelada' : 'Ativa',
+            'Produto':               i ? i.produto_nome + (i.produto_marca ? ` · ${i.produto_marca}` : '') : '—',
+            'Quantidade':            i ? parseFloat(i.quantidade) || 0 : '',
+            'Unidade':               i ? i.unidade_medida : '',
+            'Custo Unit.':           i ? parseFloat(i.preco_custo_unitario) || 0 : '',
+            'Subtotal':              i ? parseFloat(i.subtotal) || 0 : '',
+            'Valor Total da Compra': parseFloat(c.valor_total) || 0,
+          });
+        });
+      });
+      return linhas;
     }
     return (dados.produtos_fornecidos || []).map(p => ({
       'Produto':       p.produto_nome,
       'Marca':         p.produto_marca || '',
       'Unidade':       p.unidade_medida,
+      'Última Qtd.':   parseFloat(p.ultima_quantidade) || 0,
       'Último Preço':  parseFloat(p.ultimo_preco) || 0,
     }));
   }

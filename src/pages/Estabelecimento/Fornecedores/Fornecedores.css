@@ -514,3 +514,21 @@
 .forn-zoom-scope .forn-detalhe-itens-header,
 .forn-zoom-scope .forn-detalhe-item-linha   { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
 .forn-zoom-scope .forn-detalhe-itens-header { font-size: calc(0.65rem * var(--forn-font-scale, 1)); }
+
+/* Elementos específicos dos modais de fornecedor/compra */
+.forn-zoom-scope .forn-selecionado          { font-size: calc(0.92rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-selecionado button   { font-size: calc(0.78rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-resultado-item       { font-size: calc(0.88rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-forma-pgto-btn       { font-size: calc(0.85rem * var(--forn-font-scale, 1)); }
+
+/* Elementos compartilhados de Clientes.css usados dentro dos modais
+   de Fornecedores — escopados aqui pra não afetar a tela de Clientes,
+   que tem seu próprio --cli-font-scale independente */
+.forn-zoom-scope .cli-modal-titulo          { font-size: calc(1rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-form-label            { font-size: calc(0.72rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-form-input            { font-size: calc(0.875rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-modal-erro            { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-modal-btn-cancelar    { font-size: calc(0.875rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-modal-btn-salvar      { font-size: calc(0.875rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-vazio p                { font-size: calc(0.95rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .cli-vazio small            { font-size: calc(0.78rem * var(--forn-font-scale, 1)); }

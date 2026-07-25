@@ -29,7 +29,7 @@ function formatarCnpjCpf(v) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function FornecedorModal({ fornecedor, onClose, onSalvo }) {
+export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScale = 1 }) {
   const isEdit = !!fornecedor;
 
   const [form, setForm] = useState({
@@ -95,7 +95,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo }) {
   /* ════════════════════════════════════════════════════════ */
   return (
     <div className="cli-modal-overlay">
-      <div className="cli-modal" style={{ maxWidth: 560 }}>
+      <div className="cli-modal forn-zoom-scope" style={{ maxWidth: 560, '--forn-font-scale': fontScale }}>
 
         <div className="cli-modal-titulo">
           {isEdit ? `✏️ Editar — ${fornecedor.nome}` : '🚚 Novo fornecedor'}

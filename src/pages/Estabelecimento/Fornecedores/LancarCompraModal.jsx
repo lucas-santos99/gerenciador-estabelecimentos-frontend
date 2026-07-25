@@ -27,7 +27,7 @@ function hojeISO() {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function LancarCompraModal({ estabelecimentoId, fornecedorPreselecionado, onClose, onSalvo }) {
+export default function LancarCompraModal({ estabelecimentoId, fornecedorPreselecionado, onClose, onSalvo, fontScale = 1 }) {
   const [fornecedorId,   setFornecedorId]   = useState(fornecedorPreselecionado?.id || '');
   const [fornecedorNome, setFornecedorNome] = useState(fornecedorPreselecionado?.nome || '');
   const [buscaFornecedor, setBuscaFornecedor] = useState('');
@@ -183,7 +183,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
   /* ════════════════════════════════════════════════════════ */
   return (
     <div className="cli-modal-overlay">
-      <div className="cli-modal forn-modal-compra">
+      <div className="cli-modal forn-modal-compra forn-zoom-scope" style={{ '--forn-font-scale': fontScale }}>
 
         <div className="cli-modal-titulo">🧾 Lançar Compra</div>
 
