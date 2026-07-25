@@ -1,6 +1,7 @@
 /* ============================================================
-   Relatorios.css — Lucas J. Systems
-   Prefixo: rel-
+   Auditoria.css — Lucas J. Systems
+   Prefixo: rel- (mantido igual ao Relatorios.css, de onde essa
+   tela foi extraída — mesma linguagem visual, arquivo próprio)
    ============================================================ */
 
 .rel-container {
@@ -15,8 +16,9 @@
 
 /* ── Header ── */
 .rel-header {
-  padding: 20px 24px 0;
+  padding: 20px 24px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--est-border);
 }
 
 .rel-titulo {
@@ -32,37 +34,20 @@
   font-weight: 500;
 }
 
-/* ── Abas ── */
-.rel-tabs {
-  display: flex;
-  gap: 6px;
-  padding: 16px 24px 0;
-  border-bottom: 1px solid var(--est-border);
-  flex-shrink: 0;
-}
-
-.rel-tab {
-  padding: 9px 18px;
-  border-radius: 10px 10px 0 0;
-  border: 1px solid transparent;
-  border-bottom: none;
-  background: none;
-  color: var(--est-text-muted);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: calc(0.82rem * var(--rel-font-scale, 1));
-  font-weight: 600;
+/* ── Zoom (A-/A+) ── */
+.rel-zoom-btn {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-soft);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 0.8rem;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.15s;
-  margin-bottom: -1px;
 }
-.rel-tab:hover { color: var(--est-text); background: var(--est-hover); }
-.rel-tab.ativo {
-  background: var(--est-card);
-  border-color: var(--est-border);
-  border-bottom-color: var(--est-card);
-  color: var(--est-accent);
-  font-weight: 700;
-}
+.rel-zoom-btn:hover:not(:disabled) { border-color: var(--est-border-accent); color: var(--est-text); }
+.rel-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Filtros ── */
 .rel-filtros {
@@ -316,6 +301,35 @@
   font-weight: 700;
 }
 
+/* ── Diff de alterações na auditoria ── */
+.rel-meta-tag--diff {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.rel-meta-val--old {
+  text-decoration: line-through;
+  opacity: 0.55;
+  color: var(--rel-text-muted, #94a3b8);
+}
+
+.rel-meta-val--new {
+  font-weight: 600;
+  color: var(--rel-accent, #14b8a6);
+}
+
+.rel-meta-seta {
+  font-size: 0.75em;
+  opacity: 0.6;
+  color: var(--rel-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+body.light .rel-meta-val--old { color: #64748b; }
+body.light .rel-meta-val--new { color: #0d9488; }
+
 /* ── Paginação ── */
 .rel-paginacao {
   display: flex;
@@ -352,237 +366,3 @@
   color: var(--est-accent);
 }
 .rel-pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
-/* ── Resumo por operador ── */
-.rel-resumo-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rel-resumo-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: var(--est-card);
-  border: 1px solid var(--est-border);
-  border-radius: 14px;
-  transition: all 0.15s;
-}
-.rel-resumo-card:hover {
-  border-color: var(--est-border-accent);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-}
-
-.rel-resumo-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: var(--est-accent-dim);
-  border: 2px solid var(--est-border-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--est-accent);
-  flex-shrink: 0;
-}
-
-.rel-resumo-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.rel-resumo-nome {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--est-text);
-}
-
-.rel-resumo-modulos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.rel-resumo-mod {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: var(--est-input);
-  color: var(--est-text-soft);
-  border: 1px solid var(--est-border);
-}
-.rel-resumo-mod.rel-mod-teal   { background: var(--est-accent-dim); color: var(--est-accent); border-color: var(--est-border-accent); }
-.rel-resumo-mod.rel-mod-blue   { background: rgba(59,130,246,0.1);  color: #3b82f6; border-color: rgba(59,130,246,0.25); }
-.rel-resumo-mod.rel-mod-purple { background: rgba(139,92,246,0.1);  color: #8b5cf6; border-color: rgba(139,92,246,0.25); }
-.rel-resumo-mod.rel-mod-green  { background: rgba(34,197,94,0.1);   color: #22c55e; border-color: rgba(34,197,94,0.25); }
-.rel-resumo-mod.rel-mod-orange { background: rgba(245,158,11,0.1);  color: #f59e0b; border-color: rgba(245,158,11,0.25); }
-.rel-resumo-mod.rel-mod-cyan   { background: rgba(6,182,212,0.1);   color: #06b6d4; border-color: rgba(6,182,212,0.25); }
-.rel-resumo-mod.rel-mod-pink   { background: rgba(236,72,153,0.1);  color: #ec4899; border-color: rgba(236,72,153,0.25); }
-
-.rel-resumo-total {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.rel-resumo-total-num {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--est-text);
-  font-family: 'JetBrains Mono', monospace;
-  line-height: 1;
-}
-
-.rel-resumo-total-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--est-text-muted);
-}
-/* ── Diff de alterações na auditoria ── */
-.rel-meta-tag--diff {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-.rel-meta-val--old {
-  text-decoration: line-through;
-  opacity: 0.55;
-  color: var(--rel-text-muted, #94a3b8);
-}
-
-.rel-meta-val--new {
-  font-weight: 600;
-  color: var(--rel-accent, #14b8a6);
-}
-
-.rel-meta-seta {
-  font-size: 0.75em;
-  opacity: 0.6;
-  color: var(--rel-text-muted, #94a3b8);
-  flex-shrink: 0;
-}
-
-body.light .rel-meta-val--old { color: #64748b; }
-body.light .rel-meta-val--new { color: #0d9488; }
-
-/* ── Diff de alterações na auditoria ── */
-.rel-meta-tag--diff {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-.rel-meta-val--old {
-  text-decoration: line-through;
-  opacity: 0.55;
-  color: var(--rel-text-muted, #94a3b8);
-}
-
-.rel-meta-val--new {
-  font-weight: 600;
-  color: var(--rel-accent, #14b8a6);
-}
-
-.rel-meta-seta {
-  font-size: 0.75em;
-  opacity: 0.6;
-  color: var(--rel-text-muted, #94a3b8);
-  flex-shrink: 0;
-}
-
-body.light .rel-meta-val--old { color: #64748b; }
-body.light .rel-meta-val--new { color: #0d9488; }
-
-/* ── Operador no histórico de vendas ── */
-.fin-historico-operador {
-  font-size: calc(0.75rem * var(--fin-font-scale, 1));
-  color: var(--est-accent, #14b8a6);
-  background: rgba(20, 184, 166, 0.08);
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-body.light .fin-historico-operador {
-  background: rgba(13, 148, 136, 0.1);
-  color: #0d9488;
-}
-/* ════════════════════════════════════════════════════════════
-   FIXES: zoom + filtro-btn dark mode
-   ════════════════════════════════════════════════════════════ */
-
-/* Propaga AMBAS as variáveis de zoom — rel- e fin- — para que
-   as classes do Financeiro reutilizadas aqui também respondam ao A+/A- */
-.rel-container {
-  --fin-font-scale: var(--rel-font-scale, 1);
-}
-
-/* Corrige fin-filtro-btn no dark mode dentro de Relatórios */
-.rel-container .fin-filtro-btn {
-  background: var(--est-input);
-  border: 1px solid var(--est-border);
-  color: var(--est-text-soft);
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: calc(0.8rem * var(--rel-font-scale, 1));
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.rel-container .fin-filtro-btn:hover {
-  border-color: var(--est-border-accent);
-  color: var(--est-accent);
-}
-
-.rel-container .fin-filtro-btn.ativo {
-  background: var(--est-accent-dim);
-  border-color: var(--est-border-accent);
-  color: var(--est-accent);
-}
-/* ── Marca do produto (exibida após o nome) ── */
-.rel-produto-marca {
-  font-size: 0.85em;
-  font-weight: 500;
-  color: var(--est-text-muted);
-  opacity: 0.8;
-}
-
-/* ── Filtros da aba Estoque ── */
-.rel-estoque-filtros {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.rel-estoque-filtro-cat {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rel-estoque-filtro-cat .rel-filtro-label {
-  flex-shrink: 0;
-}
-
-.rel-estoque-filtro-cat .rel-filtro-select {
-  min-width: 200px;
-  max-width: 320px;
-}

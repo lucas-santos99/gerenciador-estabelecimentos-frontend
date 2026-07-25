@@ -43,29 +43,46 @@ const MODULOS = [
     ],
   },
   {
-    // Módulo Relatórios: histórico, vendas por operador, produtos, estoque, auditoria
-    id: 'relatorios', label: 'Relatórios', icone: '📊', desc: 'Histórico de vendas, estoque e auditoria',
+    // Módulo Relatórios: histórico, vendas por operador, produtos, estoque
+    // (a Auditoria virou um módulo próprio — veja o id 'auditoria' abaixo)
+    id: 'relatorios', label: 'Relatórios', icone: '📊', desc: 'Histórico de vendas, estoque e produtos',
     acoes: [
       { id: 'relatorios_historico',  label: 'Ver histórico de vendas' },
       { id: 'relatorios_operadores', label: 'Ver vendas por operador' },
       { id: 'relatorios_produtos',   label: 'Ver produtos mais vendidos' },
       { id: 'relatorios_estoque',    label: 'Ver relatório de estoque' },
-      { id: 'relatorios_auditoria',  label: 'Ver auditoria de ações' },
     ],
   },
   {
-    id: 'configuracoes', label: 'Configurações', icone: '⚙️', desc: 'Editar dados do estabelecimento',
-    acoes: [
-      { id: 'config_editar_dados', label: 'Editar dados' },
-      { id: 'config_editar_logo',  label: 'Alterar logo' },
-    ],
-  },
-  {
-    id: 'inventario', label: 'Inventário', icone: '📦', desc: 'Contagem física e movimentações de estoque',
+    id: 'inventario', label: 'Inventário', icone: '📋', desc: 'Contagem física e movimentações de estoque',
     acoes: [
       { id: 'inventario_contar',    label: 'Realizar contagens (inventário físico)' },
       { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque' },
       { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque' },
+    ],
+  },
+  {
+    id: 'fornecedores', label: 'Fornecedores', icone: '🚚', desc: 'Cadastro de fornecedores e lançamento de compras',
+    acoes: [
+      { id: 'fornecedores_adicionar', label: 'Adicionar fornecedores' },
+      { id: 'fornecedores_editar',    label: 'Editar fornecedores' },
+      { id: 'fornecedores_excluir',   label: 'Excluir fornecedores' },
+      { id: 'fornecedores_comprar',   label: 'Lançar compras' },
+      { id: 'fornecedores_cancelar',  label: 'Cancelar compras' },
+    ],
+  },
+  {
+    // Sem ações granulares — é uma tela só de leitura, então o toggle
+    // do módulo já basta. Fica desativado por padrão pra todo operador
+    // novo (ninguém marca isso sem o admin decidir explicitamente).
+    id: 'auditoria', label: 'Auditoria', icone: '🔍', desc: 'Ver o histórico de ações no estabelecimento',
+    acoes: [],
+  },
+  {
+    id: 'config', label: 'Configurações', icone: '⚙️', desc: 'Editar dados do estabelecimento',
+    acoes: [
+      { id: 'config_editar_dados', label: 'Editar dados' },
+      { id: 'config_editar_logo',  label: 'Alterar logo' },
     ],
   },
 ];

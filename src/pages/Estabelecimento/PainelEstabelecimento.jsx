@@ -14,6 +14,7 @@ import OperadoresEstabelecimento from "./Operadores/OperadoresEstabelecimento";
 import Relatorios    from "./Relatorios/Relatorios";
 import Inventario    from "./Inventario/Inventario";
 import Fornecedores  from "./Fornecedores/Fornecedores";
+import Auditoria     from "./Auditoria/Auditoria";
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -200,6 +201,14 @@ export default function PainelEstabelecimento() {
         return (
           <OperadoresEstabelecimento
             estabelecimentoId={estabelecimentoId}
+          />
+        );
+
+      case "auditoria":
+        return (
+          <Auditoria
+            estabelecimentoId={estabelecimentoId}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         );
 

@@ -112,6 +112,13 @@ const Icons = {
       <circle cx="18.5" cy="18.5" r="2.5"/>
     </svg>
   ),
+  Auditoria: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+      <rect x="9" y="3" width="6" height="4" rx="1"/>
+      <path d="M9 14l2 2 4-4"/>
+    </svg>
+  ),
   Close: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6"  x2="6"  y2="18"/>
@@ -126,7 +133,6 @@ const ABAS_BASE = [
   { key: "estoque",    label: "Estoque",          icon: Icons.Estoque,    shortcut: "F3" },
   { key: "clientes",   label: "Clientes / Fiado", icon: Icons.Clientes,   shortcut: "F4" },
   { key: "financeiro", label: "Financeiro",       icon: Icons.Financeiro, shortcut: "F5" },
-  { key: "config",     label: "Configurações",    icon: Icons.Config,     shortcut: "F6" },
 ];
 
 /* ── Abas exclusivas do merchant ─────────────────────────── */
@@ -144,6 +150,16 @@ const ABA_INVENTARIO = {
 
 const ABA_FORNECEDORES = {
   key: "fornecedores", label: "Fornecedores", icon: Icons.Fornecedores, shortcut: null,
+};
+
+const ABA_AUDITORIA = {
+  key: "auditoria", label: "Auditoria", icon: Icons.Auditoria, shortcut: null,
+};
+
+// Config sempre por último, tanto pro merchant quanto pro operador —
+// não faz parte do "pool" de abas extras, é tratado à parte no final.
+const ABA_CONFIG = {
+  key: "config", label: "Configurações", icon: Icons.Config, shortcut: "F6",
 };
 
 const SIDEBAR_KEY = "est_sidebar_collapsed";
@@ -179,10 +195,14 @@ export default function LayoutEstabelecimento({
   })();
 
   const ABAS = (() => {
-    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES];
-    // Operador: só mostra abas cujo key está nas permissões
-    // Incluir abas extras (Relatórios, Inventário, Fornecedores) no pool — operador vê se tiver permissão
-    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES];
+    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG];
+    // Operador: só mostra abas cujo key está nas permissões.
+    // Auditoria entra no "pool" mas fica desativada por padrão — só
+    // aparece se o admin marcar essa permissão especificamente pro
+    // operador (ela NUNCA vem ligada por padrão, diferente das demais).
+    // Operadores não têm acesso à gestão de Operadores, então essa aba
+    // fica de fora do pool mesmo com permissão (é exclusiva do merchant).
+    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_AUDITORIA, ABA_CONFIG];
     return TODAS.filter(aba => permissoes.includes(aba.key));
   })();
 
@@ -318,10 +338,11 @@ export default function LayoutEstabelecimento({
           <div className="est-nav-section">Menu</div>
           {ABAS.map(aba => (
             <React.Fragment key={aba.key}>
-              {/* Divisor antes de Relatórios e Operadores */}
-              {(aba.key === 'relatorios' || aba.key === 'inventario' || aba.key === 'operadores') && (
+              {/* Divisor antes do bloco de módulos extras, e outro isolando Configurações no final */}
+              {(aba.key === 'relatorios' || aba.key === 'inventario' || aba.key === 'operadores' || aba.key === 'auditoria') && (
                 <div className="est-nav-divider" />
               )}
+              {aba.key === 'config' && <div className="est-nav-divider" />}
               <li className={`est-nav-item${abaAtiva === aba.key ? " active" : ""}`}>
                 <button
                   className="est-nav-link"
