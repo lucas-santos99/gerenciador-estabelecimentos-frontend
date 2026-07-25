@@ -16,6 +16,12 @@ function paraFloatBR(valor) {
 function fmt(v) {
   return parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+// Mesmo padrão de formatação de quantidade usado no Ajuste Rápido do Inventário
+function fmtQ(v, u) {
+  return u === 'kg'
+    ? parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kg'
+    : Math.trunc(parseFloat(v || 0)) + ' un';
+}
 function hojeISO() {
   return new Date().toISOString().split('T')[0];
 }
@@ -36,7 +42,8 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
   // Busca de produto pra adicionar na lista
   const [buscaProduto, setBuscaProduto] = useState('');
   const [resultadosProduto, setResultadosProduto] = useState([]);
-  const [carrinho, setCarrinho] = useState([]); // [{ produto_id, nome, marca, unidade_medida, quantidade, preco_custo_unitario }]
+  // [{ produto_id, nome, marca, unidade_medida, estoque_atual, quantidade, preco_custo_unitario }]
+  const [carrinho, setCarrinho] = useState([]);
 
   const [salvando, setSalvando] = useState(false);
   const [erro,     setErro]     = useState('');
@@ -103,7 +110,8 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
         nome: p.nome,
         marca: p.marca,
         unidade_medida: p.unidade_medida,
-        quantidade: p.unidade_medida === 'kg' ? '1,000' : '1',
+        estoque_atual: parseFloat(p.estoque_atual) || 0,
+        quantidade: '', // vazio de propósito — evita o comerciante ter que apagar "1,000" toda vez
         preco_custo_unitario: p.preco_custo ? p.preco_custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
       }];
     });
@@ -271,33 +279,51 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
                 <span>Produto</span>
                 <span>Qtd.</span>
                 <span>Custo unit.</span>
+                <span>Estoque (atual → após)</span>
                 <span>Subtotal</span>
                 <span></span>
               </div>
-              {carrinho.map(item => (
-                <div key={item.produto_id} className="forn-item-linha">
-                  <span className="forn-item-nome">{item.nome}{item.marca && <small> · {item.marca}</small>}</span>
-                  <div className="forn-item-qtd-wrap">
-                    <input
-                      className="cli-form-input forn-item-input"
-                      value={item.quantidade}
-                      onChange={e => atualizarItem(item.produto_id, 'quantidade', e.target.value)}
-                    />
-                    <span className="forn-item-unidade">{item.unidade_medida}</span>
+              {carrinho.map(item => {
+                const qtdNumerica = paraFloatBR(item.quantidade);
+                const qtdDepois   = item.estoque_atual + qtdNumerica;
+                return (
+                  <div key={item.produto_id} className="forn-item-linha">
+                    <span className="forn-item-nome">{item.nome}{item.marca && <small> · {item.marca}</small>}</span>
+
+                    <div className="forn-item-qtd-wrap">
+                      <input
+                        className="cli-form-input forn-item-input"
+                        value={item.quantidade}
+                        onChange={e => atualizarItem(item.produto_id, 'quantidade', e.target.value)}
+                        placeholder={item.unidade_medida === 'kg' ? '0,000' : '0'}
+                      />
+                      <span className="forn-item-unidade">{item.unidade_medida}</span>
+                    </div>
+
+                    <div className="forn-item-preco-wrap">
+                      <span>R$</span>
+                      <input
+                        className="cli-form-input forn-item-input"
+                        value={item.preco_custo_unitario}
+                        onChange={e => atualizarItem(item.produto_id, 'preco_custo_unitario', e.target.value)}
+                        placeholder="0,00"
+                      />
+                      <span className="forn-item-preco-unidade">/{item.unidade_medida === 'kg' ? 'kg' : 'un'}</span>
+                    </div>
+
+                    <div className="forn-item-estoque">
+                      <span className="forn-item-estoque-atual">{fmtQ(item.estoque_atual, item.unidade_medida)}</span>
+                      <span className="forn-item-estoque-seta">→</span>
+                      <span className={`forn-item-estoque-depois${qtdNumerica > 0 ? ' mais' : ''}`}>
+                        {qtdNumerica > 0 ? fmtQ(qtdDepois, item.unidade_medida) : '—'}
+                      </span>
+                    </div>
+
+                    <span className="forn-item-subtotal">{fmt(qtdNumerica * paraFloatBR(item.preco_custo_unitario))}</span>
+                    <button type="button" className="forn-item-remover" onClick={() => removerItem(item.produto_id)}>✕</button>
                   </div>
-                  <div className="forn-item-preco-wrap">
-                    <span>R$</span>
-                    <input
-                      className="cli-form-input forn-item-input"
-                      value={item.preco_custo_unitario}
-                      onChange={e => atualizarItem(item.produto_id, 'preco_custo_unitario', e.target.value)}
-                      placeholder="0,00"
-                    />
-                  </div>
-                  <span className="forn-item-subtotal">{fmt(paraFloatBR(item.quantidade) * paraFloatBR(item.preco_custo_unitario))}</span>
-                  <button type="button" className="forn-item-remover" onClick={() => removerItem(item.produto_id)}>✕</button>
-                </div>
-              ))}
+                );
+              })}
             </>
           )}
         </div>

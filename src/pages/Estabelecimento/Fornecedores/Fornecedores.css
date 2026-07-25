@@ -31,6 +31,12 @@
   font-size: 1rem;
   color: var(--est-text);
 }
+.forn-card-selos {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .forn-card-condicao {
   font-size: 0.68rem;
   font-weight: 700;
@@ -39,6 +45,10 @@
   background: var(--est-accent-dim);
   color: var(--est-accent);
   white-space: nowrap;
+}
+.forn-card-condicao.parcelado {
+  background: rgba(217, 119, 6, 0.16);
+  color: #b45309;
 }
 
 .forn-card-contato {
@@ -178,7 +188,7 @@
 .forn-itens-header,
 .forn-item-linha {
   display: grid;
-  grid-template-columns: 1.6fr 0.8fr 0.9fr 0.8fr 28px;
+  grid-template-columns: 1.3fr 0.7fr 0.9fr 1.1fr 0.8fr 28px;
   gap: 8px;
   align-items: center;
   padding: 8px 12px;
@@ -222,6 +232,10 @@
 .forn-item-preco-wrap span {
   font-size: 0.75rem;
   color: var(--est-text-muted);
+  white-space: nowrap;
+}
+.forn-item-preco-unidade {
+  font-weight: 700;
 }
 .forn-item-subtotal {
   font-family: 'JetBrains Mono', monospace;
@@ -239,11 +253,27 @@
   padding: 4px;
 }
 
+/* ── Preview de estoque (atual → após), ao vivo, dentro da linha ── */
+.forn-item-estoque {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--est-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.forn-item-estoque-atual { color: var(--est-text-soft); }
+.forn-item-estoque-seta { color: var(--est-text-muted); }
+.forn-item-estoque-depois.mais { color: var(--est-accent); font-weight: 700; }
+
 @media (max-width: 640px) {
   .forn-itens-header, .forn-item-linha {
     grid-template-columns: 1fr;
     gap: 4px;
   }
+  .forn-item-estoque { white-space: normal; }
 }
 
 /* ── Total da compra ──────────────────────────────────────── */
@@ -266,7 +296,7 @@
 }
 
 /* ── Modais maiores (compra tem muito conteúdo) ──────────── */
-.forn-modal-compra { max-width: 640px; max-height: 88vh; overflow-y: auto; }
+.forn-modal-compra { max-width: 680px; max-height: 88vh; overflow-y: auto; }
 .forn-modal-detalhes { max-width: 620px; max-height: 85vh; overflow-y: auto; }
 
 /* ── Detalhes do fornecedor ───────────────────────────────── */
@@ -290,6 +320,34 @@
 .forn-detalhes-resumo div { display: flex; flex-direction: column; gap: 2px; }
 .forn-detalhes-resumo span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--est-text-muted); }
 .forn-detalhes-resumo strong { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--est-text); }
+
+.forn-abas-linha {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.forn-export-btns {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.forn-export-btn {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-soft);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.forn-export-btn:hover:not(:disabled) { border-color: var(--est-border-accent); color: var(--est-text); }
+.forn-export-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .forn-abas {
   display: flex;
@@ -329,6 +387,8 @@
   border-radius: 10px;
   font-size: 0.82rem;
 }
+.forn-compra-linha--clicavel { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.forn-compra-linha--clicavel:hover { border-color: var(--est-border-accent); background: var(--est-hover); }
 .forn-compra-linha.cancelada { opacity: 0.55; }
 .forn-compra-nota { color: var(--est-text-muted); font-weight: 400; }
 .forn-compra-tag-cancelada { color: var(--est-danger, #ef4444); font-weight: 700; }
@@ -356,4 +416,101 @@
   font-size: 0.82rem;
 }
 .forn-produto-nome small { color: var(--est-text-muted); font-weight: 400; }
+.forn-produto-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.forn-produto-qtd { font-size: 0.7rem; color: var(--est-text-muted); white-space: nowrap; }
 .forn-produto-preco { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--est-text-soft); white-space: nowrap; }
+
+/* ── Modal de detalhe de uma compra (itens completos) ─────── */
+.forn-modal-compra-detalhe { max-width: 600px; max-height: 85vh; overflow-y: auto; }
+
+.forn-detalhe-itens {
+  margin-top: 12px;
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.forn-detalhe-itens-header,
+.forn-detalhe-item-linha {
+  display: grid;
+  grid-template-columns: 1.8fr 0.9fr 1fr 0.9fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+.forn-detalhe-itens-header {
+  background: var(--est-input);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--est-text-muted);
+}
+.forn-detalhe-item-linha { border-top: 1px solid var(--est-border); }
+
+@media (max-width: 640px) {
+  .forn-detalhe-itens-header, .forn-detalhe-item-linha {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* ── Zoom (A-/A+) — mesmo padrão já usado no PDV ─────────── */
+.forn-zoom-group {
+  display: flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+.forn-zoom-btn {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-soft);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.forn-zoom-btn:hover:not(:disabled) { border-color: var(--est-border-accent); color: var(--est-text); }
+.forn-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* .forn-zoom-scope escala o conteúdo do módulo (cards, itens de compra,
+   detalhes) via --forn-font-scale, setado pelos botões A-/A+ acima.
+   Os controles em si (inputs, botões) ficam de fora, do jeito que
+   já é feito no PDV. */
+.forn-zoom-scope .forn-card-nome            { font-size: calc(1rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-card-condicao        { font-size: calc(0.68rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-card-contato         { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-card-stat-label      { font-size: calc(0.65rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-card-stat-valor      { font-size: calc(0.88rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-item-nome            { font-size: calc(0.85rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-item-unidade         { font-size: calc(0.7rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-item-preco-wrap span { font-size: calc(0.75rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-item-subtotal        { font-size: calc(0.85rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-item-estoque         { font-size: calc(0.72rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-itens-header         { font-size: calc(0.65rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-detalhes-sub         { font-size: calc(0.8rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-detalhes-resumo span { font-size: calc(0.68rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-detalhes-resumo strong { font-size: calc(1.1rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-aba-btn              { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-compra-linha         { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-compra-cancelar      { font-size: calc(0.72rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-produto-linha        { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-produto-qtd          { font-size: calc(0.7rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-total-box            { font-size: calc(0.9rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-total-box strong     { font-size: calc(1.2rem * var(--forn-font-scale, 1)); }
+
+.forn-zoom-scope .forn-detalhe-itens-header,
+.forn-zoom-scope .forn-detalhe-item-linha   { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-detalhe-itens-header { font-size: calc(0.65rem * var(--forn-font-scale, 1)); }
