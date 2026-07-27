@@ -481,47 +481,37 @@ export default function DashboardAdmin() {
                 ))}
               </div>
 
-              <div className="dash-cards-grid">
-                {listaFiltrada.map(m => (
-                  <div key={m.id} className={`dash-est-card dash-est-card--${m.status_assinatura}`}>
+              <div className="dash-lista">
+                {listaFiltrada.map(m => {
+                  const vencClasse = classVenc(m.data_vencimento).replace('venc-', '');
+                  return (
+                    <div key={m.id} className={`dash-row dash-row--${m.status_assinatura}`}>
 
-                    {/* Topo: logo + nome + tipo + status */}
-                    <div className="dash-est-card-topo">
-                      <div className="dash-est-card-logo">
+                      <div className={`dash-row-dot dash-row-dot--${vencClasse}`} />
+
+                      <div className="dash-row-avatar">
                         {m.logo_url
                           ? <img src={m.logo_url} className="logo-mini" alt={m.nome_fantasia} />
                           : <div className="logo-placeholder">{iniciais(m.nome_fantasia)}</div>
                         }
                       </div>
-                      <div className="dash-est-card-identidade">
-                        <span className="dash-est-card-nome">{m.nome_fantasia}</span>
-                        <div className="dash-est-card-badges">
+
+                      <div className="dash-row-info">
+                        <div className="dash-row-nome-linha">
+                          <span className="dash-row-nome">{m.nome_fantasia}</span>
                           <span className="badge-tipo">{m.tipo_estabelecimento || "—"}</span>
                           <span className={`badge badge-${m.status_assinatura}`}>{m.status_assinatura}</span>
                         </div>
+                        <div className="dash-row-detalhes">
+                          {m.telefone && <span>📞 {m.telefone}</span>}
+                          {m.cnpj && <span className="mono">🪪 {m.cnpj}</span>}
+                          <span className={`venc-text ${classVenc(m.data_vencimento)}`}>
+                            📅 {formatarData(m.data_vencimento) || "Sem vencimento"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Infos secundárias */}
-                    <div className="dash-est-card-infos">
-                      {m.telefone && (
-                        <span className="dash-est-card-info">
-                          <span className="dash-est-card-info-label">Tel</span> {m.telefone}
-                        </span>
-                      )}
-                      {m.cnpj && (
-                        <span className="dash-est-card-info mono">
-                          <span className="dash-est-card-info-label">CPF/CNPJ</span> {m.cnpj}
-                        </span>
-                      )}
-                      <span className={`dash-est-card-info venc-text ${classVenc(m.data_vencimento)}`}>
-                        <span className="dash-est-card-info-label">Venc.</span> {formatarData(m.data_vencimento) || "Sem vencimento"}
-                      </span>
-                    </div>
-
-                    {/* Ações */}
-                    <div className="dash-est-card-acoes">
-                      <div className="dash-card-acoes-linha">
+                      <div className="dash-row-acoes">
                         <button
                           className="dash-card-btn dash-card-btn--ghost"
                           onClick={() => navigate(`/admin/estabelecimentos/${m.id}?view=details`)}
@@ -534,8 +524,6 @@ export default function DashboardAdmin() {
                           className="dash-card-btn dash-card-btn--blue"
                           onClick={() => navigate(`/admin/estabelecimentos/${m.id}/operadores`)}
                         >👥 Operadores</button>
-                      </div>
-                      <div className="dash-card-acoes-linha">
                         <button
                           className="dash-card-btn dash-card-btn--green"
                           onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
@@ -552,10 +540,10 @@ export default function DashboardAdmin() {
                           onClick={() => excluir(m.id, m.nome_fantasia)}
                         >🗑 Excluir</button>
                       </div>
-                    </div>
 
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

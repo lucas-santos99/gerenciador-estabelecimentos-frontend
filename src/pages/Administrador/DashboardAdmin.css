@@ -1389,3 +1389,117 @@ body.dark .dash-card-btn--green { color: #4ade80; }
   color: #fff;
   border-color: transparent;
 }
+/* ════════════════════════════════════════════════════════════
+   LISTA EM LINHA — substitui o grid de cards (mesmo espírito
+   visual da tela de Cobranças). Reaproveita .badge, .badge-tipo,
+   .venc-text/.venc-*, .dash-card-btn* e .logo-mini/.logo-placeholder
+   já existentes acima — só adiciona o layout de linha em si.
+   ════════════════════════════════════════════════════════════ */
+
+.dash-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.dash-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.dash-row:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  border-color: var(--border-accent);
+}
+
+/* Bolinha de status de vencimento — mesma paleta de .venc-* */
+.dash-row-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-row-dot--vencido { background: var(--text-danger);  box-shadow: 0 0 0 4px var(--bg-danger); }
+.dash-row-dot--alerta  { background: var(--text-warning); box-shadow: 0 0 0 4px var(--bg-warning); }
+.dash-row-dot--ok      { background: var(--text-success); box-shadow: 0 0 0 4px var(--bg-success); }
+.dash-row-dot--nd      { background: var(--text-muted); }
+
+/* Avatar/logo — mesma classe .logo-mini/.logo-placeholder, só menor */
+.dash-row-avatar { flex-shrink: 0; }
+.dash-row-avatar .logo-mini,
+.dash-row-avatar .logo-placeholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+}
+.dash-row-avatar .logo-mini { object-fit: cover; }
+.dash-row-avatar .logo-placeholder { font-size: 0.82rem; }
+
+/* Nome + badges + infos secundárias */
+.dash-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-row-nome-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-row-nome {
+  font-size: calc(0.9rem * var(--dash-font-scale, 1));
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+.dash-row-detalhes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: calc(0.75rem * var(--dash-font-scale, 1));
+  color: var(--text-muted);
+}
+.dash-row-detalhes .mono { font-family: 'JetBrains Mono', monospace; }
+.dash-row-detalhes .venc-text { font-size: calc(0.75rem * var(--dash-font-scale, 1)); }
+
+/* Botões de ação — mesma família .dash-card-btn, só em linha só */
+.dash-row-acoes {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.dash-row-acoes .dash-card-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Responsivo — empilha em telas pequenas */
+@media (max-width: 900px) {
+  .dash-row { flex-wrap: wrap; }
+  .dash-row-info { min-width: 100%; order: 2; }
+  .dash-row-acoes { width: 100%; order: 3; justify-content: flex-start; }
+  .dash-row-nome { max-width: none; }
+}
+
+/* Correções explícitas de tema pra linha (mesmo padrão já usado nos cards) */
+body.dark .dash-row  { background: var(--bg-input, #1e293b); border-color: var(--border, rgba(255,255,255,0.08)); }
+body.light .dash-row-nome { color: #0f172a; }
+body.light .dash-row-detalhes { color: #334155; }
