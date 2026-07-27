@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
+import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import "./LayoutEstabelecimento.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -173,6 +174,8 @@ export default function LayoutEstabelecimento({
   logoUrl,
   permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
   licencaInfo = null, // { status_assinatura, data_vencimento } — vem do PainelEstabelecimento
+  estabelecimentoId = null,
+  onLicencaAtualizada = null, // callback pro PainelEstabelecimento atualizar o licencaInfo após renovação antecipada
 }) {
   const navigate  = useNavigate();
   const { logout, profile } = useAuth();
@@ -419,6 +422,15 @@ export default function LayoutEstabelecimento({
       {/* ── CONTEÚDO PRINCIPAL ─────────────────────────────── */}
       <main className={`est-main${collapsed ? " collapsed" : ""}`}>
         <div className="est-content">
+          {isMerchant && licencaInfo && estabelecimentoId && (
+            <RenovacaoAntecipada
+              merceariaId={estabelecimentoId}
+              nomeEstabelecimento={nomeEstabelecimento}
+              dataVencimento={licencaInfo.data_vencimento}
+              statusAssinatura={licencaInfo.status_assinatura}
+              onRenovado={onLicencaAtualizada}
+            />
+          )}
           {children}
         </div>
       </main>

@@ -1,0 +1,135 @@
+/* ============================================================
+   Cobrancas.css — Lucas J. Systems
+   Design System: alinhado com DashboardAdmin.css / AuditoriaAdmin.css
+   Prefixo: cob-
+   ============================================================ */
+
+.cob-wrapper {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  padding: 32px;
+  min-height: 100vh;
+  color: var(--text-primary);
+}
+
+/* ── Header ── */
+.cob-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.cob-header-left { display: flex; flex-direction: column; gap: 4px; max-width: 640px; }
+.cob-breadcrumb {
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-accent);
+}
+.cob-title {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  color: var(--text-primary);
+}
+.cob-title span { color: var(--text-accent); }
+.cob-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+.cob-subtitle strong { color: var(--text-primary); }
+.cob-header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ── Loading / Empty ── */
+.cob-loading {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 80px; color: var(--text-secondary); font-size: 0.9rem;
+}
+.cob-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 60px; text-align: center;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+}
+.cob-empty-icon { font-size: 2.5rem; }
+.cob-empty p { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+.cob-empty small { font-size: 0.78rem; color: var(--text-secondary); }
+
+/* ── Lista ── */
+.cob-lista { display: flex; flex-direction: column; gap: 10px; }
+
+.cob-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: all 0.15s;
+}
+.cob-item:hover { border-color: var(--border-accent, var(--text-accent)); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+
+.cob-item-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.cob-vencido .cob-item-dot  { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+.cob-urgente .cob-item-dot  { background: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.15); }
+.cob-alerta .cob-item-dot   { background: #eab308; box-shadow: 0 0 0 4px rgba(234,179,8,0.15); }
+.cob-nd .cob-item-dot       { background: var(--border); }
+
+.cob-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cob-item-nome-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cob-item-nome {
+  font-size: calc(0.95rem * var(--cob-font-scale, 1));
+  font-weight: 700; color: var(--text-primary);
+}
+
+.cob-item-badge {
+  font-size: calc(0.68rem * var(--cob-font-scale, 1));
+  font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.cob-item-badge.cob-vencido { background: rgba(239,68,68,0.12); color: #ef4444; }
+.cob-item-badge.cob-urgente { background: rgba(249,115,22,0.12); color: #f97316; }
+.cob-item-badge.cob-alerta  { background: rgba(234,179,8,0.12); color: #ca8a04; }
+.cob-item-badge.cob-feito   { background: rgba(34,197,94,0.12); color: #22c55e; }
+
+.cob-item-detalhes {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-size: calc(0.78rem * var(--cob-font-scale, 1));
+  color: var(--text-secondary);
+}
+
+.cob-item-acoes { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+.cob-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 9px; border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.8rem * var(--cob-font-scale, 1));
+  font-weight: 700; cursor: pointer; transition: all 0.18s; white-space: nowrap;
+}
+.cob-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cob-btn--whatsapp { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+.cob-btn--whatsapp:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34,197,94,0.35); }
+
+.cob-btn--email { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+.cob-btn--email:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.35); }
+
+.cob-btn--ghost {
+  background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border);
+}
+.cob-btn--ghost:hover:not(:disabled) { border-color: var(--text-accent); color: var(--text-accent); }
+
+/* ── Já cobrados hoje ─────────────────────────────────────── */
+.cob-cobrados-box { margin-top: 20px; }
+.cob-cobrados-toggle {
+  background: none; border: none; cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);
+  padding: 8px 0;
+}
+.cob-cobrados-toggle:hover { color: var(--text-accent); }
+.cob-item--feito { opacity: 0.7; }
+
+/* ── Responsivo ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .cob-wrapper { padding: 16px; }
+  .cob-item { flex-wrap: wrap; }
+  .cob-item-acoes { width: 100%; }
+}

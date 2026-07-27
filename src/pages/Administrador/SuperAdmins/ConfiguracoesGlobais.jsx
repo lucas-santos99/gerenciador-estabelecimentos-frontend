@@ -15,7 +15,7 @@ export default function ConfiguracoesGlobais() {
   const API_URL  = import.meta.env.VITE_API_URL;
 
   const [carregando,   setCarregando]   = useState(true);
-  const [aba,          setAba]          = useState("geral"); // 'geral' | 'tela' | 'contatos'
+  const [aba,          setAba]          = useState("geral"); // 'geral' | 'tela' | 'cobranca' | 'contatos'
 
   // Config geral
   const [cfgLimite,       setCfgLimite]       = useState(3);
@@ -41,15 +41,26 @@ export default function ConfiguracoesGlobais() {
   const [salvandoContato, setSalvandoContato] = useState(false);
   const [msgContato,      setMsgContato]      = useState("");
 
+  // Cobrança (renovação antecipada + módulo de cobrança manual)
+  const [cfgCobDias,          setCfgCobDias]          = useState(5);
+  const [cfgCobMsgWhatsapp,   setCfgCobMsgWhatsapp]   = useState("");
+  const [cfgCobEmailAssunto,  setCfgCobEmailAssunto]  = useState("");
+  const [cfgCobEmailCorpo,    setCfgCobEmailCorpo]    = useState("");
+  const [cfgCobImagemUrl,     setCfgCobImagemUrl]     = useState("");
+  const [enviandoImagem,      setEnviandoImagem]      = useState(false);
+  const [salvandoCobranca,    setSalvandoCobranca]    = useState(false);
+  const [msgCobranca,         setMsgCobranca]         = useState("");
+
   async function carregar() {
     setCarregando(true);
     try {
       const token = await getToken();
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [rGeral, rTela, rContatos] = await Promise.all([
+      const [rGeral, rTela, rCobranca, rContatos] = await Promise.all([
         fetch(`${API_URL}/superadmin/config`, { headers }),
         fetch(`${API_URL}/superadmin/config-tela-bloqueio`, { headers }),
+        fetch(`${API_URL}/superadmin/config-cobranca`, { headers }),
         fetch(`${API_URL}/superadmin/contatos-suporte`, { headers }),
       ]);
 
@@ -66,6 +77,14 @@ export default function ConfiguracoesGlobais() {
         setCfgPromoAtiva(!!d.promo_ativa);
         setCfgPromoTexto(d.promo_texto || "");
         setCfgPromoValidade(d.promo_validade || "");
+      }
+      if (rCobranca.ok) {
+        const d = await rCobranca.json();
+        setCfgCobDias(d.dias_aviso ?? 5);
+        setCfgCobMsgWhatsapp(d.msg_whatsapp || "");
+        setCfgCobEmailAssunto(d.email_assunto || "");
+        setCfgCobEmailCorpo(d.email_corpo || "");
+        setCfgCobImagemUrl(d.imagem_url || "");
       }
       if (rContatos.ok) setContatos(await rContatos.json());
     } catch { /* silencioso */ }
@@ -127,6 +146,62 @@ export default function ConfiguracoesGlobais() {
     setSalvandoTela(false);
   }
 
+  async function salvarCobranca() {
+    setSalvandoCobranca(true);
+    setMsgCobranca("");
+    try {
+      const token = await getToken();
+      const resp = await fetch(`${API_URL}/superadmin/config-cobranca`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          dias_aviso:    parseInt(cfgCobDias),
+          msg_whatsapp:  cfgCobMsgWhatsapp,
+          email_assunto: cfgCobEmailAssunto,
+          email_corpo:   cfgCobEmailCorpo,
+        }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || "Erro ao salvar.");
+      setMsgCobranca("✓ Salvo!");
+      setTimeout(() => setMsgCobranca(""), 3000);
+    } catch (e) { setMsgCobranca("❌ " + e.message); }
+    setSalvandoCobranca(false);
+  }
+
+  async function enviarImagemCobranca(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEnviandoImagem(true);
+    setMsgCobranca("");
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("imagem", file);
+      const resp = await fetch(`${API_URL}/superadmin/config-cobranca/imagem`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || "Erro ao enviar imagem.");
+      setCfgCobImagemUrl(json.imagem_url);
+    } catch (e) { setMsgCobranca("❌ " + e.message); }
+    setEnviandoImagem(false);
+    e.target.value = "";
+  }
+
+  async function removerImagemCobranca() {
+    if (!window.confirm("Remover a imagem padrão da cobrança?")) return;
+    try {
+      const token = await getToken();
+      await fetch(`${API_URL}/superadmin/config-cobranca/imagem`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      setCfgCobImagemUrl("");
+    } catch { alert("Erro ao remover imagem."); }
+  }
+
   async function adicionarContato() {
     if (!novoValor.trim()) { setMsgContato("❌ Preencha o valor do contato."); return; }
     setSalvandoContato(true);
@@ -181,6 +256,7 @@ export default function ConfiguracoesGlobais() {
               {[
                 { k: "geral",    label: "⚙️ Padrões do Sistema" },
                 { k: "tela",     label: "🔒 Tela de Bloqueio" },
+                { k: "cobranca", label: "💳 Cobrança" },
                 { k: "contatos", label: "💬 Contatos de Suporte" },
               ].map(t => (
                 <button
@@ -301,6 +377,84 @@ export default function ConfiguracoesGlobais() {
                 {msgTela && <div className={`sa-config-msg ${msgTela.startsWith("✓") ? "sucesso" : "erro"}`}>{msgTela}</div>}
                 <button className="sa-btn sa-btn-primary" style={{ alignSelf: "flex-end", marginTop: 8 }} onClick={salvarTela} disabled={salvandoTela}>
                   {salvandoTela ? "⏳ Salvando…" : "✓ Salvar"}
+                </button>
+              </div>
+            </div>
+            )}
+
+            {/* ── CONTATOS DE SUPORTE ─────────────────────────── */}
+            {aba === "cobranca" && (
+            <div className="sa-config-box">
+              <div className="sa-config-header">
+                <div className="sa-config-header-left">
+                  <span className="sa-config-icon">💳</span>
+                  <div>
+                    <div className="sa-config-title">Cobrança</div>
+                    <div className="sa-config-subtitle">Banner de renovação antecipada (estabelecimento) e mensagens do módulo de Cobranças (WhatsApp/e-mail).</div>
+                  </div>
+                </div>
+              </div>
+              <div className="sa-config-body">
+
+                <div className="sa-config-item">
+                  <div className="sa-config-item-info">
+                    <span className="sa-config-item-label">⏱ Janela de dias antes do vencimento</span>
+                    <span className="sa-config-item-desc">Vale pros dois: o botão de renovar antecipado no estabelecimento e a lista do módulo de Cobranças.</span>
+                  </div>
+                  <div className="sa-config-item-control">
+                    <input className="sa-config-input" type="number" min={1} max={60}
+                      value={cfgCobDias} onChange={e => setCfgCobDias(e.target.value)} style={{ width: 70 }} />
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>dias</span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                  Variáveis disponíveis nas mensagens: <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{nome}"}</code>{" "}
+                  <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{dias}"}</code>{" "}
+                  <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{vencimento}"}</code>{" "}
+                  <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{valor}"}</code>
+                </div>
+
+                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                  <span className="sa-config-item-label">💬 Mensagem do WhatsApp</span>
+                  <textarea className="sa-config-input" style={{ width: "100%" }} rows={4}
+                    value={cfgCobMsgWhatsapp} onChange={e => setCfgCobMsgWhatsapp(e.target.value)} />
+                </div>
+
+                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                  <span className="sa-config-item-label">✉️ Assunto do e-mail</span>
+                  <input className="sa-config-input" style={{ width: "100%" }}
+                    value={cfgCobEmailAssunto} onChange={e => setCfgCobEmailAssunto(e.target.value)} />
+                </div>
+
+                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                  <span className="sa-config-item-label">✉️ Corpo do e-mail</span>
+                  <textarea className="sa-config-input" style={{ width: "100%" }} rows={4}
+                    value={cfgCobEmailCorpo} onChange={e => setCfgCobEmailCorpo(e.target.value)} />
+                </div>
+
+                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                  <span className="sa-config-item-label">🖼️ Imagem padrão (opcional)</span>
+                  <span className="sa-config-item-desc" style={{ marginBottom: 4 }}>
+                    O link do WhatsApp não anexa imagem sozinho — mas ao clicar em "Cobrar WhatsApp" no módulo de Cobranças, essa imagem é copiada pra área de transferência automaticamente. É só apertar Ctrl+V dentro do WhatsApp Web depois de mandar o texto.
+                  </span>
+                  {cfgCobImagemUrl ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <img src={cfgCobImagemUrl} alt="Imagem da cobrança" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }} />
+                      <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={removerImagemCobranca}>🗑 Remover</button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Nenhuma imagem definida ainda.</span>
+                  )}
+                  <label className="sa-btn sa-btn-ghost sa-btn-sm" style={{ width: "fit-content", cursor: "pointer" }}>
+                    {enviandoImagem ? "⏳ Enviando…" : (cfgCobImagemUrl ? "🔄 Trocar imagem" : "+ Enviar imagem")}
+                    <input type="file" accept="image/*" onChange={enviarImagemCobranca} disabled={enviandoImagem} style={{ display: "none" }} />
+                  </label>
+                </div>
+
+                {msgCobranca && <div className={`sa-config-msg ${msgCobranca.startsWith("✓") ? "sucesso" : "erro"}`}>{msgCobranca}</div>}
+                <button className="sa-btn sa-btn-primary" style={{ alignSelf: "flex-end", marginTop: 8 }} onClick={salvarCobranca} disabled={salvandoCobranca}>
+                  {salvandoCobranca ? "⏳ Salvando…" : "✓ Salvar"}
                 </button>
               </div>
             </div>

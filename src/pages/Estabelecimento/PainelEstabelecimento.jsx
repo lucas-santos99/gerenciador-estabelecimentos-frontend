@@ -241,6 +241,13 @@ export default function PainelEstabelecimento() {
       logoUrl={logoUrl}
       permissoes={permissoes}
       licencaInfo={licencaInfo}
+      estabelecimentoId={estabelecimentoId}
+      onLicencaAtualizada={(dados) => {
+        setLicencaInfo({
+          status_assinatura: dados.status_assinatura || null,
+          data_vencimento:   dados.data_vencimento   || null,
+        });
+      }}
     >
       {renderModulo()}
     </LayoutEstabelecimento>
