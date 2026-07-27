@@ -184,6 +184,14 @@ export default function LayoutEstabelecimento({
   const isMerchant = profile?.role === 'merchant';
 
   /* ── status da licença (só exibido para merchant) ─────────── */
+  // Tick a cada 60s só pra manter a contagem regressiva do último dia
+  // atualizada — não precisa de nada mais preciso que isso pro badge.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const licenca = (() => {
     if (!isMerchant || !licencaInfo) return null;
     const { status_assinatura, data_vencimento } = licencaInfo;
@@ -194,6 +202,21 @@ export default function LayoutEstabelecimento({
     const diff = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
     const dataFmt = new Date(data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
     if (diff < 0)   return { tipo: 'vencida',   texto: 'Licença vencida',         dias: diff,  dataFmt };
+    if (diff === 0) {
+      // Último dia — mostra contagem regressiva em horas/minutos até o
+      // fim do dia, em vez de "vence em 0 dias".
+      const fimDoDia    = new Date(data_vencimento + 'T23:59:59');
+      const msRestantes = fimDoDia - new Date();
+      let contagem;
+      if (msRestantes <= 0) {
+        contagem = 'Vence a qualquer momento';
+      } else {
+        const horas   = Math.floor(msRestantes / (1000 * 60 * 60));
+        const minutos = Math.floor((msRestantes % (1000 * 60 * 60)) / (1000 * 60));
+        contagem = horas > 0 ? `Restam ${horas}h ${minutos}min` : `Restam ${minutos}min`;
+      }
+      return { tipo: 'critica', texto: 'Vence hoje', dias: 0, dataFmt: contagem };
+    }
     if (diff <= 7)  return { tipo: 'critica',   texto: `Vence em ${diff} dia${diff === 1 ? '' : 's'}`, dias: diff, dataFmt };
     if (diff <= 30) return { tipo: 'atencao',   texto: `Vence em ${diff} dias`,   dias: diff,  dataFmt };
     return               { tipo: 'ativa',      texto: `Ativa até ${dataFmt}`,     dias: diff,  dataFmt };

@@ -31,6 +31,14 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
     return () => clearInterval(pollingRef.current);
   }, []);
 
+  // Tick a cada 60s só pra manter a contagem regressiva do último dia
+  // atualizada — não precisa de nada mais preciso que isso.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const diasRestantes = (() => {
     if (!dataVencimento) return null;
     const venc = new Date(dataVencimento + "T12:00:00");
@@ -38,6 +46,18 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
     hoje.setHours(0, 0, 0, 0);
     venc.setHours(0, 0, 0, 0);
     return Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+  })();
+
+  // No último dia, troca "vence hoje" por uma contagem em horas/minutos
+  // até o fim do dia — bem mais claro que está vencendo ali mesmo.
+  const contagemHoje = (() => {
+    if (diasRestantes !== 0 || !dataVencimento) return null;
+    const fimDoDia    = new Date(dataVencimento + "T23:59:59");
+    const msRestantes = fimDoDia - new Date();
+    if (msRestantes <= 0) return "a qualquer momento";
+    const horas   = Math.floor(msRestantes / (1000 * 60 * 60));
+    const minutos = Math.floor((msRestantes % (1000 * 60 * 60)) / (1000 * 60));
+    return horas > 0 ? `em ${horas}h ${minutos}min` : `em ${minutos}min`;
   })();
 
   // Só mostra o banner se: já sabemos a janela configurada, a licença
@@ -144,7 +164,7 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
         <div className="renov-banner-texto">
           <strong>
             {diasRestantes === 0
-              ? 'Sua assinatura vence hoje!'
+              ? `Sua assinatura vence hoje — ${contagemHoje}!`
               : `Sua assinatura vence em ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}`}
           </strong>
           <span>Renove agora e continue sem interrupção no acesso.</span>
