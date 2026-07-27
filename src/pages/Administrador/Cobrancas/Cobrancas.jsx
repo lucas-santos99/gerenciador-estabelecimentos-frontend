@@ -37,6 +37,15 @@ function textoDias(diff) {
   if (diff < 0)      return `Vencido há ${Math.abs(diff)} dia${Math.abs(diff) > 1 ? "s" : ""}`;
   return `Vence em ${diff} dia${diff > 1 ? "s" : ""}`;
 }
+// Mesma lógica de textoDias, só que em minúsculo e sem sujeito — pra
+// encaixar dentro de uma frase corrida nas mensagens de cobrança
+// (ex: "sua mensalidade {situacao}" → "sua mensalidade venceu há 3 dias")
+function situacaoTexto(diff) {
+  if (diff === null) return "vence em breve";
+  if (diff === 0)    return "vence hoje";
+  if (diff < 0)      return `venceu há ${Math.abs(diff)} dia${Math.abs(diff) > 1 ? "s" : ""}`;
+  return `vence em ${diff} dia${diff > 1 ? "s" : ""}`;
+}
 function interpolar(template, m, diff, valorPadrao) {
   const dias = diff === null ? "?" : Math.abs(diff);
   const valor = m.valor_mensalidade
@@ -45,6 +54,7 @@ function interpolar(template, m, diff, valorPadrao) {
   return (template || "")
     .replaceAll("{nome}", m.nome_fantasia || "")
     .replaceAll("{dias}", String(dias))
+    .replaceAll("{situacao}", situacaoTexto(diff))
     .replaceAll("{vencimento}", formatarData(m.data_vencimento))
     .replaceAll("{valor}", valor);
 }
@@ -58,6 +68,7 @@ export default function Cobrancas() {
   const [config,  setConfig]    = useState(null);
   const [processando, setProcessando] = useState(null); // id em andamento
   const [mostrarCobrados, setMostrarCobrados] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState("");
   const [fontScale, setFontScale] = useState(() => {
     const s = localStorage.getItem("cob-font-scale");
     return s ? parseFloat(s) : 1;
@@ -70,6 +81,9 @@ export default function Cobrancas() {
       return next;
     });
   }
+
+  const [imagemBlob, setImagemBlob] = useState(null);
+  const [toast, setToast] = useState(null); // { tipo: 'ok'|'aviso', texto } | null
 
   async function carregar() {
     setLoading(true);
@@ -92,6 +106,23 @@ export default function Cobrancas() {
 
   useEffect(() => { carregar(); }, []);
 
+  // Pré-busca a imagem assim que sabemos a URL — evita ter que dar
+  // fetch() no meio do clique (isso pode fazer o navegador recusar o
+  // clipboard.write depois, principalmente no celular, por demorar
+  // demais entre o toque do usuário e a cópia de verdade).
+  useEffect(() => {
+    if (!config?.imagem_url) { setImagemBlob(null); return; }
+    fetch(config.imagem_url)
+      .then(r => r.blob())
+      .then(setImagemBlob)
+      .catch(() => setImagemBlob(null));
+  }, [config?.imagem_url]);
+
+  /* ── tipos disponíveis (pra montar o filtro) ─────────────── */
+  const tiposDisponiveis = useMemo(() => {
+    return [...new Set(lista.map(m => m.tipo_estabelecimento).filter(Boolean))].sort();
+  }, [lista]);
+
   /* ── separação pendentes / já cobrados hoje ──────────────── */
   const { pendentes, cobradosHoje } = useMemo(() => {
     if (!config) return { pendentes: [], cobradosHoje: [] };
@@ -99,6 +130,7 @@ export default function Cobrancas() {
 
     const elegiveis = lista
       .filter(m => m.status_assinatura !== "excluida")
+      .filter(m => !filtroTipo || m.tipo_estabelecimento === filtroTipo)
       .map(m => ({ ...m, _diff: calcularDiff(m.data_vencimento) }))
       .filter(m => m._diff !== null && m._diff <= diasAviso);
 
@@ -111,19 +143,18 @@ export default function Cobrancas() {
       .sort((a, b) => a._diff - b._diff);
 
     return { pendentes: pend, cobradosHoje: cobrados };
-  }, [lista, config]);
+  }, [lista, config, filtroTipo]);
 
   /* ── copiar imagem padrão pra área de transferência ──────── */
   async function copiarImagemClipboard() {
-    if (!config?.imagem_url) return false;
+    if (!imagemBlob) return false;
     try {
-      const resp = await fetch(config.imagem_url);
-      const blob = await resp.blob();
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      await navigator.clipboard.write([new ClipboardItem({ [imagemBlob.type]: imagemBlob })]);
       return true;
     } catch {
-      // Navegador não suporta (Firefox/Safari) ou permissão negada —
-      // segue sem travar o fluxo, só não cola a imagem sozinho.
+      // Navegador não suporta (Firefox/Safari) ou perdeu a permissão
+      // de "gesto do usuário" — segue sem travar o fluxo, só não cola
+      // a imagem sozinho.
       return false;
     }
   }
@@ -152,7 +183,13 @@ export default function Cobrancas() {
       alert(`"${m.nome_fantasia}" não tem telefone cadastrado.`);
       return;
     }
-    if (config.imagem_url) await copiarImagemClipboard();
+    if (imagemBlob) {
+      const copiou = await copiarImagemClipboard();
+      setToast(copiou
+        ? { tipo: "ok",    texto: "📋 Imagem copiada! No WhatsApp, cole com Ctrl+V (ou toque e segure → Colar) depois de mandar o texto." }
+        : { tipo: "aviso", texto: "⚠️ Não deu pra copiar a imagem automaticamente nesse navegador — anexe ela manualmente se quiser." });
+      setTimeout(() => setToast(null), 6000);
+    }
     window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, "_blank", "noopener,noreferrer");
     marcarCobrado(m.id, "whatsapp");
   }
@@ -191,6 +228,12 @@ export default function Cobrancas() {
             </p>
           </div>
           <div className="cob-header-actions">
+            {tiposDisponiveis.length > 0 && (
+              <select className="cob-filtro-tipo" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+                <option value="">Todos os tipos</option>
+                {tiposDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            )}
             <button className="btn btn-ghost btn-sm" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
             <button className="btn btn-ghost btn-sm" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
             <button className="btn btn-ghost" onClick={() => navigate("/admin/configuracoes-globais")}>⚙️ Editar mensagem/imagem</button>
@@ -212,6 +255,7 @@ export default function Cobrancas() {
                 <div className="cob-item-info">
                   <div className="cob-item-nome-linha">
                     <span className="cob-item-nome">{m.nome_fantasia}</span>
+                    {m.tipo_estabelecimento && <span className="cob-item-tipo">{m.tipo_estabelecimento}</span>}
                     <span className={`cob-item-badge ${classVenc(m._diff)}`}>{textoDias(m._diff)}</span>
                   </div>
                   <div className="cob-item-detalhes">
@@ -266,6 +310,7 @@ export default function Cobrancas() {
                     <div className="cob-item-info">
                       <div className="cob-item-nome-linha">
                         <span className="cob-item-nome">{m.nome_fantasia}</span>
+                        {m.tipo_estabelecimento && <span className="cob-item-tipo">{m.tipo_estabelecimento}</span>}
                         <span className="cob-item-badge cob-feito">✓ Cobrado hoje</span>
                       </div>
                       <div className="cob-item-detalhes">
@@ -291,6 +336,10 @@ export default function Cobrancas() {
         )}
 
       </div>
+
+      {toast && (
+        <div className={`cob-toast cob-toast--${toast.tipo}`}>{toast.texto}</div>
+      )}
     </LayoutAdmin>
   );
 }

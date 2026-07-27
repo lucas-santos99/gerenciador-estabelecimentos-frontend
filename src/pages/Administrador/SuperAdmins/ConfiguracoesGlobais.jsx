@@ -410,9 +410,13 @@ export default function ConfiguracoesGlobais() {
 
                 <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", borderTop: "1px solid var(--border)", paddingTop: 14 }}>
                   Variáveis disponíveis nas mensagens: <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{nome}"}</code>{" "}
+                  <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{situacao}"}</code>{" "}
                   <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{dias}"}</code>{" "}
                   <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{vencimento}"}</code>{" "}
                   <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{valor}"}</code>
+                  <div style={{ marginTop: 6 }}>
+                    <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>{"{situacao}"}</code> já se ajusta sozinho: vira "vence em 3 dias", "vence hoje" ou "venceu há 2 dias", dependendo da data. Prefira usar essa variável em vez de escrever "vence em {"{dias}"}" fixo no texto.
+                  </div>
                 </div>
 
                 <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>

@@ -189,7 +189,9 @@ export default function LayoutEstabelecimento({
     const { status_assinatura, data_vencimento } = licencaInfo;
     if (status_assinatura === 'bloqueada') return { tipo: 'bloqueada', texto: 'Licença bloqueada', dias: null };
     if (!data_vencimento) return null;
-    const diff = Math.ceil((new Date(data_vencimento + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24));
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const venc = new Date(data_vencimento + 'T12:00:00'); venc.setHours(0, 0, 0, 0);
+    const diff = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
     const dataFmt = new Date(data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
     if (diff < 0)   return { tipo: 'vencida',   texto: 'Licença vencida',         dias: diff,  dataFmt };
     if (diff <= 7)  return { tipo: 'critica',   texto: `Vence em ${diff} dia${diff === 1 ? '' : 's'}`, dias: diff, dataFmt };
