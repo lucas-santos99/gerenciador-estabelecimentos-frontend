@@ -52,17 +52,14 @@ function situacaoTexto(diff) {
 function blocoPagamento(pagamento) {
   if (!pagamento) return "";
   const partes = [];
-  if (pagamento.linkCartao)   partes.push(`💳 CLIQUE AQUI PARA PAGAR COM CARTÃO DE CRÉDITO: ${pagamento.linkCartao}`);
   if (pagamento.pixCopiaCola) partes.push(`📱 COPIE A CHAVE PIX (copia e cola) PARA PAGAR NO SEU BANCO:\n${pagamento.pixCopiaCola}`);
+  if (pagamento.linkCartao)   partes.push(`💳 CLIQUE AQUI PARA PAGAR COM CARTÃO DE CRÉDITO: ${pagamento.linkCartao}`);
   return partes.length > 0
     ? partes.join("\n\n")
     : "⚠️ Não consegui gerar o link agora — acesse o sistema e clique em \"Renovar agora\".";
 }
 function interpolar(template, m, diff, pagamento) {
   const dias = diff === null ? "?" : Math.abs(diff);
-  // Prioriza o valor da cobrança recém-gerada (é o valor real cobrado
-  // agora, já considera preço individual do estabelecimento se tiver);
-  // cai pro valor_mensalidade cadastrado só se a cobrança não veio.
   const valorNum = pagamento?.valor ?? m.valor_mensalidade ?? null;
   const valor = valorNum !== null ? parseFloat(valorNum).toFixed(2).replace(".", ",") : "";
   return (template || "")
@@ -84,6 +81,7 @@ export default function Cobrancas() {
   const [processando, setProcessando] = useState(null);
   const [mostrarCobrados, setMostrarCobrados] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState("");
+  const [tela, setTela] = useState("lista"); // 'lista' | 'config'
   const [fontScale, setFontScale] = useState(() => {
     const s = localStorage.getItem("cob-font-scale");
     return s ? parseFloat(s) : 1;
@@ -100,7 +98,6 @@ export default function Cobrancas() {
   const [imagemBlob, setImagemBlob] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const [configAberta,   setConfigAberta]   = useState(false);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [msgConfig,      setMsgConfig]      = useState("");
@@ -196,7 +193,7 @@ export default function Cobrancas() {
         valor:        dataPix.valor ?? dataCartao.valor ?? null,
       };
     } catch {
-      return { linkCartao: null, pixCopiaCola: null };
+      return { linkCartao: null, pixCopiaCola: null, valor: null };
     }
   }
 
@@ -313,6 +310,7 @@ export default function Cobrancas() {
     } catch { alert("Erro ao remover imagem."); }
   }
 
+  /* ── loading ──────────────────────────────────────────────── */
   if (loading) {
     return (
       <LayoutAdmin>
@@ -321,6 +319,119 @@ export default function Cobrancas() {
     );
   }
 
+  /* ── botões de zoom (reaproveitados nas duas telas) ─────── */
+  const ZoomBtns = () => (
+    <>
+      <button className="cob-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+      <button className="cob-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
+    </>
+  );
+
+  /* ══════════════════════════════════════════════════════════
+     TELA DE CONFIGURAÇÃO — separada da lista, tela cheia
+  ══════════════════════════════════════════════════════════ */
+  if (tela === "config" && config) {
+    return (
+      <LayoutAdmin>
+        <div className="cob-wrapper" style={{ "--cob-font-scale": fontScale }}>
+
+          <div className="cob-header">
+            <div className="cob-header-left">
+              <span className="cob-breadcrumb">💳 Painel Administrativo · Cobranças</span>
+              <h1 className="cob-title">Configurações de <span>Cobrança</span></h1>
+              <p className="cob-subtitle">
+                Mensagem, imagem padrão e janela de dias usadas tanto na lista de cobranças quanto no banner de renovação antecipada do estabelecimento.
+              </p>
+            </div>
+            <div className="cob-header-actions">
+              <ZoomBtns />
+              <button className="cob-btn-voltar" onClick={() => setTela("lista")}>← Voltar pra lista</button>
+            </div>
+          </div>
+
+          <div className="cob-config-grid">
+
+            <div className="cob-config-col">
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">⏱ Janela de dias</div>
+                <p className="cob-config-card-desc">
+                  Quantos dias antes do vencimento o estabelecimento já vê o botão de renovar antecipado, e a partir de quando ele entra na lista de cobranças.
+                </p>
+                <div className="cob-config-dias-control">
+                  <input className="cob-config-input cob-config-input--dias" type="number" min={1} max={60}
+                    value={config.dias_aviso} onChange={e => setConfig(prev => ({ ...prev, dias_aviso: e.target.value }))} />
+                  <span>dias antes do vencimento</span>
+                </div>
+              </div>
+
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">🧩 Variáveis disponíveis</div>
+                <div className="cob-config-var-lista">
+                  <div><code>{"{nome}"}</code><span>Nome do estabelecimento</span></div>
+                  <div><code>{"{situacao}"}</code><span>Se ajusta sozinho: "vence em 3 dias" / "vence hoje" / "venceu há 2 dias"</span></div>
+                  <div><code>{"{dias}"}</code><span>Só o número de dias</span></div>
+                  <div><code>{"{vencimento}"}</code><span>Data de vencimento (DD/MM/AAAA)</span></div>
+                  <div><code>{"{valor}"}</code><span>Valor da mensalidade</span></div>
+                  <div><code>{"{link_pagamento}"}</code><span>Gera o link do cartão + Pix copia-e-cola na hora de cobrar</span></div>
+                </div>
+              </div>
+
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">🖼️ Imagem padrão (opcional)</div>
+                <p className="cob-config-card-desc">
+                  O link do WhatsApp não anexa imagem sozinho — mas ao clicar em "Cobrar WhatsApp" ela já vai copiada pra área de transferência (Ctrl+V no WhatsApp Web depois do texto).
+                </p>
+                {config.imagem_url ? (
+                  <div className="cob-config-imagem-preview">
+                    <img src={config.imagem_url} alt="Imagem da cobrança" />
+                    <button className="cob-btn-ghost-sm" onClick={removerImagem}>🗑 Remover</button>
+                  </div>
+                ) : (
+                  <span className="cob-config-sem-imagem">Nenhuma imagem definida ainda.</span>
+                )}
+                <label className="cob-btn-ghost-sm" style={{ cursor: "pointer", marginTop: 10, width: "fit-content" }}>
+                  {enviandoImagem ? "⏳ Enviando…" : (config.imagem_url ? "🔄 Trocar imagem" : "+ Enviar imagem")}
+                  <input type="file" accept="image/*" onChange={enviarImagem} disabled={enviandoImagem} style={{ display: "none" }} />
+                </label>
+              </div>
+            </div>
+
+            <div className="cob-config-col">
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">💬 Mensagem do WhatsApp</div>
+                <textarea className="cob-config-input cob-config-textarea" rows={7}
+                  value={config.msg_whatsapp} onChange={e => setConfig(prev => ({ ...prev, msg_whatsapp: e.target.value }))} />
+              </div>
+
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">✉️ E-mail</div>
+                <label className="cob-config-sublabel">Assunto</label>
+                <input className="cob-config-input" style={{ marginBottom: 12 }}
+                  value={config.email_assunto} onChange={e => setConfig(prev => ({ ...prev, email_assunto: e.target.value }))} />
+                <label className="cob-config-sublabel">Corpo</label>
+                <textarea className="cob-config-input cob-config-textarea" rows={7}
+                  value={config.email_corpo} onChange={e => setConfig(prev => ({ ...prev, email_corpo: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="cob-config-footer">
+            {msgConfig && <div className={`cob-config-msg ${msgConfig.startsWith("✓") ? "sucesso" : "erro"}`}>{msgConfig}</div>}
+            <button className="cob-btn-salvar" onClick={salvarConfig} disabled={salvandoConfig}>
+              {salvandoConfig ? "⏳ Salvando…" : "✓ Salvar configurações"}
+            </button>
+          </div>
+
+        </div>
+
+        {toast && <div className={`cob-toast cob-toast--${toast.tipo}`}>{toast.texto}</div>}
+      </LayoutAdmin>
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     TELA DE LISTA — cobranças pendentes
+  ══════════════════════════════════════════════════════════ */
   return (
     <LayoutAdmin>
       <div className="cob-wrapper" style={{ "--cob-font-scale": fontScale }}>
@@ -340,80 +451,10 @@ export default function Cobrancas() {
                 {tiposDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             )}
-            <button className="btn btn-ghost btn-sm" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
-            <button className="btn btn-ghost" onClick={() => setConfigAberta(p => !p)}>
-              {configAberta ? "✕ Fechar" : "⚙️ Mensagem, imagem e janela"}
-            </button>
+            <ZoomBtns />
+            <button className="cob-btn-voltar" onClick={() => setTela("config")}>⚙️ Configurações</button>
           </div>
         </div>
-
-        {configAberta && config && (
-          <div className="cob-config-box">
-            <div className="cob-config-item">
-              <div className="cob-config-item-info">
-                <span className="cob-config-item-label">⏱ Janela de dias antes do vencimento</span>
-                <span className="cob-config-item-desc">Vale pros dois: o botão de renovar antecipado no estabelecimento e essa lista aqui.</span>
-              </div>
-              <div className="cob-config-item-control">
-                <input className="cob-config-input" type="number" min={1} max={60} style={{ width: 70 }}
-                  value={config.dias_aviso} onChange={e => setConfig(prev => ({ ...prev, dias_aviso: e.target.value }))} />
-                <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>dias</span>
-              </div>
-            </div>
-
-            <div className="cob-config-variaveis">
-              Variáveis disponíveis: <code>{"{nome}"}</code> <code>{"{situacao}"}</code> <code>{"{dias}"}</code>{" "}
-              <code>{"{vencimento}"}</code> <code>{"{valor}"}</code> <code>{"{link_pagamento}"}</code>
-              <div style={{ marginTop: 6 }}>
-                <code>{"{situacao}"}</code> se ajusta sozinho ("vence em 3 dias" / "vence hoje" / "venceu há 2 dias").{" "}
-                <code>{"{link_pagamento}"}</code> gera o link do cartão + o Pix copia-e-cola na hora de cobrar, prontos pra pagar sem precisar entrar no sistema.
-              </div>
-            </div>
-
-            <div className="cob-config-item cob-config-item--full">
-              <span className="cob-config-item-label">💬 Mensagem do WhatsApp</span>
-              <textarea className="cob-config-input" rows={5}
-                value={config.msg_whatsapp} onChange={e => setConfig(prev => ({ ...prev, msg_whatsapp: e.target.value }))} />
-            </div>
-
-            <div className="cob-config-item cob-config-item--full">
-              <span className="cob-config-item-label">✉️ Assunto do e-mail</span>
-              <input className="cob-config-input"
-                value={config.email_assunto} onChange={e => setConfig(prev => ({ ...prev, email_assunto: e.target.value }))} />
-            </div>
-
-            <div className="cob-config-item cob-config-item--full">
-              <span className="cob-config-item-label">✉️ Corpo do e-mail</span>
-              <textarea className="cob-config-input" rows={5}
-                value={config.email_corpo} onChange={e => setConfig(prev => ({ ...prev, email_corpo: e.target.value }))} />
-            </div>
-
-            <div className="cob-config-item cob-config-item--full">
-              <span className="cob-config-item-label">🖼️ Imagem padrão (opcional)</span>
-              <span className="cob-config-item-desc" style={{ marginBottom: 4 }}>
-                Não anexa sozinha no link do WhatsApp — mas ao clicar em "Cobrar WhatsApp" ela já vai copiada pra área de transferência (Ctrl+V no WhatsApp Web depois do texto).
-              </span>
-              {config.imagem_url ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <img src={config.imagem_url} alt="Imagem da cobrança" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }} />
-                  <button className="btn btn-ghost btn-sm" onClick={removerImagem}>🗑 Remover</button>
-                </div>
-              ) : (
-                <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>Nenhuma imagem definida ainda.</span>
-              )}
-              <label className="btn btn-ghost btn-sm" style={{ width: "fit-content", cursor: "pointer", marginTop: 6 }}>
-                {enviandoImagem ? "⏳ Enviando…" : (config.imagem_url ? "🔄 Trocar imagem" : "+ Enviar imagem")}
-                <input type="file" accept="image/*" onChange={enviarImagem} disabled={enviandoImagem} style={{ display: "none" }} />
-              </label>
-            </div>
-
-            {msgConfig && <div className={`cob-config-msg ${msgConfig.startsWith("✓") ? "sucesso" : "erro"}`}>{msgConfig}</div>}
-            <button className="cob-btn-salvar" onClick={salvarConfig} disabled={salvandoConfig}>
-              {salvandoConfig ? "⏳ Salvando…" : "✓ Salvar configurações"}
-            </button>
-          </div>
-        )}
 
         {pendentes.length === 0 ? (
           <div className="cob-empty">
@@ -510,9 +551,7 @@ export default function Cobrancas() {
 
       </div>
 
-      {toast && (
-        <div className={`cob-toast cob-toast--${toast.tipo}`}>{toast.texto}</div>
-      )}
+      {toast && <div className={`cob-toast cob-toast--${toast.tipo}`}>{toast.texto}</div>}
     </LayoutAdmin>
   );
 }

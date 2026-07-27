@@ -20,20 +20,54 @@
   margin-bottom: 24px;
   flex-wrap: wrap;
 }
-.cob-header-left { display: flex; flex-direction: column; gap: 4px; max-width: 640px; }
+.cob-header-left { display: flex; flex-direction: column; gap: 4px; max-width: 680px; }
 .cob-breadcrumb {
-  font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  font-size: calc(0.75rem * var(--cob-font-scale, 1));
+  font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.08em; color: var(--text-accent);
 }
 .cob-title {
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+  font-size: calc(clamp(1.4rem, 3vw, 1.9rem) * var(--cob-font-scale, 1));
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.2;
   color: var(--text-primary);
 }
 .cob-title span { color: var(--text-accent); }
-.cob-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+.cob-subtitle {
+  font-size: calc(0.85rem * var(--cob-font-scale, 1));
+  color: var(--text-secondary); margin-top: 4px; line-height: 1.5;
+}
 .cob-subtitle strong { color: var(--text-primary); }
 .cob-header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ── Botões do header (zoom / voltar / config) ───────────── */
+.cob-zoom-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: calc(0.8rem * var(--cob-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cob-zoom-btn:hover:not(:disabled) { border-color: var(--text-accent); color: var(--text-accent); }
+.cob-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cob-btn-voltar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 9px;
+  padding: 8px 16px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.82rem * var(--cob-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cob-btn-voltar:hover { border-color: var(--text-accent); color: var(--text-accent); }
 
 /* ── Loading / Empty ── */
 .cob-loading {
@@ -46,8 +80,11 @@
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
 }
 .cob-empty-icon { font-size: 2.5rem; }
-.cob-empty p { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
-.cob-empty small { font-size: 0.78rem; color: var(--text-secondary); }
+.cob-empty p {
+  font-size: calc(1rem * var(--cob-font-scale, 1));
+  font-weight: 700; color: var(--text-primary); margin: 0;
+}
+.cob-empty small { font-size: calc(0.78rem * var(--cob-font-scale, 1)); color: var(--text-secondary); }
 
 /* ── Lista ── */
 .cob-lista { display: flex; flex-direction: column; gap: 10px; }
@@ -108,7 +145,7 @@
   background: var(--bg-input);
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.8rem;
+  font-size: calc(0.8rem * var(--cob-font-scale, 1));
   font-weight: 600;
   cursor: pointer;
 }
@@ -146,68 +183,151 @@
 .cob-cobrados-toggle {
   background: none; border: none; cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);
+  font-size: calc(0.82rem * var(--cob-font-scale, 1));
+  font-weight: 700; color: var(--text-secondary);
   padding: 8px 0;
 }
 .cob-cobrados-toggle:hover { color: var(--text-accent); }
 .cob-item--feito { opacity: 0.7; }
 
-/* ── Painel de configuração embutido ─────────────────────── */
-.cob-config-box {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* ════════════════════════════════════════════════════════════
+   TELA DE CONFIGURAÇÃO — separada, layout em 2 colunas
+   ════════════════════════════════════════════════════════════ */
+
+.cob-config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .cob-config-grid { grid-template-columns: 1fr; }
+}
+
+.cob-config-col { display: flex; flex-direction: column; gap: 18px; }
+
+.cob-config-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 20px 22px;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.cob-config-item {
+.cob-config-card-titulo {
+  font-size: calc(0.95rem * var(--cob-font-scale, 1));
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.cob-config-card-desc {
+  font-size: calc(0.78rem * var(--cob-font-scale, 1));
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cob-config-dias-control {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
-.cob-config-item--full { flex-direction: column; align-items: stretch; gap: 6px; }
-
-.cob-config-item-info { display: flex; flex-direction: column; gap: 2px; }
-.cob-config-item-label { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
-.cob-config-item-desc { font-size: 0.75rem; color: var(--text-secondary); }
-
-.cob-config-item-control { display: flex; align-items: center; gap: 8px; }
+.cob-config-dias-control span {
+  font-size: calc(0.82rem * var(--cob-font-scale, 1));
+  color: var(--text-secondary);
+}
 
 .cob-config-input {
-  padding: 9px 12px;
+  padding: 10px 13px;
   border-radius: 9px;
   border: 1px solid var(--border);
   background: var(--bg-input);
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.85rem;
-  resize: vertical;
+  font-size: calc(0.87rem * var(--cob-font-scale, 1));
+  width: 100%;
 }
+.cob-config-input--dias { width: 80px; flex-shrink: 0; }
 .cob-config-input:focus { outline: none; border-color: var(--text-accent); }
+.cob-config-textarea { resize: vertical; line-height: 1.6; }
 
-.cob-config-variaveis {
-  font-size: 0.75rem;
+.cob-config-sublabel {
+  font-size: calc(0.72rem * var(--cob-font-scale, 1));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 0;
-  line-height: 1.6;
+  margin-bottom: 4px;
+  display: block;
 }
-.cob-config-variaveis code {
+
+.cob-config-var-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cob-config-var-lista div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cob-config-var-lista code {
   background: var(--border);
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
   font-family: 'JetBrains Mono', monospace;
+  font-size: calc(0.78rem * var(--cob-font-scale, 1));
+  color: var(--text-accent);
+  flex-shrink: 0;
+}
+.cob-config-var-lista span {
+  font-size: calc(0.78rem * var(--cob-font-scale, 1));
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cob-config-imagem-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cob-config-imagem-preview img {
+  width: 100px; height: 100px; object-fit: cover;
+  border-radius: 12px; border: 1px solid var(--border);
+}
+.cob-config-sem-imagem { font-size: calc(0.78rem * var(--cob-font-scale, 1)); color: var(--text-secondary); }
+
+.cob-btn-ghost-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.78rem * var(--cob-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cob-btn-ghost-sm:hover:not(:disabled) { border-color: var(--text-accent); color: var(--text-accent); }
+
+.cob-config-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 
 .cob-config-msg {
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--cob-font-scale, 1));
   font-weight: 600;
   padding: 8px 12px;
   border-radius: 8px;
@@ -216,17 +336,17 @@
 .cob-config-msg.erro    { background: rgba(239,68,68,0.12); color: #ef4444; }
 
 .cob-btn-salvar {
-  align-self: flex-end;
   background: linear-gradient(135deg, #14b8a6, #0d9488);
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 10px 20px;
+  padding: 11px 22px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.85rem;
+  font-size: calc(0.86rem * var(--cob-font-scale, 1));
   font-weight: 700;
   cursor: pointer;
   transition: all 0.18s;
+  white-space: nowrap;
 }
 .cob-btn-salvar:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(20,184,166,0.35); }
 .cob-btn-salvar:disabled { opacity: 0.6; cursor: not-allowed; }
