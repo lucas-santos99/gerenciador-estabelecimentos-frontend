@@ -52,17 +52,19 @@ function situacaoTexto(diff) {
 function blocoPagamento(pagamento) {
   if (!pagamento) return "";
   const partes = [];
-  if (pagamento.linkCartao)   partes.push(`💳 Cartão: ${pagamento.linkCartao}`);
-  if (pagamento.pixCopiaCola) partes.push(`📱 Pix (copia e cola):\n${pagamento.pixCopiaCola}`);
+  if (pagamento.linkCartao)   partes.push(`💳 CLIQUE AQUI PARA PAGAR COM CARTÃO DE CRÉDITO: ${pagamento.linkCartao}`);
+  if (pagamento.pixCopiaCola) partes.push(`📱 COPIE A CHAVE PIX (copia e cola) PARA PAGAR NO SEU BANCO:\n${pagamento.pixCopiaCola}`);
   return partes.length > 0
     ? partes.join("\n\n")
     : "⚠️ Não consegui gerar o link agora — acesse o sistema e clique em \"Renovar agora\".";
 }
-function interpolar(template, m, diff, valorPadrao, pagamento) {
+function interpolar(template, m, diff, pagamento) {
   const dias = diff === null ? "?" : Math.abs(diff);
-  const valor = m.valor_mensalidade
-    ? parseFloat(m.valor_mensalidade).toFixed(2).replace(".", ",")
-    : (valorPadrao ? valorPadrao.toFixed(2).replace(".", ",") : "");
+  // Prioriza o valor da cobrança recém-gerada (é o valor real cobrado
+  // agora, já considera preço individual do estabelecimento se tiver);
+  // cai pro valor_mensalidade cadastrado só se a cobrança não veio.
+  const valorNum = pagamento?.valor ?? m.valor_mensalidade ?? null;
+  const valor = valorNum !== null ? parseFloat(valorNum).toFixed(2).replace(".", ",") : "";
   return (template || "")
     .replaceAll("{nome}", m.nome_fantasia || "")
     .replaceAll("{dias}", String(dias))
@@ -191,6 +193,7 @@ export default function Cobrancas() {
       return {
         linkCartao:   dataCartao.invoice_url_cartao || null,
         pixCopiaCola: dataPix.pix_copy_paste || null,
+        valor:        dataPix.valor ?? dataCartao.valor ?? null,
       };
     } catch {
       return { linkCartao: null, pixCopiaCola: null };
@@ -221,7 +224,7 @@ export default function Cobrancas() {
     setProcessando(m.id);
 
     const pagamento = await gerarLinkPagamento(m.id);
-    const mensagem  = interpolar(config.msg_whatsapp, m, m._diff, undefined, pagamento);
+    const mensagem  = interpolar(config.msg_whatsapp, m, m._diff, pagamento);
 
     if (!pagamento.linkCartao && !pagamento.pixCopiaCola) {
       mostrarToast("aviso", "⚠️ Não consegui gerar o link de pagamento agora — a mensagem foi montada sem ele. Tente cobrar de novo em instantes.");
@@ -245,8 +248,8 @@ export default function Cobrancas() {
     setProcessando(m.id);
 
     const pagamento = await gerarLinkPagamento(m.id);
-    const assunto = interpolar(config.email_assunto, m, m._diff, undefined, pagamento);
-    const corpo   = interpolar(config.email_corpo, m, m._diff, undefined, pagamento);
+    const assunto = interpolar(config.email_assunto, m, m._diff, pagamento);
+    const corpo   = interpolar(config.email_corpo, m, m._diff, pagamento);
 
     if (!pagamento.linkCartao && !pagamento.pixCopiaCola) {
       mostrarToast("aviso", "⚠️ Não consegui gerar o link de pagamento agora — o e-mail foi montado sem ele. Tente cobrar de novo em instantes.");
