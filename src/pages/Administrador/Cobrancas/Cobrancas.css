@@ -152,6 +152,85 @@
 .cob-cobrados-toggle:hover { color: var(--text-accent); }
 .cob-item--feito { opacity: 0.7; }
 
+/* ── Painel de configuração embutido ─────────────────────── */
+.cob-config-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+
+.cob-config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cob-config-item--full { flex-direction: column; align-items: stretch; gap: 6px; }
+
+.cob-config-item-info { display: flex; flex-direction: column; gap: 2px; }
+.cob-config-item-label { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+.cob-config-item-desc { font-size: 0.75rem; color: var(--text-secondary); }
+
+.cob-config-item-control { display: flex; align-items: center; gap: 8px; }
+
+.cob-config-input {
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+.cob-config-input:focus { outline: none; border-color: var(--text-accent); }
+
+.cob-config-variaveis {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  line-height: 1.6;
+}
+.cob-config-variaveis code {
+  background: var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cob-config-msg {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.cob-config-msg.sucesso { background: rgba(34,197,94,0.12); color: #22c55e; }
+.cob-config-msg.erro    { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.cob-btn-salvar {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.cob-btn-salvar:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(20,184,166,0.35); }
+.cob-btn-salvar:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ── Toast de feedback (cópia da imagem) ─────────────────── */
 .cob-toast {
   position: fixed;
