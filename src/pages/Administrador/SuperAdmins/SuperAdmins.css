@@ -631,3 +631,125 @@
   color: var(--text-danger);
   background: var(--bg-danger);
 }
+/* ════════════════════════════════════════════════════════════
+   AJUSTES — abas com classe própria, campos de texto livre
+   padronizados, e zoom (A-/A+) aplicado em toda a página
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Zoom aplicado aos textos principais da página ── */
+.sa-breadcrumb        { font-size: calc(0.75rem * var(--sa-font-scale, 1)); }
+.sa-page-title        { font-size: calc(clamp(1.4rem, 3vw, 1.9rem) * var(--sa-font-scale, 1)); }
+.sa-config-title      { font-size: calc(0.85rem * var(--sa-font-scale, 1)); }
+.sa-config-subtitle   { font-size: calc(0.75rem * var(--sa-font-scale, 1)); }
+.sa-config-item-label { font-size: calc(0.88rem * var(--sa-font-scale, 1)); }
+.sa-config-item-desc  { font-size: calc(0.75rem * var(--sa-font-scale, 1)); }
+.sa-config-msg        { font-size: calc(0.78rem * var(--sa-font-scale, 1)); }
+.sa-btn                { font-size: calc(0.82rem * var(--sa-font-scale, 1)); }
+
+/* ── Barra de abas (antes era tudo style inline) ── */
+.sa-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+  padding-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.sa-tab {
+  padding: 9px 16px;
+  border-radius: 8px 8px 0 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: calc(0.85rem * var(--sa-font-scale, 1));
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sa-tab:hover { color: var(--text-accent); background: var(--bg-hover); }
+.sa-tab.ativo {
+  background: var(--bg-hover);
+  border-bottom-color: var(--text-accent);
+  color: var(--text-accent);
+  font-weight: 700;
+}
+
+/* ── Campo de texto livre (título/mensagem/e-mail/etc.) — separado
+   do .sa-config-input, que é pra números curtos (mono, centralizado).
+   Esse aqui é pra texto de verdade: alinhado à esquerda, fonte normal,
+   confortável de ler e editar. Era a causa da "caixa despadronizada"
+   na Tela de Bloqueio. ── */
+.sa-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.sa-config-field--promo {
+  border-top: none;
+  margin-top: 4px;
+}
+
+.sa-config-textfield {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.87rem * var(--sa-font-scale, 1));
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all 0.2s;
+}
+.sa-config-textfield::placeholder { color: var(--text-muted); }
+.sa-config-textfield:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+  background: var(--bg-card);
+}
+
+.sa-config-hint {
+  font-size: calc(0.75rem * var(--sa-font-scale, 1));
+  color: var(--text-secondary);
+}
+.sa-config-hint code {
+  background: var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sa-config-promo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sa-config-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.sa-config-switch input {
+  accent-color: #14b8a6;
+  width: 16px;
+  height: 16px;
+}
+.sa-config-switch-texto {
+  font-size: calc(0.78rem * var(--sa-font-scale, 1));
+  font-weight: 600;
+  color: var(--text-secondary);
+}

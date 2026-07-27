@@ -1080,3 +1080,98 @@
   border-color: #ef4444 !important;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
 }
+/* ════════════════════════════════════════════════════════════
+   LISTA EM LINHA — Estabelecimentos Excluídos, substitui o grid
+   de cards (.est-excl-grid/.est-excl-card ficam acima, sem uso).
+   Reaproveita .est-badge/.est-badge-excluida e .est-btn* já
+   existentes — só adiciona o layout de linha em si.
+   ════════════════════════════════════════════════════════════ */
+
+.est-excl-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.est-excl-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--text-danger);
+  border-radius: 14px;
+  padding: 14px 18px;
+  backdrop-filter: blur(20px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  animation: estFadeIn 0.3s ease both;
+}
+.est-excl-row:hover {
+  box-shadow: 0 6px 20px rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+  border-left-color: var(--text-danger);
+}
+
+.est-excl-row-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-danger);
+  color: var(--text-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.est-excl-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.est-excl-row-nome-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.est-excl-row-nome {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.est-excl-row-detalhes {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.est-excl-row-acoes {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Responsivo — empilha em telas pequenas */
+@media (max-width: 700px) {
+  .est-excl-row { flex-wrap: wrap; }
+  .est-excl-row-info { min-width: 100%; order: 2; }
+  .est-excl-row-acoes { width: 100%; order: 3; }
+  .est-excl-row-nome { max-width: none; }
+}

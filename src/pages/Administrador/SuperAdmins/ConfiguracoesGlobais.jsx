@@ -16,6 +16,17 @@ export default function ConfiguracoesGlobais() {
 
   const [carregando,   setCarregando]   = useState(true);
   const [aba,          setAba]          = useState("geral"); // 'geral' | 'tela' | 'contatos'
+  const [fontScale,    setFontScale]    = useState(() => {
+    const s = localStorage.getItem("sa-font-scale");
+    return s ? parseFloat(s) : 1;
+  });
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.4, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem("sa-font-scale", next);
+      return next;
+    });
+  }
 
   // Config geral
   const [cfgLimite,       setCfgLimite]       = useState(3);
@@ -160,7 +171,7 @@ export default function ConfiguracoesGlobais() {
   /* ── render ──────────────────────────────────────────────── */
   return (
     <LayoutAdmin>
-      <div className="sa-wrapper">
+      <div className="sa-wrapper" style={{ "--sa-font-scale": fontScale }}>
 
         <div className="sa-page-header">
           <div className="sa-page-header-left">
@@ -168,6 +179,8 @@ export default function ConfiguracoesGlobais() {
             <h1 className="sa-page-title">Configurações <span>Globais</span></h1>
           </div>
           <div className="sa-page-actions">
+            <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
             <button className="sa-btn sa-btn-ghost" onClick={() => navigate("/admin")}>← Voltar ao painel</button>
           </div>
         </div>
@@ -177,7 +190,7 @@ export default function ConfiguracoesGlobais() {
         ) : (
           <>
             {/* ── NAVEGAÇÃO DE ABAS ───────────────────────────── */}
-            <div style={{ display: "flex", gap: 6, borderBottom: "2px solid var(--border)", marginBottom: 20, paddingBottom: 2 }}>
+            <div className="sa-tabs">
               {[
                 { k: "geral",    label: "⚙️ Padrões do Sistema" },
                 { k: "tela",     label: "🔒 Tela de Bloqueio" },
@@ -185,21 +198,8 @@ export default function ConfiguracoesGlobais() {
               ].map(t => (
                 <button
                   key={t.k}
+                  className={`sa-tab${aba === t.k ? " ativo" : ""}`}
                   onClick={() => setAba(t.k)}
-                  style={{
-                    padding: "9px 16px",
-                    borderRadius: "8px 8px 0 0",
-                    border: "none",
-                    borderBottom: aba === t.k ? "2px solid #14b8a6" : "2px solid transparent",
-                    marginBottom: -2,
-                    background: aba === t.k ? "var(--bg-hover)" : "transparent",
-                    color: aba === t.k ? "var(--text-accent)" : "var(--text-secondary)",
-                    fontWeight: aba === t.k ? 700 : 600,
-                    fontSize: "0.85rem",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
                 >
                   {t.label}
                 </button>
@@ -263,37 +263,36 @@ export default function ConfiguracoesGlobais() {
                 </div>
               </div>
               <div className="sa-config-body">
-                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                  Use <code style={{ background: "var(--border)", padding: "1px 4px", borderRadius: 4 }}>**texto**</code> para negrito.
+                <div className="sa-config-hint">
+                  Use <code>**texto**</code> para negrito.
                 </div>
-                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                <div className="sa-config-field">
                   <span className="sa-config-item-label">Título</span>
-                  <input className="sa-config-input" style={{ width: "100%" }} value={cfgTelaTitulo} onChange={e => setCfgTelaTitulo(e.target.value)} />
+                  <input className="sa-config-textfield" value={cfgTelaTitulo} onChange={e => setCfgTelaTitulo(e.target.value)} />
                 </div>
-                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                <div className="sa-config-field">
                   <span className="sa-config-item-label">Mensagem principal</span>
-                  <textarea className="sa-config-input" style={{ width: "100%" }} rows={2} value={cfgTelaMensagem} onChange={e => setCfgTelaMensagem(e.target.value)} />
+                  <textarea className="sa-config-textfield" rows={3} value={cfgTelaMensagem} onChange={e => setCfgTelaMensagem(e.target.value)} />
                 </div>
-                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
+                <div className="sa-config-field">
                   <span className="sa-config-item-label">Informação adicional</span>
-                  <textarea className="sa-config-input" style={{ width: "100%" }} rows={2} value={cfgTelaInfo} onChange={e => setCfgTelaInfo(e.target.value)} />
+                  <textarea className="sa-config-textfield" rows={3} value={cfgTelaInfo} onChange={e => setCfgTelaInfo(e.target.value)} />
                 </div>
 
-                <div className="sa-config-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="sa-config-field sa-config-field--promo">
+                  <div className="sa-config-promo-linha">
                     <span className="sa-config-item-label">🎉 Banner de promoção</span>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                      <input type="checkbox" checked={cfgPromoAtiva} onChange={e => setCfgPromoAtiva(e.target.checked)}
-                        style={{ accentColor: "#14b8a6", width: 16, height: 16 }} />
-                      <span style={{ fontSize: "0.78rem", fontWeight: 600 }}>{cfgPromoAtiva ? "Ativo" : "Inativo"}</span>
+                    <label className="sa-config-switch">
+                      <input type="checkbox" checked={cfgPromoAtiva} onChange={e => setCfgPromoAtiva(e.target.checked)} />
+                      <span className="sa-config-switch-texto">{cfgPromoAtiva ? "Ativo" : "Inativo"}</span>
                     </label>
                   </div>
                   {cfgPromoAtiva && (
                     <>
-                      <input className="sa-config-input" value={cfgPromoTexto} onChange={e => setCfgPromoTexto(e.target.value)}
-                        style={{ width: "100%" }} placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
-                      <input className="sa-config-input" type="date" value={cfgPromoValidade} onChange={e => setCfgPromoValidade(e.target.value)} style={{ width: "100%" }} />
-                      <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>Validade da promoção (opcional)</span>
+                      <input className="sa-config-textfield" value={cfgPromoTexto} onChange={e => setCfgPromoTexto(e.target.value)}
+                        placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
+                      <input className="sa-config-textfield" type="date" value={cfgPromoValidade} onChange={e => setCfgPromoValidade(e.target.value)} />
+                      <span className="sa-config-item-desc">Validade da promoção (opcional)</span>
                     </>
                   )}
                 </div>
@@ -341,9 +340,9 @@ export default function ConfiguracoesGlobais() {
                     <option value="whatsapp">🟢 WhatsApp</option>
                     <option value="email">✉️ E-mail</option>
                   </select>
-                  <input className="sa-config-input" placeholder={novoTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
+                  <input className="sa-config-textfield" placeholder={novoTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
                     value={novoValor} onChange={e => setNovoValor(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
-                  <input className="sa-config-input" placeholder="Rótulo (opcional, ex: Financeiro)"
+                  <input className="sa-config-textfield" placeholder="Rótulo (opcional, ex: Financeiro)"
                     value={novoLabel} onChange={e => setNovoLabel(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
                   <button className="sa-btn sa-btn-purple sa-btn-sm" onClick={adicionarContato} disabled={salvandoContato}>
                     {salvandoContato ? "⏳" : "+ Adicionar"}

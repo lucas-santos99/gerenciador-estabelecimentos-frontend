@@ -96,47 +96,27 @@ export default function Excluidas() {
             Nenhum estabelecimento excluído. Tudo limpo!
           </div>
         ) : (
-          <div className="est-excl-grid">
+          <div className="est-excl-lista">
             {lista.map((m, i) => (
               <div
                 key={m.id}
-                className="est-excl-card"
+                className="est-excl-row"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                {/* Card header */}
-                <div className="est-excl-card-header">
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div
-                      style={{
-                        width: 40, height: 40, borderRadius: 10,
-                        background: "var(--bg-danger)",
-                        display: "flex", alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 700, fontSize: "0.8rem",
-                        color: "var(--text-danger)", flexShrink: 0,
-                      }}
-                    >
-                      {iniciais(m.nome_fantasia)}
-                    </div>
-                    <span className="est-excl-card-name">{m.nome_fantasia}</span>
-                  </div>
-                  <span className="est-badge est-badge-excluida">Excluída</span>
-                </div>
+                <div className="est-excl-row-avatar">{iniciais(m.nome_fantasia)}</div>
 
-                {/* Dados */}
-                <div className="est-excl-info">
-                  <div className="est-excl-info-row">
-                    <span className="est-excl-info-label">CNPJ</span>
-                    <span className="est-excl-info-value">{m.cnpj || "—"}</span>
+                <div className="est-excl-row-info">
+                  <div className="est-excl-row-nome-linha">
+                    <span className="est-excl-row-nome">{m.nome_fantasia}</span>
+                    <span className="est-badge est-badge-excluida">Excluída</span>
                   </div>
-                  <div className="est-excl-info-row">
-                    <span className="est-excl-info-label">Tel.</span>
-                    <span className="est-excl-info-value">{m.telefone || "—"}</span>
+                  <div className="est-excl-row-detalhes">
+                    <span>🪪 {m.cnpj || "—"}</span>
+                    <span>📞 {m.telefone || "—"}</span>
                   </div>
                 </div>
 
-                {/* Ações */}
-                <div className="est-excl-actions">
+                <div className="est-excl-row-acoes">
                   <button
                     className="est-btn est-btn-success est-btn-sm"
                     onClick={() => restaurar(m.id, m.nome_fantasia)}
