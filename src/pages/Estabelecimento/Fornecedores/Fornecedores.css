@@ -393,6 +393,7 @@
 .forn-compra-nota { color: var(--est-text-muted); font-weight: 400; }
 .forn-compra-tag-cancelada { color: var(--est-danger, #ef4444); font-weight: 700; }
 .forn-compra-forma { color: var(--est-text-soft); }
+.forn-compra-forma small { color: var(--est-text-muted); font-weight: 500; }
 .forn-compra-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
 .forn-compra-cancelar {
   background: none;

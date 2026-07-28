@@ -401,7 +401,12 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                         {c.numero_nota && <span className="forn-compra-nota"> · Nota {c.numero_nota}</span>}
                         {c.status === 'cancelada' && <span className="forn-compra-tag-cancelada"> · Cancelada</span>}
                       </div>
-                      <span className="forn-compra-forma">{c.forma_pagamento === 'a_vista' ? 'À vista' : 'A prazo'}</span>
+                      <span className="forn-compra-forma">
+                        {c.forma_pagamento === 'a_vista' ? 'À vista' : 'A prazo'}
+                        {c.forma_pagamento === 'a_prazo' && c.data_vencimento_prazo && (
+                          <small> · vence {fmtData(c.data_vencimento_prazo)}</small>
+                        )}
+                      </span>
                       <span className="forn-compra-valor">{fmt(c.valor_total)}</span>
                       {c.status === 'ativa' && (
                         <button
@@ -496,6 +501,9 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1 }) {
               <span>🚚 {compra.fornecedor_nome}</span>
               {compra.numero_nota && <span>📄 Nota {compra.numero_nota}</span>}
               <span>{compra.forma_pagamento === 'a_vista' ? '💵 À vista' : '📆 A prazo'}</span>
+              {compra.forma_pagamento === 'a_prazo' && compra.data_vencimento_prazo && (
+                <span>🗓 Vence {fmtData(compra.data_vencimento_prazo)}</span>
+              )}
             </div>
 
             <div className="forn-detalhe-itens">
