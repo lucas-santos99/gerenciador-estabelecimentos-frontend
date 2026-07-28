@@ -154,10 +154,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           ['   Em Pix',                 fmt(dreData.receita_pix)],
           ['   Em Cartão',              fmt(dreData.receita_cartao)],
           ['(-) CMV',                   `- ${fmt(dreData.cmv)}`],
-          ['   (info) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
           ['(=) Lucro Bruto',           fmt(dreData.lucro_bruto)],
           ['(-) Despesas Operacionais', `- ${fmt(dreData.despesas)}`],
           ['(=) Lucro Líquido',         fmt(dreData.lucro_liquido)],
+          ['', ''],
+          ['(informativo, não desconta do lucro) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
         ],
         theme: 'striped',
         styles: { fontSize: 10, cellPadding: 3 },
@@ -702,6 +703,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             )}
 
             {dreData && (
+              <>
               <div className="fin-dre-grid">
                 <div className="fin-dre-card receita">
                   <span className="fin-dre-card-titulo">(+) Receita Bruta Total</span>
@@ -715,13 +717,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) CMV</span>
-                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida</span>
+                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida — inclui tudo que você comprou de fornecedor e já foi vendido</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.cmv)}</span>
-                </div>
-                <div className="fin-dre-card info">
-                  <span className="fin-dre-card-titulo">🚚 Pago a Fornecedores</span>
-                  <span className="fin-dre-card-subtitulo">Informativo — já incluído no CMV, não desconta de novo do lucro</span>
-                  <span className="fin-dre-card-valor">{fmt(dreData.total_compras_fornecedor)}</span>
                 </div>
                 <div className="fin-dre-card bruto">
                   <span className="fin-dre-card-titulo">(=) Lucro Bruto</span>
@@ -730,7 +727,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) Despesas Operacionais</span>
-                  <span className="fin-dre-card-subtitulo">Contas pagas no período</span>
+                  <span className="fin-dre-card-subtitulo">Contas cadastradas manualmente em "Contas a Pagar" (água, luz, aluguel, internet, etc.) e já marcadas como pagas no período. <strong>Não inclui compras de fornecedor</strong> — esse custo já saiu descontado ali em cima, no CMV.</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.despesas)}</span>
                 </div>
                 <div className="fin-dre-card liquido">
@@ -739,6 +736,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_liquido)}</span>
                 </div>
               </div>
+
+              <div className="fin-dre-info-separado">
+                <div className="fin-dre-info-icone">ℹ️</div>
+                <div className="fin-dre-info-texto">
+                  <span className="fin-dre-info-titulo">🚚 Total pago a fornecedores no período: <strong>{fmt(dreData.total_compras_fornecedor)}</strong></span>
+                  <span className="fin-dre-info-desc">
+                    Isso é só uma informação a mais, pra você ver quanto saiu do caixa pra fornecedores nesse período.
+                    <strong> Esse valor NÃO é descontado do Lucro Líquido aqui em cima</strong> — o custo da mercadoria já foi
+                    descontado lá no CMV, no momento em que ela foi vendida. Contar esse valor de novo aqui deixaria o lucro errado.
+                  </span>
+                </div>
+              </div>
+              </>
             )}
           </>
         )}
@@ -746,6 +756,16 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
         {/* ══ ABA 2: CONTAS A PAGAR ══ */}
         {abaAtiva === 'contas' && (
           <>
+            <div className="fin-contas-explicacao">
+              <span className="fin-contas-explicacao-icone">💡</span>
+              <span className="fin-contas-explicacao-texto">
+                Aqui você controla <strong>tudo que precisa pagar</strong> — contas de água, luz, aluguel, internet, e também
+                as compras de fornecedor feitas "a prazo" (essas entram sozinhas quando você lança a compra no módulo Fornecedores).
+                Isso é só pra você não esquecer de pagar e saber o que está pendente — <strong>não</strong> tem relação direta
+                com o cálculo de lucro do DRE, que já é feito de outro jeito (na hora da venda, automaticamente).
+              </span>
+            </div>
+
             <div className="fin-contas-header">
               <div className="fin-status-toggle">
                 {['pendente', 'paga', 'atrasada'].map(s => (

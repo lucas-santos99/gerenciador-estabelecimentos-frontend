@@ -496,8 +496,32 @@
 .fin-dre-card.receita  .fin-dre-card-valor { color: var(--est-success); }
 .fin-dre-card.despesa  .fin-dre-card-valor { color: var(--est-danger); }
 .fin-dre-card.bruto    .fin-dre-card-valor { color: var(--est-accent); }
-.fin-dre-card.info     { border-style: dashed; }
-.fin-dre-card.info     .fin-dre-card-valor { color: var(--est-text-soft); }
+
+/* ── Bloco separado do DRE, só informativo (total pago a fornecedores) ── */
+.fin-dre-info-separado {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: var(--est-input);
+  border: 1px dashed var(--est-border-accent);
+  border-radius: 14px;
+}
+.fin-dre-info-icone { font-size: 1.2rem; flex-shrink: 0; }
+.fin-dre-info-texto { display: flex; flex-direction: column; gap: 6px; }
+.fin-dre-info-titulo {
+  font-size: calc(0.9rem * var(--fin-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text);
+}
+.fin-dre-info-titulo strong { font-family: 'JetBrains Mono', monospace; color: var(--est-text-soft); }
+.fin-dre-info-desc {
+  font-size: calc(0.78rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted);
+  line-height: 1.5;
+}
+.fin-dre-info-desc strong { color: var(--est-text-soft); }
 .fin-dre-card.liquido  {
   grid-column: 1 / -1;
   text-align: center;
@@ -768,6 +792,25 @@
    .fin-conta-card (ficam acima, sem uso). Reaproveita .fin-badge-status,
    .fin-conta-descricao e .fin-conta-btn já existentes.
    ════════════════════════════════════════════════════════════ */
+
+/* ── Nota explicativa no topo de Contas a Pagar ──────────────── */
+.fin-contas-explicacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 12px;
+}
+.fin-contas-explicacao-icone { font-size: 1.1rem; flex-shrink: 0; }
+.fin-contas-explicacao-texto {
+  font-size: calc(0.8rem * var(--fin-font-scale, 1));
+  color: var(--est-text-soft);
+  line-height: 1.55;
+}
+.fin-contas-explicacao-texto strong { color: var(--est-text); }
 
 .fin-contas-lista {
   display: flex;
@@ -1187,6 +1230,7 @@
   .fin-form-filtros,
   .fin-conta-acoes,
   .fin-conta-acoes-row,
+  .fin-contas-explicacao,
   .fin-contas-header { display: none !important; }
 }
 /* ════════════════════════════════════════════════════════
