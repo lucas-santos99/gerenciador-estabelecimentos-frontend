@@ -206,8 +206,14 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
   const [loading, setLoading] = useState(true);
   const [aba,     setAba]     = useState('compras'); // 'compras' | 'produtos'
   const [cancelando, setCancelando] = useState(null);
+  const [pagando,    setPagando]    = useState(null);
   const [exportando, setExportando] = useState(null); // 'xlsx' | 'pdf' | null
   const [compraDetalheId, setCompraDetalheId] = useState(null);
+
+  // Busca dentro do histórico — por nº da nota ou intervalo de data
+  const [buscaNota,   setBuscaNota]   = useState('');
+  const [filtroDataDe, setFiltroDataDe] = useState('');
+  const [filtroDataAte, setFiltroDataAte] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -242,13 +248,42 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
     setCancelando(null);
   }
 
+  // Paga a compra a prazo direto por aqui — chama o mesmo endpoint que
+  // o módulo Financeiro usa, só que sem precisar sair de Fornecedores.
+  async function pagarCompra(contaId, nomeFornecedor) {
+    if (!window.confirm(`Marcar essa compra de "${nomeFornecedor}" como paga?`)) return;
+    setPagando(contaId);
+    try {
+      const resp = await apiFetch(`/api/financeiro/${contaId}/pagar`, { method: 'PUT' });
+      const data = await resp.json();
+      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
+      const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
+      setDados(await respD.json());
+      onAtualizar?.();
+    } catch { alert('Erro ao marcar como paga.'); }
+    setPagando(null);
+  }
+
   /* ── Exportação (mesmo padrão do Inventário) ─────────────── */
   const nomeArquivoBase = () => (dados?.nome || 'fornecedor').replace(/\s+/g, '_');
+
+  // Filtra o histórico por nº da nota (contém) e/ou intervalo de data —
+  // usado tanto na lista quanto na exportação, pra exportar exatamente
+  // o que está sendo mostrado na tela.
+  function comprasFiltradas() {
+    if (!dados?.compras) return [];
+    return dados.compras.filter(c => {
+      if (buscaNota.trim() && !(c.numero_nota || '').toLowerCase().includes(buscaNota.trim().toLowerCase())) return false;
+      if (filtroDataDe && c.data_compra < filtroDataDe) return false;
+      if (filtroDataAte && c.data_compra > filtroDataAte) return false;
+      return true;
+    });
+  }
 
   function linhasParaExportar() {
     if (aba === 'compras') {
       const linhas = [];
-      (dados.compras || []).forEach(c => {
+      comprasFiltradas().forEach(c => {
         const itensDaCompra = (c.itens && c.itens.length > 0) ? c.itens : [null];
         itensDaCompra.forEach(i => {
           linhas.push({
@@ -334,7 +369,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
   }
 
   const temDadosParaExportar = aba === 'compras'
-    ? (dados?.compras?.length > 0)
+    ? (comprasFiltradas().length > 0)
     : (dados?.produtos_fornecidos?.length > 0);
 
   return (
@@ -386,10 +421,43 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
 
             <div className="forn-detalhes-body">
               {aba === 'compras' && (
-                dados.compras.length === 0 ? (
-                  <div className="cli-vazio" style={{ padding: 30 }}><p>Nenhuma compra registrada ainda.</p></div>
+                <div className="forn-historico-filtros">
+                  <input
+                    className="cli-form-input forn-historico-busca"
+                    placeholder="🔍 Buscar por nº da nota…"
+                    value={buscaNota}
+                    onChange={e => setBuscaNota(e.target.value)}
+                  />
+                  <input
+                    className="cli-form-input"
+                    type="date"
+                    value={filtroDataDe}
+                    onChange={e => setFiltroDataDe(e.target.value)}
+                    title="Data inicial"
+                  />
+                  <span className="forn-historico-ate">até</span>
+                  <input
+                    className="cli-form-input"
+                    type="date"
+                    value={filtroDataAte}
+                    onChange={e => setFiltroDataAte(e.target.value)}
+                    title="Data final"
+                  />
+                  {(buscaNota || filtroDataDe || filtroDataAte) && (
+                    <button className="forn-historico-limpar" onClick={() => { setBuscaNota(''); setFiltroDataDe(''); setFiltroDataAte(''); }}>
+                      ✕ Limpar
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {aba === 'compras' && (
+                comprasFiltradas().length === 0 ? (
+                  <div className="cli-vazio" style={{ padding: 30 }}>
+                    <p>{dados.compras.length === 0 ? 'Nenhuma compra registrada ainda.' : 'Nenhuma compra encontrada com esse filtro.'}</p>
+                  </div>
                 ) : (
-                  dados.compras.map(c => (
+                  comprasFiltradas().map(c => (
                     <div
                       key={c.id}
                       className={`forn-compra-linha forn-compra-linha--clicavel${c.status === 'cancelada' ? ' cancelada' : ''}`}
@@ -406,16 +474,30 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                         {c.forma_pagamento === 'a_prazo' && c.data_vencimento_prazo && (
                           <small> · vence {fmtData(c.data_vencimento_prazo)}</small>
                         )}
+                        {c.forma_pagamento === 'a_prazo' && c.status_conta_pagar === 'paga' && (
+                          <small className="forn-compra-paga"> · ✓ Paga</small>
+                        )}
                       </span>
                       <span className="forn-compra-valor">{fmt(c.valor_total)}</span>
                       {c.status === 'ativa' && (
-                        <button
-                          className="forn-compra-cancelar"
-                          disabled={cancelando === c.id}
-                          onClick={(e) => { e.stopPropagation(); cancelarCompra(c.id); }}
-                        >
-                          {cancelando === c.id ? '⏳' : '✕ Cancelar'}
-                        </button>
+                        <div className="forn-compra-acoes" onClick={e => e.stopPropagation()}>
+                          {c.forma_pagamento === 'a_prazo' && c.conta_a_pagar_id && ['pendente', 'atrasada'].includes(c.status_conta_pagar) && (
+                            <button
+                              className="forn-compra-pagar"
+                              disabled={pagando === c.conta_a_pagar_id}
+                              onClick={() => pagarCompra(c.conta_a_pagar_id, dados.nome)}
+                            >
+                              {pagando === c.conta_a_pagar_id ? '⏳' : '💰 Pagar'}
+                            </button>
+                          )}
+                          <button
+                            className="forn-compra-cancelar"
+                            disabled={cancelando === c.id}
+                            onClick={() => cancelarCompra(c.id)}
+                          >
+                            {cancelando === c.id ? '⏳' : '✕ Cancelar'}
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))
@@ -451,6 +533,11 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
           compraId={compraDetalheId}
           onFechar={() => setCompraDetalheId(null)}
           fontScale={fontScale}
+          onPago={async () => {
+            const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
+            setDados(await respD.json());
+            onAtualizar?.();
+          }}
         />
       )}
     </div>
@@ -461,9 +548,10 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
    DETALHE DE UMA COMPRA — itens completos (produto, qtd, custo,
    subtotal), aberto ao clicar numa linha do histórico
 ════════════════════════════════════════════════════════════ */
-function DetalheCompraModal({ compraId, onFechar, fontScale = 1 }) {
+function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
   const [compra,  setCompra]  = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pagando, setPagando] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -482,6 +570,20 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1 }) {
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
   }, [onFechar]);
+
+  async function pagarAqui() {
+    if (!compra?.conta_a_pagar_id) return;
+    if (!window.confirm(`Marcar essa compra de "${compra.fornecedor_nome}" como paga?`)) return;
+    setPagando(true);
+    try {
+      const resp = await apiFetch(`/api/financeiro/${compra.conta_a_pagar_id}/pagar`, { method: 'PUT' });
+      const data = await resp.json();
+      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(false); return; }
+      setCompra(prev => ({ ...prev, status_conta_pagar: 'paga' }));
+      onPago?.();
+    } catch { alert('Erro ao marcar como paga.'); }
+    setPagando(false);
+  }
 
   return (
     <div className="cli-modal-overlay" onClick={onFechar}>
@@ -531,6 +633,16 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1 }) {
               <span>Total da compra</span>
               <strong>{fmt(compra.valor_total)}</strong>
             </div>
+
+            {compra.forma_pagamento === 'a_prazo' && compra.conta_a_pagar_id && (
+              compra.status_conta_pagar === 'paga' ? (
+                <div className="forn-compra-paga-box">✓ Essa conta já está paga</div>
+              ) : compra.status === 'ativa' && (
+                <button className="forn-compra-pagar forn-compra-pagar--grande" disabled={pagando} onClick={pagarAqui}>
+                  {pagando ? '⏳ Marcando…' : '💰 Marcar como paga'}
+                </button>
+              )
+            )}
 
             {compra.observacoes && (
               <div className="forn-detalhes-sub" style={{ marginTop: 10 }}>📝 {compra.observacoes}</div>

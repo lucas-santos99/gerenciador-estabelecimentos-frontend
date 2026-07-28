@@ -396,7 +396,11 @@
 .forn-compra-tag-cancelada { color: var(--est-danger, #ef4444); font-weight: 700; }
 .forn-compra-forma { color: var(--est-text-soft); }
 .forn-compra-forma small { color: var(--est-text-muted); font-weight: 500; }
+.forn-compra-forma small.forn-compra-paga { color: var(--est-accent); font-weight: 700; }
 .forn-compra-valor { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; }
+
+.forn-compra-acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
 .forn-compra-cancelar {
   background: none;
   border: 1px solid var(--est-danger, #ef4444);
@@ -408,6 +412,63 @@
   cursor: pointer;
   white-space: nowrap;
 }
+
+.forn-compra-pagar {
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  color: var(--est-accent);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.forn-compra-pagar:hover:not(:disabled) { background: var(--est-accent); color: #fff; }
+.forn-compra-pagar:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.forn-compra-pagar--grande {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+.forn-compra-paga-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* ── Busca/filtro do histórico de compras ────────────────── */
+.forn-historico-filtros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.forn-historico-busca { flex: 1; min-width: 160px; }
+.forn-historico-ate { font-size: 0.78rem; color: var(--est-text-muted); }
+.forn-historico-limpar {
+  background: none;
+  border: 1px solid var(--est-border);
+  color: var(--est-text-muted);
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.forn-historico-limpar:hover { border-color: var(--est-border-accent); color: var(--est-text); }
 
 .forn-produto-linha {
   display: flex;
@@ -507,6 +568,12 @@
 
 .forn-zoom-scope .forn-compra-linha         { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
 .forn-zoom-scope .forn-compra-cancelar      { font-size: calc(0.72rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-compra-pagar         { font-size: calc(0.72rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-compra-pagar--grande { font-size: calc(0.85rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-compra-paga-box      { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-historico-busca      { font-size: calc(0.85rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-historico-ate        { font-size: calc(0.78rem * var(--forn-font-scale, 1)); }
+.forn-zoom-scope .forn-historico-limpar     { font-size: calc(0.75rem * var(--forn-font-scale, 1)); }
 
 .forn-zoom-scope .forn-produto-linha        { font-size: calc(0.82rem * var(--forn-font-scale, 1)); }
 .forn-zoom-scope .forn-produto-qtd          { font-size: calc(0.7rem * var(--forn-font-scale, 1)); }

@@ -154,6 +154,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           ['   Em Pix',                 fmt(dreData.receita_pix)],
           ['   Em Cartão',              fmt(dreData.receita_cartao)],
           ['(-) CMV',                   `- ${fmt(dreData.cmv)}`],
+          ['   (info) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
           ['(=) Lucro Bruto',           fmt(dreData.lucro_bruto)],
           ['(-) Despesas Operacionais', `- ${fmt(dreData.despesas)}`],
           ['(=) Lucro Líquido',         fmt(dreData.lucro_liquido)],
@@ -717,6 +718,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.cmv)}</span>
                 </div>
+                <div className="fin-dre-card info">
+                  <span className="fin-dre-card-titulo">🚚 Pago a Fornecedores</span>
+                  <span className="fin-dre-card-subtitulo">Informativo — já incluído no CMV, não desconta de novo do lucro</span>
+                  <span className="fin-dre-card-valor">{fmt(dreData.total_compras_fornecedor)}</span>
+                </div>
                 <div className="fin-dre-card bruto">
                   <span className="fin-dre-card-titulo">(=) Lucro Bruto</span>
                   <span className="fin-dre-card-subtitulo">Receita menos custo dos produtos</span>
@@ -818,7 +824,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             {loadingContas ? (
               <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
             ) : (
-              <div className="fin-contas-grid">
+              <div className="fin-contas-lista">
                 {contas.length === 0 ? (
                   <div className="fin-vazio">
                     <span className="fin-vazio-icon">📋</span>
@@ -827,25 +833,22 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   </div>
                 ) : (
                   contas.map(conta => (
-                    <div key={conta.id} className={`fin-conta-card ${conta.status}`}>
-                      <div className="fin-conta-card-header">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div key={conta.id} className={`fin-conta-row ${conta.status}`}>
+                      <div className="fin-conta-row-dot" />
+
+                      <div className="fin-conta-row-info">
+                        <div className="fin-conta-row-linha">
                           <span className="fin-conta-descricao">{conta.descricao}</span>
                           <span className={`fin-badge-status ${conta.status}`}>{conta.status}</span>
                         </div>
-                      </div>
-                      <div className="fin-conta-card-body">
-                        <div className="fin-conta-info-row">
-                          <span className="fin-conta-info-label">Vencimento</span>
-                          <span className="fin-conta-info-valor">{formatarData(conta.data_vencimento)}</span>
-                        </div>
-                        <div className="fin-conta-info-row">
-                          <span className="fin-conta-info-label">Valor</span>
-                          <span className="fin-conta-info-valor valor-grande">{fmt(conta.valor)}</span>
+                        <div className="fin-conta-row-detalhes">
+                          <span>📅 Vencimento {formatarData(conta.data_vencimento)}</span>
+                          <span className="fin-conta-row-valor">{fmt(conta.valor)}</span>
                         </div>
                       </div>
+
                       {(conta.status === 'pendente' || conta.status === 'atrasada') && (
-                        <div className="fin-conta-acoes">
+                        <div className="fin-conta-acoes-row">
                           <button className="fin-conta-btn editar" onClick={() => abrirFormEditar(conta)}>✏️ Editar</button>
                           <button className="fin-conta-btn excluir" onClick={() => excluirConta(conta.id)}>🗑</button>
                           <button className="fin-conta-btn pagar" onClick={() => marcarPaga(conta.id)} disabled={salvandoConta}>

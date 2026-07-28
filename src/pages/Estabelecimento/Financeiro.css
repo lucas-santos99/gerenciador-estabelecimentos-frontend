@@ -496,6 +496,8 @@
 .fin-dre-card.receita  .fin-dre-card-valor { color: var(--est-success); }
 .fin-dre-card.despesa  .fin-dre-card-valor { color: var(--est-danger); }
 .fin-dre-card.bruto    .fin-dre-card-valor { color: var(--est-accent); }
+.fin-dre-card.info     { border-style: dashed; }
+.fin-dre-card.info     .fin-dre-card-valor { color: var(--est-text-soft); }
 .fin-dre-card.liquido  {
   grid-column: 1 / -1;
   text-align: center;
@@ -760,6 +762,95 @@
 .fin-conta-btn.excluir:hover  { background: var(--est-danger); color: #fff; }
 .fin-conta-btn.pagar          { color: var(--est-success); font-weight: 800; }
 .fin-conta-btn.pagar:hover    { background: var(--est-success); color: #fff; }
+
+/* ════════════════════════════════════════════════════════════
+   LISTA EM LINHA — Contas a Pagar, substitui .fin-contas-grid/
+   .fin-conta-card (ficam acima, sem uso). Reaproveita .fin-badge-status,
+   .fin-conta-descricao e .fin-conta-btn já existentes.
+   ════════════════════════════════════════════════════════════ */
+
+.fin-contas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fin-conta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.18s;
+}
+.fin-conta-row:hover { border-color: var(--est-border-accent); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.fin-conta-row.paga { opacity: 0.6; }
+
+.fin-conta-row-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--est-warning);
+}
+.fin-conta-row.pendente .fin-conta-row-dot { background: var(--est-warning); box-shadow: 0 0 0 4px var(--est-warning-dim); }
+.fin-conta-row.atrasada .fin-conta-row-dot { background: var(--est-danger);  box-shadow: 0 0 0 4px var(--est-danger-dim); }
+.fin-conta-row.paga     .fin-conta-row-dot { background: var(--est-success); box-shadow: 0 0 0 4px var(--est-success-dim); }
+
+.fin-conta-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fin-conta-row-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fin-conta-row-detalhes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: calc(0.78rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted);
+}
+
+.fin-conta-row-valor {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: calc(0.9rem * var(--fin-font-scale, 1));
+  color: var(--est-text);
+}
+.fin-conta-row.atrasada .fin-conta-row-valor { color: var(--est-danger); }
+.fin-conta-row.paga     .fin-conta-row-valor { color: var(--est-success); }
+
+.fin-conta-acoes-row {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid var(--est-border);
+}
+.fin-conta-acoes-row .fin-conta-btn {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+}
+
+@media (max-width: 700px) {
+  .fin-conta-row { flex-wrap: wrap; }
+  .fin-conta-row-info { min-width: 100%; order: 2; }
+  .fin-conta-acoes-row { width: 100%; order: 3; }
+}
 
 /* ========================= */
 /*  RELATÓRIO DE PRODUTOS     */
@@ -1095,6 +1186,7 @@
   .fin-btn-atualizar,
   .fin-form-filtros,
   .fin-conta-acoes,
+  .fin-conta-acoes-row,
   .fin-contas-header { display: none !important; }
 }
 /* ════════════════════════════════════════════════════════
