@@ -373,7 +373,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
     : (dados?.produtos_fornecidos?.length > 0);
 
   return (
-    <div className="cli-modal-overlay" onClick={onFechar}>
+    <div className="cli-modal-overlay">
       <div className="cli-modal forn-modal-detalhes forn-zoom-scope" style={{ '--forn-font-scale': fontScale }} onClick={e => e.stopPropagation()}>
 
         {loading ? (
@@ -586,7 +586,7 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
   }
 
   return (
-    <div className="cli-modal-overlay" onClick={onFechar}>
+    <div className="cli-modal-overlay">
       <div className="cli-modal forn-modal-compra-detalhe forn-zoom-scope" style={{ '--forn-font-scale': fontScale }} onClick={e => e.stopPropagation()}>
 
         {loading ? (

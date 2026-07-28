@@ -299,7 +299,7 @@
 
 /* ── Modais maiores (compra tem muito conteúdo) ──────────── */
 .forn-modal-compra { max-width: 780px; max-height: 88vh; overflow-y: auto; }
-.forn-modal-detalhes { max-width: 620px; max-height: 85vh; overflow-y: auto; }
+.forn-modal-detalhes { max-width: 900px; max-height: 88vh; overflow-y: auto; }
 
 /* ── Detalhes do fornecedor ───────────────────────────────── */
 .forn-detalhes-sub {
