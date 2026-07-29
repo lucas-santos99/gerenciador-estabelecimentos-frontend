@@ -25,6 +25,13 @@ const CONDICAO_LABEL = {
   a_vista: 'À vista', '7_dias': '7 dias', '15_dias': '15 dias',
   '30_dias': '30 dias', '45_dias': '45 dias', '60_dias': '60 dias', outro: 'Combinar',
 };
+// Fornecedor cadastrado com condição personalizada (ex: "12_dias") não
+// está no mapa acima — formata de um jeito legível em vez de mostrar cru
+function formatarCondicao(valor) {
+  if (CONDICAO_LABEL[valor]) return CONDICAO_LABEL[valor];
+  const m = /^(\d+)_dias$/.exec(valor || '');
+  return m ? `${m[1]} dias` : valor;
+}
 
 const FORMA_PGTO_LABEL = { a_vista: 'À vista', a_prazo: 'Parcelado' };
 
@@ -131,7 +138,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
                   ) : (
                     f.condicao_pagamento && (
                       <span className="forn-card-condicao">
-                        {CONDICAO_LABEL[f.condicao_pagamento] || f.condicao_pagamento}
+                        {formatarCondicao(f.condicao_pagamento)}
                       </span>
                     )
                   )}
@@ -386,7 +393,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
             <div className="forn-detalhes-sub">
               {dados.whatsapp && <span>📱 {dados.whatsapp}</span>}
               {dados.contato_nome && <span>👤 {dados.contato_nome}</span>}
-              {dados.condicao_pagamento && <span>💳 {CONDICAO_LABEL[dados.condicao_pagamento] || dados.condicao_pagamento}</span>}
+              {dados.condicao_pagamento && <span>💳 {formatarCondicao(dados.condicao_pagamento)}</span>}
             </div>
 
             <div className="forn-detalhes-resumo">

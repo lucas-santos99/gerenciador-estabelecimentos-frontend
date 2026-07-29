@@ -11,8 +11,19 @@ const CONDICOES_PAGAMENTO = [
   { value: '30_dias', label: '30 dias' },
   { value: '45_dias', label: '45 dias' },
   { value: '60_dias', label: '60 dias' },
+  { value: 'personalizado', label: 'Personalizado (dias)' },
   { value: 'outro',   label: 'Outro / combinar' },
 ];
+const PRESETS_VALORES = CONDICOES_PAGAMENTO.map(c => c.value);
+
+// Extrai o número de dias de um valor tipo "12_dias" — só quando NÃO
+// é um dos presets fixos (7/15/30/45/60), ou seja, foi digitado como
+// personalizado antes.
+function extrairDiasPersonalizado(valor) {
+  if (!valor || PRESETS_VALORES.includes(valor)) return '';
+  const m = /^(\d+)_dias$/.exec(valor);
+  return m ? m[1] : '';
+}
 
 function formatarTelefone(v) {
   const d = (v || '').replace(/\D/g, '').slice(0, 11);
@@ -47,6 +58,11 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
   });
   const [salvando, setSalvando] = useState(false);
   const [erro,     setErro]     = useState('');
+  const [diasPersonalizado, setDiasPersonalizado] = useState(() => extrairDiasPersonalizado(fornecedor?.condicao_pagamento));
+
+  // O <select> mostra "personalizado" sempre que o valor salvo não bate
+  // com nenhum preset fixo (ex: veio "12_dias" de um cadastro anterior)
+  const condicaoSelect = PRESETS_VALORES.includes(form.condicao_pagamento) ? form.condicao_pagamento : 'personalizado';
 
   const nomeRef = useRef(null);
 
@@ -66,9 +82,30 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
     setForm(prev => ({ ...prev, [name]: v }));
   }
 
+  function alterarCondicaoSelect(e) {
+    const novo = e.target.value;
+    if (novo === 'personalizado') {
+      // Já entra usando o número que tiver digitado (ou vazio, corrige no salvar)
+      setForm(prev => ({ ...prev, condicao_pagamento: diasPersonalizado ? `${diasPersonalizado}_dias` : '' }));
+    } else {
+      setDiasPersonalizado('');
+      setForm(prev => ({ ...prev, condicao_pagamento: novo }));
+    }
+  }
+
+  function alterarDiasPersonalizado(e) {
+    const num = e.target.value.replace(/\D/g, '');
+    setDiasPersonalizado(num);
+    setForm(prev => ({ ...prev, condicao_pagamento: num ? `${num}_dias` : '' }));
+  }
+
   async function salvar(e) {
     e.preventDefault();
     if (!form.nome.trim()) { setErro('O nome do fornecedor é obrigatório.'); return; }
+    if (condicaoSelect === 'personalizado' && !diasPersonalizado) {
+      setErro('Informe o número de dias da condição personalizada.');
+      return;
+    }
     setSalvando(true);
     setErro('');
 
@@ -149,10 +186,18 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
 
             <div className="cli-form-group">
               <label className="cli-form-label">Condição de pagamento padrão</label>
-              <select className="cli-form-input" name="condicao_pagamento" value={form.condicao_pagamento} onChange={atualizar}>
+              <select className="cli-form-input" name="condicao_pagamento" value={condicaoSelect} onChange={alterarCondicaoSelect}>
                 {CONDICOES_PAGAMENTO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
+
+            {condicaoSelect === 'personalizado' && (
+              <div className="cli-form-group">
+                <label className="cli-form-label">Quantos dias?</label>
+                <input className="cli-form-input" type="number" min="1" inputMode="numeric"
+                  value={diasPersonalizado} onChange={alterarDiasPersonalizado} placeholder="Ex: 21" />
+              </div>
+            )}
 
             <div className="cli-form-group">
               <label className="cli-form-label">Prazo médio de entrega (dias)</label>
