@@ -43,12 +43,13 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     });
   }
 
-  /* ── Histórico ── */
+  /* ── Histórico (agora com filtro por operador embutido) ── */
   const [historico, setHistorico] = useState([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [erroHistorico, setErroHistorico] = useState('');
   const [histInicio, setHistInicio] = useState(dataHoje());
   const [histFim, setHistFim] = useState(dataHoje());
+  const [histOperador, setHistOperador] = useState(''); // '' = todos, 'merchant' = admin, ou o id do operador
   const [vendaDetalhes, setVendaDetalhes] = useState(null);
 
   /* ── Relatório Produtos ── */
@@ -58,13 +59,6 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const [reportInicio, setReportInicio] = useState(dataHoje());
   const [reportFim, setReportFim] = useState(dataHoje());
   const [reportCat, setReportCat] = useState('');
-
-  /* ── Vendas por Operador ── */
-  const [relOp, setRelOp] = useState([]);
-  const [loadingRelOp, setLoadingRelOp] = useState(false);
-  const [erroRelOp, setErroRelOp] = useState('');
-  const [relOpInicio, setRelOpInicio] = useState(dataHoje());
-  const [relOpFim, setRelOpFim] = useState(dataHoje());
 
   /* ── Estoque ── */
   const [estoque, setEstoque] = useState([]);
@@ -97,6 +91,95 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     finally { setLoadingHistorico(false); }
   }
 
+  // Lista de operadores que aparecem nesse período (pra popular o
+  // seletor) — derivada do próprio histórico, sem precisar de outra
+  // chamada ao servidor. "merchant" = vendas feitas pelo administrador.
+  const operadoresNoPeriodo = [...new Map(
+    historico.map(v => [v.operador_id || 'merchant', { id: v.operador_id || 'merchant', nome: v.operador_nome }])
+  ).values()].sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const historicoFiltrado = histOperador
+    ? historico.filter(v => (histOperador === 'merchant' ? !v.operador_id : v.operador_id === histOperador))
+    : historico;
+
+  // Resumo por operador — só faz sentido mostrar quando "Todos" está
+  // selecionado (com 1 operador só, vira redundante com a lista de baixo)
+  const resumoPorOperador = (() => {
+    const mapa = {};
+    historico.forEach(v => {
+      const chave = v.operador_id || 'merchant';
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          operador_id: chave, operador_nome: v.operador_nome,
+          qtd_vendas: 0, total_vendas: 0,
+          total_dinheiro: 0, total_pix: 0, total_cartao: 0, total_fiado: 0,
+        };
+      }
+      const r = mapa[chave];
+      const valor = parseFloat(v.valor_total) || 0;
+      const meio = (v.meio_pagamento || '').toLowerCase();
+      r.qtd_vendas += 1;
+      r.total_vendas += valor;
+      if (meio === 'dinheiro') r.total_dinheiro += valor;
+      else if (meio === 'pix') r.total_pix += valor;
+      else if (meio === 'debito' || meio === 'credito') r.total_cartao += valor;
+      else if (meio === 'fiado') r.total_fiado += valor;
+    });
+    return Object.values(mapa).sort((a, b) => b.total_vendas - a.total_vendas);
+  })();
+
+  /* ── Exportação do Histórico (lista individual, respeita os filtros) ── */
+  function exportarHistoricoExcel() {
+    if (!historicoFiltrado.length) return;
+    const dados = historicoFiltrado.map(v => ({
+      'Data':        new Date(v.data_venda).toLocaleString('pt-BR'),
+      'Operador':    v.operador_nome,
+      'Cliente':     v.cliente_nome || '',
+      'Meio Pagto':  v.meio_pagamento,
+      'Valor (R$)':  parseFloat(v.valor_total),
+      'Itens':       (v.itens || []).map(i => `${i.produto_nome} (${i.quantidade})`).join(', '),
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Vendas');
+    XLSX.writeFile(wb, `Historico_Vendas_${histInicio}_${histFim}.xlsx`);
+  }
+
+  function baixarPDFHistorico() {
+    if (!historicoFiltrado.length) return;
+    const doc = new jsPDF();
+    const gerar = (y) => {
+      doc.setFontSize(16); doc.setFont(undefined, 'bold');
+      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
+      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
+      doc.text('Histórico de Vendas', 105, y + 7, { align: 'center' });
+      doc.setFontSize(9);
+      const operadorLabel = histOperador
+        ? (operadoresNoPeriodo.find(o => o.id === histOperador)?.nome || '')
+        : 'Todos os operadores';
+      doc.text(`Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorLabel}`, 105, y + 13, { align: 'center' });
+      const body = historicoFiltrado.map(v => [
+        new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        v.operador_nome, v.cliente_nome || '—', v.meio_pagamento, fmt(v.valor_total),
+      ]);
+      const totalGeral = historicoFiltrado.reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
+      body.push(['', '', '', 'TOTAL', fmt(totalGeral)]);
+      autoTable(doc, {
+        startY: y + 20,
+        head: [['Data', 'Operador', 'Cliente', 'Pagamento', 'Valor']],
+        body, theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      });
+      doc.save(`Historico_Vendas_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
+    };
+    if (logoUrl) {
+      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
+      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
+      img.onerror = () => gerar(15);
+    } else { gerar(15); }
+  }
+
   /* ── Relatório Produtos ── */
   async function gerarReportProdutos(e) {
     e.preventDefault();
@@ -126,24 +209,42 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     XLSX.writeFile(wb, `Produtos_${reportInicio}_${reportFim}.xlsx`);
   }
 
-  /* ── Vendas por Operador ── */
-  async function gerarRelatorioOperador(e) {
-    e.preventDefault();
-    setLoadingRelOp(true); setErroRelOp(''); setRelOp([]);
-    try {
-      const params = new URLSearchParams({ data_inicio: relOpInicio, data_fim: relOpFim });
-      const resp = await apiFetch(`/api/financeiro/relatorio_vendas_operador?${params}`);
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Erro');
-      setRelOp(data);
-    } catch (err) { setErroRelOp(err.message); }
-    finally { setLoadingRelOp(false); }
+  function baixarPDFProdutos() {
+    if (!reportProd.length) return;
+    const doc = new jsPDF();
+    const gerar = (y) => {
+      doc.setFontSize(16); doc.setFont(undefined, 'bold');
+      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
+      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
+      doc.text('Produtos Mais Vendidos', 105, y + 7, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text(`Período: ${formatarData(reportInicio)} a ${formatarData(reportFim)}`, 105, y + 13, { align: 'center' });
+      const body = reportProd.map((p, i) => {
+        const lucro = parseFloat(p.receita_total) - parseFloat(p.custo_total || 0);
+        return [`#${i + 1}`, p.produto_nome, p.categoria_nome || '—', fmt(p.receita_total), fmt(lucro)];
+      });
+      autoTable(doc, {
+        startY: y + 20,
+        head: [['#', 'Produto', 'Categoria', 'Receita', 'Lucro']],
+        body, theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      });
+      doc.save(`Produtos_${nomeEstabelecimento || 'relatorio'}_${reportInicio}_a_${reportFim}.pdf`);
+    };
+    if (logoUrl) {
+      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
+      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
+      img.onerror = () => gerar(15);
+    } else { gerar(15); }
   }
 
-  function exportarRelatorioOperadorExcel() {
-    if (!relOp.length) return;
-    const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
-    const dados = relOp.map((op, i) => ({
+  /* ── Resumo por Operador (agora derivado do histórico, exibido
+     dentro da própria aba de Histórico quando "Todos" está selecionado) ── */
+  function exportarResumoOperadorExcel() {
+    if (!resumoPorOperador.length) return;
+    const totalGeral = resumoPorOperador.reduce((s, op) => s + op.total_vendas, 0);
+    const dados = resumoPorOperador.map((op, i) => ({
       '#': i + 1, 'Operador': op.operador_nome, 'Qtd Vendas': op.qtd_vendas,
       'Total (R$)': parseFloat(op.total_vendas.toFixed(2)),
       '% do Total': totalGeral > 0 ? parseFloat(((op.total_vendas / totalGeral) * 100).toFixed(1)) : 0,
@@ -154,40 +255,40 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       'Média por Venda': op.qtd_vendas > 0 ? parseFloat((op.total_vendas / op.qtd_vendas).toFixed(2)) : 0,
     }));
     dados.push({
-      '#': '', 'Operador': 'TOTAL', 'Qtd Vendas': relOp.reduce((s, op) => s + op.qtd_vendas, 0),
+      '#': '', 'Operador': 'TOTAL', 'Qtd Vendas': resumoPorOperador.reduce((s, op) => s + op.qtd_vendas, 0),
       'Total (R$)': parseFloat(totalGeral.toFixed(2)), '% do Total': 100,
-      'Dinheiro (R$)': parseFloat(relOp.reduce((s, op) => s + op.total_dinheiro, 0).toFixed(2)),
-      'Pix (R$)': parseFloat(relOp.reduce((s, op) => s + op.total_pix, 0).toFixed(2)),
-      'Cartão (R$)': parseFloat(relOp.reduce((s, op) => s + op.total_cartao, 0).toFixed(2)),
-      'Fiado (R$)': parseFloat(relOp.reduce((s, op) => s + op.total_fiado, 0).toFixed(2)),
+      'Dinheiro (R$)': parseFloat(resumoPorOperador.reduce((s, op) => s + op.total_dinheiro, 0).toFixed(2)),
+      'Pix (R$)': parseFloat(resumoPorOperador.reduce((s, op) => s + op.total_pix, 0).toFixed(2)),
+      'Cartão (R$)': parseFloat(resumoPorOperador.reduce((s, op) => s + op.total_cartao, 0).toFixed(2)),
+      'Fiado (R$)': parseFloat(resumoPorOperador.reduce((s, op) => s + op.total_fiado, 0).toFixed(2)),
       'Média por Venda': '',
     });
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendas por Operador');
-    XLSX.writeFile(wb, `Vendas_Operador_${relOpInicio}_${relOpFim}.xlsx`);
+    XLSX.writeFile(wb, `Vendas_Operador_${histInicio}_${histFim}.xlsx`);
   }
 
-  function baixarPDFOperador() {
-    if (!relOp.length) return;
+  function baixarPDFResumoOperador() {
+    if (!resumoPorOperador.length) return;
     const doc = new jsPDF();
-    const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
+    const totalGeral = resumoPorOperador.reduce((s, op) => s + op.total_vendas, 0);
     const gerar = (y) => {
       doc.setFontSize(16); doc.setFont(undefined, 'bold');
       doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
       doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
       doc.text('Relatório de Vendas por Operador', 105, y + 7, { align: 'center' });
       doc.setFontSize(9);
-      doc.text(`Período: ${formatarData(relOpInicio)} a ${formatarData(relOpFim)}`, 105, y + 13, { align: 'center' });
-      const body = relOp.map((op, i) => [
+      doc.text(`Período: ${formatarData(histInicio)} a ${formatarData(histFim)}`, 105, y + 13, { align: 'center' });
+      const body = resumoPorOperador.map((op, i) => [
         `#${i + 1}`, op.operador_nome, op.qtd_vendas, fmt(op.total_vendas),
         totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
         fmt(op.total_dinheiro), fmt(op.total_pix), fmt(op.total_cartao),
       ]);
-      body.push(['', 'TOTAL', relOp.reduce((s, op) => s + op.qtd_vendas, 0), fmt(totalGeral), '100%',
-        fmt(relOp.reduce((s, op) => s + op.total_dinheiro, 0)),
-        fmt(relOp.reduce((s, op) => s + op.total_pix, 0)),
-        fmt(relOp.reduce((s, op) => s + op.total_cartao, 0))]);
+      body.push(['', 'TOTAL', resumoPorOperador.reduce((s, op) => s + op.qtd_vendas, 0), fmt(totalGeral), '100%',
+        fmt(resumoPorOperador.reduce((s, op) => s + op.total_dinheiro, 0)),
+        fmt(resumoPorOperador.reduce((s, op) => s + op.total_pix, 0)),
+        fmt(resumoPorOperador.reduce((s, op) => s + op.total_cartao, 0))]);
       autoTable(doc, {
         startY: y + 20,
         head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
@@ -195,7 +296,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [15, 118, 110], textColor: 255 },
       });
-      doc.save(`Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
+      doc.save(`Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
     };
     if (logoUrl) {
       const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
@@ -252,6 +353,44 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     XLSX.writeFile(wb, `Estoque${sufixo}${sufixoStatus}_${dataHoje()}.xlsx`);
   }
 
+  function baixarPDFEstoque() {
+    if (!estoqueFiltrado.length) return;
+    const doc = new jsPDF();
+    const gerar = (y) => {
+      doc.setFontSize(16); doc.setFont(undefined, 'bold');
+      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
+      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
+      doc.text('Relatório de Estoque', 105, y + 7, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text(`Gerado em ${formatarData(dataHoje())}`, 105, y + 13, { align: 'center' });
+      const body = estoqueFiltrado.map(p => {
+        const estAtual = parseFloat(p.estoque_atual);
+        const unidade = p.unidade_medida === 'kg'
+          ? `${estAtual.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+          : `${Math.trunc(estAtual)} un`;
+        const status = estoqueStatus(p);
+        return [
+          p.nome, p.nome_categoria || '—', unidade,
+          status === 'critico' ? 'Crítico' : status === 'baixo' ? 'Baixo' : 'Normal',
+          fmt(p.preco_venda), fmt(parseFloat(p.preco_venda || 0) * estAtual),
+        ];
+      });
+      autoTable(doc, {
+        startY: y + 20,
+        head: [['Produto', 'Categoria', 'Estoque', 'Status', 'Venda Unit.', 'Total']],
+        body, theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      });
+      doc.save(`Estoque_${nomeEstabelecimento || 'relatorio'}_${dataHoje()}.pdf`);
+    };
+    if (logoUrl) {
+      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
+      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
+      img.onerror = () => gerar(15);
+    } else { gerar(15); }
+  }
+
   /* ════════════════════════════════════════════════════════ */
   return (
     <div className="rel-container" style={{ '--rel-font-scale': fontScale }}>
@@ -269,7 +408,6 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
         <div className="fin-tabs-nav" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {[
             { key: 'historico',  label: '🧾 Histórico de Vendas' },
-            { key: 'operadores', label: '👤 Por Operador' },
             { key: 'produtos',   label: '📊 Produtos Vendidos' },
             { key: 'estoque',    label: '📦 Estoque' },
           ].map(t => (
@@ -286,11 +424,17 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
         </div>
       </div>
 
-      {/* ══ ABA: HISTÓRICO DE VENDAS ══ */}
+      {/* ══ ABA: HISTÓRICO DE VENDAS (com filtro por operador embutido) ══ */}
       {abaAtiva === 'historico' && (
         <div className="rel-body">
           <div className="fin-section-header">
             <span className="fin-section-titulo">🧾 Histórico de Vendas</span>
+            {historicoFiltrado.length > 0 && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="fin-btn-excel" onClick={exportarHistoricoExcel}>📥 Excel</button>
+                <button className="fin-btn-pdf" onClick={baixarPDFHistorico}>📄 PDF</button>
+              </div>
+            )}
           </div>
           <form className="fin-form-filtros" onSubmit={e => { e.preventDefault(); carregarHistorico(); }}>
             <div className="fin-form-group">
@@ -301,6 +445,15 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               <label className="fin-form-label">Data fim</label>
               <input className="fin-form-input" type="date" value={histFim} onChange={e => setHistFim(e.target.value)} />
             </div>
+            <div className="fin-form-group">
+              <label className="fin-form-label">Operador</label>
+              <select className="fin-form-select" value={histOperador} onChange={e => setHistOperador(e.target.value)}>
+                <option value="">Todos</option>
+                {operadoresNoPeriodo.map(op => (
+                  <option key={op.id} value={op.id}>{op.id === 'merchant' ? `${op.nome} (admin)` : op.nome}</option>
+                ))}
+              </select>
+            </div>
             <button type="submit" className="fin-btn-gerar" disabled={loadingHistorico}>
               {loadingHistorico ? '⏳…' : '▶ Buscar'}
             </button>
@@ -309,148 +462,99 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           {loadingHistorico ? (
             <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
           ) : (
-            <div className="fin-historico-lista">
-              {historico.length === 0 ? (
-                <div className="fin-vazio">
-                  <span className="fin-vazio-icon">🧾</span>
-                  <p>Nenhuma venda encontrada</p>
-                  <small>Selecione um período e clique em Buscar</small>
-                </div>
-              ) : historico.map(venda => (
-                <div key={venda.id} className="fin-historico-card">
-                  <div className="fin-historico-header" onClick={() => setVendaDetalhes(vendaDetalhes?.id === venda.id ? null : venda)}>
-                    <div className="fin-historico-info">
-                      <span className="fin-historico-data">
-                        {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{venda.meio_pagamento}</span>
-                      {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
-                      {venda.operador_nome && (
-                        <span className="fin-historico-operador">🧑‍💼 {venda.operador_nome}</span>
-                      )}
-                    </div>
-                    <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
-                  </div>
-                  {vendaDetalhes?.id === venda.id && venda.itens?.length > 0 && (
-                    <div className="fin-historico-itens">
-                      {venda.itens.map((item, i) => {
-                        const unidade = item.unidade_medida || 'un';
-                        const qtd = parseFloat(item.quantidade);
-                        const qtdLabel = unidade === 'kg'
-                          ? `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
-                          : `${Math.trunc(qtd)}×`;
-                        return (
-                          <div key={i} className="fin-historico-item">
-                            <span className="fin-hist-item-nome">{item.produto_nome}{item.produto_marca && <span className="rel-produto-marca"> · {item.produto_marca}</span>}</span>
-                            <span className="fin-hist-item-qtd">{qtdLabel}</span>
-                            <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ ABA: VENDAS POR OPERADOR ══ */}
-      {abaAtiva === 'operadores' && (
-        <div className="rel-body">
-          <div className="fin-section-header">
-            <span className="fin-section-titulo">👤 Vendas por Operador</span>
-            {relOp.length > 0 && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="fin-btn-excel" onClick={exportarRelatorioOperadorExcel}>📥 Excel</button>
-                <button className="fin-btn-pdf" onClick={baixarPDFOperador}>📄 PDF</button>
-              </div>
-            )}
-          </div>
-          <form className="fin-form-filtros" onSubmit={gerarRelatorioOperador}>
-            <div className="fin-form-group">
-              <label className="fin-form-label">Data início</label>
-              <input className="fin-form-input" type="date" value={relOpInicio} onChange={e => setRelOpInicio(e.target.value)} />
-            </div>
-            <div className="fin-form-group">
-              <label className="fin-form-label">Data fim</label>
-              <input className="fin-form-input" type="date" value={relOpFim} onChange={e => setRelOpFim(e.target.value)} />
-            </div>
-            <button type="submit" className="fin-btn-gerar" disabled={loadingRelOp}>
-              {loadingRelOp ? '⏳ Gerando…' : '▶ Gerar'}
-            </button>
-          </form>
-          {erroRelOp && <div className="fin-erro">⚠️ {erroRelOp}</div>}
-          {loadingRelOp ? (
-            <div className="fin-loading"><div className="est-spinner" /> Gerando…</div>
-          ) : relOp.length === 0 ? (
-            <div className="fin-vazio">
-              <span className="fin-vazio-icon">👤</span>
-              <p>Nenhuma venda encontrada</p>
-              <small>Selecione um período e clique em Gerar</small>
-            </div>
-          ) : (
             <>
-              {(() => {
-                const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
-                const totalVendas = relOp.reduce((s, op) => s + op.qtd_vendas, 0);
-                return (
-                  <div className="fin-resumo-grid" style={{ marginBottom: 24 }}>
-                    <div className="fin-resumo-card destaque">
-                      <span className="fin-resumo-card-titulo">Total do Período</span>
-                      <span className="fin-resumo-card-valor">{fmt(totalGeral)}</span>
-                    </div>
-                    <div className="fin-resumo-card">
-                      <span className="fin-resumo-card-titulo">Qtd Vendas</span>
-                      <span className="fin-resumo-card-valor">{totalVendas}</span>
-                    </div>
-                    <div className="fin-resumo-card">
-                      <span className="fin-resumo-card-titulo">Média por Venda</span>
-                      <span className="fin-resumo-card-valor">{fmt(totalVendas > 0 ? totalGeral / totalVendas : 0)}</span>
-                    </div>
-                    <div className="fin-resumo-card">
-                      <span className="fin-resumo-card-titulo">Operadores ativos</span>
-                      <span className="fin-resumo-card-valor">{relOp.length}</span>
+              {/* Resumo comparativo entre operadores — só aparece com "Todos"
+                  selecionado e mais de um operador tendo vendido no período */}
+              {!histOperador && resumoPorOperador.length > 1 && (
+                <>
+                  <div className="fin-section-header" style={{ marginTop: 4 }}>
+                    <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="fin-btn-excel" onClick={exportarResumoOperadorExcel}>📥 Excel</button>
+                      <button className="fin-btn-pdf" onClick={baixarPDFResumoOperador}>📄 PDF</button>
                     </div>
                   </div>
-                );
-              })()}
-              <div className="fin-relop-grid">
-                {relOp.map((op, i) => {
-                  const totalGeral = relOp.reduce((s, o) => s + o.total_vendas, 0);
-                  const pct = totalGeral > 0 ? (op.total_vendas / totalGeral) * 100 : 0;
-                  const media = op.qtd_vendas > 0 ? op.total_vendas / op.qtd_vendas : 0;
-                  return (
-                    <div key={op.operador_id || i} className="fin-relop-card">
-                      <div className="fin-relop-header">
-                        <span className="fin-relop-rank">#{i + 1}</span>
-                        <span className="fin-relop-nome">{op.operador_nome}</span>
-                        <span className="fin-relop-pct">{pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>
-                      </div>
-                      <div className="fin-relop-barra-bg">
-                        <div className="fin-relop-barra-fill" style={{ width: `${pct}%` }} />
-                      </div>
-                      <div className="fin-relop-total">{fmt(op.total_vendas)}</div>
-                      <div className="fin-relop-metricas">
-                        <div className="fin-relop-metrica">
-                          <span className="fin-relop-metrica-label">Qtd Vendas</span>
-                          <span className="fin-relop-metrica-valor">{op.qtd_vendas}</span>
+                  <div className="fin-relop-grid" style={{ marginBottom: 24 }}>
+                    {resumoPorOperador.map((op, i) => {
+                      const totalGeral = resumoPorOperador.reduce((s, o) => s + o.total_vendas, 0);
+                      const pct = totalGeral > 0 ? (op.total_vendas / totalGeral) * 100 : 0;
+                      const media = op.qtd_vendas > 0 ? op.total_vendas / op.qtd_vendas : 0;
+                      return (
+                        <div key={op.operador_id} className="fin-relop-card" onClick={() => setHistOperador(op.operador_id)} style={{ cursor: 'pointer' }} title="Ver só as vendas desse operador">
+                          <div className="fin-relop-header">
+                            <span className="fin-relop-rank">#{i + 1}</span>
+                            <span className="fin-relop-nome">{op.operador_nome}</span>
+                            <span className="fin-relop-pct">{pct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>
+                          </div>
+                          <div className="fin-relop-barra-bg">
+                            <div className="fin-relop-barra-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="fin-relop-total">{fmt(op.total_vendas)}</div>
+                          <div className="fin-relop-metricas">
+                            <div className="fin-relop-metrica">
+                              <span className="fin-relop-metrica-label">Qtd Vendas</span>
+                              <span className="fin-relop-metrica-valor">{op.qtd_vendas}</span>
+                            </div>
+                            <div className="fin-relop-metrica">
+                              <span className="fin-relop-metrica-label">Média por Venda</span>
+                              <span className="fin-relop-metrica-valor">{fmt(media)}</span>
+                            </div>
+                          </div>
+                          <div className="fin-relop-meios">
+                            {op.total_dinheiro > 0 && <div className="fin-relop-meio dinheiro"><span>💵 Dinheiro</span><span>{fmt(op.total_dinheiro)}</span></div>}
+                            {op.total_pix > 0      && <div className="fin-relop-meio pix"><span>📱 Pix</span><span>{fmt(op.total_pix)}</span></div>}
+                            {op.total_cartao > 0   && <div className="fin-relop-meio cartao"><span>💳 Cartão</span><span>{fmt(op.total_cartao)}</span></div>}
+                            {op.total_fiado > 0    && <div className="fin-relop-meio fiado"><span>📋 Fiado</span><span>{fmt(op.total_fiado)}</span></div>}
+                          </div>
                         </div>
-                        <div className="fin-relop-metrica">
-                          <span className="fin-relop-metrica-label">Média por Venda</span>
-                          <span className="fin-relop-metrica-valor">{fmt(media)}</span>
-                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              <div className="fin-historico-lista">
+                {historicoFiltrado.length === 0 ? (
+                  <div className="fin-vazio">
+                    <span className="fin-vazio-icon">🧾</span>
+                    <p>Nenhuma venda encontrada</p>
+                    <small>Selecione um período e clique em Buscar</small>
+                  </div>
+                ) : historicoFiltrado.map(venda => (
+                  <div key={venda.id} className="fin-historico-card">
+                    <div className="fin-historico-header" onClick={() => setVendaDetalhes(vendaDetalhes?.id === venda.id ? null : venda)}>
+                      <div className="fin-historico-info">
+                        <span className="fin-historico-data">
+                          {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{venda.meio_pagamento}</span>
+                        {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
+                        {venda.operador_nome && (
+                          <span className="fin-historico-operador">🧑‍💼 {venda.operador_nome}</span>
+                        )}
                       </div>
-                      <div className="fin-relop-meios">
-                        {op.total_dinheiro > 0 && <div className="fin-relop-meio dinheiro"><span>💵 Dinheiro</span><span>{fmt(op.total_dinheiro)}</span></div>}
-                        {op.total_pix > 0      && <div className="fin-relop-meio pix"><span>📱 Pix</span><span>{fmt(op.total_pix)}</span></div>}
-                        {op.total_cartao > 0   && <div className="fin-relop-meio cartao"><span>💳 Cartão</span><span>{fmt(op.total_cartao)}</span></div>}
-                        {op.total_fiado > 0    && <div className="fin-relop-meio fiado"><span>📋 Fiado</span><span>{fmt(op.total_fiado)}</span></div>}
-                      </div>
+                      <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
                     </div>
-                  );
-                })}
+                    {vendaDetalhes?.id === venda.id && venda.itens?.length > 0 && (
+                      <div className="fin-historico-itens">
+                        {venda.itens.map((item, i) => {
+                          const unidade = item.unidade_medida || 'un';
+                          const qtd = parseFloat(item.quantidade);
+                          const qtdLabel = unidade === 'kg'
+                            ? `${qtd.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                            : `${Math.trunc(qtd)}×`;
+                          return (
+                            <div key={i} className="fin-historico-item">
+                              <span className="fin-hist-item-nome">{item.produto_nome}{item.produto_marca && <span className="rel-produto-marca"> · {item.produto_marca}</span>}</span>
+                              <span className="fin-hist-item-qtd">{qtdLabel}</span>
+                              <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </>
           )}
@@ -463,7 +567,10 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           <div className="fin-section-header">
             <span className="fin-section-titulo">📊 Produtos mais vendidos</span>
             {reportProd.length > 0 && (
-              <button className="fin-btn-excel" onClick={exportarRelatorioExcel}>📥 Excel</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="fin-btn-excel" onClick={exportarRelatorioExcel}>📥 Excel</button>
+                <button className="fin-btn-pdf" onClick={baixarPDFProdutos}>📄 PDF</button>
+              </div>
             )}
           </div>
           <form className="fin-form-filtros" onSubmit={gerarReportProdutos}>
@@ -542,7 +649,10 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           <div className="fin-section-header">
             <span className="fin-section-titulo">📦 Relatório de Estoque</span>
             {estoque.length > 0 && (
-              <button className="fin-btn-excel" onClick={exportarEstoqueExcel}>📥 Excel</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="fin-btn-excel" onClick={exportarEstoqueExcel}>📥 Excel</button>
+                <button className="fin-btn-pdf" onClick={baixarPDFEstoque}>📄 PDF</button>
+              </div>
             )}
           </div>
           <div className="fin-estoque-resumo">
