@@ -555,11 +555,12 @@
 .fin-contas-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 16px;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 16px;
 }
+
+.fin-btn-nova-conta { margin-left: auto; }
 
 /* Toggle de status */
 .fin-status-toggle {

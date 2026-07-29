@@ -321,29 +321,31 @@ function ContasFornecedores({ fontScale = 1 }) {
           <p>Nenhuma conta {filtroStatus === 'pendente' ? 'pendente' : filtroStatus === 'paga' ? 'paga' : 'atrasada'} {(filtroDataDe || filtroDataAte) ? 'nesse período' : 'no momento'}.</p>
         </div>
       ) : (
-        <div className="forn-contapag-lista">
+        <div className="forn-contapag-grid">
           {listaFiltrada.map(c => (
-            <div key={c.conta_a_pagar_id} className={`forn-contapag-row ${c.status}`}>
-              <div className="forn-contapag-dot" />
-              <div className="forn-contapag-info">
-                <div className="forn-contapag-linha">
-                  <span className="forn-contapag-nome">{c.fornecedor_nome}</span>
-                  {c.numero_nota && <span className="forn-compra-nota">Nota {c.numero_nota}</span>}
-                  <span className={`forn-contapag-badge ${c.status}`}>{c.status}</span>
+            <div key={c.conta_a_pagar_id} className={`forn-contapag-card ${c.status}`}>
+              <div className="forn-contapag-card-header">
+                <span className="forn-contapag-nome">{c.fornecedor_nome}</span>
+                <span className={`forn-contapag-badge ${c.status}`}>{c.status}</span>
+              </div>
+              {c.numero_nota && <span className="forn-compra-nota">Nota {c.numero_nota}</span>}
+              <div className="forn-contapag-card-body">
+                <div className="forn-contapag-info-row">
+                  <span className="forn-contapag-info-label">Vencimento</span>
+                  <span className="forn-contapag-info-valor">{fmtData(c.data_vencimento)}</span>
                 </div>
-                <div className="forn-contapag-detalhes">
-                  <span>📅 Vencimento {fmtData(c.data_vencimento)}</span>
-                  <span className="forn-contapag-valor">{fmt(c.valor)}</span>
+                <div className="forn-contapag-info-row">
+                  <span className="forn-contapag-info-label">Valor</span>
+                  <span className="forn-contapag-info-valor valor-grande">{fmt(c.valor)}</span>
                 </div>
               </div>
-              <div className="forn-contapag-acoes">
-                <button className="forn-compra-cancelar" style={{ borderColor: 'var(--est-border)', color: 'var(--est-text-soft)' }}
-                  onClick={() => setCompraDetalheId(c.compra_id)}>
+              <div className="forn-contapag-card-acoes">
+                <button className="forn-contapag-card-btn ver" onClick={() => setCompraDetalheId(c.compra_id)}>
                   👁 Ver
                 </button>
                 {c.status !== 'paga' && (
                   <button
-                    className="forn-compra-pagar"
+                    className="forn-contapag-card-btn pagar"
                     disabled={pagando === c.conta_a_pagar_id}
                     onClick={() => pagar(c.conta_a_pagar_id, c.fornecedor_nome)}
                   >

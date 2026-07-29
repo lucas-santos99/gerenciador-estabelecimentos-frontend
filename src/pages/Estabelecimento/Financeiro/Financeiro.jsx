@@ -880,7 +880,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 return true;
               });
               return (
-              <div className="fin-contas-lista">
+              <div className="fin-contas-grid">
                 {contasFiltradas.length === 0 ? (
                   <div className="fin-vazio">
                     <span className="fin-vazio-icon">📋</span>
@@ -889,22 +889,25 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   </div>
                 ) : (
                   contasFiltradas.map(conta => (
-                    <div key={conta.id} className={`fin-conta-row ${conta.status}`}>
-                      <div className="fin-conta-row-dot" />
-
-                      <div className="fin-conta-row-info">
-                        <div className="fin-conta-row-linha">
+                    <div key={conta.id} className={`fin-conta-card ${conta.status}`}>
+                      <div className="fin-conta-card-header">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <span className="fin-conta-descricao">{conta.descricao}</span>
                           <span className={`fin-badge-status ${conta.status}`}>{conta.status}</span>
                         </div>
-                        <div className="fin-conta-row-detalhes">
-                          <span>📅 Vencimento {formatarData(conta.data_vencimento)}</span>
-                          <span className="fin-conta-row-valor">{fmt(conta.valor)}</span>
+                      </div>
+                      <div className="fin-conta-card-body">
+                        <div className="fin-conta-info-row">
+                          <span className="fin-conta-info-label">Vencimento</span>
+                          <span className="fin-conta-info-valor">{formatarData(conta.data_vencimento)}</span>
+                        </div>
+                        <div className="fin-conta-info-row">
+                          <span className="fin-conta-info-label">Valor</span>
+                          <span className="fin-conta-info-valor valor-grande">{fmt(conta.valor)}</span>
                         </div>
                       </div>
-
                       {(conta.status === 'pendente' || conta.status === 'atrasada') && (
-                        <div className="fin-conta-acoes-row">
+                        <div className="fin-conta-acoes">
                           <button className="fin-conta-btn editar" onClick={() => abrirFormEditar(conta)}>✏️ Editar</button>
                           <button className="fin-conta-btn excluir" onClick={() => excluirConta(conta.id)}>🗑</button>
                           <button className="fin-conta-btn pagar" onClick={() => marcarPaga(conta.id)} disabled={salvandoConta}>
