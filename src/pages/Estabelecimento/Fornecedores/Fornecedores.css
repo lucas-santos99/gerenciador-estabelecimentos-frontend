@@ -606,3 +606,141 @@
 .forn-zoom-scope .cli-modal-btn-salvar      { font-size: calc(0.875rem * var(--forn-font-scale, 1)); }
 .forn-zoom-scope .cli-vazio p                { font-size: calc(0.95rem * var(--forn-font-scale, 1)); }
 .forn-zoom-scope .cli-vazio small            { font-size: calc(0.78rem * var(--forn-font-scale, 1)); }
+
+/* ════════════════════════════════════════════════════════════
+   ABAS NO TOPO (Fornecedores / Contas a Pagar)
+   ════════════════════════════════════════════════════════════ */
+.forn-tabs-topo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 10px;
+  border-bottom: 1px solid var(--est-border);
+  margin-bottom: 4px;
+}
+.forn-tab-topo {
+  padding: 9px 16px;
+  border-radius: 8px 8px 0 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -11px;
+  background: none;
+  color: var(--est-text-muted);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.85rem * var(--forn-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.forn-tab-topo:hover { color: var(--est-text); }
+.forn-tab-topo.ativo { color: var(--est-accent); border-bottom-color: var(--est-accent); }
+
+/* ════════════════════════════════════════════════════════════
+   CONTAS A PAGAR DE FORNECEDORES — visão agregada
+   ════════════════════════════════════════════════════════════ */
+.forn-contapag-explicacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 12px;
+  font-size: calc(0.8rem * var(--forn-font-scale, 1));
+  color: var(--est-text-soft);
+  line-height: 1.55;
+}
+.forn-contapag-explicacao strong { color: var(--est-text); }
+
+.forn-contapag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.forn-status-toggle {
+  display: flex;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+.forn-status-btn {
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.78rem * var(--forn-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.forn-status-btn.ativo { background: var(--est-card); color: var(--est-accent); box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+.forn-status-btn.atrasada.ativo { color: #ef4444; }
+
+.forn-contapag-lista { display: flex; flex-direction: column; gap: 8px; }
+
+.forn-contapag-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  transition: all 0.15s;
+}
+.forn-contapag-row:hover { border-color: var(--est-border-accent); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+.forn-contapag-row.paga { opacity: 0.6; }
+
+.forn-contapag-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.forn-contapag-row.pendente .forn-contapag-dot { background: #eab308; box-shadow: 0 0 0 4px rgba(234,179,8,0.15); }
+.forn-contapag-row.atrasada .forn-contapag-dot { background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+.forn-contapag-row.paga     .forn-contapag-dot { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.15); }
+
+.forn-contapag-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.forn-contapag-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.forn-contapag-nome { font-size: calc(0.92rem * var(--forn-font-scale, 1)); font-weight: 700; color: var(--est-text); }
+
+.forn-contapag-badge {
+  font-size: calc(0.66rem * var(--forn-font-scale, 1));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.forn-contapag-badge.pendente { background: rgba(234,179,8,0.14); color: #b45309; }
+.forn-contapag-badge.atrasada { background: rgba(239,68,68,0.14); color: #ef4444; }
+.forn-contapag-badge.paga     { background: rgba(34,197,94,0.14); color: #16a34a; }
+
+.forn-contapag-detalhes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: calc(0.78rem * var(--forn-font-scale, 1));
+  color: var(--est-text-muted);
+}
+.forn-contapag-valor {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: calc(0.88rem * var(--forn-font-scale, 1));
+  color: var(--est-text);
+}
+.forn-contapag-row.atrasada .forn-contapag-valor { color: #ef4444; }
+.forn-contapag-row.paga     .forn-contapag-valor { color: #16a34a; }
+
+.forn-contapag-acoes { display: flex; gap: 6px; flex-shrink: 0; }
+
+@media (max-width: 700px) {
+  .forn-contapag-row { flex-wrap: wrap; }
+  .forn-contapag-info { min-width: 100%; order: 2; }
+  .forn-contapag-acoes { width: 100%; order: 3; }
+}

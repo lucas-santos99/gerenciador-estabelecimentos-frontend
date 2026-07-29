@@ -37,6 +37,7 @@ const FORMA_PGTO_LABEL = { a_vista: 'À vista', a_prazo: 'Parcelado' };
 
 /* ════════════════════════════════════════════════════════════ */
 export default function Fornecedores({ estabelecimentoId, permissoes = null, isMerchant = true }) {
+  const [tela,         setTela]         = useState('fornecedores'); // 'fornecedores' | 'contas'
   const [lista,        setLista]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [busca,        setBusca]        = useState('');
@@ -89,6 +90,23 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   return (
     <div className="cli-wrapper">
 
+      <div className="forn-tabs-topo">
+        <button className={`forn-tab-topo${tela === 'fornecedores' ? ' ativo' : ''}`} onClick={() => setTela('fornecedores')}>
+          🚚 Fornecedores
+        </button>
+        <button className={`forn-tab-topo${tela === 'contas' ? ' ativo' : ''}`} onClick={() => setTela('contas')}>
+          💰 Contas a Pagar
+        </button>
+        <div className="forn-zoom-group" style={{ marginLeft: 'auto' }}>
+          <button className="forn-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+          <button className="forn-zoom-btn" onClick={() => changeFontScale(0.1)} disabled={fontScale >= 1.6} title="Aumentar fonte">A+</button>
+        </div>
+      </div>
+
+      {tela === 'contas' ? (
+        <ContasFornecedores fontScale={fontScale} />
+      ) : (
+      <>
       <div className="cli-header">
         <input
           className="cli-header-busca"
@@ -97,10 +115,6 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           onChange={e => setBusca(e.target.value)}
         />
         <div className="cli-header-btns">
-          <div className="forn-zoom-group">
-            <button className="forn-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
-            <button className="forn-zoom-btn" onClick={() => changeFontScale(0.1)} disabled={fontScale >= 1.6} title="Aumentar fonte">A+</button>
-          </div>
           {pode('fornecedores') && (
             <button className="cli-btn verde" onClick={() => setModalCompra(true)}>🧾 Lançar Compra</button>
           )}
@@ -200,7 +214,123 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           fontScale={fontScale}
         />
       )}
+      </>
+      )}
 
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   CONTAS A PAGAR DE FORNECEDORES — visão agregada, todos os
+   fornecedores juntos numa lista só (não precisa abrir um por um)
+════════════════════════════════════════════════════════════ */
+function ContasFornecedores({ fontScale = 1 }) {
+  const [lista,       setLista]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [filtroStatus, setFiltroStatus] = useState('pendente'); // 'pendente' | 'paga' | 'atrasada'
+  const [pagando,     setPagando]     = useState(null);
+  const [compraDetalheId, setCompraDetalheId] = useState(null);
+
+  async function carregar() {
+    setLoading(true);
+    try {
+      const resp = await apiFetch(`/api/compras/contas-a-pagar?status=${filtroStatus}`);
+      const data = await resp.json();
+      setLista(Array.isArray(data) ? data : []);
+    } catch { setLista([]); }
+    setLoading(false);
+  }
+
+  useEffect(() => { carregar(); }, [filtroStatus]);
+
+  async function pagar(contaId, fornecedorNome) {
+    if (!window.confirm(`Marcar essa compra de "${fornecedorNome}" como paga?`)) return;
+    setPagando(contaId);
+    try {
+      const resp = await apiFetch(`/api/financeiro/${contaId}/pagar`, { method: 'PUT' });
+      const data = await resp.json();
+      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
+      carregar();
+    } catch { alert('Erro ao marcar como paga.'); }
+    setPagando(null);
+  }
+
+  return (
+    <div className="forn-zoom-scope" style={{ '--forn-font-scale': fontScale }}>
+      <div className="forn-contapag-explicacao">
+        <span>💡</span>
+        <span>
+          Aqui ficam <strong>só as compras de fornecedor feitas a prazo</strong> — elas entram sozinhas quando você lança
+          a compra. Contas de água, luz, aluguel etc. ficam no módulo <strong>Financeiro</strong>, separado daqui.
+        </span>
+      </div>
+
+      <div className="forn-contapag-header">
+        <div className="forn-status-toggle">
+          {['pendente', 'atrasada', 'paga'].map(s => (
+            <button
+              key={s}
+              className={`forn-status-btn ${s}${filtroStatus === s ? ' ativo' : ''}`}
+              onClick={() => setFiltroStatus(s)}
+            >
+              {s === 'pendente' ? '⏳ Pendente' : s === 'paga' ? '✅ Paga' : '🔴 Atrasada'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
+      ) : lista.length === 0 ? (
+        <div className="cli-vazio">
+          <span className="cli-vazio-icon">✅</span>
+          <p>Nenhuma conta {filtroStatus === 'pendente' ? 'pendente' : filtroStatus === 'paga' ? 'paga' : 'atrasada'} no momento.</p>
+        </div>
+      ) : (
+        <div className="forn-contapag-lista">
+          {lista.map(c => (
+            <div key={c.conta_a_pagar_id} className={`forn-contapag-row ${c.status}`}>
+              <div className="forn-contapag-dot" />
+              <div className="forn-contapag-info">
+                <div className="forn-contapag-linha">
+                  <span className="forn-contapag-nome">{c.fornecedor_nome}</span>
+                  {c.numero_nota && <span className="forn-compra-nota">Nota {c.numero_nota}</span>}
+                  <span className={`forn-contapag-badge ${c.status}`}>{c.status}</span>
+                </div>
+                <div className="forn-contapag-detalhes">
+                  <span>📅 Vencimento {fmtData(c.data_vencimento)}</span>
+                  <span className="forn-contapag-valor">{fmt(c.valor)}</span>
+                </div>
+              </div>
+              <div className="forn-contapag-acoes">
+                <button className="forn-compra-cancelar" style={{ borderColor: 'var(--est-border)', color: 'var(--est-text-soft)' }}
+                  onClick={() => setCompraDetalheId(c.compra_id)}>
+                  👁 Ver
+                </button>
+                {c.status !== 'paga' && (
+                  <button
+                    className="forn-compra-pagar"
+                    disabled={pagando === c.conta_a_pagar_id}
+                    onClick={() => pagar(c.conta_a_pagar_id, c.fornecedor_nome)}
+                  >
+                    {pagando === c.conta_a_pagar_id ? '⏳' : '💰 Pagar'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {compraDetalheId && (
+        <DetalheCompraModal
+          compraId={compraDetalheId}
+          onFechar={() => setCompraDetalheId(null)}
+          fontScale={fontScale}
+          onPago={carregar}
+        />
+      )}
     </div>
   );
 }

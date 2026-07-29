@@ -759,10 +759,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             <div className="fin-contas-explicacao">
               <span className="fin-contas-explicacao-icone">💡</span>
               <span className="fin-contas-explicacao-texto">
-                Aqui você controla <strong>tudo que precisa pagar</strong> — contas de água, luz, aluguel, internet, e também
-                as compras de fornecedor feitas "a prazo" (essas entram sozinhas quando você lança a compra no módulo Fornecedores).
-                Isso é só pra você não esquecer de pagar e saber o que está pendente — <strong>não</strong> tem relação direta
-                com o cálculo de lucro do DRE, que já é feito de outro jeito (na hora da venda, automaticamente).
+                Aqui você controla as <strong>despesas do dia a dia</strong> — água, luz, aluguel, internet e outras contas
+                que você cadastra manualmente com "+ Nova Conta". Elas <strong>entram no cálculo do Lucro Líquido</strong> do
+                DRE quando marcadas como pagas. <strong>Compras de fornecedor não aparecem aqui</strong> — elas têm sua
+                própria aba de contas a pagar dentro do módulo Fornecedores, porque o custo delas já é descontado do lucro
+                de outro jeito (na hora da venda, automaticamente).
               </span>
             </div>
 
