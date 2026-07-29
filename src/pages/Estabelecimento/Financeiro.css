@@ -466,22 +466,24 @@
 
 .fin-dre-card-titulo {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--est-text-muted);
-  margin-bottom: 2px;
+  color: var(--est-text);
+  margin-bottom: 4px;
   display: block;
 }
 
 .fin-dre-card-subtitulo {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   color: var(--est-text-muted);
   font-weight: 500;
-  font-style: italic;
+  font-style: normal;
+  line-height: 1.5;
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
+.fin-dre-card-subtitulo strong { color: var(--est-text-soft); font-weight: 700; }
 
 .fin-dre-card-valor {
   font-size: calc(1.6rem * var(--fin-font-scale, 1));

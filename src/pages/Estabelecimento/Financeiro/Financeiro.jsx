@@ -38,6 +38,16 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     });
   }
 
+  const [avisoFluxoAberto, setAvisoFluxoAberto] = useState(() => localStorage.getItem('fin-aviso-fluxo-fechado') !== 'true');
+  function fecharAvisoFluxo() {
+    setAvisoFluxoAberto(false);
+    localStorage.setItem('fin-aviso-fluxo-fechado', 'true');
+  }
+  function abrirAvisoFluxo() {
+    setAvisoFluxoAberto(true);
+    localStorage.removeItem('fin-aviso-fluxo-fechado');
+  }
+
   /* ── Estado Fluxo / DRE ──────────────────────────────────── */
   const [resumo,        setResumo]        = useState(null);
   const [loadingResumo, setLoadingResumo] = useState(true);
@@ -193,6 +203,83 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     } else {
       gerar(15);
     }
+  }
+
+  function exportarDREExcel() {
+    if (!dreData) return;
+    const dados = [
+      { 'Descrição': '(+) Receita Bruta Total', 'Valor (R$)': parseFloat(dreData.receita_bruta) },
+      { 'Descrição': '   Em Dinheiro',           'Valor (R$)': parseFloat(dreData.receita_dinheiro) },
+      { 'Descrição': '   Em Pix',                'Valor (R$)': parseFloat(dreData.receita_pix) },
+      { 'Descrição': '   Em Cartão',             'Valor (R$)': parseFloat(dreData.receita_cartao) },
+      { 'Descrição': '(-) CMV',                  'Valor (R$)': -parseFloat(dreData.cmv) },
+      { 'Descrição': '(=) Lucro Bruto',          'Valor (R$)': parseFloat(dreData.lucro_bruto) },
+      { 'Descrição': '(-) Despesas Operacionais','Valor (R$)': -parseFloat(dreData.despesas) },
+      { 'Descrição': '(=) Lucro Líquido',        'Valor (R$)': parseFloat(dreData.lucro_liquido) },
+      { 'Descrição': '',                          'Valor (R$)': '' },
+      { 'Descrição': '(informativo) Pago a Fornecedores', 'Valor (R$)': parseFloat(dreData.total_compras_fornecedor) },
+    ];
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'DRE');
+    XLSX.writeFile(wb, `DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.xlsx`);
+  }
+
+  /* ── Exportação do Resumo do Dia (substitui o "Imprimir" antigo,
+     que usava window.print() e não saía certo — agora gera um PDF/Excel
+     de verdade, com os mesmos dados exatos que estão na tela) ── */
+  function linhasResumoDia() {
+    if (!resumo) return [];
+    return [
+      { 'Item': 'Total Entradas',        'Valor (R$)': parseFloat(resumo.total_entradas_dia || 0) },
+      { 'Item': 'Vendas (pagas no ato)', 'Valor (R$)': parseFloat(resumo.total_vendas_dia || 0) },
+      { 'Item': 'Fiado Recebido',        'Valor (R$)': parseFloat(resumo.total_fiado_recebido || 0) },
+      { 'Item': 'Dinheiro',              'Valor (R$)': parseFloat(resumo.total_dinheiro || 0) },
+      { 'Item': 'Pix',                   'Valor (R$)': parseFloat(resumo.total_pix || 0) },
+      { 'Item': 'Cartão (total)',        'Valor (R$)': parseFloat(resumo.total_cartao || 0) },
+      { 'Item': '   Débito',             'Valor (R$)': parseFloat(resumo.total_debito || 0) },
+      { 'Item': '   Crédito',            'Valor (R$)': parseFloat(resumo.total_credito || 0) },
+      { 'Item': 'Fiado Pendente',        'Valor (R$)': parseFloat(resumo.total_fiado_pendente || 0) },
+      { 'Item': 'Contas a Pagar Pendente', 'Valor (R$)': parseFloat(resumo.total_contas_pagar_pendente || 0) },
+    ];
+  }
+
+  function exportarResumoDiaExcel() {
+    const dados = linhasResumoDia();
+    if (!dados.length) return;
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Resumo do Dia');
+    XLSX.writeFile(wb, `Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.xlsx`);
+  }
+
+  function baixarPDFResumoDia() {
+    const dados = linhasResumoDia();
+    if (!dados.length) return;
+    const doc = new jsPDF();
+    const gerar = (y) => {
+      doc.setFontSize(16); doc.setFont(undefined, 'bold');
+      doc.text(nomeFantasia || 'Relatório', 105, y, { align: 'center' });
+      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
+      doc.text('Resumo do Dia', 105, y + 7, { align: 'center' });
+      doc.setFontSize(9);
+      doc.text(`Gerado em ${formatarData(hoje())}`, 105, y + 13, { align: 'center' });
+      autoTable(doc, {
+        startY: y + 20,
+        head: [['Item', 'Valor']],
+        body: dados.map(d => [d['Item'], fmt(d['Valor (R$)'])]),
+        theme: 'striped',
+        styles: { fontSize: 10, cellPadding: 3 },
+        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
+      });
+      doc.save(`Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.pdf`);
+    };
+    if (logoUrl) {
+      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
+      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
+      img.onerror = () => gerar(15);
+    } else { gerar(15); }
   }
 
   /* ════════════════════════════════════════════════════════
@@ -576,8 +663,21 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             disabled={fontScale >= 1.6}
             title="Aumentar fonte"
           >A+</button>
-          <button className="fin-tab-btn-imprimir" onClick={() => window.print()}>
-            🖨️ Imprimir
+          <button
+            className="fin-tab-btn-imprimir"
+            onClick={exportarResumoDiaExcel}
+            disabled={!resumo}
+            title="Exportar o resumo do dia em Excel"
+          >
+            📥 Excel
+          </button>
+          <button
+            className="fin-tab-btn-imprimir"
+            onClick={baixarPDFResumoDia}
+            disabled={!resumo}
+            title="Exportar o resumo do dia em PDF"
+          >
+            📄 PDF
           </button>
         </div>
       </div>
@@ -588,6 +688,22 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
         {/* ══ ABA 1: FLUXO DE CAIXA ══ */}
         {abaAtiva === 'fluxo' && (
           <>
+            {avisoFluxoAberto ? (
+              <div className="fin-contas-explicacao">
+                <span className="fin-contas-explicacao-icone">💡</span>
+                <span className="fin-contas-explicacao-texto">
+                  Aqui você acompanha o <strong>dinheiro entrando hoje</strong> (vendas, fiado recebido, por meio de pagamento),
+                  o que ainda está <strong>pendente</strong> (fiado a receber, contas a pagar), e o <strong>DRE</strong> — o cálculo
+                  de lucro do período, já descontando o custo da mercadoria e as despesas de verdade.
+                </span>
+                <button className="fin-contas-explicacao-fechar" onClick={fecharAvisoFluxo} title="Ocultar este aviso">✕</button>
+              </div>
+            ) : (
+              <button className="fin-contas-explicacao-reabrir" onClick={abrirAvisoFluxo}>
+                💡 Sobre esta aba
+              </button>
+            )}
+
             {/* Resumo do dia */}
             <div className="fin-section-header">
               <span className="fin-section-titulo">📅 Resumo do Dia</span>
@@ -703,6 +819,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               >
                 📄 Baixar PDF
               </button>
+              <button
+                type="button"
+                className="fin-btn-excel"
+                onClick={exportarDREExcel}
+                disabled={!dreData}
+              >
+                📥 Excel
+              </button>
             </form>
 
             {erroDre && <div className="fin-erro">⚠️ {erroDre}</div>}
@@ -728,7 +852,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) CMV</span>
-                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida — inclui tudo que você comprou de fornecedor e já foi vendido</span>
+                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida (o que você comprou de fornecedor e já vendeu)</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.cmv)}</span>
                 </div>
                 <div className="fin-dre-card bruto">
@@ -738,7 +862,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 </div>
                 <div className="fin-dre-card despesa">
                   <span className="fin-dre-card-titulo">(-) Despesas Operacionais</span>
-                  <span className="fin-dre-card-subtitulo">Contas cadastradas manualmente em "Contas a Pagar" (água, luz, aluguel, internet, etc.) e já marcadas como pagas no período. <strong>Não inclui compras de fornecedor</strong> — esse custo já saiu descontado ali em cima, no CMV.</span>
+                  <span className="fin-dre-card-subtitulo">Contas manuais pagas no período (água, luz, aluguel, etc). <strong>Não inclui</strong> compra de fornecedor — já contada no CMV.</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.despesas)}</span>
                 </div>
                 <div className="fin-dre-card liquido">
