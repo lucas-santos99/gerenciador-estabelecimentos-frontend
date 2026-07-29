@@ -53,6 +53,13 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [loadingContas,setLoadingContas] = useState(false);
   const [erroContas,   setErroContas]   = useState('');
   const [filtroStatus, setFiltroStatus] = useState('pendente');
+  const [filtroContaDe,  setFiltroContaDe]  = useState('');
+  const [filtroContaAte, setFiltroContaAte] = useState('');
+  const [avisoContasAberto, setAvisoContasAberto] = useState(() => localStorage.getItem('fin-aviso-contas-fechado') !== 'true');
+  function fecharAvisoContas() {
+    setAvisoContasAberto(false);
+    localStorage.setItem('fin-aviso-contas-fechado', 'true');
+  }
   const [formAberto,   setFormAberto]   = useState(false);
   const [formData,     setFormData]     = useState({ descricao: '', valor: '', data_vencimento: '' });
   const [contaEditId,  setContaEditId]  = useState(null);
@@ -756,6 +763,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
         {/* ══ ABA 2: CONTAS A PAGAR ══ */}
         {abaAtiva === 'contas' && (
           <>
+            {avisoContasAberto && (
             <div className="fin-contas-explicacao">
               <span className="fin-contas-explicacao-icone">💡</span>
               <span className="fin-contas-explicacao-texto">
@@ -765,7 +773,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                 própria aba de contas a pagar dentro do módulo Fornecedores, porque o custo delas já é descontado do lucro
                 de outro jeito (na hora da venda, automaticamente).
               </span>
+              <button className="fin-contas-explicacao-fechar" onClick={fecharAvisoContas} title="Ocultar este aviso">✕</button>
             </div>
+            )}
 
             <div className="fin-contas-header">
               <div className="fin-status-toggle">
@@ -784,6 +794,18 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               <button className="fin-btn-nova-conta" onClick={abrirFormNovaConta}>
                 + Nova Conta
               </button>
+            </div>
+
+            <div className="fin-contas-filtro-data">
+              <label className="fin-form-label">De</label>
+              <input className="fin-form-input" type="date" value={filtroContaDe} onChange={e => setFiltroContaDe(e.target.value)} />
+              <label className="fin-form-label">Até</label>
+              <input className="fin-form-input" type="date" value={filtroContaAte} onChange={e => setFiltroContaAte(e.target.value)} />
+              {(filtroContaDe || filtroContaAte) && (
+                <button className="fin-btn-cancelar-conta" onClick={() => { setFiltroContaDe(''); setFiltroContaAte(''); }}>
+                  ✕ Limpar
+                </button>
+              )}
             </div>
 
             {/* Formulário */}
@@ -844,16 +866,22 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             {loadingContas ? (
               <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
-            ) : (
+            ) : (() => {
+              const contasFiltradas = contas.filter(c => {
+                if (filtroContaDe && c.data_vencimento < filtroContaDe) return false;
+                if (filtroContaAte && c.data_vencimento > filtroContaAte) return false;
+                return true;
+              });
+              return (
               <div className="fin-contas-lista">
-                {contas.length === 0 ? (
+                {contasFiltradas.length === 0 ? (
                   <div className="fin-vazio">
                     <span className="fin-vazio-icon">📋</span>
                     <p>Nenhuma conta encontrada</p>
-                    <small>Filtro: {filtroStatus}</small>
+                    <small>Filtro: {filtroStatus}{(filtroContaDe || filtroContaAte) ? ' · período selecionado' : ''}</small>
                   </div>
                 ) : (
-                  contas.map(conta => (
+                  contasFiltradas.map(conta => (
                     <div key={conta.id} className={`fin-conta-row ${conta.status}`}>
                       <div className="fin-conta-row-dot" />
 
@@ -881,7 +909,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   ))
                 )}
               </div>
-            )}
+              );
+            })()}
           </>
         )}
 

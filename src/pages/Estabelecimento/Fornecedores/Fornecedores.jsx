@@ -229,8 +229,15 @@ function ContasFornecedores({ fontScale = 1 }) {
   const [lista,       setLista]       = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filtroStatus, setFiltroStatus] = useState('pendente'); // 'pendente' | 'paga' | 'atrasada'
+  const [filtroDataDe, setFiltroDataDe] = useState('');
+  const [filtroDataAte, setFiltroDataAte] = useState('');
   const [pagando,     setPagando]     = useState(null);
   const [compraDetalheId, setCompraDetalheId] = useState(null);
+  const [avisoAberto, setAvisoAberto] = useState(() => localStorage.getItem('forn-contapag-aviso-fechado') !== 'true');
+  function fecharAviso() {
+    setAvisoAberto(false);
+    localStorage.setItem('forn-contapag-aviso-fechado', 'true');
+  }
 
   async function carregar() {
     setLoading(true);
@@ -258,13 +265,16 @@ function ContasFornecedores({ fontScale = 1 }) {
 
   return (
     <div className="forn-zoom-scope" style={{ '--forn-font-scale': fontScale }}>
+      {avisoAberto && (
       <div className="forn-contapag-explicacao">
         <span>💡</span>
         <span>
           Aqui ficam <strong>só as compras de fornecedor feitas a prazo</strong> — elas entram sozinhas quando você lança
           a compra. Contas de água, luz, aluguel etc. ficam no módulo <strong>Financeiro</strong>, separado daqui.
         </span>
+        <button className="forn-contapag-explicacao-fechar" onClick={fecharAviso} title="Ocultar este aviso">✕</button>
       </div>
+      )}
 
       <div className="forn-contapag-header">
         <div className="forn-status-toggle">
@@ -280,16 +290,32 @@ function ContasFornecedores({ fontScale = 1 }) {
         </div>
       </div>
 
-      {loading ? (
+      <div className="forn-contapag-filtro-data">
+        <span className="cli-form-label">De</span>
+        <input className="cli-form-input" type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)} />
+        <span className="cli-form-label">Até</span>
+        <input className="cli-form-input" type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)} />
+        {(filtroDataDe || filtroDataAte) && (
+          <button className="forn-historico-limpar" onClick={() => { setFiltroDataDe(''); setFiltroDataAte(''); }}>✕ Limpar</button>
+        )}
+      </div>
+
+      {(() => {
+        const listaFiltrada = lista.filter(c => {
+          if (filtroDataDe && c.data_vencimento < filtroDataDe) return false;
+          if (filtroDataAte && c.data_vencimento > filtroDataAte) return false;
+          return true;
+        });
+        return loading ? (
         <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
-      ) : lista.length === 0 ? (
+      ) : listaFiltrada.length === 0 ? (
         <div className="cli-vazio">
           <span className="cli-vazio-icon">✅</span>
-          <p>Nenhuma conta {filtroStatus === 'pendente' ? 'pendente' : filtroStatus === 'paga' ? 'paga' : 'atrasada'} no momento.</p>
+          <p>Nenhuma conta {filtroStatus === 'pendente' ? 'pendente' : filtroStatus === 'paga' ? 'paga' : 'atrasada'} {(filtroDataDe || filtroDataAte) ? 'nesse período' : 'no momento'}.</p>
         </div>
       ) : (
         <div className="forn-contapag-lista">
-          {lista.map(c => (
+          {listaFiltrada.map(c => (
             <div key={c.conta_a_pagar_id} className={`forn-contapag-row ${c.status}`}>
               <div className="forn-contapag-dot" />
               <div className="forn-contapag-info">
@@ -321,7 +347,8 @@ function ContasFornecedores({ fontScale = 1 }) {
             </div>
           ))}
         </div>
-      )}
+      );
+      })()}
 
       {compraDetalheId && (
         <DetalheCompraModal
