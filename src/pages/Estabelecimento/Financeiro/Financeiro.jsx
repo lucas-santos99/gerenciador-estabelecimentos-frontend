@@ -60,6 +60,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     setAvisoContasAberto(false);
     localStorage.setItem('fin-aviso-contas-fechado', 'true');
   }
+  function abrirAvisoContas() {
+    setAvisoContasAberto(true);
+    localStorage.removeItem('fin-aviso-contas-fechado');
+  }
   const [formAberto,   setFormAberto]   = useState(false);
   const [formData,     setFormData]     = useState({ descricao: '', valor: '', data_vencimento: '' });
   const [contaEditId,  setContaEditId]  = useState(null);
@@ -763,7 +767,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
         {/* ══ ABA 2: CONTAS A PAGAR ══ */}
         {abaAtiva === 'contas' && (
           <>
-            {avisoContasAberto && (
+            {avisoContasAberto ? (
             <div className="fin-contas-explicacao">
               <span className="fin-contas-explicacao-icone">💡</span>
               <span className="fin-contas-explicacao-texto">
@@ -775,6 +779,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               </span>
               <button className="fin-contas-explicacao-fechar" onClick={fecharAvisoContas} title="Ocultar este aviso">✕</button>
             </div>
+            ) : (
+              <button className="fin-contas-explicacao-reabrir" onClick={abrirAvisoContas}>
+                💡 Sobre esta aba
+              </button>
             )}
 
             <div className="fin-contas-header">

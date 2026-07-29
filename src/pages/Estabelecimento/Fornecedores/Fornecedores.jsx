@@ -238,6 +238,10 @@ function ContasFornecedores({ fontScale = 1 }) {
     setAvisoAberto(false);
     localStorage.setItem('forn-contapag-aviso-fechado', 'true');
   }
+  function abrirAviso() {
+    setAvisoAberto(true);
+    localStorage.removeItem('forn-contapag-aviso-fechado');
+  }
 
   async function carregar() {
     setLoading(true);
@@ -265,7 +269,7 @@ function ContasFornecedores({ fontScale = 1 }) {
 
   return (
     <div className="forn-zoom-scope" style={{ '--forn-font-scale': fontScale }}>
-      {avisoAberto && (
+      {avisoAberto ? (
       <div className="forn-contapag-explicacao">
         <span>💡</span>
         <span>
@@ -274,6 +278,10 @@ function ContasFornecedores({ fontScale = 1 }) {
         </span>
         <button className="forn-contapag-explicacao-fechar" onClick={fecharAviso} title="Ocultar este aviso">✕</button>
       </div>
+      ) : (
+        <button className="forn-contapag-explicacao-reabrir" onClick={abrirAviso}>
+          💡 Sobre esta aba
+        </button>
       )}
 
       <div className="forn-contapag-header">

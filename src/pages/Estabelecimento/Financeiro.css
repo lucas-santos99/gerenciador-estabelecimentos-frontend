@@ -601,7 +601,7 @@
   flex-wrap: wrap;
 }
 .fin-contas-filtro-data .fin-form-label { margin: 0; }
-.fin-contas-filtro-data .fin-form-input { width: auto; }
+.fin-contas-filtro-data input[type="date"] { width: 155px; flex: 0 0 auto; }
 
 .fin-btn-nova-conta {
   padding: 9px 14px;
@@ -834,6 +834,24 @@
   transition: all 0.15s;
 }
 .fin-contas-explicacao-fechar:hover { background: var(--est-hover); color: var(--est-text); }
+
+.fin-contas-explicacao-reabrir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-muted);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.75rem * var(--fin-font-scale, 1));
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.15s;
+}
+.fin-contas-explicacao-reabrir:hover { border-color: var(--est-border-accent); color: var(--est-accent); }
 
 .fin-contas-lista {
   display: flex;
