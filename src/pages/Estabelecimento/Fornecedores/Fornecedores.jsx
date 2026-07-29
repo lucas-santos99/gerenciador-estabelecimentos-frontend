@@ -296,16 +296,15 @@ function ContasFornecedores({ fontScale = 1 }) {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="forn-contapag-filtro-data">
-        <span className="cli-form-label">De</span>
-        <input className="cli-form-input" type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)} />
-        <span className="cli-form-label">Até</span>
-        <input className="cli-form-input" type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)} />
-        {(filtroDataDe || filtroDataAte) && (
-          <button className="forn-historico-limpar" onClick={() => { setFiltroDataDe(''); setFiltroDataAte(''); }}>✕ Limpar</button>
-        )}
+        <div className="forn-contapag-filtro-data">
+          <span className="cli-form-label">De</span>
+          <input className="cli-form-input" type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)} />
+          <span className="cli-form-label">Até</span>
+          <input className="cli-form-input" type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)} />
+          {(filtroDataDe || filtroDataAte) && (
+            <button className="forn-historico-limpar" onClick={() => { setFiltroDataDe(''); setFiltroDataAte(''); }}>✕ Limpar</button>
+          )}
+        </div>
       </div>
 
       {(() => {

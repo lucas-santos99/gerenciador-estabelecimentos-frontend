@@ -799,21 +799,20 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   </button>
                 ))}
               </div>
+              <div className="fin-contas-filtro-data">
+                <label className="fin-form-label">De</label>
+                <input className="fin-form-input" type="date" value={filtroContaDe} onChange={e => setFiltroContaDe(e.target.value)} />
+                <label className="fin-form-label">Até</label>
+                <input className="fin-form-input" type="date" value={filtroContaAte} onChange={e => setFiltroContaAte(e.target.value)} />
+                {(filtroContaDe || filtroContaAte) && (
+                  <button className="fin-btn-cancelar-conta" onClick={() => { setFiltroContaDe(''); setFiltroContaAte(''); }}>
+                    ✕ Limpar
+                  </button>
+                )}
+              </div>
               <button className="fin-btn-nova-conta" onClick={abrirFormNovaConta}>
                 + Nova Conta
               </button>
-            </div>
-
-            <div className="fin-contas-filtro-data">
-              <label className="fin-form-label">De</label>
-              <input className="fin-form-input" type="date" value={filtroContaDe} onChange={e => setFiltroContaDe(e.target.value)} />
-              <label className="fin-form-label">Até</label>
-              <input className="fin-form-input" type="date" value={filtroContaAte} onChange={e => setFiltroContaAte(e.target.value)} />
-              {(filtroContaDe || filtroContaAte) && (
-                <button className="fin-btn-cancelar-conta" onClick={() => { setFiltroContaDe(''); setFiltroContaAte(''); }}>
-                  ✕ Limpar
-                </button>
-              )}
             </div>
 
             {/* Formulário */}

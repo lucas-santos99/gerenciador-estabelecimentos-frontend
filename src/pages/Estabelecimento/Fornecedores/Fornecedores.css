@@ -688,6 +688,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 14px;
 }
 
@@ -695,7 +697,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 .forn-contapag-filtro-data input[type="date"] { width: 155px; flex: 0 0 auto; }
@@ -724,7 +725,7 @@
 .forn-status-btn.ativo { background: var(--est-card); color: var(--est-accent); box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
 .forn-status-btn.atrasada.ativo { color: #ef4444; }
 
-.forn-contapag-lista { display: flex; flex-direction: column; gap: 8px; }
+.forn-contapag-lista { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
 
 .forn-contapag-row {
   display: flex;
