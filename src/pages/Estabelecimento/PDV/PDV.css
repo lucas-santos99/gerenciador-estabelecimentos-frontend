@@ -1913,13 +1913,10 @@ button:disabled[title*="Sem permissão"] {
 .pdv-ident-btn-sim:focus {
   outline: none;
   border-color: var(--est-accent);
+  color: var(--est-accent);
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
-.pdv-ident-btn-sim {
-  border-color: var(--est-accent);
-  color: var(--est-accent);
-}
-.pdv-ident-btn-sim:hover { background: var(--est-accent); color: #fff; }
+.pdv-ident-btn-sim:hover { border-color: var(--est-accent); color: var(--est-accent); }
 .pdv-ident-btn-nao:hover { border-color: var(--est-text-muted); }
 
 .pdv-ident-hint {
