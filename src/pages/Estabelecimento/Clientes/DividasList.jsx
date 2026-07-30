@@ -235,20 +235,24 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   }
 
   /* ── Carregar dados ─────────────────────────────────────── */
-  async function carregarDados() {
+  async function carregarDados(fiadoAtivoParam = fiadoAtivo) {
     if (!estabelecimentoId) return;
     setLoading(true);
     setErro('');
     try {
-      const [rDiv, rTodos] = await Promise.all([
-        apiFetch(`/api/clientes/dividas`),
-        apiFetch(`/api/clientes`),
-      ]);
-      if (!rDiv.ok)   throw new Error('Erro ao buscar dívidas');
+      const rTodos = await apiFetch(`/api/clientes`);
       if (!rTodos.ok) throw new Error('Erro ao buscar clientes');
-      const [div, todos] = await Promise.all([rDiv.json(), rTodos.json()]);
-      setDividas(div);
-      setTodosClientes(todos);
+      setTodosClientes(await rTodos.json());
+
+      // Só pede a lista de dívidas se o Fiado estiver ativo — se não,
+      // nem tenta (evita o 403 aparecer numa tela que nem é de fiado)
+      if (fiadoAtivoParam) {
+        const rDiv = await apiFetch(`/api/clientes/dividas`);
+        if (!rDiv.ok) throw new Error('Erro ao buscar dívidas');
+        setDividas(await rDiv.json());
+      } else {
+        setDividas([]);
+      }
     } catch (err) {
       setErro(err.message);
     } finally {
@@ -256,13 +260,14 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
     }
   }
 
-  useEffect(() => { carregarDados(); }, [estabelecimentoId]);
-
-
-  /* ── Config de Pix (maquininha vs. sistema) + Fiado ativo? ── */
+  /* ── Config de Pix (maquininha vs. sistema) + Fiado ativo? ──
+     Roda primeiro pra descobrir se o Fiado está ligado, e SÓ DEPOIS
+     busca os clientes — assim carregarDados já sabe se deve pedir
+     dívidas ou não, sem depender de timing entre dois efeitos soltos. */
   useEffect(() => {
     if (!estabelecimentoId) return;
     (async () => {
+      let ativo = true;
       try {
         const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
         if (resp.ok) {
@@ -271,11 +276,12 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             modo: d.pix_modo || 'maquininha',
             disponivel: !!(d.pix_chave && d.pix_cidade),
           });
-          const ativo = d.fiado_ativo !== false;
+          ativo = d.fiado_ativo !== false;
           setFiadoAtivo(ativo);
           if (!ativo) setViewMode('todos'); // sem Fiado, a aba "devedores" nem existe
         }
       } catch { /* Pix pela maquininha continua funcionando mesmo se isso falhar */ }
+      carregarDados(ativo);
     })();
   }, [estabelecimentoId]);
 
