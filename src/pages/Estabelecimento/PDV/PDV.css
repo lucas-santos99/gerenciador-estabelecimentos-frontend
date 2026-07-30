@@ -1853,3 +1853,113 @@ button:disabled[title*="Sem permissão"] {
   margin-top: 10px;
   margin-bottom: 4px;
 }
+
+
+/* ════════════════════════════════════════════════════════════
+   ASSISTENTE DE IDENTIFICAÇÃO — sequência de perguntas por Enter
+   (substitui o antigo link+caixa expansível — classes .pdv-ident-toggle/
+   .pdv-ident-box/.pdv-ident-header/.pdv-ident-fechar ficam acima sem uso)
+   ════════════════════════════════════════════════════════════ */
+
+.pdv-ident-wizard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: pdvIdentIn 0.15s ease;
+}
+@keyframes pdvIdentIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pdv-ident-pergunta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.pdv-ident-pergunta-texto {
+  font-size: calc(1.05rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  color: var(--est-text);
+}
+
+.pdv-ident-pergunta-botoes {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.pdv-ident-btn-nao,
+.pdv-ident-btn-sim {
+  flex: 1;
+  max-width: 180px;
+  padding: calc(12px * var(--pdv-pag-zoom, 1)) calc(18px * var(--pdv-pag-zoom, 1));
+  border-radius: 10px;
+  font-size: calc(0.95rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 2px solid var(--est-border);
+  background: var(--est-card);
+  color: var(--est-text-soft);
+}
+.pdv-ident-btn-nao:focus,
+.pdv-ident-btn-sim:focus {
+  outline: none;
+  border-color: var(--est-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+.pdv-ident-btn-sim {
+  border-color: var(--est-accent);
+  color: var(--est-accent);
+}
+.pdv-ident-btn-sim:hover { background: var(--est-accent); color: #fff; }
+.pdv-ident-btn-nao:hover { border-color: var(--est-text-muted); }
+
+.pdv-ident-hint {
+  font-size: calc(0.75rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-text-muted);
+}
+
+.pdv-ident-pular {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--est-text-muted);
+  font-size: calc(0.8rem * var(--pdv-pag-zoom, 1));
+  text-decoration: underline;
+  cursor: pointer;
+}
+.pdv-ident-pular:hover { color: var(--est-text); }
+
+.pdv-ident-recap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 10px;
+  font-size: calc(0.8rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-text-soft);
+}
+.pdv-ident-recap strong { color: var(--est-text); }
+.pdv-ident-recap-editar {
+  background: none;
+  border: none;
+  color: var(--est-accent);
+  font-size: calc(0.78rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pdv-ident-recap-editar:hover { opacity: 0.8; }

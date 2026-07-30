@@ -223,16 +223,43 @@ export default function LayoutEstabelecimento({
   })();
 
   const ABAS = (() => {
-    if (isMerchant) return [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG];
-    // Operador: só mostra abas cujo key está nas permissões.
-    // Auditoria entra no "pool" mas fica desativada por padrão — só
-    // aparece se o admin marcar essa permissão especificamente pro
-    // operador (ela NUNCA vem ligada por padrão, diferente das demais).
-    // Operadores não têm acesso à gestão de Operadores, então essa aba
-    // fica de fora do pool mesmo com permissão (é exclusiva do merchant).
-    const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_AUDITORIA, ABA_CONFIG];
-    return TODAS.filter(aba => permissoes.includes(aba.key));
+    const base = isMerchant
+      ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG]
+      : (() => {
+          // Operador: só mostra abas cujo key está nas permissões.
+          // Auditoria entra no "pool" mas fica desativada por padrão — só
+          // aparece se o admin marcar essa permissão especificamente pro
+          // operador (ela NUNCA vem ligada por padrão, diferente das demais).
+          // Operadores não têm acesso à gestão de Operadores, então essa aba
+          // fica de fora do pool mesmo com permissão (é exclusiva do merchant).
+          const TODAS = [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_AUDITORIA, ABA_CONFIG];
+          return TODAS.filter(aba => permissoes.includes(aba.key));
+        })();
+
+    // Nome do menu de Clientes só menciona Fiado se o módulo estiver
+    // ativo pro estabelecimento — senão fica só "Clientes", mais limpo
+    // pra quem não trabalha com fiado.
+    return base.map(aba => aba.key === 'clientes'
+      ? { ...aba, label: fiadoAtivo ? 'Clientes / Fiado' : 'Clientes' }
+      : aba
+    );
   })();
+
+  // Só pra saber se menciona "Fiado" no nome do menu — busca uma vez,
+  // bem leve, não precisa repetir em nenhum outro lugar desse arquivo.
+  const [fiadoAtivo, setFiadoAtivo] = useState(true);
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
+        if (resp.ok) {
+          const d = await resp.json();
+          setFiadoAtivo(d.fiado_ativo !== false);
+        }
+      } catch { /* mantém o label com "Fiado" por padrão se isso falhar */ }
+    })();
+  }, [estabelecimentoId]);
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");

@@ -73,15 +73,31 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [erro,               setErro]               = useState('');
 
   // Identificação opcional na venda (qualquer forma de pagamento,
-  // diferente do fluxo de Fiado que já obriga cliente) — "vincular
-  // cliente cadastrado" e/ou "informar CPF na nota", os dois
-  // independentes e nenhum obrigatório.
-  const [mostrarIdent,        setMostrarIdent]        = useState(false);
-  const [clienteVinculado,    setClienteVinculado]    = useState(null);
-  const [termoBuscaIdent,     setTermoBuscaIdent]     = useState('');
-  const [resultadosIdent,     setResultadosIdent]     = useState([]);
-  const [loadingIdent,        setLoadingIdent]        = useState(false);
-  const [cpfNota,             setCpfNota]             = useState('');
+  // diferente do fluxo de Fiado que já obriga cliente) — sequência de
+  // perguntas por Enter: "quer identificar cliente?" → busca → "quer
+  // CPF na nota?" → CPF (com sugestão de reaproveitar o que já foi
+  // digitado/cadastrado). Fiado não passa por isso, já tem fluxo próprio.
+  const [identEtapa,           setIdentEtapa]           = useState(null); // null | 'perguntaCliente' | 'buscaCliente' | 'perguntaCpf' | 'inputCpf' | 'concluido'
+  const [clienteVinculado,     setClienteVinculado]     = useState(null);
+  const [termoBuscaIdent,      setTermoBuscaIdent]      = useState('');
+  const [termoBuscaIdentUltimo, setTermoBuscaIdentUltimo] = useState('');
+  const [resultadosIdent,      setResultadosIdent]      = useState([]);
+  const [identClienteIndex,    setIdentClienteIndex]    = useState(-1);
+  const [loadingIdent,         setLoadingIdent]         = useState(false);
+  const [cpfNota,              setCpfNota]              = useState('');
+
+  const identNaoClienteRef = useRef(null);
+  const identBuscaInputRef = useRef(null);
+  const identNaoCpfRef     = useRef(null);
+  const identCpfInputRef   = useRef(null);
+
+  // CPF sugerido pra reaproveitar: prioriza o CPF já salvo no cadastro
+  // do cliente escolhido; senão, se o texto digitado na busca parecia
+  // um CPF (bastante dígito), oferece reaproveitar isso
+  const digitosUltimoTermo = termoBuscaIdentUltimo.replace(/\D/g, '');
+  const sugestaoCpf = clienteVinculado?.cpf
+    ? formatarCpfInput(clienteVinculado.cpf)
+    : (digitosUltimoTermo.length >= 8 ? formatarCpfInput(digitosUltimoTermo) : '');
 
   // Pix pela tela do sistema (BR Code direto da chave do estabelecimento)
   const [pixModo,      setPixModo]      = useState(pixConfig.modo === 'sistema' && pixConfig.disponivel ? 'sistema' : 'maquininha');
@@ -113,13 +129,36 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (meioPagamento === 'Dinheiro') {
       const val = total.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 });
       setValorRecebido(val);
+    }
+    if (meioPagamento === 'Fiado') {
+      if (!clienteSelecionado) setTimeout(() => inputClienteRef.current?.focus(), 0);
+      else setTimeout(() => btnConfirmarRef.current?.focus(), 0);
+      return;
+    }
+    // Formas que não são Fiado passam pelo assistente de identificação
+    // primeiro — só focamos o campo de pagamento em si depois dele concluir.
+    if (identEtapa !== 'concluido') return;
+    if (meioPagamento === 'Dinheiro') {
       setTimeout(() => { inputDinheiroRef.current?.focus(); inputDinheiroRef.current?.select(); }, 0);
-    } else if (meioPagamento === 'Fiado' && !clienteSelecionado) {
-      setTimeout(() => inputClienteRef.current?.focus(), 0);
     } else {
       setTimeout(() => btnConfirmarRef.current?.focus(), 0);
     }
+  }, [metodoConfirmado, meioPagamento, identEtapa]);
+
+  // Inicia o assistente de identificação assim que confirma a forma de
+  // pagamento (exceto Fiado, que já tem fluxo próprio de cliente)
+  useEffect(() => {
+    if (metodoConfirmado && meioPagamento !== 'Fiado') setIdentEtapa('perguntaCliente');
   }, [metodoConfirmado, meioPagamento]);
+
+  // Foca o elemento certo em cada passo do assistente — sempre parte
+  // com foco no "Não", pra quem quiser pular tudo bater Enter 2x rápido
+  useEffect(() => {
+    if (identEtapa === 'perguntaCliente') setTimeout(() => identNaoClienteRef.current?.focus(), 0);
+    else if (identEtapa === 'buscaCliente') setTimeout(() => identBuscaInputRef.current?.focus(), 0);
+    else if (identEtapa === 'perguntaCpf') setTimeout(() => identNaoCpfRef.current?.focus(), 0);
+    else if (identEtapa === 'inputCpf') setTimeout(() => { identCpfInputRef.current?.focus(); identCpfInputRef.current?.select(); }, 0);
+  }, [identEtapa]);
 
   useEffect(() => {
     if (meioPagamento !== 'Dinheiro') return;
@@ -199,20 +238,56 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // forma de pagamento) — nome, telefone, CPF ou código do cliente
   async function buscarClienteIdent(termo) {
     setTermoBuscaIdent(termo);
+    setIdentClienteIndex(-1);
     if (termo.length < 2) { setResultadosIdent([]); return; }
     setLoadingIdent(true);
     try {
       const resp = await apiFetch(`/api/clientes/buscar?termo=${encodeURIComponent(termo)}`);
       if (!resp.ok) throw new Error();
-      setResultadosIdent(await resp.json());
+      const todos = await resp.json();
+      setResultadosIdent(todos);
     } catch { /* silencioso — identificação é opcional, não trava a venda */ }
     finally { setLoadingIdent(false); }
   }
 
   function selecionarClienteIdent(cli) {
     setClienteVinculado(cli);
+    setTermoBuscaIdentUltimo(termoBuscaIdent); // guarda o que foi digitado, pra sugerir como CPF depois
     setResultadosIdent([]);
     setTermoBuscaIdent('');
+    setIdentEtapa('perguntaCpf');
+  }
+
+  function pularBuscaCliente() {
+    setTermoBuscaIdentUltimo(termoBuscaIdent);
+    setResultadosIdent([]);
+    setTermoBuscaIdent('');
+    setIdentEtapa('perguntaCpf');
+  }
+
+  function responderPerguntaCliente(sim) {
+    setIdentEtapa(sim ? 'buscaCliente' : 'perguntaCpf');
+  }
+
+  function responderPerguntaCpf(sim) {
+    if (sim) { setCpfNota(sugestaoCpf || ''); setIdentEtapa('inputCpf'); }
+    else { setIdentEtapa('concluido'); }
+  }
+
+  function handleIdentBuscaKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setIdentClienteIndex(p => Math.min(p + 1, resultadosIdent.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setIdentClienteIndex(p => Math.max(p - 1, 0)); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (identClienteIndex > -1 && resultadosIdent[identClienteIndex]) selecionarClienteIdent(resultadosIdent[identClienteIndex]);
+      else if (resultadosIdent.length === 0) pularBuscaCliente(); // não achou ninguém, Enter já pula
+    }
+  }
+
+  function handleIdentCpfInputKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); setIdentEtapa('concluido'); }
+    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); }
   }
 
   function formatarCpfInput(valor) {
@@ -324,6 +399,86 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
         )}
         {metodoConfirmado && (
           <div className="pdv-pagamento-conteudo">
+            {meioPagamento !== 'Fiado' && identEtapa && identEtapa !== 'concluido' ? (
+              <div className="pdv-ident-wizard">
+                {identEtapa === 'perguntaCliente' && (
+                  <div className="pdv-ident-pergunta">
+                    <span className="pdv-ident-pergunta-texto">🪪 Quer identificar o cliente nessa venda?</span>
+                    <div className="pdv-ident-pergunta-botoes">
+                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)}>Não (Enter)</button>
+                      <button type="button" className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)}>Sim</button>
+                    </div>
+                    <span className="pdv-ident-hint">Opcional — não muda o pagamento.</span>
+                  </div>
+                )}
+
+                {identEtapa === 'buscaCliente' && (
+                  <div className="pdv-ident-pergunta">
+                    <span className="pdv-ident-pergunta-texto">Buscar cliente cadastrado</span>
+                    <input
+                      ref={identBuscaInputRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      placeholder="Nome, CPF ou código…"
+                      value={termoBuscaIdent}
+                      onChange={e => buscarClienteIdent(e.target.value)}
+                      onKeyDown={handleIdentBuscaKey}
+                    />
+                    {loadingIdent && <div style={{ fontSize: '0.78rem', color: 'var(--est-text-muted)', marginTop: 6 }}>Buscando…</div>}
+                    {resultadosIdent.length > 0 && (
+                      <ul className="pdv-cliente-lista">
+                        {resultadosIdent.map((cli, i) => (
+                          <li key={cli.id} className={`pdv-cliente-item${identClienteIndex === i ? ' ativo' : ''}`} onClick={() => selecionarClienteIdent(cli)} onMouseEnter={() => setIdentClienteIndex(i)}>
+                            {cli.nome}{cli.codigo_cliente ? ` #${cli.codigo_cliente}` : ''}
+                            <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <button type="button" className="pdv-ident-pular" onClick={pularBuscaCliente}>
+                      → Pular {resultadosIdent.length === 0 && termoBuscaIdent ? '(Enter)' : ''}
+                    </button>
+                  </div>
+                )}
+
+                {identEtapa === 'perguntaCpf' && (
+                  <div className="pdv-ident-pergunta">
+                    {clienteVinculado && (
+                      <div className="pdv-cliente-selecionado" style={{ marginBottom: 12 }}>
+                        <span className="pdv-cliente-selecionado-nome">👤 {clienteVinculado.nome}</span>
+                      </div>
+                    )}
+                    <span className="pdv-ident-pergunta-texto">
+                      🪪 Quer informar CPF na nota{sugestaoCpf ? ` (${sugestaoCpf})` : ''}?
+                    </span>
+                    <div className="pdv-ident-pergunta-botoes">
+                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)}>Não (Enter)</button>
+                      <button type="button" className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)}>
+                        {sugestaoCpf ? 'Sim, usar esse' : 'Sim'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {identEtapa === 'inputCpf' && (
+                  <div className="pdv-ident-pergunta">
+                    <span className="pdv-ident-pergunta-texto">CPF na nota</span>
+                    <input
+                      ref={identCpfInputRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000.000.000-00"
+                      value={cpfNota}
+                      onChange={e => setCpfNota(formatarCpfInput(e.target.value))}
+                      onKeyDown={handleIdentCpfInputKey}
+                    />
+                    <span className="pdv-ident-hint">Enter pra confirmar e continuar.</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+            <>
             {meioPagamento === 'Dinheiro' && (
               <>
                 <span className="pdv-troco-input-label">Valor recebido (R$)</span>
@@ -411,62 +566,20 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
               </div>
             )}
 
-            {/* Identificação opcional — não é fiado, então nunca trava a
-                venda. Vincular cliente cadastrado e/ou CPF na nota, os
-                dois independentes, do jeito que se pergunta num caixa
-                de mercado ("quer colocar CPF na nota?"). */}
-            {meioPagamento !== 'Fiado' && (
-              <div style={{ width: '100%' }}>
-                {!mostrarIdent ? (
-                  <button type="button" className="pdv-ident-toggle" onClick={() => setMostrarIdent(true)}>
-                    🪪 Identificar cliente (opcional)
-                  </button>
-                ) : (
-                  <div className="pdv-ident-box">
-                    <div className="pdv-ident-header">
-                      <span>🪪 Identificação (opcional)</span>
-                      <button type="button" className="pdv-ident-fechar" onClick={() => setMostrarIdent(false)}>✕</button>
-                    </div>
-
-                    {clienteVinculado ? (
-                      <div className="pdv-cliente-selecionado" style={{ marginBottom: 10 }}>
-                        <span className="pdv-cliente-selecionado-nome">👤 {clienteVinculado.nome}</span>
-                        <button className="pdv-btn-trocar-cliente" onClick={() => setClienteVinculado(null)}>↩ Remover</button>
-                      </div>
-                    ) : (
-                      <>
-                        <input
-                          className="pdv-cliente-busca-input"
-                          type="text"
-                          placeholder="Buscar cliente cadastrado (nome, CPF ou código)…"
-                          value={termoBuscaIdent}
-                          onChange={e => buscarClienteIdent(e.target.value)}
-                        />
-                        {loadingIdent && <div style={{ fontSize: '0.78rem', color: 'var(--est-text-muted)', marginBottom: 6 }}>Buscando…</div>}
-                        {resultadosIdent.length > 0 && (
-                          <ul className="pdv-cliente-lista">
-                            {resultadosIdent.map(cli => (
-                              <li key={cli.id} className="pdv-cliente-item" onClick={() => selecionarClienteIdent(cli)}>
-                                {cli.nome}{cli.codigo_cliente ? ` #${cli.codigo_cliente}` : ''}
-                                <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-
-                    <label className="pdv-ident-cpf-label">CPF na nota (opcional)</label>
-                    <input
-                      className="pdv-cliente-busca-input"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="000.000.000-00"
-                      value={cpfNota}
-                      onChange={e => setCpfNota(formatarCpfInput(e.target.value))}
-                    />
-                  </div>
-                )}
+            {/* Resumo da identificação (se teve alguma) — com opção de
+                reabrir o assistente pra trocar, sem precisar cancelar
+                a venda inteira */}
+            {meioPagamento !== 'Fiado' && (clienteVinculado || cpfNota) && (
+              <div className="pdv-ident-recap">
+                <span>
+                  🪪
+                  {clienteVinculado && <> Cliente: <strong>{clienteVinculado.nome}</strong></>}
+                  {clienteVinculado && cpfNota && ' · '}
+                  {cpfNota && <> CPF: <strong>{cpfNota}</strong></>}
+                </span>
+                <button type="button" className="pdv-ident-recap-editar" onClick={() => setIdentEtapa('perguntaCliente')}>
+                  ✏️ Editar
+                </button>
               </div>
             )}
 
@@ -513,6 +626,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   </>
                 )}
               </>
+            )}
+            </>
             )}
           </div>
         )}

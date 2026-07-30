@@ -398,6 +398,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
             { key: 'dados',      label: '🏪 Dados' },
             { key: 'logo',       label: '🖼️ Logo' },
             { key: 'pagamentos', label: '💳 Pagamentos' },
+            { key: 'fiado',      label: '💰 Fiado' },
             { key: 'tutoriais',  label: '📚 Tutoriais' },
           ].map(t => (
             <button
@@ -598,11 +599,16 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
               </button>
             </div>
+          </div>
+        )}
 
-            <div className="cfg-section" style={{ marginTop: 20 }}>
-              <span className="cfg-section-titulo">🧾 Módulos</span>
+        {/* ══ ABA FIADO ══ */}
+        {abaCfg === 'fiado' && (
+          <div className="cfg-aba-maxwidth">
+            <div className="cfg-section">
+              <span className="cfg-section-titulo">💰 Fiado</span>
               <p className="cfg-guia-intro">
-                Nem toda loja trabalha do mesmo jeito — ligue só o que faz sentido pro seu negócio.
+                Nem toda loja trabalha com crédito informal — ligue só se fizer sentido pro seu negócio.
               </p>
 
               <label
@@ -614,8 +620,9 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 <div>
                   <strong>💰 Fiado (crédito informal pra cliente)</strong>
                   <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)', marginTop: 2 }}>
-                    Quando ativo, a aba "Fiado" aparece em Clientes — com limite de crédito, controle de dívida e cobrança.
-                    Se sua loja não trabalha assim, pode desligar: o cadastro de clientes continua normal, só some a parte de dívida.
+                    Quando ativo, o menu mostra "Clientes / Fiado" e o PDV permite vender fiado pra clientes habilitados.
+                    Desligando, o menu volta a ser só "Clientes" e não dá mais pra vender fiado novo — mas dívidas antigas
+                    continuam podendo ser cobradas e quitadas normalmente, sem trava nenhuma.
                   </div>
                 </div>
               </label>
