@@ -28,6 +28,7 @@ export default function ClienteModal({
   onClose,
   onSalvo,
   onExcluido,
+  fiadoAtivo = true,
 }) {
   const isEdit = !!cliente;
 
@@ -155,7 +156,8 @@ export default function ClienteModal({
             </div>
           </div>
 
-          {/* Config fiado */}
+          {/* Config fiado — só aparece se o módulo estiver ativo pro estabelecimento */}
+          {fiadoAtivo && (
           <div className="cli-modal-section">
             <div className="cli-modal-section-titulo">💳 Configurações do Fiado</div>
 
@@ -209,9 +211,10 @@ export default function ClienteModal({
               </span>
             </div>
           </div>
+          )}
 
-          {/* Saldo atual no modo editar */}
-          {isEdit && (
+          {/* Saldo atual no modo editar — só faz sentido com fiado ativo */}
+          {isEdit && fiadoAtivo && (
             <div className={`cli-saldo-info${parseFloat(cliente.saldo_devedor) > 0.01 ? ' devedor' : ' ok'}`}>
               Saldo atual: {fmt(cliente.saldo_devedor)}
             </div>

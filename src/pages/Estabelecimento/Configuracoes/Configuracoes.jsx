@@ -182,6 +182,13 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const [pixErro,      setPixErro]      = useState('');
   const [pixSucesso,   setPixSucesso]   = useState('');
 
+  // Fiado — opcional por estabelecimento (lojas que não trabalham com
+  // crédito informal simplesmente desligam e a aba some pros clientes)
+  const [fiadoAtivo,    setFiadoAtivo]    = useState(true);
+  const [salvandoFiado, setSalvandoFiado] = useState(false);
+  const [fiadoErro,     setFiadoErro]     = useState('');
+  const [fiadoSucesso,  setFiadoSucesso]  = useState('');
+
   // Acordeões independentes: null = fechado, string = aba ativa
   const [abaImpressora,  setAbaImpressora]  = useState(null);
   const [abaBipador,     setAbaBipador]     = useState(null);
@@ -215,7 +222,32 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
       pix_cidade:     dados.pix_cidade     || '',
       pix_modo:       dados.pix_modo       || 'maquininha',
     });
+    setFiadoAtivo(dados.fiado_ativo !== false); // default true se ainda não vier definido
   }, [dados]);
+
+  /* ── Salvar liga/desliga do Fiado ───────────────────────────── */
+  async function salvarFiado(novoValor) {
+    setFiadoErro('');
+    setFiadoSucesso('');
+    setSalvandoFiado(true);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ fiado_ativo: novoValor }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'Erro ao salvar.');
+      setFiadoAtivo(novoValor);
+      setDados(prev => ({ ...prev, fiado_ativo: novoValor }));
+      setFiadoSucesso(novoValor ? 'Fiado ativado!' : 'Fiado desativado.');
+      setTimeout(() => setFiadoSucesso(''), 4000);
+    } catch (err) {
+      setFiadoErro(err.message);
+    } finally {
+      setSalvandoFiado(false);
+    }
+  }
 
   /* ── Salvar configuração de Pix ────────────────────────────── */
   async function salvarPix() {
@@ -565,6 +597,31 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               <button className="cfg-btn-solicitar" style={{ marginTop: 16 }} onClick={salvarPix} disabled={salvandoPix}>
                 {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
               </button>
+            </div>
+
+            <div className="cfg-section" style={{ marginTop: 20 }}>
+              <span className="cfg-section-titulo">🧾 Módulos</span>
+              <p className="cfg-guia-intro">
+                Nem toda loja trabalha do mesmo jeito — ligue só o que faz sentido pro seu negócio.
+              </p>
+
+              <label
+                className={`cfg-radio-card${fiadoAtivo ? ' ativo' : ''}`}
+                style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: salvandoFiado ? 'not-allowed' : 'pointer', opacity: salvandoFiado ? 0.6 : 1 }}
+                onClick={() => !salvandoFiado && salvarFiado(!fiadoAtivo)}
+              >
+                <input type="checkbox" checked={fiadoAtivo} readOnly style={{ marginTop: 3 }} disabled={salvandoFiado} />
+                <div>
+                  <strong>💰 Fiado (crédito informal pra cliente)</strong>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)', marginTop: 2 }}>
+                    Quando ativo, a aba "Fiado" aparece em Clientes — com limite de crédito, controle de dívida e cobrança.
+                    Se sua loja não trabalha assim, pode desligar: o cadastro de clientes continua normal, só some a parte de dívida.
+                  </div>
+                </div>
+              </label>
+
+              {fiadoErro    && <div className="cfg-alert erro" style={{ marginTop: 12 }}>⚠️ {fiadoErro}</div>}
+              {fiadoSucesso && <div className="cfg-alert" style={{ marginTop: 12, background: 'rgba(34,197,94,0.1)', color: '#15803d' }}>✓ {fiadoSucesso}</div>}
             </div>
           </div>
         )}

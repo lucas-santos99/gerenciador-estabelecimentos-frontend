@@ -219,6 +219,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
   const [pixConfig,         setPixConfig]         = useState({ modo: 'maquininha', disponivel: false });
+  const [fiadoAtivo,        setFiadoAtivo]        = useState(true); // null enquanto carrega = assume true, ajusta depois
   const [fontScale,         setFontScale]         = useState(() => {
     const saved = localStorage.getItem('cli-font-scale');
     return saved ? parseFloat(saved) : 1;
@@ -257,7 +258,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
 
 
-  /* ── Config de Pix (maquininha vs. sistema) ──────────────── */
+  /* ── Config de Pix (maquininha vs. sistema) + Fiado ativo? ── */
   useEffect(() => {
     if (!estabelecimentoId) return;
     (async () => {
@@ -269,6 +270,9 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             modo: d.pix_modo || 'maquininha',
             disponivel: !!(d.pix_chave && d.pix_cidade),
           });
+          const ativo = d.fiado_ativo !== false;
+          setFiadoAtivo(ativo);
+          if (!ativo) setViewMode('todos'); // sem Fiado, a aba "devedores" nem existe
         }
       } catch { /* Pix pela maquininha continua funcionando mesmo se isso falhar */ }
     })();
@@ -421,6 +425,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           onClose={() => { setModalAberto(false); setClienteModal(null); }}
           onSalvo={carregarDados}
           onExcluido={carregarDados}
+          fiadoAtivo={fiadoAtivo}
         />
       )}
 
@@ -446,17 +451,19 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
         />
         <div className="cli-toggle">
           <button
-            className={`cli-toggle-btn${viewMode === 'devedores' ? ' ativo' : ''}`}
-            onClick={() => { setViewMode('devedores'); setTermoBusca(''); }}
-          >
-            💸 Devedores ({dividas.length})
-          </button>
-          <button
             className={`cli-toggle-btn${viewMode === 'todos' ? ' ativo' : ''}`}
             onClick={() => { setViewMode('todos'); setTermoBusca(''); }}
           >
-            👥 Todos ({todosClientes.length})
+            👥 Clientes ({todosClientes.length})
           </button>
+          {fiadoAtivo && (
+            <button
+              className={`cli-toggle-btn${viewMode === 'devedores' ? ' ativo' : ''}`}
+              onClick={() => { setViewMode('devedores'); setTermoBusca(''); }}
+            >
+              💰 Fiado ({dividas.length})
+            </button>
+          )}
         </div>
         <div className="cli-header-btns">
           <button
@@ -574,6 +581,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
                 <ClienteCard
                   key={cliente.id}
                   cliente={cliente}
+                  fiadoAtivo={fiadoAtivo}
                   onEditar={() => { setClienteModal(cliente); setModalAberto(true); }}
                   onDetalhes={() => setClienteDetalhes(
                     clienteDetalhes?.id === cliente.id ? null : cliente
@@ -606,8 +614,8 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 }
 
 /* ── Card de cliente ─────────────────────────────────────────*/
-function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
-  const temDivida       = parseFloat(cliente.saldo_devedor) > 0.01;
+function ClienteCard({ cliente, fiadoAtivo = true, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
+  const temDivida       = fiadoAtivo && parseFloat(cliente.saldo_devedor) > 0.01;
   const limiteExcedido  = temDivida
     && parseFloat(cliente.limite_credito || 0) > 0
     && parseFloat(cliente.saldo_devedor) > parseFloat(cliente.limite_credito);
@@ -647,11 +655,12 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
   return (
     <div className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}`}>
 
-      <div className="cli-card-header" onClick={onDetalhes} style={{ cursor: "pointer" }}>
+      <div className="cli-card-header" onClick={fiadoAtivo ? onDetalhes : undefined} style={{ cursor: fiadoAtivo ? "pointer" : "default" }}>
         <span className="cli-card-nome">{cliente.nome}</span>
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
       </div>
 
+      {fiadoAtivo && (
       <div className="cli-card-corpo" onClick={onDetalhes} style={{ cursor: "pointer" }}>
         {limiteExcedido && (
           <span className="cli-badge-limite">⚠️ Limite excedido</span>
@@ -679,6 +688,7 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
           </div>
         </div>
       </div>
+      )}
 
       <div className="cli-card-acoes">
         <button className="cli-btn-acao config" onClick={podeEditar ? onEditar : undefined} disabled={!podeEditar} title={!podeEditar ? semPermMsg : 'Editar'}>⚙️</button>
@@ -693,20 +703,24 @@ function ClienteCard({ cliente, onEditar, onDetalhes, onReceber, onExcluir, onWh
           </button>
         )}
 
-        <button className="cli-btn-acao detalhes" onClick={onDetalhes} title="Ver histórico de compras e pagamentos">📋 Detalhes</button>
+        {fiadoAtivo && (
+          <button className="cli-btn-acao detalhes" onClick={onDetalhes} title="Ver histórico de compras e pagamentos">📋 Detalhes</button>
+        )}
 
         {!temDivida && (
           <button className="cli-btn-acao excluir" onClick={podeExcluir ? onExcluir : undefined} disabled={!podeExcluir} title={!podeExcluir ? semPermMsg : 'Excluir'}>🗑 Excluir</button>
         )}
 
-        <button
-          className="cli-btn-acao receber"
-          onClick={podeReceber ? onReceber : undefined}
-          disabled={!podeReceber || !temDivida}
-          title={!podeReceber ? semPermMsg : undefined}
-        >
-          💰 Receber
-        </button>
+        {fiadoAtivo && (
+          <button
+            className="cli-btn-acao receber"
+            onClick={podeReceber ? onReceber : undefined}
+            disabled={!podeReceber || !temDivida}
+            title={!podeReceber ? semPermMsg : undefined}
+          >
+            💰 Receber
+          </button>
+        )}
       </div>
 
     </div>
