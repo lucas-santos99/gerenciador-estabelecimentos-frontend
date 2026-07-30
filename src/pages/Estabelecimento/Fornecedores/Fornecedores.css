@@ -692,6 +692,25 @@
   margin-bottom: 14px;
 }
 
+.forn-contapag-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 10px;
+  font-size: calc(0.82rem * var(--forn-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text-soft);
+}
+.forn-contapag-total strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: calc(1rem * var(--forn-font-scale, 1));
+  color: var(--est-accent);
+}
+
 .forn-contapag-filtro-data {
   display: flex;
   align-items: center;

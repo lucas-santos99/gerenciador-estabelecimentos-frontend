@@ -871,18 +871,6 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_liquido)}</span>
                 </div>
               </div>
-
-              <div className="fin-dre-info-separado">
-                <div className="fin-dre-info-icone">ℹ️</div>
-                <div className="fin-dre-info-texto">
-                  <span className="fin-dre-info-titulo">🚚 Total pago a fornecedores no período: <strong>{fmt(dreData.total_compras_fornecedor)}</strong></span>
-                  <span className="fin-dre-info-desc">
-                    Isso é só uma informação a mais, pra você ver quanto saiu do caixa pra fornecedores nesse período.
-                    <strong> Esse valor NÃO é descontado do Lucro Líquido aqui em cima</strong> — o custo da mercadoria já foi
-                    descontado lá no CMV, no momento em que ela foi vendida. Contar esse valor de novo aqui deixaria o lucro errado.
-                  </span>
-                </div>
-              </div>
               </>
             )}
           </>

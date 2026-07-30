@@ -313,7 +313,23 @@ function ContasFornecedores({ fontScale = 1 }) {
           if (filtroDataAte && c.data_vencimento > filtroDataAte) return false;
           return true;
         });
-        return loading ? (
+        const totalFiltrado = listaFiltrada.reduce((s, c) => s + (parseFloat(c.valor) || 0), 0);
+        const labelTotal = filtroStatus === 'paga' ? '💰 Total pago'
+          : filtroStatus === 'atrasada' ? '🔴 Total atrasado'
+          : '⏳ Total pendente';
+        const periodoTexto = (filtroDataDe || filtroDataAte)
+          ? ' no período selecionado'
+          : '';
+
+        return (
+        <>
+        {listaFiltrada.length > 0 && (
+          <div className="forn-contapag-total">
+            <span>{labelTotal}{periodoTexto}</span>
+            <strong>{fmt(totalFiltrado)}</strong>
+          </div>
+        )}
+        {loading ? (
         <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
       ) : listaFiltrada.length === 0 ? (
         <div className="cli-vazio">
@@ -356,6 +372,8 @@ function ContasFornecedores({ fontScale = 1 }) {
             </div>
           ))}
         </div>
+      )}
+      </>
       );
       })()}
 
