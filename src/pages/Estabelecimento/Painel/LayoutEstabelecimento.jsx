@@ -222,6 +222,22 @@ export default function LayoutEstabelecimento({
     return               { tipo: 'ativa',      texto: `Ativa até ${dataFmt}`,     dias: diff,  dataFmt };
   })();
 
+  // Só pra saber se menciona "Fiado" no nome do menu — busca uma vez,
+  // bem leve, não precisa repetir em nenhum outro lugar desse arquivo.
+  const [fiadoAtivo, setFiadoAtivo] = useState(true);
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
+        if (resp.ok) {
+          const d = await resp.json();
+          setFiadoAtivo(d.fiado_ativo !== false);
+        }
+      } catch { /* mantém o label com "Fiado" por padrão se isso falhar */ }
+    })();
+  }, [estabelecimentoId]);
+
   const ABAS = (() => {
     const base = isMerchant
       ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG]
@@ -244,22 +260,6 @@ export default function LayoutEstabelecimento({
       : aba
     );
   })();
-
-  // Só pra saber se menciona "Fiado" no nome do menu — busca uma vez,
-  // bem leve, não precisa repetir em nenhum outro lugar desse arquivo.
-  const [fiadoAtivo, setFiadoAtivo] = useState(true);
-  useEffect(() => {
-    if (!estabelecimentoId) return;
-    (async () => {
-      try {
-        const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
-        if (resp.ok) {
-          const d = await resp.json();
-          setFiadoAtivo(d.fiado_ativo !== false);
-        }
-      } catch { /* mantém o label com "Fiado" por padrão se isso falhar */ }
-    })();
-  }, [estabelecimentoId]);
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
