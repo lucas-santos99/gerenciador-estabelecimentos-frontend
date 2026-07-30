@@ -21,6 +21,14 @@ function formatarDataInput(s) {
   catch { return ''; }
 }
 
+function formatarCpf(valor) {
+  const d = (valor || '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+  return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ClienteModal({
   estabelecimentoId,
@@ -34,6 +42,7 @@ export default function ClienteModal({
 
   const [nome,           setNome]           = useState(cliente?.nome || '');
   const [telefone,       setTelefone]       = useState(cliente?.telefone || '');
+  const [cpf,            setCpf]            = useState(cliente?.cpf || '');
   const [semLimite,      setSemLimite]      = useState(
     !cliente || parseFloat(cliente?.limite_credito || 0) === 0
   );
@@ -76,6 +85,7 @@ export default function ClienteModal({
           estabelecimentoId,
           nome:          nome.trim(),
           telefone:      telefone.trim() || null,
+          cpf:           cpf.replace(/\D/g, '') || null,
           limiteCredito: semLimite ? '0' : limiteCredito.replace(/\./g, '').replace(',', '.'),
           dataVencimento: dataVencimento || null,
         }),
@@ -130,6 +140,11 @@ export default function ClienteModal({
 
           {/* Dados pessoais */}
           <div>
+            {isEdit && cliente.codigo_cliente && (
+              <div className="cli-form-small" style={{ marginBottom: 10 }}>
+                🔖 Código do cliente: <strong>#{cliente.codigo_cliente}</strong> — útil pra localizar rápido no PDV
+              </div>
+            )}
             <div className="cli-form-group">
               <label className="cli-form-label">Nome completo *</label>
               <input
@@ -153,6 +168,20 @@ export default function ClienteModal({
                 onChange={e => setTelefone(e.target.value)}
                 disabled={salvando}
               />
+            </div>
+            <div className="cli-form-group">
+              <label className="cli-form-label">CPF (opcional)</label>
+              <input
+                className="cli-form-input"
+                type="text"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={e => setCpf(formatarCpf(e.target.value))}
+                disabled={salvando}
+              />
+              <span className="cli-form-small">
+                Ajuda a localizar o cliente rápido no PDV, mesmo quem não usa fiado.
+              </span>
             </div>
           </div>
 

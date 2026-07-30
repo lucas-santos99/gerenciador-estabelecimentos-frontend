@@ -1793,3 +1793,63 @@ button:disabled[title*="Sem permissão"] {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
 }
+
+/* ════════════════════════════════════════════════════════════
+   IDENTIFICAÇÃO OPCIONAL NA VENDA — cliente vinculado e/ou CPF
+   na nota, disponível pra qualquer forma de pagamento que não
+   seja Fiado (que já tem seu próprio fluxo obrigatório)
+   ════════════════════════════════════════════════════════════ */
+
+.pdv-ident-toggle {
+  margin-top: 16px;
+  font-size: calc(0.85rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-accent);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.pdv-ident-toggle:hover { opacity: 0.8; }
+
+.pdv-ident-box {
+  margin-top: 16px;
+  width: 100%;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  padding: calc(12px * var(--pdv-pag-zoom, 1));
+  background: var(--est-accent-dim);
+}
+
+.pdv-ident-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.pdv-ident-header span {
+  font-size: calc(0.85rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  color: var(--est-accent);
+}
+
+.pdv-ident-fechar {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--est-text-muted);
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.pdv-ident-fechar:hover { background: var(--est-hover); color: var(--est-text); }
+
+.pdv-ident-cpf-label {
+  display: block;
+  font-size: calc(0.75rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+  color: var(--est-text-muted);
+  margin-top: 10px;
+  margin-bottom: 4px;
+}

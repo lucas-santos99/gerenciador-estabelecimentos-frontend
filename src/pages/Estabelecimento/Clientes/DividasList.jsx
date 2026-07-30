@@ -214,6 +214,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const [termoBusca,        setTermoBusca]        = useState('');
   const [ordenacao,         setOrdenacao]         = useState('vencimento'); // 'vencimento' | 'valor' | 'nome'
   const [clienteDetalhes,   setClienteDetalhes]   = useState(null);
+  const [clienteHistorico,  setClienteHistorico]  = useState(null);
   const [clienteModal,      setClienteModal]      = useState(null);
   const [modalAberto,       setModalAberto]       = useState(false);
   const [clienteReceber,    setClienteReceber]    = useState(null);
@@ -581,10 +582,13 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
                 <ClienteCard
                   key={cliente.id}
                   cliente={cliente}
-                  fiadoAtivo={fiadoAtivo}
+                  modo={viewMode === 'devedores' ? 'fiado' : 'clientes'}
                   onEditar={() => { setClienteModal(cliente); setModalAberto(true); }}
-                  onDetalhes={() => setClienteDetalhes(
+                  onDetalhesFiado={() => setClienteDetalhes(
                     clienteDetalhes?.id === cliente.id ? null : cliente
+                  )}
+                  onHistorico={() => setClienteHistorico(
+                    clienteHistorico?.id === cliente.id ? null : cliente
                   )}
                   onReceber={() => abrirRecebimento(cliente)}
                   onExcluir={() => excluirCliente(cliente)}
@@ -599,12 +603,20 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           </div>
         </div>
 
-        {/* Painel detalhes */}
+        {/* Painel detalhes de fiado (aba Fiado) */}
         {clienteDetalhes && (
           <DetalhesFiado
             cliente={clienteDetalhes}
             onFechar={() => setClienteDetalhes(null)}
             onAtualizar={carregarDados}
+          />
+        )}
+
+        {/* Painel histórico geral de compras (aba Clientes) */}
+        {clienteHistorico && (
+          <HistoricoComprasCliente
+            cliente={clienteHistorico}
+            onFechar={() => setClienteHistorico(null)}
           />
         )}
 
@@ -614,8 +626,9 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 }
 
 /* ── Card de cliente ─────────────────────────────────────────*/
-function ClienteCard({ cliente, fiadoAtivo = true, onEditar, onDetalhes, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
-  const temDivida       = fiadoAtivo && parseFloat(cliente.saldo_devedor) > 0.01;
+function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDetalhesFiado, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
+  const ehFiado         = modo === 'fiado';
+  const temDivida       = ehFiado && parseFloat(cliente.saldo_devedor) > 0.01;
   const limiteExcedido  = temDivida
     && parseFloat(cliente.limite_credito || 0) > 0
     && parseFloat(cliente.saldo_devedor) > parseFloat(cliente.limite_credito);
@@ -651,49 +664,59 @@ function ClienteCard({ cliente, fiadoAtivo = true, onEditar, onDetalhes, onReceb
   }
 
   const svStatus = statusVencimento(cliente.data_vencimento);
+  const abrirDetalhe = ehFiado ? onDetalhesFiado : onHistorico;
 
   return (
     <div className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}`}>
 
-      <div className="cli-card-header" onClick={fiadoAtivo ? onDetalhes : undefined} style={{ cursor: fiadoAtivo ? "pointer" : "default" }}>
-        <span className="cli-card-nome">{cliente.nome}</span>
+      <div className="cli-card-header" onClick={abrirDetalhe} style={{ cursor: "pointer" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span className="cli-card-nome">{cliente.nome}</span>
+          {cliente.codigo_cliente && (
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--est-text-muted, #94a3b8)', background: 'var(--est-input, rgba(0,0,0,0.04))', padding: '2px 7px', borderRadius: 10 }}>
+              #{cliente.codigo_cliente}
+            </span>
+          )}
+        </div>
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
+        {cliente.cpf && <span className="cli-card-tel">🪪 {cliente.cpf}</span>}
       </div>
 
-      {fiadoAtivo && (
-      <div className="cli-card-corpo" onClick={onDetalhes} style={{ cursor: "pointer" }}>
-        {limiteExcedido && (
-          <span className="cli-badge-limite">⚠️ Limite excedido</span>
-        )}
-        <span className="cli-divida-label">Dívida atual</span>
-        <span className="cli-divida-valor">{fmt(cliente.saldo_devedor)}</span>
+      {/* Corpo com dívida/limite/vencimento — só na aba Fiado */}
+      {ehFiado && (
+        <div className="cli-card-corpo" onClick={abrirDetalhe} style={{ cursor: "pointer" }}>
+          {limiteExcedido && (
+            <span className="cli-badge-limite">⚠️ Limite excedido</span>
+          )}
+          <span className="cli-divida-label">Dívida atual</span>
+          <span className="cli-divida-valor">{fmt(cliente.saldo_devedor)}</span>
 
-        <div className="cli-card-info-row">
-          <div className="cli-info-item">
-            <span className="cli-info-label">Vencimento</span>
-            <span className={`cli-info-valor${svStatus === 'vencido' ? ' vencido' : svStatus === 'proximo' ? ' proximo' : ''}`}>
-              {temDivida ? formatarData(cliente.data_vencimento) : '—'}
-              {temDivida && cliente.data_vencimento && (
-                <small style={{ fontWeight: 500, opacity: 0.8 }}>{textoDiasVencimento(cliente.data_vencimento)}</small>
-              )}
-              {svStatus === 'vencido' && ' 🔴'}
-              {svStatus === 'proximo' && ' ⚠️'}
-            </span>
-          </div>
-          <div className="cli-info-item">
-            <span className="cli-info-label">Limite</span>
-            <span className="cli-info-valor">
-              {parseFloat(cliente.limite_credito || 0) === 0 ? '∞ Sem limite' : fmt(cliente.limite_credito)}
-            </span>
+          <div className="cli-card-info-row">
+            <div className="cli-info-item">
+              <span className="cli-info-label">Vencimento</span>
+              <span className={`cli-info-valor${svStatus === 'vencido' ? ' vencido' : svStatus === 'proximo' ? ' proximo' : ''}`}>
+                {formatarData(cliente.data_vencimento)}
+                {cliente.data_vencimento && (
+                  <small style={{ fontWeight: 500, opacity: 0.8 }}>{textoDiasVencimento(cliente.data_vencimento)}</small>
+                )}
+                {svStatus === 'vencido' && ' 🔴'}
+                {svStatus === 'proximo' && ' ⚠️'}
+              </span>
+            </div>
+            <div className="cli-info-item">
+              <span className="cli-info-label">Limite</span>
+              <span className="cli-info-valor">
+                {parseFloat(cliente.limite_credito || 0) === 0 ? '∞ Sem limite' : fmt(cliente.limite_credito)}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="cli-card-acoes">
         <button className="cli-btn-acao config" onClick={podeEditar ? onEditar : undefined} disabled={!podeEditar} title={!podeEditar ? semPermMsg : 'Editar'}>⚙️</button>
 
-        {temDivida && cliente.telefone && (
+        {ehFiado && temDivida && cliente.telefone && (
           <button className="cli-btn-acao whatsapp" onClick={onWhatsApp} title="Enviar cobrança via WhatsApp">
             <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" style={{flexShrink:0}}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -703,15 +726,15 @@ function ClienteCard({ cliente, fiadoAtivo = true, onEditar, onDetalhes, onReceb
           </button>
         )}
 
-        {fiadoAtivo && (
-          <button className="cli-btn-acao detalhes" onClick={onDetalhes} title="Ver histórico de compras e pagamentos">📋 Detalhes</button>
-        )}
+        <button className="cli-btn-acao detalhes" onClick={abrirDetalhe} title={ehFiado ? 'Ver histórico de fiado' : 'Ver histórico de compras'}>
+          {ehFiado ? '📋 Detalhes' : '🧾 Histórico'}
+        </button>
 
-        {!temDivida && (
+        {(!ehFiado || !temDivida) && (
           <button className="cli-btn-acao excluir" onClick={podeExcluir ? onExcluir : undefined} disabled={!podeExcluir} title={!podeExcluir ? semPermMsg : 'Excluir'}>🗑 Excluir</button>
         )}
 
-        {fiadoAtivo && (
+        {ehFiado && (
           <button
             className="cli-btn-acao receber"
             onClick={podeReceber ? onReceber : undefined}
@@ -723,6 +746,87 @@ function ClienteCard({ cliente, fiadoAtivo = true, onEditar, onDetalhes, onReceb
         )}
       </div>
 
+    </div>
+  );
+}
+
+/* ── Painel de histórico geral de compras (qualquer forma de
+   pagamento) — usado na aba Clientes, diferente do painel de Fiado ── */
+function HistoricoComprasCliente({ cliente, onFechar }) {
+  const [vendas,  setVendas]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [erro,    setErro]    = useState('');
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setErro('');
+      try {
+        const resp = await apiFetch(`/api/clientes/${cliente.id}/historico-compras`);
+        if (!resp.ok) throw new Error('Erro ao buscar histórico');
+        setVendas(await resp.json());
+      } catch (err) { setErro(err.message); }
+      finally { setLoading(false); }
+    })();
+  }, [cliente.id]);
+
+  return (
+    <div className="cli-detalhes">
+      <div className="cli-detalhes-header">
+        <span className="cli-detalhes-titulo">🧾 Histórico de Compras — {cliente.nome}</span>
+        <button className="cli-detalhes-fechar" onClick={onFechar}>✕</button>
+      </div>
+
+      <div className="cli-detalhes-body">
+        {loading && (
+          <div className="cli-detalhes-loading">
+            <div className="est-spinner" />
+            Carregando histórico…
+          </div>
+        )}
+        {erro && <div className="cli-erro">⚠️ {erro}</div>}
+
+        {!loading && (
+          vendas.length === 0 ? (
+            <div className="cli-vazio">
+              <span className="cli-vazio-icon">🧾</span>
+              <p>Nenhuma compra registrada ainda</p>
+              <small>Aparece aqui assim que esse cliente for identificado numa venda (por nome, CPF ou código)</small>
+            </div>
+          ) : (
+            vendas.map(venda => (
+              <div key={venda.id} className="cli-venda-card">
+                <div className="cli-venda-info">
+                  <span className="cli-venda-info-data">
+                    📅 {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {' · '}{venda.meio_pagamento}
+                  </span>
+                  <span className="cli-venda-info-valor">{fmt(venda.valor_total)}</span>
+                </div>
+                {venda.itens.length > 0 && (
+                  <ul className="cli-venda-itens">
+                    {venda.itens.map((item, i) => {
+                      const unidade = item.unidade_medida || 'un';
+                      const qtdLabel = unidade === 'kg'
+                        ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                        : `${parseFloat(item.quantidade).toFixed(0)}×`;
+                      return (
+                        <li key={i} className="cli-venda-item">
+                          <span className="cli-item-qtd">{qtdLabel}</span>
+                          <span className="cli-item-nome">{item.produto_nome}</span>
+                          <span className="cli-item-subtotal">
+                            {fmt(item.quantidade * item.preco_unitario)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ))
+          )
+        )}
+      </div>
     </div>
   );
 }

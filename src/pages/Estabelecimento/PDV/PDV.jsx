@@ -72,6 +72,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [clienteIndex,       setClienteIndex]       = useState(-1);
   const [erro,               setErro]               = useState('');
 
+  // Identificação opcional na venda (qualquer forma de pagamento,
+  // diferente do fluxo de Fiado que já obriga cliente) — "vincular
+  // cliente cadastrado" e/ou "informar CPF na nota", os dois
+  // independentes e nenhum obrigatório.
+  const [mostrarIdent,        setMostrarIdent]        = useState(false);
+  const [clienteVinculado,    setClienteVinculado]    = useState(null);
+  const [termoBuscaIdent,     setTermoBuscaIdent]     = useState('');
+  const [resultadosIdent,     setResultadosIdent]     = useState([]);
+  const [loadingIdent,        setLoadingIdent]        = useState(false);
+  const [cpfNota,             setCpfNota]             = useState('');
+
   // Pix pela tela do sistema (BR Code direto da chave do estabelecimento)
   const [pixModo,      setPixModo]      = useState(pixConfig.modo === 'sistema' && pixConfig.disponivel ? 'sistema' : 'maquininha');
   const [pixDados,      setPixDados]      = useState(null); // { payload, qrcode_base64 }
@@ -179,6 +190,34 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     finally { setLoadingCliente(false); }
   }
 
+  // Mesma busca do fiado, só que pra identificação opcional (qualquer
+  // forma de pagamento) — nome, telefone, CPF ou código do cliente
+  async function buscarClienteIdent(termo) {
+    setTermoBuscaIdent(termo);
+    if (termo.length < 2) { setResultadosIdent([]); return; }
+    setLoadingIdent(true);
+    try {
+      const resp = await apiFetch(`/api/clientes/buscar?termo=${encodeURIComponent(termo)}`);
+      if (!resp.ok) throw new Error();
+      setResultadosIdent(await resp.json());
+    } catch { /* silencioso — identificação é opcional, não trava a venda */ }
+    finally { setLoadingIdent(false); }
+  }
+
+  function selecionarClienteIdent(cli) {
+    setClienteVinculado(cli);
+    setResultadosIdent([]);
+    setTermoBuscaIdent('');
+  }
+
+  function formatarCpfInput(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  }
+
   function selecionarCliente(cli) {
     setClienteSelecionado(cli);
     setResultadosCliente([]);
@@ -216,12 +255,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     } else if (meioPagamento === 'Dinheiro') {
       const recebido = paraFloatBR(valorRecebido) || 0;
       if (recebido < parseFloat(total.toFixed(2))) { setErro('Valor recebido insuficiente.'); return; }
-      onFinalizar('Dinheiro', null, { valorRecebido: recebido, troco });
+      onFinalizar('Dinheiro', clienteVinculado?.id || null, { valorRecebido: recebido, troco, clienteNome: clienteVinculado?.nome || null, cpfNota: cpfNota.replace(/\D/g, '') || null });
     } else if (meioPagamento === 'Pix' && pixModo === 'sistema') {
       if (!pixRecebido) { setErro('Confirme que o Pix foi recebido antes de finalizar.'); return; }
-      onFinalizar('Pix', null, {});
+      onFinalizar('Pix', clienteVinculado?.id || null, { clienteNome: clienteVinculado?.nome || null, cpfNota: cpfNota.replace(/\D/g, '') || null });
     } else {
-      onFinalizar(meioPagamento, null, {});
+      onFinalizar(meioPagamento, clienteVinculado?.id || null, { clienteNome: clienteVinculado?.nome || null, cpfNota: cpfNota.replace(/\D/g, '') || null });
     }
   }
 
@@ -366,6 +405,66 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 <span className="pdv-pagamento-digital-hint">Pressione Enter para confirmar</span>
               </div>
             )}
+
+            {/* Identificação opcional — não é fiado, então nunca trava a
+                venda. Vincular cliente cadastrado e/ou CPF na nota, os
+                dois independentes, do jeito que se pergunta num caixa
+                de mercado ("quer colocar CPF na nota?"). */}
+            {meioPagamento !== 'Fiado' && (
+              <div style={{ width: '100%' }}>
+                {!mostrarIdent ? (
+                  <button type="button" className="pdv-ident-toggle" onClick={() => setMostrarIdent(true)}>
+                    🪪 Identificar cliente (opcional)
+                  </button>
+                ) : (
+                  <div className="pdv-ident-box">
+                    <div className="pdv-ident-header">
+                      <span>🪪 Identificação (opcional)</span>
+                      <button type="button" className="pdv-ident-fechar" onClick={() => setMostrarIdent(false)}>✕</button>
+                    </div>
+
+                    {clienteVinculado ? (
+                      <div className="pdv-cliente-selecionado" style={{ marginBottom: 10 }}>
+                        <span className="pdv-cliente-selecionado-nome">👤 {clienteVinculado.nome}</span>
+                        <button className="pdv-btn-trocar-cliente" onClick={() => setClienteVinculado(null)}>↩ Remover</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          className="pdv-cliente-busca-input"
+                          type="text"
+                          placeholder="Buscar cliente cadastrado (nome, CPF ou código)…"
+                          value={termoBuscaIdent}
+                          onChange={e => buscarClienteIdent(e.target.value)}
+                        />
+                        {loadingIdent && <div style={{ fontSize: '0.78rem', color: 'var(--est-text-muted)', marginBottom: 6 }}>Buscando…</div>}
+                        {resultadosIdent.length > 0 && (
+                          <ul className="pdv-cliente-lista">
+                            {resultadosIdent.map(cli => (
+                              <li key={cli.id} className="pdv-cliente-item" onClick={() => selecionarClienteIdent(cli)}>
+                                {cli.nome}{cli.codigo_cliente ? ` #${cli.codigo_cliente}` : ''}
+                                <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+
+                    <label className="pdv-ident-cpf-label">CPF na nota (opcional)</label>
+                    <input
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000.000.000-00"
+                      value={cpfNota}
+                      onChange={e => setCpfNota(formatarCpfInput(e.target.value))}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {meioPagamento === 'Fiado' && (
               <>
                 {clienteSelecionado ? (
@@ -525,6 +624,14 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           </div>
         )}
 
+        {venda.meioPagamento !== 'Fiado' && (venda.clienteNome || venda.cpfNota) && (
+          <div className="pdv-posv-fiado">
+            🪪 {venda.clienteNome && <>Cliente: <strong>{venda.clienteNome}</strong></>}
+            {venda.clienteNome && venda.cpfNota && ' · '}
+            {venda.cpfNota && <>CPF na nota: <strong>{venda.cpfNota}</strong></>}
+          </div>
+        )}
+
         <div className="pdv-posv-pergunta">
           🖨️ Deseja imprimir o recibo?
         </div>
@@ -582,6 +689,18 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
               <div className="rec-pagamento">
                 <span>Cliente</span>
                 <span>{venda.clienteNome}</span>
+              </div>
+            )}
+            {venda.meioPagamento !== 'Fiado' && venda.clienteNome && (
+              <div className="rec-pagamento">
+                <span>Cliente</span>
+                <span>{venda.clienteNome}</span>
+              </div>
+            )}
+            {venda.cpfNota && (
+              <div className="rec-pagamento">
+                <span>CPF</span>
+                <span>{venda.cpfNota}</span>
               </div>
             )}
             <hr className="rec-divider" />
@@ -971,6 +1090,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           estabelecimentoId, valor_total: total, meio_pagamento: meioPagamento,
           carrinho: carrinho.map(i => ({ produto_id: i.id, quantidade: parseFloat(i.quantidade), valor_unitario: parseFloat(i.preco_venda) })),
           clienteId,
+          cpfNota: dadosPagamento?.cpfNota || null,
         }),
       });
       const result = await resp.json();
@@ -982,6 +1102,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         meioPagamento,
         clienteId,
         clienteNome:   dadosPagamento?.clienteNome || null,
+        cpfNota:       dadosPagamento?.cpfNota || null,
         valorRecebido: dadosPagamento?.valorRecebido || null,
         troco:         dadosPagamento?.troco || 0,
         horario:       new Date(),
