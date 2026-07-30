@@ -43,6 +43,7 @@ export default function ClienteModal({
   const [nome,           setNome]           = useState(cliente?.nome || '');
   const [telefone,       setTelefone]       = useState(cliente?.telefone || '');
   const [cpf,            setCpf]            = useState(cliente?.cpf || '');
+  const [permiteFiado,   setPermiteFiado]   = useState(cliente?.permite_fiado !== false);
   const [semLimite,      setSemLimite]      = useState(
     !cliente || parseFloat(cliente?.limite_credito || 0) === 0
   );
@@ -86,6 +87,7 @@ export default function ClienteModal({
           nome:          nome.trim(),
           telefone:      telefone.trim() || null,
           cpf:           cpf.replace(/\D/g, '') || null,
+          permiteFiado,
           limiteCredito: semLimite ? '0' : limiteCredito.replace(/\./g, '').replace(',', '.'),
           dataVencimento: dataVencimento || null,
         }),
@@ -191,6 +193,20 @@ export default function ClienteModal({
             <div className="cli-modal-section-titulo">💳 Configurações do Fiado</div>
 
             <div className="cli-form-group">
+              <label className="cli-form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={permiteFiado} onChange={e => setPermiteFiado(e.target.checked)} disabled={salvando} />
+                Esse cliente pode comprar fiado
+              </label>
+              <span className="cli-form-small">
+                {permiteFiado
+                  ? 'Vai aparecer na busca de fiado do PDV, com limite de crédito e vencimento configuráveis abaixo.'
+                  : 'Cliente cadastrado só pra identificação e histórico — não vai aparecer na busca de fiado do PDV.'}
+              </span>
+            </div>
+
+            {permiteFiado && (
+            <>
+            <div className="cli-form-group">
               <label className="cli-form-label">Limite de crédito</label>
               <div className="cli-limite-toggle">
                 <button
@@ -239,6 +255,8 @@ export default function ClienteModal({
                 O sistema exibirá alertas quando o fiado vencer.
               </span>
             </div>
+            </>
+            )}
           </div>
           )}
 

@@ -185,7 +185,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     try {
       const resp = await apiFetch(`/api/clientes/buscar?termo=${encodeURIComponent(termo)}`);
       if (!resp.ok) throw new Error();
-      setResultadosCliente(await resp.json());
+      const todos = await resp.json();
+      // Só mostra quem pode comprar fiado — quem está marcado como "sem
+      // fiado" fica de fora dessa busca específica (mas continua
+      // aparecendo normal na identificação opcional de outras formas
+      // de pagamento, que não tem nada a ver com crédito)
+      setResultadosCliente(todos.filter(c => c.permite_fiado !== false));
     } catch { setErro('Erro ao buscar clientes.'); }
     finally { setLoadingCliente(false); }
   }

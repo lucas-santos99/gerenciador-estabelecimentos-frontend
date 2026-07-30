@@ -463,10 +463,11 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           >
             👥 Clientes ({todosClientes.length})
           </button>
-          {fiadoAtivo && (
+          {(fiadoAtivo || dividas.length > 0) && (
             <button
               className={`cli-toggle-btn${viewMode === 'devedores' ? ' ativo' : ''}`}
               onClick={() => { setViewMode('devedores'); setTermoBusca(''); }}
+              title={!fiadoAtivo ? 'Fiado desligado — só aparece porque existe dívida antiga a cobrar' : undefined}
             >
               💰 Fiado ({dividas.length})
             </button>
@@ -560,6 +561,17 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
       )}
 
       {erro && <div className="cli-erro">⚠️ {erro}</div>}
+
+      {viewMode === 'devedores' && !fiadoAtivo && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: '0 20px 12px', padding: '12px 16px', background: 'rgba(20,184,166,0.08)', border: '1px solid rgba(20,184,166,0.25)', borderRadius: 12, fontSize: '0.82rem', color: 'var(--est-text-soft, #475569)', lineHeight: 1.5 }}>
+          <span>💡</span>
+          <span>
+            O módulo de Fiado está <strong>desligado</strong> pra esse estabelecimento — essa aba só está visível porque ainda
+            existe dívida antiga a cobrar. Depois de quitar tudo, ela some sozinha. Pra vender fiado de novo, reative em
+            Configurações → Pagamentos.
+          </span>
+        </div>
+      )}
 
       {/* ── CORPO ───────────────────────────────────────── */}
       <div className="cli-body">
