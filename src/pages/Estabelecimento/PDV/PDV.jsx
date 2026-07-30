@@ -87,8 +87,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [cpfNota,              setCpfNota]              = useState('');
 
   const identNaoClienteRef = useRef(null);
+  const identSimClienteRef = useRef(null);
   const identBuscaInputRef = useRef(null);
   const identNaoCpfRef     = useRef(null);
+  const identSimCpfRef     = useRef(null);
   const identCpfInputRef   = useRef(null);
 
   // CPF sugerido pra reaproveitar: prioriza o CPF já salvo no cadastro
@@ -290,6 +292,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (e.key === 'Escape') { e.preventDefault(); onCancelar(); }
   }
 
+  // Navega entre os botões "Não"/"Sim" pela seta (esquerda/direita ou
+  // cima/baixo) — botão nativo só responde a Tab por padrão, então sem
+  // isso o fluxo ficaria preso no mouse
+  function handleSimNaoKey(e, outroRef) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      outroRef.current?.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancelar();
+    }
+  }
+
   function formatarCpfInput(valor) {
     const d = valor.replace(/\D/g, '').slice(0, 11);
     if (d.length <= 3) return d;
@@ -405,8 +420,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">🪪 Quer identificar o cliente nessa venda?</span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)}>Não (Enter)</button>
-                      <button type="button" className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)}>Sim</button>
+                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)} onKeyDown={e => handleSimNaoKey(e, identSimClienteRef)}>Não (Enter)</button>
+                      <button type="button" ref={identSimClienteRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)} onKeyDown={e => handleSimNaoKey(e, identNaoClienteRef)}>Sim</button>
                     </div>
                     <span className="pdv-ident-hint">Opcional — não muda o pagamento.</span>
                   </div>
@@ -452,8 +467,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       🪪 Quer informar CPF na nota{sugestaoCpf ? ` (${sugestaoCpf})` : ''}?
                     </span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)}>Não (Enter)</button>
-                      <button type="button" className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)}>
+                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef)}>Não (Enter)</button>
+                      <button type="button" ref={identSimCpfRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCpfRef)}>
                         {sugestaoCpf ? 'Sim, usar esse' : 'Sim'}
                       </button>
                     </div>
