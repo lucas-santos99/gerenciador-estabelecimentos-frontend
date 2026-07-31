@@ -171,37 +171,80 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
 
   function baixarPDFHistorico() {
     if (!historicoFiltrado.length) return;
-    const doc = new jsPDF();
-    const gerar = (y) => {
-      doc.setFontSize(16); doc.setFont(undefined, 'bold');
-      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
-      doc.text('Histórico de Vendas', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      const operadorLabel = histOperador
-        ? (operadoresNoPeriodo.find(o => o.id === histOperador)?.nome || '')
-        : 'Todos os operadores';
-      doc.text(`Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorLabel}`, 105, y + 13, { align: 'center' });
-      const body = historicoFiltrado.map(v => [
-        new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
-        v.operador_nome, v.cliente_nome || '—', v.meio_pagamento, fmt(v.valor_total),
-      ]);
-      const totalGeral = historicoFiltrado.filter(v => v.status !== 'cancelada').reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
-      body.push(['', '', '', 'TOTAL', fmt(totalGeral)]);
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['Data', 'Operador', 'Cliente', 'Pagamento', 'Valor']],
-        body, theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-      });
-      doc.save(`Historico_Vendas_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
-    };
-    if (logoUrl) {
-      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
-      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
-      img.onerror = () => gerar(15);
-    } else { gerar(15); }
+
+    const operadorLabel = histOperador
+      ? (operadoresNoPeriodo.find(o => o.id === histOperador)?.nome || '')
+      : 'Todos os operadores';
+    const totalGeral = historicoFiltrado.filter(v => v.status !== 'cancelada').reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
+
+    const linhasHtml = historicoFiltrado.map(v => {
+      const itensHtml = (v.itens && v.itens.length > 0)
+        ? v.itens.map(item => {
+            const unidade = item.unidade_medida || 'un';
+            const qtdLabel = unidade === 'kg'
+              ? `${parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+              : `${parseFloat(item.quantidade).toFixed(0)}×`;
+            return `<div class="hp-item"><span>${qtdLabel} ${item.produto_nome}${item.produto_marca ? ` · ${item.produto_marca}` : ''}</span><span>${fmt(item.quantidade * item.preco_unitario)}</span></div>`;
+          }).join('')
+        : '<div class="hp-item"><span>—</span><span></span></div>';
+
+      return `
+        <tr class="hp-venda-row">
+          <td>${new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+          <td>${v.operador_nome || ''}</td>
+          <td>${v.cliente_nome || '—'}</td>
+          <td>${v.meio_pagamento}</td>
+          <td>${v.status === 'cancelada' ? 'Cancelada' : 'Ativa'}</td>
+          <td class="hp-valor">${fmt(v.valor_total)}</td>
+        </tr>
+        <tr class="hp-itens-row"><td colspan="6">${itensHtml}</td></tr>
+      `;
+    }).join('');
+
+    const alturaJanela = Math.round((window.screen?.availHeight || 900) * 0.92);
+    const janela = window.open('', '_blank', `width=860,height=${alturaJanela},top=20,left=100`);
+    janela.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Histórico de Vendas</title>
+          <style>
+            @page { size: A4; margin: 15mm; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; padding: 12px; }
+            .hp-header { text-align: center; margin-bottom: 18px; }
+            .hp-logo { max-width: 90px; max-height: 90px; margin: 0 auto 8px; display: block; }
+            .hp-nome { font-size: 20px; font-weight: 800; }
+            .hp-sub { font-size: 14px; color: #0d9488; margin-top: 2px; }
+            .hp-periodo { font-size: 11px; color: #64748b; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            thead th { background: #0f766e; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; }
+            .hp-venda-row td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+            .hp-valor { font-weight: 700; text-align: right; }
+            .hp-itens-row td { padding: 4px 10px 10px 24px; border-bottom: 2px solid #e2e8f0; }
+            .hp-item { display: flex; justify-content: space-between; font-size: 11px; color: #475569; padding: 2px 0; }
+            .hp-total { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; font-size: 14px; font-weight: 800; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="hp-header">
+            ${logoUrl ? `<img class="hp-logo" src="${logoUrl}" />` : ''}
+            <div class="hp-nome">${nomeEstabelecimento || ''}</div>
+            <div class="hp-sub">Histórico de Vendas</div>
+            <div class="hp-periodo">Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorLabel}</div>
+          </div>
+          <table>
+            <thead><tr><th>Data</th><th>Operador</th><th>Cliente</th><th>Pagamento</th><th>Status</th><th>Valor</th></tr></thead>
+            <tbody>${linhasHtml}</tbody>
+          </table>
+          <div class="hp-total"><span>TOTAL (ativas)</span><span>${fmt(totalGeral)}</span></div>
+        </body>
+      </html>
+    `);
+    janela.document.close();
+    setTimeout(() => { janela.print(); }, 300);
   }
 
   /* ── Relatório Produtos ── */

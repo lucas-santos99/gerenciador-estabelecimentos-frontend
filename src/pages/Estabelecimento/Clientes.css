@@ -373,7 +373,7 @@
 /* ========================= */
 
 .cli-detalhes {
-  width: 380px;
+  width: 560px;
   flex-shrink: 0;
   background: var(--est-sidebar);
   border-left: 1px solid var(--est-sidebar-border);
@@ -529,6 +529,32 @@
   color: var(--est-text-soft);
   flex-shrink: 0;
   font-size: calc(0.75rem * var(--cli-font-scale, 1));
+}
+
+/* Barra de filtro de data + exportação do histórico de compras */
+.cli-hist-filtro-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--est-border);
+  background: var(--est-card);
+  flex-shrink: 0;
+}
+.cli-hist-filtro-datas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cli-hist-filtro-datas .cli-form-label { margin: 0; }
+.cli-hist-filtro-datas input[type="date"] { width: 150px; flex: 0 0 auto; }
+.cli-hist-filtro-export {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .cli-detalhes-loading {
