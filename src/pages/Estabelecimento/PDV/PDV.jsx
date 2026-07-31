@@ -597,11 +597,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       </div>
                     )}
                     <span className="pdv-ident-pergunta-texto">
-                      🪪 Quer informar CPF na nota{sugestaoCpf ? ` (${sugestaoCpf})` : ''}?
+                      🪪 Quer informar CPF na nota?
                     </span>
                     <div className="pdv-ident-pergunta-botoes">
                       <button type="button" ref={identSimCpfRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCpfRef)}>
-                        {sugestaoCpf ? 'Sim, usar esse' : 'Sim'}
+                        Sim
                       </button>
                       <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef)}>Não</button>
                     </div>
@@ -841,6 +841,10 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           <meta charset="UTF-8">
           <title>Recibo</title>
           <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: 'Courier New', Courier, monospace;

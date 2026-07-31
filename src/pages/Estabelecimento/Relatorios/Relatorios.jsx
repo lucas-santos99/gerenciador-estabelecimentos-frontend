@@ -51,6 +51,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const [histFim, setHistFim] = useState(dataHoje());
   const [histOperador, setHistOperador] = useState(''); // '' = todos, 'merchant' = admin, ou o id do operador
   const [vendaDetalhes, setVendaDetalhes] = useState(null);
+  const [cancelandoVendaId, setCancelandoVendaId] = useState(null);
 
   /* ── Relatório Produtos ── */
   const [reportProd, setReportProd] = useState([]);
@@ -91,6 +92,27 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     finally { setLoadingHistorico(false); }
   }
 
+  async function cancelarVenda(venda) {
+    const motivo = window.prompt(
+      `Cancelar a venda de ${fmt(venda.valor_total)} (${venda.meio_pagamento})?\n\nIsso vai devolver os itens pro estoque e estornar o pagamento (caixa ou dívida de fiado).\n\nMotivo (opcional):`
+    );
+    if (motivo === null) return; // clicou em Cancelar do prompt, desiste
+    setCancelandoVendaId(venda.id);
+    try {
+      const resp = await apiFetch(`/api/vendas/${venda.id}/cancelar`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo: motivo || null }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao cancelar venda.');
+      carregarHistorico();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelandoVendaId(null);
+    }
+  }
+
   // Lista de operadores que aparecem nesse período (pra popular o
   // seletor) — derivada do próprio histórico, sem precisar de outra
   // chamada ao servidor. "merchant" = vendas feitas pelo administrador.
@@ -106,7 +128,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   // selecionado (com 1 operador só, vira redundante com a lista de baixo)
   const resumoPorOperador = (() => {
     const mapa = {};
-    historico.forEach(v => {
+    historico.filter(v => v.status !== 'cancelada').forEach(v => {
       const chave = v.operador_id || 'merchant';
       if (!mapa[chave]) {
         mapa[chave] = {
@@ -162,7 +184,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
         new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
         v.operador_nome, v.cliente_nome || '—', v.meio_pagamento, fmt(v.valor_total),
       ]);
-      const totalGeral = historicoFiltrado.reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
+      const totalGeral = historicoFiltrado.filter(v => v.status !== 'cancelada').reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
       body.push(['', '', '', 'TOTAL', fmt(totalGeral)]);
       autoTable(doc, {
         startY: y + 20,
@@ -521,7 +543,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                     <small>Selecione um período e clique em Buscar</small>
                   </div>
                 ) : historicoFiltrado.map(venda => (
-                  <div key={venda.id} className="fin-historico-card">
+                  <div key={venda.id} className={`fin-historico-card${venda.status === 'cancelada' ? ' cancelada' : ''}`}>
                     <div className="fin-historico-header" onClick={() => setVendaDetalhes(vendaDetalhes?.id === venda.id ? null : venda)}>
                       <div className="fin-historico-info">
                         <span className="fin-historico-data">
@@ -531,6 +553,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                         {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
                         {venda.operador_nome && (
                           <span className="fin-historico-operador">🧑‍💼 {venda.operador_nome}</span>
+                        )}
+                        {venda.status === 'cancelada' && (
+                          <span className="fin-historico-cancelada-badge">✕ Cancelada</span>
                         )}
                       </div>
                       <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
@@ -551,6 +576,17 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                             </div>
                           );
                         })}
+                      </div>
+                    )}
+                    {vendaDetalhes?.id === venda.id && venda.status !== 'cancelada' && (
+                      <div className="fin-historico-acoes-extra">
+                        <button
+                          className="fin-historico-btn-cancelar"
+                          disabled={cancelandoVendaId === venda.id}
+                          onClick={(e) => { e.stopPropagation(); cancelarVenda(venda); }}
+                        >
+                          {cancelandoVendaId === venda.id ? '⏳ Cancelando…' : '🗑 Cancelar essa venda'}
+                        </button>
                       </div>
                     )}
                   </div>

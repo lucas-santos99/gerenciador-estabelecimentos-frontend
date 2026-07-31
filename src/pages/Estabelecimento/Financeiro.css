@@ -1079,6 +1079,38 @@
   transition: border-color 0.15s;
 }
 .fin-historico-card:hover { border-color: var(--est-border-accent); }
+.fin-historico-card.cancelada { opacity: 0.55; }
+.fin-historico-card.cancelada .fin-historico-valor { text-decoration: line-through; }
+
+.fin-historico-cancelada-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(239,68,68,0.14);
+  color: #ef4444;
+}
+
+.fin-historico-acoes-extra {
+  padding: 0 16px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+.fin-historico-btn-cancelar {
+  background: none;
+  border: 1px solid rgba(239,68,68,0.35);
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fin-historico-btn-cancelar:hover:not(:disabled) { background: #ef4444; color: #fff; }
+.fin-historico-btn-cancelar:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .fin-historico-header {
   display: flex;
