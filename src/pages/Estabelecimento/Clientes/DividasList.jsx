@@ -5,6 +5,8 @@ import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -490,7 +492,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             disabled={fontScale >= 1.6}
             title="Aumentar fonte"
           >A+</button>
-          <button className="cli-btn" onClick={() => window.print()}>🖨️</button>
+          
           <button className="cli-btn verde" onClick={exportarExcel} title="Exportar Excel">📥 Excel</button>
           <button
             className="cli-btn primary"
@@ -640,6 +642,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             cliente={clienteHistorico}
             onFechar={() => setClienteHistorico(null)}
             onAtualizar={carregarDados}
+            nomeEstabelecimento={nomeEstabelecimento}
           />
         )}
 
@@ -775,11 +778,13 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
 
 /* ── Painel de histórico geral de compras (qualquer forma de
    pagamento) — usado na aba Clientes, diferente do painel de Fiado ── */
-function HistoricoComprasCliente({ cliente, onFechar, onAtualizar }) {
+function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelecimento }) {
   const [vendas,  setVendas]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro,    setErro]    = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
+  const [filtroDe,  setFiltroDe]  = useState('');
+  const [filtroAte, setFiltroAte] = useState('');
 
   async function carregar() {
     setLoading(true);
@@ -793,6 +798,71 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar }) {
   }
 
   useEffect(() => { carregar(); }, [cliente.id]);
+
+  const vendasFiltradas = vendas.filter(v => {
+    const dataV = v.data_venda.split('T')[0];
+    if (filtroDe && dataV < filtroDe) return false;
+    if (filtroAte && dataV > filtroAte) return false;
+    return true;
+  });
+
+  function exportarExcel() {
+    if (!vendasFiltradas.length) return;
+    const linhas = [];
+    vendasFiltradas.forEach(v => {
+      const itensDaVenda = (v.itens && v.itens.length > 0) ? v.itens : [null];
+      itensDaVenda.forEach(item => {
+        linhas.push({
+          'Data':      new Date(v.data_venda).toLocaleString('pt-BR'),
+          'Vendedor':  v.operador_nome,
+          'Pagamento': v.meio_pagamento,
+          'Status':    v.status === 'cancelada' ? 'Cancelada' : 'Ativa',
+          'Produto':   item ? item.produto_nome + (item.produto_marca ? ` · ${item.produto_marca}` : '') : '—',
+          'Quantidade': item ? parseFloat(item.quantidade) || 0 : '',
+          'Custo Unit. (R$)': item ? parseFloat(item.preco_unitario) || 0 : '',
+          'Subtotal (R$)':    item ? (parseFloat(item.quantidade) * parseFloat(item.preco_unitario)) || 0 : '',
+          'Total da Venda (R$)': parseFloat(v.valor_total),
+        });
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(linhas);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Compras');
+    XLSX.writeFile(wb, `Compras_${cliente.nome.replace(/\s+/g, '_')}.xlsx`);
+  }
+
+  function baixarPDF() {
+    if (!vendasFiltradas.length) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16); doc.setFont(undefined, 'bold');
+    doc.text(nomeEstabelecimento || 'Relatório', 105, 15, { align: 'center' });
+    doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
+    doc.text(`Histórico de Compras — ${cliente.nome}`, 105, 22, { align: 'center' });
+    doc.setFontSize(9);
+    const periodo = (filtroDe || filtroAte)
+      ? `Período: ${filtroDe ? new Date(filtroDe + 'T12:00:00').toLocaleDateString('pt-BR') : 'início'} a ${filtroAte ? new Date(filtroAte + 'T12:00:00').toLocaleDateString('pt-BR') : 'hoje'}`
+      : 'Todo o período';
+    doc.text(periodo, 105, 28, { align: 'center' });
+
+    const body = vendasFiltradas.map(v => [
+      new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      v.operador_nome,
+      v.meio_pagamento,
+      v.status === 'cancelada' ? 'Cancelada' : 'Ativa',
+      fmt(v.valor_total),
+    ]);
+    const totalGeral = vendasFiltradas.filter(v => v.status !== 'cancelada').reduce((s, v) => s + (parseFloat(v.valor_total) || 0), 0);
+    body.push(['', '', '', 'TOTAL (ativas)', fmt(totalGeral)]);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Data', 'Vendedor', 'Pagamento', 'Status', 'Valor']],
+      body, theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+    });
+    doc.save(`Compras_${cliente.nome.replace(/\s+/g, '_')}.pdf`);
+  }
 
   async function cancelarVenda(venda) {
     const motivo = window.prompt(
@@ -823,6 +893,20 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar }) {
         <button className="cli-detalhes-fechar" onClick={onFechar}>✕</button>
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 12px', borderBottom: '1px solid var(--est-border)' }}>
+        <span className="cli-form-label" style={{ margin: 0 }}>De</span>
+        <input className="cli-form-input" type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)} style={{ width: 150 }} />
+        <span className="cli-form-label" style={{ margin: 0 }}>Até</span>
+        <input className="cli-form-input" type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)} style={{ width: 150 }} />
+        {(filtroDe || filtroAte) && (
+          <button className="cli-btn" onClick={() => { setFiltroDe(''); setFiltroAte(''); }}>✕ Limpar</button>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button className="cli-btn verde" onClick={exportarExcel} disabled={!vendasFiltradas.length}>📥 Excel</button>
+          <button className="cli-btn" onClick={baixarPDF} disabled={!vendasFiltradas.length}>📄 PDF</button>
+        </div>
+      </div>
+
       <div className="cli-detalhes-body">
         {loading && (
           <div className="cli-detalhes-loading">
@@ -833,19 +917,20 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar }) {
         {erro && <div className="cli-erro">⚠️ {erro}</div>}
 
         {!loading && (
-          vendas.length === 0 ? (
+          vendasFiltradas.length === 0 ? (
             <div className="cli-vazio">
               <span className="cli-vazio-icon">🧾</span>
-              <p>Nenhuma compra registrada ainda</p>
-              <small>Aparece aqui assim que esse cliente for identificado numa venda (por nome, CPF ou código)</small>
+              <p>{vendas.length === 0 ? 'Nenhuma compra registrada ainda' : 'Nenhuma compra nesse período'}</p>
+              <small>{vendas.length === 0 ? 'Aparece aqui assim que esse cliente for identificado numa venda (por nome, CPF ou código)' : 'Tenta ajustar o filtro de data'}</small>
             </div>
           ) : (
-            vendas.map(venda => (
+            vendasFiltradas.map(venda => (
               <div key={venda.id} className={`cli-venda-card${venda.status === 'cancelada' ? ' cancelada' : ''}`}>
                 <div className="cli-venda-info">
                   <span className="cli-venda-info-data">
                     📅 {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     {' · '}{venda.meio_pagamento}
+                    {venda.operador_nome && <>{' · '}🧑‍💼 {venda.operador_nome}</>}
                     {venda.status === 'cancelada' && <span className="cli-venda-cancelada-badge">✕ Cancelada</span>}
                   </span>
                   <span className="cli-venda-info-valor">{fmt(venda.valor_total)}</span>
