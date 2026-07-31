@@ -101,6 +101,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const identNaoCadastradoRef  = useRef(null);
   const identBuscaInputRef     = useRef(null);
   const cadNomeRef              = useRef(null);
+  const cadTelefoneRef          = useRef(null);
+  const cadCpfRef                = useRef(null);
   const identSimCpfRef         = useRef(null);
   const identNaoCpfRef         = useRef(null);
   const identCpfInputRef       = useRef(null);
@@ -370,8 +372,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     }
   }
 
-  function handleCadastroRapidoKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
+  function handleCadNomeKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); cadTelefoneRef.current?.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
+  }
+  function handleCadTelefoneKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); cadCpfRef.current?.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
+  }
+  function handleCadCpfKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); salvarCadastroRapido(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
   }
 
   function formatarCpfInput(valor) {
@@ -550,24 +561,26 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       placeholder="Nome do cliente *"
                       value={cadNome}
                       onChange={e => setCadNome(e.target.value)}
-                      onKeyDown={handleCadastroRapidoKey}
+                      onKeyDown={handleCadNomeKey}
                     />
                     <input
+                      ref={cadTelefoneRef}
                       className="pdv-cliente-busca-input"
                       type="text"
                       placeholder="Telefone (opcional)"
                       value={cadTelefone}
                       onChange={e => setCadTelefone(e.target.value)}
-                      onKeyDown={handleCadastroRapidoKey}
+                      onKeyDown={handleCadTelefoneKey}
                     />
                     <input
+                      ref={cadCpfRef}
                       className="pdv-cliente-busca-input"
                       type="text"
                       inputMode="numeric"
                       placeholder="CPF (opcional)"
                       value={cadCpf}
                       onChange={e => setCadCpf(formatarCpfInput(e.target.value))}
-                      onKeyDown={handleCadastroRapidoKey}
+                      onKeyDown={handleCadCpfKey}
                     />
                     {cadErro && <div className="pdv-pagamento-erro" style={{ marginTop: 0 }}>⚠️ {cadErro}</div>}
                     <button type="submit" className="pdv-ident-btn-sim" style={{ maxWidth: 'none', width: '100%' }} disabled={cadSalvando}>
@@ -819,7 +832,8 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
   function imprimir() {
     const conteudo = reciboRef.current?.innerHTML;
     if (!conteudo) return;
-    const janela = window.open('', '_blank', 'width=400,height=600');
+    const alturaJanela = Math.round((window.screen?.availHeight || 900) * 0.92);
+    const janela = window.open('', '_blank', `width=480,height=${alturaJanela},top=20,left=100`);
     janela.document.write(`
       <!DOCTYPE html>
       <html>
