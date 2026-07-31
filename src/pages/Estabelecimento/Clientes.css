@@ -542,6 +542,48 @@
   gap: 12px;
 }
 
+/* Venda cancelada — dentro do histórico geral de compras */
+.cli-venda-card.cancelada { opacity: 0.6; }
+.cli-venda-card.cancelada .cli-venda-info-valor { text-decoration: line-through; }
+
+.cli-venda-cancelada-badge {
+  margin-left: 6px;
+  font-size: calc(0.62rem * var(--cli-font-scale, 1));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+}
+
+.cli-venda-motivo {
+  font-size: calc(0.75rem * var(--cli-font-scale, 1));
+  font-style: italic;
+  color: var(--est-text-muted);
+  padding: 0 12px 8px;
+}
+
+.cli-venda-acoes {
+  padding: 0 12px 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+.cli-venda-btn-cancelar {
+  background: none;
+  border: 1px solid var(--est-danger-dim);
+  color: var(--est-danger);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: calc(0.78rem * var(--cli-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cli-venda-btn-cancelar:hover:not(:disabled) { background: var(--est-danger); color: #fff; }
+.cli-venda-btn-cancelar:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ========================= */
 /*  MODAIS                    */
 /* ========================= */

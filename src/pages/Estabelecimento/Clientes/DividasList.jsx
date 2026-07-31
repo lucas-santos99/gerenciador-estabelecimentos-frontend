@@ -206,7 +206,11 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
   const SEM_PERM = 'Sem permissão — contate o administrador';
 
-  const [viewMode,          setViewMode]          = useState('devedores');
+  const [viewMode,          setViewMode]          = useState(() => localStorage.getItem('cli-ultima-aba') || 'todos');
+  function mudarAba(modo) {
+    setViewMode(modo);
+    localStorage.setItem('cli-ultima-aba', modo);
+  }
   const [dividas,           setDividas]           = useState([]);
   const [todosClientes,     setTodosClientes]     = useState([]);
   const [loading,           setLoading]           = useState(true);
@@ -278,7 +282,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           });
           ativo = d.fiado_ativo !== false;
           setFiadoAtivo(ativo);
-          if (!ativo) setViewMode('todos'); // sem Fiado, a aba "devedores" nem existe
+          if (!ativo) mudarAba('todos'); // sem Fiado, a aba "devedores" nem existe
         }
       } catch { /* Pix pela maquininha continua funcionando mesmo se isso falhar */ }
       carregarDados(ativo);
@@ -459,14 +463,14 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
         <div className="cli-toggle">
           <button
             className={`cli-toggle-btn${viewMode === 'todos' ? ' ativo' : ''}`}
-            onClick={() => { setViewMode('todos'); setTermoBusca(''); }}
+            onClick={() => { mudarAba('todos'); setTermoBusca(''); }}
           >
             👥 Clientes ({todosClientes.length})
           </button>
           {(fiadoAtivo || dividas.length > 0) && (
             <button
               className={`cli-toggle-btn${viewMode === 'devedores' ? ' ativo' : ''}`}
-              onClick={() => { setViewMode('devedores'); setTermoBusca(''); }}
+              onClick={() => { mudarAba('devedores'); setTermoBusca(''); }}
               title={!fiadoAtivo ? 'Fiado desligado — só aparece porque existe dívida antiga a cobrar' : undefined}
             >
               💰 Fiado ({dividas.length})
@@ -521,7 +525,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
               </div>
               <button
                 className="cli-alerta-btn"
-                onClick={() => { setViewMode('devedores'); setOrdenacao('vencimento'); }}
+                onClick={() => { mudarAba('devedores'); setOrdenacao('vencimento'); }}
               >Ver devedores</button>
             </div>
           )}
@@ -533,7 +537,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
               </div>
               <button
                 className="cli-alerta-btn"
-                onClick={() => { setViewMode('devedores'); setOrdenacao('vencimento'); }}
+                onClick={() => { mudarAba('devedores'); setOrdenacao('vencimento'); }}
               >Ver devedores</button>
             </div>
           )}
@@ -635,6 +639,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           <HistoricoComprasCliente
             cliente={clienteHistorico}
             onFechar={() => setClienteHistorico(null)}
+            onAtualizar={carregarDados}
           />
         )}
 
@@ -697,7 +702,7 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
           )}
         </div>
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
-        {cliente.cpf && <span className="cli-card-tel">🪪 {cliente.cpf}</span>}
+        {cliente.cpf && <span className="cli-card-tel">🪪 CPF: {cliente.cpf}</span>}
       </div>
 
       {/* Corpo com dívida/limite/vencimento — só na aba Fiado */}
@@ -770,23 +775,46 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
 
 /* ── Painel de histórico geral de compras (qualquer forma de
    pagamento) — usado na aba Clientes, diferente do painel de Fiado ── */
-function HistoricoComprasCliente({ cliente, onFechar }) {
+function HistoricoComprasCliente({ cliente, onFechar, onAtualizar }) {
   const [vendas,  setVendas]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro,    setErro]    = useState('');
+  const [cancelandoId, setCancelandoId] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setErro('');
-      try {
-        const resp = await apiFetch(`/api/clientes/${cliente.id}/historico-compras`);
-        if (!resp.ok) throw new Error('Erro ao buscar histórico');
-        setVendas(await resp.json());
-      } catch (err) { setErro(err.message); }
-      finally { setLoading(false); }
-    })();
-  }, [cliente.id]);
+  async function carregar() {
+    setLoading(true);
+    setErro('');
+    try {
+      const resp = await apiFetch(`/api/clientes/${cliente.id}/historico-compras`);
+      if (!resp.ok) throw new Error('Erro ao buscar histórico');
+      setVendas(await resp.json());
+    } catch (err) { setErro(err.message); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { carregar(); }, [cliente.id]);
+
+  async function cancelarVenda(venda) {
+    const motivo = window.prompt(
+      `Cancelar a compra de ${fmt(venda.valor_total)} (${venda.meio_pagamento})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado).\n\nMotivo (opcional):`
+    );
+    if (motivo === null) return; // desistiu no prompt
+    setCancelandoId(venda.id);
+    try {
+      const resp = await apiFetch(`/api/vendas/${venda.id}/cancelar`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo: motivo || null }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao cancelar venda.');
+      carregar();
+      onAtualizar?.();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelandoId(null);
+    }
+  }
 
   return (
     <div className="cli-detalhes">
@@ -813,14 +841,18 @@ function HistoricoComprasCliente({ cliente, onFechar }) {
             </div>
           ) : (
             vendas.map(venda => (
-              <div key={venda.id} className="cli-venda-card">
+              <div key={venda.id} className={`cli-venda-card${venda.status === 'cancelada' ? ' cancelada' : ''}`}>
                 <div className="cli-venda-info">
                   <span className="cli-venda-info-data">
                     📅 {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     {' · '}{venda.meio_pagamento}
+                    {venda.status === 'cancelada' && <span className="cli-venda-cancelada-badge">✕ Cancelada</span>}
                   </span>
                   <span className="cli-venda-info-valor">{fmt(venda.valor_total)}</span>
                 </div>
+                {venda.status === 'cancelada' && venda.motivo_cancelamento && (
+                  <div className="cli-venda-motivo">Motivo: {venda.motivo_cancelamento}</div>
+                )}
                 {venda.itens.length > 0 && (
                   <ul className="cli-venda-itens">
                     {venda.itens.map((item, i) => {
@@ -831,7 +863,7 @@ function HistoricoComprasCliente({ cliente, onFechar }) {
                       return (
                         <li key={i} className="cli-venda-item">
                           <span className="cli-item-qtd">{qtdLabel}</span>
-                          <span className="cli-item-nome">{item.produto_nome}</span>
+                          <span className="cli-item-nome">{item.produto_nome}{item.produto_marca && ` · ${item.produto_marca}`}</span>
                           <span className="cli-item-subtotal">
                             {fmt(item.quantidade * item.preco_unitario)}
                           </span>
@@ -839,6 +871,17 @@ function HistoricoComprasCliente({ cliente, onFechar }) {
                       );
                     })}
                   </ul>
+                )}
+                {venda.status !== 'cancelada' && (
+                  <div className="cli-venda-acoes">
+                    <button
+                      className="cli-venda-btn-cancelar"
+                      disabled={cancelandoId === venda.id}
+                      onClick={() => cancelarVenda(venda)}
+                    >
+                      {cancelandoId === venda.id ? '⏳ Cancelando…' : '🗑 Cancelar essa compra'}
+                    </button>
+                  </div>
                 )}
               </div>
             ))
