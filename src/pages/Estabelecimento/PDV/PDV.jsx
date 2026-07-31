@@ -74,10 +74,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   // Identificação opcional na venda (qualquer forma de pagamento,
   // diferente do fluxo de Fiado que já obriga cliente) — sequência de
-  // perguntas por Enter: "quer identificar cliente?" → busca → "quer
-  // CPF na nota?" → CPF (com sugestão de reaproveitar o que já foi
-  // digitado/cadastrado). Fiado não passa por isso, já tem fluxo próprio.
-  const [identEtapa,           setIdentEtapa]           = useState(null); // null | 'perguntaCliente' | 'buscaCliente' | 'perguntaCpf' | 'inputCpf' | 'concluido'
+  // perguntas por Enter: "quer identificar cliente?" → "já cadastrado?"
+  // → busca OU cadastro rápido → "quer CPF na nota?" → CPF (com
+  // sugestão de reaproveitar o que já foi digitado/cadastrado). Fiado
+  // não passa por isso, já tem fluxo próprio.
+  const [identEtapa,           setIdentEtapa]           = useState(null); // null | 'perguntaCliente' | 'perguntaClienteCadastrado' | 'buscaCliente' | 'cadastroRapido' | 'perguntaCpf' | 'inputCpf' | 'concluido'
+  const [identHistorico,       setIdentHistorico]       = useState([]); // pilha de telas visitadas, Esc volta uma de cada vez
   const [clienteVinculado,     setClienteVinculado]     = useState(null);
   const [termoBuscaIdent,      setTermoBuscaIdent]      = useState('');
   const [termoBuscaIdentUltimo, setTermoBuscaIdentUltimo] = useState('');
@@ -86,12 +88,22 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [loadingIdent,         setLoadingIdent]         = useState(false);
   const [cpfNota,              setCpfNota]              = useState('');
 
-  const identNaoClienteRef = useRef(null);
-  const identSimClienteRef = useRef(null);
-  const identBuscaInputRef = useRef(null);
-  const identNaoCpfRef     = useRef(null);
-  const identSimCpfRef     = useRef(null);
-  const identCpfInputRef   = useRef(null);
+  // Cadastro rápido (quando o cliente identificado ainda não existe)
+  const [cadNome,      setCadNome]      = useState('');
+  const [cadTelefone,  setCadTelefone]  = useState('');
+  const [cadCpf,       setCadCpf]       = useState('');
+  const [cadSalvando,  setCadSalvando]  = useState(false);
+  const [cadErro,      setCadErro]      = useState('');
+
+  const identSimClienteRef     = useRef(null);
+  const identNaoClienteRef     = useRef(null);
+  const identSimCadastradoRef  = useRef(null);
+  const identNaoCadastradoRef  = useRef(null);
+  const identBuscaInputRef     = useRef(null);
+  const cadNomeRef              = useRef(null);
+  const identSimCpfRef         = useRef(null);
+  const identNaoCpfRef         = useRef(null);
+  const identCpfInputRef       = useRef(null);
 
   // CPF sugerido pra reaproveitar: prioriza o CPF já salvo no cadastro
   // do cliente escolhido; senão, se o texto digitado na busca parecia
@@ -150,15 +162,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // Inicia o assistente de identificação assim que confirma a forma de
   // pagamento (exceto Fiado, que já tem fluxo próprio de cliente)
   useEffect(() => {
-    if (metodoConfirmado && meioPagamento !== 'Fiado') setIdentEtapa('perguntaCliente');
+    if (metodoConfirmado && meioPagamento !== 'Fiado') { setIdentHistorico([]); setIdentEtapa('perguntaCliente'); }
   }, [metodoConfirmado, meioPagamento]);
 
   // Foca o elemento certo em cada passo do assistente — sempre parte
   // com foco no "Não", pra quem quiser pular tudo bater Enter 2x rápido
   useEffect(() => {
-    if (identEtapa === 'perguntaCliente') setTimeout(() => identNaoClienteRef.current?.focus(), 0);
+    if (identEtapa === 'perguntaCliente') setTimeout(() => identSimClienteRef.current?.focus(), 0);
+    else if (identEtapa === 'perguntaClienteCadastrado') setTimeout(() => identSimCadastradoRef.current?.focus(), 0);
     else if (identEtapa === 'buscaCliente') setTimeout(() => identBuscaInputRef.current?.focus(), 0);
-    else if (identEtapa === 'perguntaCpf') setTimeout(() => identNaoCpfRef.current?.focus(), 0);
+    else if (identEtapa === 'cadastroRapido') setTimeout(() => cadNomeRef.current?.focus(), 0);
+    else if (identEtapa === 'perguntaCpf') setTimeout(() => identSimCpfRef.current?.focus(), 0);
     else if (identEtapa === 'inputCpf') setTimeout(() => { identCpfInputRef.current?.focus(); identCpfInputRef.current?.select(); }, 0);
   }, [identEtapa]);
 
@@ -257,27 +271,77 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setTermoBuscaIdentUltimo(termoBuscaIdent); // guarda o que foi digitado, pra sugerir como CPF depois
     setResultadosIdent([]);
     setTermoBuscaIdent('');
-    setIdentEtapa('perguntaCpf');
+    irParaEtapa('perguntaCpf');
   }
 
   function pularBuscaCliente() {
     setTermoBuscaIdentUltimo(termoBuscaIdent);
     setResultadosIdent([]);
     setTermoBuscaIdent('');
-    setIdentEtapa('perguntaCpf');
+    irParaEtapa('perguntaCpf');
+  }
+
+  // ── Navegação do assistente: empilha a tela atual ao avançar, Esc
+  // desempilha (volta uma tela). Chegando ao início do assistente,
+  // Esc volta pra escolha da forma de pagamento.
+  function irParaEtapa(nova) {
+    setIdentHistorico(h => [...h, identEtapa]);
+    setIdentEtapa(nova);
+  }
+
+  function voltarEtapa() {
+    setIdentHistorico(h => {
+      if (h.length === 0) {
+        setMetodoConfirmado(false);
+        setIdentEtapa(null);
+        return h;
+      }
+      const novoHist = [...h];
+      const anterior = novoHist.pop();
+      setIdentEtapa(anterior);
+      return novoHist;
+    });
   }
 
   function responderPerguntaCliente(sim) {
-    setIdentEtapa(sim ? 'buscaCliente' : 'perguntaCpf');
+    irParaEtapa(sim ? 'perguntaClienteCadastrado' : 'perguntaCpf');
+  }
+
+  function responderClienteCadastrado(sim) {
+    irParaEtapa(sim ? 'buscaCliente' : 'cadastroRapido');
   }
 
   function responderPerguntaCpf(sim) {
-    if (sim) { setCpfNota(sugestaoCpf || ''); setIdentEtapa('inputCpf'); }
-    else { setIdentEtapa('concluido'); }
+    if (sim) { setCpfNota(sugestaoCpf || ''); irParaEtapa('inputCpf'); }
+    else { irParaEtapa('concluido'); }
+  }
+
+  // Cadastro rápido — pro cliente que ainda não existe, sem sair do PDV
+  async function salvarCadastroRapido(e) {
+    e?.preventDefault();
+    if (!cadNome.trim()) { setCadErro('Nome é obrigatório.'); return; }
+    setCadSalvando(true); setCadErro('');
+    try {
+      const resp = await apiFetch('/api/clientes/criar', {
+        method: 'POST',
+        body: JSON.stringify({
+          estabelecimentoId,
+          nome:     cadNome.trim(),
+          telefone: cadTelefone.trim() || null,
+          cpf:      cadCpf.replace(/\D/g, '') || null,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao cadastrar cliente.');
+      setClienteVinculado(data);
+      if (cadCpf) setTermoBuscaIdentUltimo(cadCpf); // já digitou CPF aqui, reaproveita na pergunta seguinte
+      irParaEtapa('perguntaCpf');
+    } catch (err) { setCadErro(err.message); }
+    finally { setCadSalvando(false); }
   }
 
   function handleIdentBuscaKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); setIdentClienteIndex(p => Math.min(p + 1, resultadosIdent.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setIdentClienteIndex(p => Math.max(p - 1, 0)); }
     else if (e.key === 'Enter') {
@@ -288,8 +352,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   }
 
   function handleIdentCpfInputKey(e) {
-    if (e.key === 'Enter') { e.preventDefault(); setIdentEtapa('concluido'); }
-    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); }
+    if (e.key === 'Enter') { e.preventDefault(); irParaEtapa('concluido'); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
   }
 
   // Navega entre os botões "Não"/"Sim" pela seta (esquerda/direita ou
@@ -301,8 +365,13 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       outroRef.current?.focus();
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      onCancelar();
+      e.stopPropagation();
+      voltarEtapa();
     }
+  }
+
+  function handleCadastroRapidoKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
   }
 
   function formatarCpfInput(valor) {
@@ -360,7 +429,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   }
 
   function handleOverlayKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (metodoConfirmado) { setMetodoConfirmado(false); return; }
+      onCancelar();
+      return;
+    }
     if (e.target.tagName === 'INPUT') return;
     if (!metodoConfirmado) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(p => (p + 1) % MEIOS.length); }
@@ -371,11 +445,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   function handleDinheiroKey(e) {
     if (e.key === 'Enter') { e.preventDefault(); confirmarFinal(); }
-    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
   }
 
   function handleClienteKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); onCancelar(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setMetodoConfirmado(false); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); setClienteIndex(p => Math.min(p + 1, resultadosCliente.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setClienteIndex(p => Math.max(p - 1, 0)); }
     else if (e.key === 'Enter') {
@@ -420,10 +494,20 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">🪪 Quer identificar o cliente nessa venda?</span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)} onKeyDown={e => handleSimNaoKey(e, identSimClienteRef)}>Não (Enter)</button>
                       <button type="button" ref={identSimClienteRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)} onKeyDown={e => handleSimNaoKey(e, identNaoClienteRef)}>Sim</button>
+                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)} onKeyDown={e => handleSimNaoKey(e, identSimClienteRef)}>Não</button>
                     </div>
                     <span className="pdv-ident-hint">Opcional — não muda o pagamento.</span>
+                  </div>
+                )}
+
+                {identEtapa === 'perguntaClienteCadastrado' && (
+                  <div className="pdv-ident-pergunta">
+                    <span className="pdv-ident-pergunta-texto">O cliente já está cadastrado?</span>
+                    <div className="pdv-ident-pergunta-botoes">
+                      <button type="button" ref={identSimCadastradoRef} className="pdv-ident-btn-sim" onClick={() => responderClienteCadastrado(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCadastradoRef)}>Sim</button>
+                      <button type="button" ref={identNaoCadastradoRef} className="pdv-ident-btn-nao" onClick={() => responderClienteCadastrado(false)} onKeyDown={e => handleSimNaoKey(e, identSimCadastradoRef)}>Não</button>
+                    </div>
                   </div>
                 )}
 
@@ -456,6 +540,42 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   </div>
                 )}
 
+                {identEtapa === 'cadastroRapido' && (
+                  <form className="pdv-ident-pergunta" onSubmit={salvarCadastroRapido}>
+                    <span className="pdv-ident-pergunta-texto">Cadastro rápido</span>
+                    <input
+                      ref={cadNomeRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      placeholder="Nome do cliente *"
+                      value={cadNome}
+                      onChange={e => setCadNome(e.target.value)}
+                      onKeyDown={handleCadastroRapidoKey}
+                    />
+                    <input
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      placeholder="Telefone (opcional)"
+                      value={cadTelefone}
+                      onChange={e => setCadTelefone(e.target.value)}
+                      onKeyDown={handleCadastroRapidoKey}
+                    />
+                    <input
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="CPF (opcional)"
+                      value={cadCpf}
+                      onChange={e => setCadCpf(formatarCpfInput(e.target.value))}
+                      onKeyDown={handleCadastroRapidoKey}
+                    />
+                    {cadErro && <div className="pdv-pagamento-erro" style={{ marginTop: 0 }}>⚠️ {cadErro}</div>}
+                    <button type="submit" className="pdv-ident-btn-sim" style={{ maxWidth: 'none', width: '100%' }} disabled={cadSalvando}>
+                      {cadSalvando ? '⏳ Cadastrando…' : '✓ Cadastrar e continuar (Enter)'}
+                    </button>
+                  </form>
+                )}
+
                 {identEtapa === 'perguntaCpf' && (
                   <div className="pdv-ident-pergunta">
                     {clienteVinculado && (
@@ -467,10 +587,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       🪪 Quer informar CPF na nota{sugestaoCpf ? ` (${sugestaoCpf})` : ''}?
                     </span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef)}>Não (Enter)</button>
                       <button type="button" ref={identSimCpfRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCpfRef)}>
                         {sugestaoCpf ? 'Sim, usar esse' : 'Sim'}
                       </button>
+                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef)}>Não</button>
                     </div>
                   </div>
                 )}
@@ -664,6 +784,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
   const reciboRef    = useRef(null);
   const btnImpRef    = useRef(null);
+  const btnFecharRef = useRef(null);
   const overlayRef   = useRef(null);
 
   useEffect(() => {
@@ -673,11 +794,19 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') { e.preventDefault(); onFechar(); }
-      if (e.key === 'Enter')  { e.preventDefault(); imprimir(); }
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onFechar]);
+
+  // Seta alterna entre Imprimir/Fechar — Enter já confirma o que
+  // estiver com foco no momento (comportamento nativo do botão)
+  function handlePosVendaKey(e, outroRef) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      outroRef.current?.focus();
+    }
+  }
 
   const meioLabel = {
     Dinheiro: '💵 Dinheiro',
@@ -771,12 +900,12 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           🖨️ Deseja imprimir o recibo?
         </div>
 
-        <div className="pdv-posv-acoes">
-          <button className="pdv-posv-btn-fechar" onClick={onFechar}>
-            Fechar <span className="pdv-posv-hint">Esc</span>
+        <div className="pdv-ident-pergunta-botoes">
+          <button ref={btnImpRef} className="pdv-ident-btn-sim" onClick={imprimir} onKeyDown={e => handlePosVendaKey(e, btnFecharRef)}>
+            🖨️ Sim, imprimir
           </button>
-          <button ref={btnImpRef} className="pdv-posv-btn-imprimir" onClick={imprimir}>
-            🖨️ Imprimir recibo <span className="pdv-posv-hint">Enter</span>
+          <button ref={btnFecharRef} className="pdv-ident-btn-nao" onClick={onFechar} onKeyDown={e => handlePosVendaKey(e, btnImpRef)}>
+            Não, fechar
           </button>
         </div>
 
