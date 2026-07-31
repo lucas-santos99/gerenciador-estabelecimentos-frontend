@@ -70,6 +70,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [loadingCliente,     setLoadingCliente]     = useState(false);
   const [clienteIndex,       setClienteIndex]       = useState(-1);
+
+  // Cadastro rápido dentro do próprio fluxo de Fiado — pro cliente que
+  // ainda não existe, sem precisar cancelar a venda e recomeçar
+  const [mostrarCadFiado, setMostrarCadFiado] = useState(false);
+  const [cadFiadoNome,     setCadFiadoNome]     = useState('');
+  const [cadFiadoTelefone, setCadFiadoTelefone] = useState('');
+  const [cadFiadoCpf,      setCadFiadoCpf]      = useState('');
+  const [cadFiadoSalvando, setCadFiadoSalvando] = useState(false);
+  const [cadFiadoErro,     setCadFiadoErro]     = useState('');
+  const [cadFiadoSemLimite, setCadFiadoSemLimite] = useState(true);
+  const [cadFiadoLimite,    setCadFiadoLimite]    = useState('');
   const [erro,               setErro]               = useState('');
 
   // Identificação opcional na venda (qualquer forma de pagamento,
@@ -131,6 +142,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const overlayRef       = useRef(null);
   const inputDinheiroRef = useRef(null);
   const inputClienteRef  = useRef(null);
+  const cadFiadoNomeRef     = useRef(null);
+  const cadFiadoTelefoneRef = useRef(null);
+  const cadFiadoCpfRef      = useRef(null);
+  const cadFiadoSemLimiteRef = useRef(null);
+  const cadFiadoComLimiteRef = useRef(null);
+  const cadFiadoLimiteInputRef = useRef(null);
   const btnConfirmarRef  = useRef(null);
   const pixCheckboxRef   = useRef(null);
   const listaClienteRef  = useRef(null);
@@ -328,9 +345,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
         method: 'POST',
         body: JSON.stringify({
           estabelecimentoId,
-          nome:     cadNome.trim(),
-          telefone: cadTelefone.trim() || null,
-          cpf:      cadCpf.replace(/\D/g, '') || null,
+          nome:         cadNome.trim(),
+          telefone:     cadTelefone.trim() || null,
+          cpf:          cadCpf.replace(/\D/g, '') || null,
+          permiteFiado: false, // cadastro rápido é só identificação — fiado
+                               // precisa ser habilitado de propósito depois
         }),
       });
       const data = await resp.json();
@@ -385,6 +404,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarEtapa(); }
   }
 
+  // Máscara "tipo calculadora" pro valor do limite — digita "5000" e
+  // já vira "50,00" sozinho, mesmo padrão do cadastro completo em Clientes
+  function digitarValorMascarado(valorBruto) {
+    const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
+    if (!digitos) return '';
+    const numero = parseInt(digitos, 10) / 100;
+    return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function formatarCpfInput(valor) {
     const d = valor.replace(/\D/g, '').slice(0, 11);
     if (d.length <= 3) return d;
@@ -399,6 +427,77 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setTermoBuscaCliente('');
     setTimeout(() => btnConfirmarRef.current?.focus(), 0);
   }
+
+  function abrirCadFiado() {
+    setCadFiadoNome(termoBuscaCliente); // já aproveita o que foi digitado na busca
+    setCadFiadoTelefone('');
+    setCadFiadoCpf('');
+    setCadFiadoErro('');
+    setCadFiadoSemLimite(true);
+    setCadFiadoLimite('');
+    setResultadosCliente([]);
+    setMostrarCadFiado(true);
+  }
+
+  function voltarCadFiado() {
+    setMostrarCadFiado(false);
+    setTimeout(() => inputClienteRef.current?.focus(), 0);
+  }
+
+  async function salvarCadFiado(e) {
+    e?.preventDefault();
+    if (!cadFiadoNome.trim()) { setCadFiadoErro('Nome é obrigatório.'); return; }
+    setCadFiadoSalvando(true); setCadFiadoErro('');
+    try {
+      const resp = await apiFetch('/api/clientes/criar', {
+        method: 'POST',
+        body: JSON.stringify({
+          estabelecimentoId,
+          nome:          cadFiadoNome.trim(),
+          telefone:      cadFiadoTelefone.trim() || null,
+          cpf:           cadFiadoCpf.replace(/\D/g, '') || null,
+          permiteFiado:  true, // aqui SIM é de propósito — cadastro veio de dentro do fluxo de fiado
+          limiteCredito: cadFiadoSemLimite ? '0' : cadFiadoLimite.replace(/\./g, '').replace(',', '.'),
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao cadastrar cliente.');
+      setMostrarCadFiado(false);
+      selecionarCliente(data);
+    } catch (err) { setCadFiadoErro(err.message); }
+    finally { setCadFiadoSalvando(false); }
+  }
+
+  function handleCadFiadoNomeKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); cadFiadoTelefoneRef.current?.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarCadFiado(); }
+  }
+  function handleCadFiadoTelefoneKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); cadFiadoCpfRef.current?.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarCadFiado(); }
+  }
+  function handleCadFiadoCpfKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); cadFiadoSemLimiteRef.current?.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarCadFiado(); }
+  }
+  // Sem limite / Com limite — seta alterna, Enter em "Sem limite" já
+  // cadastra direto; Enter em "Com limite" abre o campo de valor
+  function handleCadFiadoLimiteChoiceKey(e, outroRef) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      outroRef.current?.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation(); voltarCadFiado();
+    }
+  }
+  function handleCadFiadoLimiteValorKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); salvarCadFiado(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarCadFiado(); }
+  }
+
+  useEffect(() => {
+    if (mostrarCadFiado) setTimeout(() => cadFiadoNomeRef.current?.focus(), 0);
+  }, [mostrarCadFiado]);
 
   function confirmarMetodo(key, idx) {
     setMeioPagamento(key);
@@ -461,11 +560,13 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   function handleClienteKey(e) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setMetodoConfirmado(false); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setClienteIndex(p => Math.min(p + 1, resultadosCliente.length - 1)); }
+    const totalOpcoes = resultadosCliente.length + (termoBuscaCliente.length >= 2 ? 1 : 0); // +1 = "cadastrar novo"
+    if (e.key === 'ArrowDown') { e.preventDefault(); setClienteIndex(p => Math.min(p + 1, totalOpcoes - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setClienteIndex(p => Math.max(p - 1, 0)); }
     else if (e.key === 'Enter') {
       e.preventDefault();
-      if (clienteIndex > -1 && resultadosCliente[clienteIndex]) selecionarCliente(resultadosCliente[clienteIndex]);
+      if (clienteIndex > -1 && clienteIndex < resultadosCliente.length) selecionarCliente(resultadosCliente[clienteIndex]);
+      else if (termoBuscaCliente.length >= 2) abrirCadFiado(); // último item da lista, ou Enter direto se não achou nada
     }
   }
 
@@ -733,7 +834,74 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
             {meioPagamento === 'Fiado' && (
               <>
-                {clienteSelecionado ? (
+                {mostrarCadFiado ? (
+                  <form className="pdv-ident-pergunta" onSubmit={salvarCadFiado}>
+                    <span className="pdv-ident-pergunta-texto">Cadastrar cliente pro fiado</span>
+                    <input
+                      ref={cadFiadoNomeRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      placeholder="Nome do cliente *"
+                      value={cadFiadoNome}
+                      onChange={e => setCadFiadoNome(e.target.value)}
+                      onKeyDown={handleCadFiadoNomeKey}
+                    />
+                    <input
+                      ref={cadFiadoTelefoneRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      placeholder="Telefone (opcional)"
+                      value={cadFiadoTelefone}
+                      onChange={e => setCadFiadoTelefone(e.target.value)}
+                      onKeyDown={handleCadFiadoTelefoneKey}
+                    />
+                    <input
+                      ref={cadFiadoCpfRef}
+                      className="pdv-cliente-busca-input"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="CPF (opcional)"
+                      value={cadFiadoCpf}
+                      onChange={e => setCadFiadoCpf(formatarCpfInput(e.target.value))}
+                      onKeyDown={handleCadFiadoCpfKey}
+                    />
+                    <label className="pdv-ident-cpf-label" style={{ marginTop: 4 }}>Limite de crédito</label>
+                    <div className="pdv-ident-pergunta-botoes">
+                      <button
+                        type="button"
+                        ref={cadFiadoSemLimiteRef}
+                        className="pdv-ident-btn-sim"
+                        onClick={() => { setCadFiadoSemLimite(true); salvarCadFiado(); }}
+                        onKeyDown={e => handleCadFiadoLimiteChoiceKey(e, cadFiadoComLimiteRef)}
+                      >
+                        ∞ Sem limite
+                      </button>
+                      <button
+                        type="button"
+                        ref={cadFiadoComLimiteRef}
+                        className="pdv-ident-btn-nao"
+                        onClick={() => { setCadFiadoSemLimite(false); setTimeout(() => cadFiadoLimiteInputRef.current?.focus(), 0); }}
+                        onKeyDown={e => handleCadFiadoLimiteChoiceKey(e, cadFiadoSemLimiteRef)}
+                      >
+                        R$ Definir limite
+                      </button>
+                    </div>
+                    {!cadFiadoSemLimite && (
+                      <input
+                        ref={cadFiadoLimiteInputRef}
+                        className="pdv-cliente-busca-input"
+                        type="text"
+                        placeholder="0,00"
+                        value={cadFiadoLimite}
+                        onChange={e => setCadFiadoLimite(digitarValorMascarado(e.target.value))}
+                        onKeyDown={handleCadFiadoLimiteValorKey}
+                      />
+                    )}
+                    {cadFiadoErro && <div className="pdv-pagamento-erro" style={{ marginTop: 0 }}>⚠️ {cadFiadoErro}</div>}
+                    <span className="pdv-ident-hint">{cadFiadoSalvando ? '⏳ Cadastrando…' : 'Enter em "Sem limite" já cadastra e usa no fiado.'}</span>
+                    <button type="button" className="pdv-ident-pular" onClick={voltarCadFiado}>← Voltar pra busca (Esc)</button>
+                  </form>
+                ) : clienteSelecionado ? (
                   <div className="pdv-cliente-selecionado">
                     <span className="pdv-cliente-selecionado-nome">📋 {clienteSelecionado.nome}</span>
                     <div className="pdv-cliente-selecionado-info">
@@ -761,7 +929,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <>
                     <input ref={inputClienteRef} className="pdv-cliente-busca-input" type="text" placeholder="Buscar cliente por nome ou telefone…" value={termoBuscaCliente} onChange={e => buscarCliente(e.target.value)} onKeyDown={handleClienteKey} />
                     {loadingCliente && <div style={{ fontSize: '0.78rem', color: 'var(--est-text-muted)', marginBottom: 6 }}>Buscando…</div>}
-                    {resultadosCliente.length > 0 && (
+                    {(resultadosCliente.length > 0 || termoBuscaCliente.length >= 2) && (
                       <ul className="pdv-cliente-lista" ref={listaClienteRef}>
                         {resultadosCliente.map((cli, i) => (
                           <li key={cli.id} className={`pdv-cliente-item${clienteIndex === i ? ' ativo' : ''}`} onClick={() => selecionarCliente(cli)} onMouseEnter={() => setClienteIndex(i)}>
@@ -769,6 +937,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                             <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
                           </li>
                         ))}
+                        {termoBuscaCliente.length >= 2 && (
+                          <li
+                            className={`pdv-cliente-item${clienteIndex === resultadosCliente.length ? ' ativo' : ''}`}
+                            onClick={abrirCadFiado}
+                            onMouseEnter={() => setClienteIndex(resultadosCliente.length)}
+                          >
+                            ➕ Cadastrar novo cliente
+                          </li>
+                        )}
                       </ul>
                     )}
                   </>
