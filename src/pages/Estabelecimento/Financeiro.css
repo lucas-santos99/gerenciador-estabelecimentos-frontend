@@ -1093,6 +1093,16 @@
   color: #ef4444;
 }
 
+.fin-historico-motivo {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--est-text-muted);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .fin-historico-acoes-extra {
   padding: 0 16px 12px;
   display: flex;

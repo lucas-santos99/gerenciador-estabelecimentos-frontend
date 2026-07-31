@@ -567,6 +567,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                         {venda.status === 'cancelada' && (
                           <span className="fin-historico-cancelada-badge">✕ Cancelada</span>
                         )}
+                        {venda.status === 'cancelada' && venda.motivo_cancelamento && (
+                          <span className="fin-historico-motivo">— {venda.motivo_cancelamento}</span>
+                        )}
                       </div>
                       <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
                     </div>
