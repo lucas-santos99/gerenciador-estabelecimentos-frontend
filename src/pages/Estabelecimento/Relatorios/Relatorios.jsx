@@ -10,7 +10,8 @@ import './Relatorios.css';
 const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function dataHoje() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function formatarDataHora(iso) {
   if (!iso) return '—';
@@ -50,6 +51,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const [histInicio, setHistInicio] = useState(dataHoje());
   const [histFim, setHistFim] = useState(dataHoje());
   const [histOperador, setHistOperador] = useState(''); // '' = todos, 'merchant' = admin, ou o id do operador
+  const [histStatus, setHistStatus] = useState(''); // '' = todas, 'ativa', 'cancelada'
   const [vendaDetalhes, setVendaDetalhes] = useState(null);
   const [cancelandoVendaId, setCancelandoVendaId] = useState(null);
 
@@ -120,9 +122,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     historico.map(v => [v.operador_id || 'merchant', { id: v.operador_id || 'merchant', nome: v.operador_nome }])
   ).values()].sort((a, b) => a.nome.localeCompare(b.nome));
 
-  const historicoFiltrado = histOperador
-    ? historico.filter(v => (histOperador === 'merchant' ? !v.operador_id : v.operador_id === histOperador))
-    : historico;
+  const historicoFiltrado = historico
+    .filter(v => !histOperador || (histOperador === 'merchant' ? !v.operador_id : v.operador_id === histOperador))
+    .filter(v => !histStatus || (histStatus === 'ativa' ? v.status !== 'cancelada' : v.status === 'cancelada'));
 
   // Resumo por operador — só faz sentido mostrar quando "Todos" está
   // selecionado (com 1 operador só, vira redundante com a lista de baixo)
@@ -476,6 +478,14 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                 ))}
               </select>
             </div>
+            <div className="fin-form-group">
+              <label className="fin-form-label">Status</label>
+              <select className="fin-form-select" value={histStatus} onChange={e => setHistStatus(e.target.value)}>
+                <option value="">Todas</option>
+                <option value="ativa">Só ativas</option>
+                <option value="cancelada">Só canceladas</option>
+              </select>
+            </div>
             <button type="submit" className="fin-btn-gerar" disabled={loadingHistorico}>
               {loadingHistorico ? '⏳…' : '▶ Buscar'}
             </button>
@@ -487,7 +497,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             <>
               {/* Resumo comparativo entre operadores — só aparece com "Todos"
                   selecionado e mais de um operador tendo vendido no período */}
-              {!histOperador && resumoPorOperador.length > 1 && (
+              {!histOperador && histStatus !== 'cancelada' && resumoPorOperador.length > 1 && (
                 <>
                   <div className="fin-section-header" style={{ marginTop: 4 }}>
                     <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador</span>
