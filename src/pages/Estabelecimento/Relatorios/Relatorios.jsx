@@ -52,6 +52,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const [histFim, setHistFim] = useState(dataHoje());
   const [histOperador, setHistOperador] = useState(''); // '' = todos, 'merchant' = admin, ou o id do operador
   const [histStatus, setHistStatus] = useState(''); // '' = todas, 'ativa', 'cancelada'
+  const [histCliente, setHistCliente] = useState(''); // '' = todos, ou o id do cliente
   const [vendaDetalhes, setVendaDetalhes] = useState(null);
   const [cancelandoVendaId, setCancelandoVendaId] = useState(null);
 
@@ -122,9 +123,16 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     historico.map(v => [v.operador_id || 'merchant', { id: v.operador_id || 'merchant', nome: v.operador_nome }])
   ).values()].sort((a, b) => a.nome.localeCompare(b.nome));
 
+  // Mesma ideia, agora pra clientes — só entra quem realmente foi
+  // identificado em alguma venda do período (nem toda venda tem cliente)
+  const clientesNoPeriodo = [...new Map(
+    historico.filter(v => v.cliente_id).map(v => [v.cliente_id, { id: v.cliente_id, nome: v.cliente_nome }])
+  ).values()].sort((a, b) => a.nome.localeCompare(b.nome));
+
   const historicoFiltrado = historico
     .filter(v => !histOperador || (histOperador === 'merchant' ? !v.operador_id : v.operador_id === histOperador))
-    .filter(v => !histStatus || (histStatus === 'ativa' ? v.status !== 'cancelada' : v.status === 'cancelada'));
+    .filter(v => !histStatus || (histStatus === 'ativa' ? v.status !== 'cancelada' : v.status === 'cancelada'))
+    .filter(v => !histCliente || v.cliente_id === histCliente);
 
   // Resumo por operador — só faz sentido mostrar quando "Todos" está
   // selecionado (com 1 operador só, vira redundante com a lista de baixo)
@@ -518,6 +526,15 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                 <option value="">Todos</option>
                 {operadoresNoPeriodo.map(op => (
                   <option key={op.id} value={op.id}>{op.id === 'merchant' ? `${op.nome} (admin)` : op.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fin-form-group">
+              <label className="fin-form-label">Cliente</label>
+              <select className="fin-form-select" value={histCliente} onChange={e => setHistCliente(e.target.value)}>
+                <option value="">Todos</option>
+                {clientesNoPeriodo.map(c => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
             </div>
