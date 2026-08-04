@@ -10,6 +10,23 @@ import * as XLSX from 'xlsx';
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Formata Date -> 'YYYY-MM-DD' usando horário LOCAL (nunca toISOString,
+// que joga pra UTC e pode voltar um dia à noite no fuso do Brasil)
+function paraInputDate(d) {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+// Mesmo padrão já usado na tela de Auditoria: últimos 30 dias até hoje
+function periodoPadrao30Dias() {
+  const hoje = new Date();
+  const inicio = new Date();
+  inicio.setDate(hoje.getDate() - 30);
+  return { de: paraInputDate(inicio), ate: paraInputDate(hoje) };
+}
+
 function formatarData(s) {
   if (!s) return '—';
   try {
@@ -781,8 +798,8 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
   const [loading, setLoading] = useState(true);
   const [erro,    setErro]    = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
-  const [filtroDe,  setFiltroDe]  = useState('');
-  const [filtroAte, setFiltroAte] = useState('');
+  const [filtroDe,  setFiltroDe]  = useState(() => periodoPadrao30Dias().de);
+  const [filtroAte, setFiltroAte] = useState(() => periodoPadrao30Dias().ate);
 
   async function carregar() {
     setLoading(true);

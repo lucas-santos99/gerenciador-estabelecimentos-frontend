@@ -452,6 +452,9 @@
 
 .cli-detalhes-body {
   flex: 1;
+  min-height: 0; /* crítico: sem isso o flex item não encolhe e o overflow-y:auto
+                    nunca ativa — o conteúdo cresce e é cortado pelo overflow:hidden
+                    do .cli-detalhes pai em vez de rolar internamente */
   overflow-y: auto;
   padding: 14px;
   scrollbar-width: thin;
