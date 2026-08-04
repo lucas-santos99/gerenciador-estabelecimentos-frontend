@@ -249,9 +249,9 @@ export default function DetalhesEstabelecimento() {
         <div className="est-info-grid">          <div className="est-info-block">
             <div className="est-info-block-title">Dados da Empresa</div>
             {[
-              { label: "CNPJ",     value: dados.cnpj,           mono: true  },
-              { label: "Telefone", value: dados.telefone,        mono: true  },
-              { label: "E-mail",   value: dados.email_contato,   mono: false },
+              { label: "CNPJ",                value: dados.cnpj,          mono: true  },
+              { label: "Telefone principal",  value: dados.telefone,      mono: true  },
+              { label: "E-mail",              value: dados.email_contato, mono: false },
             ].map(r => (
               <div className="est-info-row" key={r.label}>
                 <span className="est-info-row-label">{r.label}</span>
@@ -260,16 +260,28 @@ export default function DetalhesEstabelecimento() {
                 </span>
               </div>
             ))}
+            {(dados.telefones_extras || []).map((tel, idx) => (
+              <div className="est-info-row" key={`tel-extra-${idx}`}>
+                <span className="est-info-row-label">Telefone adicional</span>
+                <span className="est-info-row-value mono">{tel}</span>
+              </div>
+            ))}
           </div>
 
           <div className="est-info-block">
             <div className="est-info-block-title">Endereço</div>
             <div className="est-info-row">
-              <span className="est-info-row-label">Endereço</span>
+              <span className="est-info-row-label">Endereço principal</span>
               <span className="est-info-row-value">
                 {dados.endereco_completo || "Não informado"}
               </span>
             </div>
+            {(dados.enderecos_extras || []).map((end, idx) => (
+              <div className="est-info-row" key={`end-extra-${idx}`}>
+                <span className="est-info-row-label">Local adicional</span>
+                <span className="est-info-row-value">{end}</span>
+              </div>
+            ))}
           </div>
 
           <div className="est-info-block">

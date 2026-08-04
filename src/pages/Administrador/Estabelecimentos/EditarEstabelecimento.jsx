@@ -31,8 +31,10 @@ export default function EditarEstabelecimento() {
     nome_fantasia:     "",
     cnpj:              "",
     telefone:          "",
+    telefones_extras:  [],
     email_contato:     "",
     endereco_completo: "",
+    enderecos_extras:  [],
     status_assinatura: "ativa",
     data_vencimento:   "",
     logo_url:          "",
@@ -68,8 +70,10 @@ export default function EditarEstabelecimento() {
           nome_fantasia:     data.nome_fantasia     || "",
           cnpj:              docComMascara,
           telefone:          data.telefone          || "",
+          telefones_extras:  Array.isArray(data.telefones_extras) ? data.telefones_extras : [],
           email_contato:     data.email_contato     || "",
           endereco_completo: data.endereco_completo || "",
+          enderecos_extras:  Array.isArray(data.enderecos_extras) ? data.enderecos_extras : [],
           status_assinatura: data.status_assinatura || "ativa",
           data_vencimento:   data.data_vencimento   ?? "",
           logo_url:          data.logo_url          || "",
@@ -88,6 +92,32 @@ export default function EditarEstabelecimento() {
 
   function atualizar(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  function adicionarTelefoneExtra() {
+    setForm(prev => ({ ...prev, telefones_extras: [...prev.telefones_extras, ""] }));
+  }
+  function atualizarTelefoneExtra(idx, valor) {
+    setForm(prev => ({
+      ...prev,
+      telefones_extras: prev.telefones_extras.map((t, i) => i === idx ? valor : t),
+    }));
+  }
+  function removerTelefoneExtra(idx) {
+    setForm(prev => ({ ...prev, telefones_extras: prev.telefones_extras.filter((_, i) => i !== idx) }));
+  }
+
+  function adicionarEnderecoExtra() {
+    setForm(prev => ({ ...prev, enderecos_extras: [...prev.enderecos_extras, ""] }));
+  }
+  function atualizarEnderecoExtra(idx, valor) {
+    setForm(prev => ({
+      ...prev,
+      enderecos_extras: prev.enderecos_extras.map((e, i) => i === idx ? valor : e),
+    }));
+  }
+  function removerEnderecoExtra(idx) {
+    setForm(prev => ({ ...prev, enderecos_extras: prev.enderecos_extras.filter((_, i) => i !== idx) }));
   }
 
   /* ── Função estática de máscara (usada no carregarDados) ────── */
@@ -166,6 +196,8 @@ export default function EditarEstabelecimento() {
           data_vencimento:
             form.status_assinatura === "ativa" ? form.data_vencimento : null,
           limite_operadores: parseInt(form.limite_operadores) || 3,
+          telefones_extras:  form.telefones_extras.map(t => t.trim()).filter(Boolean),
+          enderecos_extras:  form.enderecos_extras.map(e => e.trim()).filter(Boolean),
         }),
       });
       const json = await resp.json();
@@ -452,8 +484,22 @@ export default function EditarEstabelecimento() {
             <div className="est-form-section-title">📞 Contato</div>
             <div className="est-form-grid">
               <div className="est-form-group">
-                <label className="est-label">Telefone</label>
+                <label className="est-label">Telefone/celular principal</label>
                 <input className="est-input" name="telefone" value={form.telefone} onChange={atualizar} />
+                {form.telefones_extras.map((tel, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <input
+                      className="est-input"
+                      placeholder="(53) 99999-9999"
+                      value={tel}
+                      onChange={e => atualizarTelefoneExtra(idx, e.target.value)}
+                    />
+                    <button type="button" className="est-btn est-btn-ghost" onClick={() => removerTelefoneExtra(idx)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={adicionarTelefoneExtra}>
+                  + Adicionar telefone
+                </button>
               </div>
               <div className="est-form-group">
                 <label className="est-label">E-mail de Contato</label>
@@ -462,6 +508,23 @@ export default function EditarEstabelecimento() {
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
                 <input className="est-input" name="endereco_completo" value={form.endereco_completo} onChange={atualizar} />
+                {form.enderecos_extras.map((end, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <input
+                      className="est-input"
+                      placeholder="Rua, número, bairro, cidade - UF"
+                      value={end}
+                      onChange={e => atualizarEnderecoExtra(idx, e.target.value)}
+                    />
+                    <button type="button" className="est-btn est-btn-ghost" onClick={() => removerEnderecoExtra(idx)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={adicionarEnderecoExtra}>
+                  + Adicionar outro local de atuação
+                </button>
+                <small style={{ display: "block", marginTop: 4, color: "var(--text-muted, #888)", fontSize: 12 }}>
+                  Use se o estabelecimento atua em mais de um endereço.
+                </small>
               </div>
               <div className="est-form-group est-form-full">
                 <label className="est-label">Fuso Horário</label>

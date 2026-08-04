@@ -10,9 +10,11 @@ import '../Configuracoes.css';
 const CAMPOS_ALTERAVEIS = [
   { key: 'nome_fantasia',     label: 'Nome do Estabelecimento' },
   { key: 'cnpj',              label: 'CNPJ' },
-  { key: 'telefone',          label: 'Telefone' },
+  { key: 'telefone',          label: 'Telefone/celular principal' },
+  { key: 'telefones_extras',  label: 'Telefones adicionais' },
   { key: 'email_contato',     label: 'E-mail de contato' },
-  { key: 'endereco_completo', label: 'Endereço' },
+  { key: 'endereco_completo', label: 'Endereço principal' },
+  { key: 'enderecos_extras',  label: 'Endereços adicionais' },
   { key: 'logo',              label: 'Logo' },
   { key: 'outro',             label: 'Outro (descreva abaixo)' },
 ];
@@ -69,8 +71,10 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar })
     if (dadosAtuais.nome_fantasia)     linhas.push(`• Nome: ${dadosAtuais.nome_fantasia}`);
     if (dadosAtuais.cnpj)             linhas.push(`• CNPJ: ${dadosAtuais.cnpj}`);
     if (dadosAtuais.telefone)         linhas.push(`• Tel: ${dadosAtuais.telefone}`);
+    (dadosAtuais.telefones_extras || []).forEach(tel => linhas.push(`• Tel adicional: ${tel}`));
     if (dadosAtuais.email_contato)    linhas.push(`• E-mail: ${dadosAtuais.email_contato}`);
     if (dadosAtuais.endereco_completo) linhas.push(`• Endereço: ${dadosAtuais.endereco_completo}`);
+    (dadosAtuais.enderecos_extras || []).forEach(end => linhas.push(`• Local adicional: ${end}`));
 
     return linhas.join('\n');
   }
@@ -436,16 +440,25 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
             <div className="cfg-section">
               <span className="cfg-section-titulo">🏪 Dados do Estabelecimento</span>
               <div className="cfg-form-grid">
-                <Campo label="Nome Fantasia"     valor={dados?.nome_fantasia} />
-                <Campo label="CNPJ"              valor={dados?.cnpj} />
-                <Campo label="Telefone"          valor={dados?.telefone} />
-                <Campo label="E-mail de contato" valor={dados?.email_contato} />
+                <Campo label="Nome Fantasia"          valor={dados?.nome_fantasia} />
+                <Campo label="CNPJ"                   valor={dados?.cnpj} />
+                <Campo label="Telefone/celular principal" valor={dados?.telefone} />
+                <Campo label="E-mail de contato"      valor={dados?.email_contato} />
+                {(dados?.telefones_extras || []).map((tel, idx) => (
+                  <Campo key={`tel-extra-${idx}`} label={`Telefone adicional ${idx + 1}`} valor={tel} />
+                ))}
                 <div className="cfg-form-group cfg-form-full">
                   <span className="cfg-label">Endereço Completo</span>
                   <div className="cfg-campo-valor">
                     {dados?.endereco_completo || <span className="cfg-campo-vazio">Não informado</span>}
                   </div>
                 </div>
+                {(dados?.enderecos_extras || []).map((end, idx) => (
+                  <div className="cfg-form-group cfg-form-full" key={`end-extra-${idx}`}>
+                    <span className="cfg-label">Local adicional {idx + 1}</span>
+                    <div className="cfg-campo-valor">{end}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

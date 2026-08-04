@@ -29,6 +29,14 @@ function aplicarMascaraDoc(s, tipo) {
     .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d)/, "$1-$2");
 }
 
+// Data de hoje + 1 mês, formatada 'YYYY-MM-DD' (local, não UTC) — usada
+// como sugestão inicial de vencimento no modo Assinatura Mensal.
+function dataMaisUmMes() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function NovoEstabelecimento() {
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
@@ -37,18 +45,21 @@ export default function NovoEstabelecimento() {
     nome_fantasia:        "",
     cnpj:                 "",
     telefone:             "",
+    telefones_extras:     [], // telefones adicionais, além do principal acima
     email_contato:        "",
     endereco_completo:    "",
+    enderecos_extras:     [], // endereços adicionais, pra quem tem mais de um local
     senha:                "",
     status_assinatura:    "ativa",
-    data_vencimento:      "",
+    data_vencimento:      dataMaisUmMes(), // sugestão pra quando o modo for Assinatura Mensal
     tipo_estabelecimento: "mercearia",
     limite_operadores:    3,
     valor_mensalidade:    "", // vazio = usa o padrão global
     timezone:             "America/Sao_Paulo", // fuso do estabelecimento — Brasília por padrão
+    motivo_periodo_teste: "", // opcional, só usado quando usarPeriodoTeste = true
   });
 
-  const [usarPeriodoTeste,  setUsarPeriodoTeste]  = useState(true);
+  const [usarPeriodoTeste,  setUsarPeriodoTeste]  = useState(false); // Assinatura Mensal é o padrão agora
   const [tipoCpfCnpj,      setTipoCpfCnpj]      = useState("cpf");
   const [cpfCnpjErro,      setCpfCnpjErro]      = useState("");
   const [mensalidadePadrao, setMensalidadePadrao] = useState(49.90);
@@ -65,6 +76,32 @@ export default function NovoEstabelecimento() {
   /* ── helpers ─────────────────────────────────────────────── */
   function atualizar(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  function adicionarTelefoneExtra() {
+    setForm(prev => ({ ...prev, telefones_extras: [...prev.telefones_extras, ""] }));
+  }
+  function atualizarTelefoneExtra(idx, valor) {
+    setForm(prev => ({
+      ...prev,
+      telefones_extras: prev.telefones_extras.map((t, i) => i === idx ? valor : t),
+    }));
+  }
+  function removerTelefoneExtra(idx) {
+    setForm(prev => ({ ...prev, telefones_extras: prev.telefones_extras.filter((_, i) => i !== idx) }));
+  }
+
+  function adicionarEnderecoExtra() {
+    setForm(prev => ({ ...prev, enderecos_extras: [...prev.enderecos_extras, ""] }));
+  }
+  function atualizarEnderecoExtra(idx, valor) {
+    setForm(prev => ({
+      ...prev,
+      enderecos_extras: prev.enderecos_extras.map((e, i) => i === idx ? valor : e),
+    }));
+  }
+  function removerEnderecoExtra(idx) {
+    setForm(prev => ({ ...prev, enderecos_extras: prev.enderecos_extras.filter((_, i) => i !== idx) }));
   }
 
   function formatarTipo(texto) {
@@ -154,7 +191,7 @@ export default function NovoEstabelecimento() {
     if (usarPeriodoTeste) {
       const d = new Date();
       d.setDate(d.getDate() + parseInt(diasTeste));
-      dataVencimentoFinal = d.toISOString().split("T")[0];
+      dataVencimentoFinal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     } else if (form.status_assinatura === "ativa" && !form.data_vencimento) {
       setErro("Data de vencimento é obrigatória para estabelecimentos ativos.");
       return;
@@ -177,6 +214,9 @@ export default function NovoEstabelecimento() {
           data_vencimento:      dataVencimentoFinal,
           tipo_estabelecimento: tipoFinal,
           limite_operadores:    parseInt(form.limite_operadores) || 3,
+          telefones_extras:     form.telefones_extras.map(t => t.trim()).filter(Boolean),
+          enderecos_extras:     form.enderecos_extras.map(e => e.trim()).filter(Boolean),
+          motivo_periodo_teste: usarPeriodoTeste ? (form.motivo_periodo_teste.trim() || null) : null,
           valor_mensalidade:    form.valor_mensalidade ? parseFloat(form.valor_mensalidade) : null,
         }),
       });
@@ -238,7 +278,6 @@ export default function NovoEstabelecimento() {
                 <input
                   className="est-input"
                   name="nome_fantasia"
-                  placeholder="Ex: Mercearia do João"
                   value={form.nome_fantasia}
                   onChange={atualizar}
                   required
@@ -333,7 +372,7 @@ export default function NovoEstabelecimento() {
             <div className="est-form-grid">
 
               <div className="est-form-group">
-                <label className="est-label">Telefone</label>
+                <label className="est-label">Telefone/celular principal</label>
                 <input
                   className="est-input"
                   name="telefone"
@@ -341,6 +380,20 @@ export default function NovoEstabelecimento() {
                   value={form.telefone}
                   onChange={atualizar}
                 />
+                {form.telefones_extras.map((tel, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <input
+                      className="est-input"
+                      placeholder="(53) 99999-9999"
+                      value={tel}
+                      onChange={e => atualizarTelefoneExtra(idx, e.target.value)}
+                    />
+                    <button type="button" className="est-btn est-btn-ghost" onClick={() => removerTelefoneExtra(idx)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={adicionarTelefoneExtra}>
+                  + Adicionar telefone
+                </button>
               </div>
 
               <div className="est-form-group">
@@ -364,6 +417,23 @@ export default function NovoEstabelecimento() {
                   value={form.endereco_completo}
                   onChange={atualizar}
                 />
+                {form.enderecos_extras.map((end, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <input
+                      className="est-input"
+                      placeholder="Rua, número, bairro, cidade - UF"
+                      value={end}
+                      onChange={e => atualizarEnderecoExtra(idx, e.target.value)}
+                    />
+                    <button type="button" className="est-btn est-btn-ghost" onClick={() => removerEnderecoExtra(idx)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={adicionarEnderecoExtra}>
+                  + Adicionar outro local de atuação
+                </button>
+                <small style={{ display: "block", marginTop: 4, color: "var(--text-muted, #888)", fontSize: 12 }}>
+                  Use se o estabelecimento atua em mais de um endereço.
+                </small>
               </div>
 
               <div className="est-form-group est-form-full">
@@ -427,9 +497,13 @@ export default function NovoEstabelecimento() {
                   <button
                     type="button"
                     className={`est-periodo-btn${!usarPeriodoTeste ? " ativo" : ""}`}
-                    onClick={() => setUsarPeriodoTeste(false)}
+                    onClick={() => {
+                      setUsarPeriodoTeste(false);
+                      // Se ainda não tem vencimento definido, sugere +1 mês a partir de hoje
+                      setForm(prev => prev.data_vencimento ? prev : ({ ...prev, data_vencimento: dataMaisUmMes() }));
+                    }}
                   >
-                    📅 Data manual
+                    📅 Assinatura mensal
                   </button>
                 </div>
               </div>
@@ -469,6 +543,16 @@ export default function NovoEstabelecimento() {
                         })()}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="est-form-group est-form-full">
+                    <label className="est-label">Motivo do período de teste (opcional)</label>
+                    <input
+                      className="est-input"
+                      placeholder="Ex: indicação de parceiro, negociação em andamento…"
+                      value={form.motivo_periodo_teste}
+                      onChange={e => setForm(prev => ({ ...prev, motivo_periodo_teste: e.target.value }))}
+                    />
                   </div>
                 </>
               ) : (

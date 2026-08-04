@@ -77,6 +77,10 @@ export default function Cobrancas() {
 
   const [loading, setLoading]   = useState(true);
   const [lista,   setLista]     = useState([]);
+  // Número escolhido pra cobrança de WhatsApp, por estabelecimento —
+  // chave = mercearia_id, valor = telefone selecionado. Sem entrada
+  // aqui = usa o telefone principal (comportamento padrão).
+  const [telefoneEscolhido, setTelefoneEscolhido] = useState({});
   const [config,  setConfig]    = useState(null);
   const [processando, setProcessando] = useState(null);
   const [mostrarCobrados, setMostrarCobrados] = useState(false);
@@ -213,7 +217,11 @@ export default function Cobrancas() {
   }
 
   async function cobrarWhatsapp(m) {
-    const telefone = (m.telefone || "").replace(/\D/g, "");
+    // Usa o número escolhido no seletor (se houver mais de um cadastrado);
+    // sem escolha explícita, cai no telefone principal — comportamento
+    // igual ao de antes, quando só existia um telefone por estabelecimento.
+    const numeroEscolhido = telefoneEscolhido[m.id] || m.telefone;
+    const telefone = (numeroEscolhido || "").replace(/\D/g, "");
     if (!telefone) {
       alert(`"${m.nome_fantasia}" não tem telefone cadastrado.`);
       return;
@@ -476,7 +484,25 @@ export default function Cobrancas() {
                   </div>
                   <div className="cob-item-detalhes">
                     <span>📅 {formatarData(m.data_vencimento)}</span>
-                    {m.telefone && <span>📱 {m.telefone}</span>}
+                    {m.telefone && !m.telefones_extras?.length && <span>📱 {m.telefone}</span>}
+                    {m.telefone && m.telefones_extras?.length > 0 && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        📱
+                        <select
+                          className="cob-select-telefone"
+                          value={telefoneEscolhido[m.id] || m.telefone}
+                          onChange={e => setTelefoneEscolhido(prev => ({ ...prev, [m.id]: e.target.value }))}
+                          onClick={e => e.stopPropagation()}
+                          style={{ fontSize: "inherit", padding: "1px 4px" }}
+                          title="Escolher pra qual número enviar a cobrança"
+                        >
+                          <option value={m.telefone}>{m.telefone} (principal)</option>
+                          {m.telefones_extras.map((tel, idx) => (
+                            <option key={idx} value={tel}>{tel}</option>
+                          ))}
+                        </select>
+                      </span>
+                    )}
                     {m.email_contato && <span>✉️ {m.email_contato}</span>}
                     {m.valor_mensalidade && <span>💰 R$ {parseFloat(m.valor_mensalidade).toFixed(2).replace(".", ",")}</span>}
                   </div>
