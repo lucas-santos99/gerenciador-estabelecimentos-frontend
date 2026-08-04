@@ -37,6 +37,7 @@ export default function EditarEstabelecimento() {
     data_vencimento:   "",
     logo_url:          "",
     limite_operadores: 3,
+    timezone:          "America/Sao_Paulo",
   });
 
   const [carregando,   setCarregando]   = useState(true);
@@ -73,6 +74,7 @@ export default function EditarEstabelecimento() {
           data_vencimento:   data.data_vencimento   ?? "",
           logo_url:          data.logo_url          || "",
           limite_operadores: data.limite_operadores ?? 3,
+          timezone:          data.timezone          || "America/Sao_Paulo",
         });
       } else {
         setErro(data.error || "Erro ao carregar.");
@@ -460,6 +462,18 @@ export default function EditarEstabelecimento() {
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
                 <input className="est-input" name="endereco_completo" value={form.endereco_completo} onChange={atualizar} />
+              </div>
+              <div className="est-form-group est-form-full">
+                <label className="est-label">Fuso Horário</label>
+                <select className="est-select" name="timezone" value={form.timezone} onChange={atualizar}>
+                  <option value="America/Sao_Paulo">Brasília (UTC-3) — SP, RJ, MG, RS, BA e a maioria dos estados</option>
+                  <option value="America/Manaus">Amazônia (UTC-4) — AM, MT, MS, RO, RR</option>
+                  <option value="America/Rio_Branco">Acre (UTC-5) — AC e oeste do AM</option>
+                  <option value="America/Noronha">Fernando de Noronha (UTC-2)</option>
+                </select>
+                <small style={{ display: "block", marginTop: 4, color: "var(--text-muted, #888)", fontSize: 12 }}>
+                  Usado pra calcular corretamente "hoje" nos relatórios, na auditoria e no financeiro deste estabelecimento.
+                </small>
               </div>
             </div>
           </div>

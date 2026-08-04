@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
+import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import "./LayoutEstabelecimento.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -192,20 +193,28 @@ export default function LayoutEstabelecimento({
     return () => clearInterval(id);
   }, []);
 
+  // Timezone oficial do estabelecimento — buscado junto com fiado_ativo
+  // logo abaixo. Usado pra calcular "dias restantes" da licença sem
+  // depender do relógio/fuso de quem está com a tela aberta: dois
+  // usuários olhando o mesmo estabelecimento de cidades diferentes têm
+  // que ver a MESMA contagem.
+  const [estabTimezone, setEstabTimezone] = useState(TIMEZONE_PADRAO);
+
   const licenca = (() => {
     if (!isMerchant || !licencaInfo) return null;
     const { status_assinatura, data_vencimento } = licencaInfo;
     if (status_assinatura === 'bloqueada') return { tipo: 'bloqueada', texto: 'Licença bloqueada', dias: null };
     if (!data_vencimento) return null;
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const venc = new Date(data_vencimento + 'T12:00:00'); venc.setHours(0, 0, 0, 0);
-    const diff = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
-    const dataFmt = new Date(data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
+
+    const hojeStr = hojeStrTZ(estabTimezone);
+    const diff = diasEntre(hojeStr, data_vencimento);
+    const dataFmt = new Date(data_vencimento + 'T12:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
     if (diff < 0)   return { tipo: 'vencida',   texto: 'Licença vencida',         dias: diff,  dataFmt };
     if (diff === 0) {
       // Último dia — mostra contagem regressiva em horas/minutos até o
-      // fim do dia, em vez de "vence em 0 dias".
-      const fimDoDia    = new Date(data_vencimento + 'T23:59:59');
+      // fim do dia NO FUSO DO ESTABELECIMENTO, em vez de "vence em 0 dias".
+      const fimDoDia    = fimDiaTZ(data_vencimento, estabTimezone);
       const msRestantes = fimDoDia - new Date();
       let contagem;
       if (msRestantes <= 0) {
@@ -224,6 +233,7 @@ export default function LayoutEstabelecimento({
 
   // Só pra saber se menciona "Fiado" no nome do menu — busca uma vez,
   // bem leve, não precisa repetir em nenhum outro lugar desse arquivo.
+  // Aproveita a mesma chamada pra pegar o timezone oficial (acima).
   const [fiadoAtivo, setFiadoAtivo] = useState(true);
   useEffect(() => {
     if (!estabelecimentoId) return;
@@ -233,8 +243,9 @@ export default function LayoutEstabelecimento({
         if (resp.ok) {
           const d = await resp.json();
           setFiadoAtivo(d.fiado_ativo !== false);
+          setEstabTimezone(d.timezone || TIMEZONE_PADRAO);
         }
-      } catch { /* mantém o label com "Fiado" por padrão se isso falhar */ }
+      } catch { /* mantém os defaults se isso falhar */ }
     })();
   }, [estabelecimentoId]);
 
@@ -480,6 +491,7 @@ export default function LayoutEstabelecimento({
               nomeEstabelecimento={nomeEstabelecimento}
               dataVencimento={licencaInfo.data_vencimento}
               statusAssinatura={licencaInfo.status_assinatura}
+              timezone={estabTimezone}
               onRenovado={onLicencaAtualizada}
             />
           )}

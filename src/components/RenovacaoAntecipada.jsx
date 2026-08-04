@@ -1,6 +1,7 @@
 // src/components/RenovacaoAntecipada.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../utils/api';
+import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from '../utils/fusoHorario';
 import './RenovacaoAntecipada.css';
 
 /* ════════════════════════════════════════════════════════════
@@ -11,7 +12,7 @@ import './RenovacaoAntecipada.css';
    acumula os 30 dias a partir do vencimento atual, então pagar
    adiantado nunca faz o estabelecimento perder dias.
 ════════════════════════════════════════════════════════════ */
-export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, dataVencimento, statusAssinatura, onRenovado }) {
+export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, dataVencimento, statusAssinatura, timezone = TIMEZONE_PADRAO, onRenovado }) {
   const pollingRef = useRef(null);
 
   const [diasAviso,   setDiasAviso]   = useState(null); // null = ainda não sabemos, não decide nada
@@ -41,18 +42,15 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
 
   const diasRestantes = (() => {
     if (!dataVencimento) return null;
-    const venc = new Date(dataVencimento + "T12:00:00");
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    venc.setHours(0, 0, 0, 0);
-    return Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+    return diasEntre(hojeStrTZ(timezone), dataVencimento);
   })();
 
   // No último dia, troca "vence hoje" por uma contagem em horas/minutos
-  // até o fim do dia — bem mais claro que está vencendo ali mesmo.
+  // até o fim do dia NO FUSO DO ESTABELECIMENTO — bem mais claro que
+  // está vencendo ali mesmo, e consistente pra qualquer um que olhar.
   const contagemHoje = (() => {
     if (diasRestantes !== 0 || !dataVencimento) return null;
-    const fimDoDia    = new Date(dataVencimento + "T23:59:59");
+    const fimDoDia    = fimDiaTZ(dataVencimento, timezone);
     const msRestantes = fimDoDia - new Date();
     if (msRestantes <= 0) return "a qualquer momento";
     const horas   = Math.floor(msRestantes / (1000 * 60 * 60));
@@ -246,7 +244,7 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
                   <>
                     <p className="renov-modal-desc">
                       Pagando agora, os 30 dias somam a partir do seu vencimento atual
-                      ({new Date(dataVencimento + "T12:00:00").toLocaleDateString("pt-BR")}) — você não perde nenhum dia já pago.
+                      ({new Date(dataVencimento + "T12:00:00Z").toLocaleDateString("pt-BR", { timeZone: "UTC" })}) — você não perde nenhum dia já pago.
                     </p>
 
                     <div className="renov-plano-unico">

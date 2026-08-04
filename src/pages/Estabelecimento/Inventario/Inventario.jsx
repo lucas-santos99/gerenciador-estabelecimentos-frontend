@@ -9,7 +9,10 @@ const fmt  = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency'
 const fmtQ = (v, u) => u === 'kg'
   ? parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kg'
   : Math.trunc(parseFloat(v || 0)) + ' un';
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const fmtData = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 const STATUS_LABEL  = { em_andamento: 'Em andamento', finalizado: 'Finalizado', cancelado: 'Cancelado' };
