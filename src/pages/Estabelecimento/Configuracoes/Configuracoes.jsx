@@ -58,11 +58,12 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
   // chave aqui é o que define se o campo está selecionado ou não.
   const [valoresNovos, setValoresNovos] = useState({});
   const [detalhes, setDetalhes]     = useState('');
-  const [enviado,  setEnviado]      = useState(false);
+  const [feedback, setFeedback] = useState(null); // { texto } — mensagem específica da última ação
   const [enviandoPainel, setEnviandoPainel] = useState(false);
   const [erroPainel,     setErroPainel]     = useState('');
 
   function toggleCampo(key) {
+    setFeedback(null);
     setValoresNovos(prev => {
       if (key in prev) {
         const { [key]: _, ...resto } = prev;
@@ -73,6 +74,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
   }
 
   function atualizarValorNovo(key, valor) {
+    setFeedback(null);
     setValoresNovos(prev => ({ ...prev, [key]: valor }));
   }
 
@@ -113,12 +115,12 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
     const msg = gerarMensagem();
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
-    setEnviado(true);
+    setFeedback('💬 WhatsApp aberto — confirme o envio por lá.');
   }
 
   function copiarMensagem() {
     navigator.clipboard.writeText(gerarMensagem());
-    setEnviado(true);
+    setFeedback('📋 Mensagem copiada! Cole onde quiser enviar.');
   }
 
   async function enviarPainel() {
@@ -136,7 +138,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
         const j = await resp.json().catch(() => ({}));
         setErroPainel(j.error || 'Erro ao enviar solicitação.');
       } else {
-        setEnviado(true);
+        setFeedback('✓ Solicitação enviada! O administrador vai receber o pedido.');
       }
     } catch {
       setErroPainel('Erro ao enviar solicitação. Verifique sua conexão.');
@@ -144,7 +146,14 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
     setEnviandoPainel(false);
   }
 
-  const podeEnviar = camposSelecionados.length > 0 || detalhes.trim();
+  // Cada campo selecionado precisa ter um valor novo preenchido — não
+  // basta marcar a caixinha (ex: marcar "Outro" e deixar em branco não
+  // gera uma solicitação útil pro admin). Se nenhum campo foi
+  // selecionado, exige ao menos os detalhes preenchidos.
+  const todosCamposComValor = camposSelecionados.every(k => (valoresNovos[k] || '').trim());
+  const podeEnviar = camposSelecionados.length > 0
+    ? todosCamposComValor
+    : detalhes.trim().length > 0;
 
   useEffect(() => {
     function handleEsc(e) { if (e.key === 'Escape') onFechar(); }
@@ -221,15 +230,23 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
             rows={3}
             placeholder="Alguma outra informação que ajude o administrador a entender o pedido…"
             value={detalhes}
-            onChange={e => setDetalhes(e.target.value)}
+            onChange={e => { setDetalhes(e.target.value); setFeedback(null); }}
           />
         </div>
 
         {erroPainel && <div className="cfg-alert erro">⚠️ {erroPainel}</div>}
 
-        {enviado && (
+        {feedback && (
           <div className="cfg-modal-enviado">
-            ✓ Solicitação enviada! O administrador vai receber o pedido.
+            {feedback}
+          </div>
+        )}
+
+        {!podeEnviar && (
+          <div style={{ fontSize: 12, color: "var(--text-muted, #888)", marginTop: -4, marginBottom: 8 }}>
+            {camposSelecionados.length > 0
+              ? "Preencha o novo valor de cada campo selecionado pra poder enviar."
+              : "Selecione um campo ou escreva os detalhes pra poder enviar."}
           </div>
         )}
 

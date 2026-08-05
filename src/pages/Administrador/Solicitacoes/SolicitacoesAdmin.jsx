@@ -27,6 +27,18 @@ export default function SolicitacoesAdmin() {
   const [respostaAberta, setRespostaAberta] = useState(null); // { id, status }
   const [respostaTexto,  setRespostaTexto]  = useState("");
 
+  const [fontScale, setFontScale] = useState(() => {
+    const s = localStorage.getItem("sol-font-scale");
+    return s ? parseFloat(s) : 1;
+  });
+  function changeFontScale(delta) {
+    setFontScale(prev => {
+      const next = Math.min(1.4, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem("sol-font-scale", next);
+      return next;
+    });
+  }
+
   const carregar = useCallback(async () => {
     setLoading(true);
     try {
@@ -74,11 +86,19 @@ export default function SolicitacoesAdmin() {
 
   return (
     <LayoutAdmin>
-      <div className="sol-wrapper">
+      <div className="sol-wrapper" style={{ "--sol-font-scale": fontScale }}>
+
         <div className="sol-header">
-          <div>
-            <h1 className="sol-title">📨 Solicitações de Alteração</h1>
-            <span className="sol-subtitle">Pedidos de mudança de dados enviados pelos estabelecimentos</span>
+          <div className="sol-header-left">
+            <span className="sol-breadcrumb">📨 Painel Administrativo</span>
+            <h1 className="sol-title">Solicitações de <span>Alteração</span></h1>
+            <p className="sol-subtitle">
+              Pedidos de mudança de dados enviados pelos estabelecimentos.
+            </p>
+          </div>
+          <div className="sol-header-actions">
+            <button className="sol-zoom-btn" onClick={() => changeFontScale(-0.1)} disabled={fontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="sol-zoom-btn" onClick={() => changeFontScale(0.1)}  disabled={fontScale >= 1.4} title="Aumentar fonte">A+</button>
           </div>
         </div>
 
