@@ -275,7 +275,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
             disabled={!podeEnviar || enviandoPainel}
             title="Envia a solicitação direto pro painel do administrador"
           >
-            {enviandoPainel ? "⏳ Enviando…" : "📨 Enviar pro Painel"}
+            {enviandoPainel ? "⏳ Enviando…" : "📨 Enviar Solicitação"}
           </button>
         </div>
       </div>

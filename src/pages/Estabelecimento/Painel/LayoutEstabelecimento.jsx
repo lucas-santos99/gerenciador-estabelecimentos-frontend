@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Painel/LayoutEstabelecimento.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
@@ -252,20 +252,29 @@ export default function LayoutEstabelecimento({
   // Avisa quando uma solicitação de alteração de dados foi atendida ou
   // recusada e o comerciante ainda não viu o resultado.
   const [notificacoesResolucao, setNotificacoesResolucao] = useState([]);
+  const buscarNotificacoes = useCallback(async () => {
+    if (!estabelecimentoId || !isMerchant) return;
+    try {
+      const resp = await apiFetch('/api/solicitacoes/minhas');
+      if (resp.ok) {
+        const data = await resp.json();
+        setNotificacoesResolucao(
+          (data || []).filter(s => s.status !== 'pendente' && !s.visto_pelo_estabelecimento)
+        );
+      }
+    } catch { /* aviso não é crítico pro painel carregar */ }
+  }, [estabelecimentoId, isMerchant]);
+
+  useEffect(() => { buscarNotificacoes(); }, [buscarNotificacoes]);
+
+  // Confere de novo a cada 30s — assim, se o admin atender ou recusar
+  // enquanto o comerciante já está com o painel aberto, o aviso aparece
+  // sozinho, sem precisar recarregar a página.
   useEffect(() => {
     if (!estabelecimentoId || !isMerchant) return;
-    (async () => {
-      try {
-        const resp = await apiFetch('/api/solicitacoes/minhas');
-        if (resp.ok) {
-          const data = await resp.json();
-          setNotificacoesResolucao(
-            (data || []).filter(s => s.status !== 'pendente' && !s.visto_pelo_estabelecimento)
-          );
-        }
-      } catch { /* aviso não é crítico pro painel carregar */ }
-    })();
-  }, [estabelecimentoId, isMerchant]);
+    const id = setInterval(buscarNotificacoes, 30000);
+    return () => clearInterval(id);
+  }, [estabelecimentoId, isMerchant, buscarNotificacoes]);
 
   async function dispensarNotificacao(id) {
     setNotificacoesResolucao(prev => prev.filter(n => n.id !== id));

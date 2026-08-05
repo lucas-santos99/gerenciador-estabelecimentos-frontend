@@ -1,5 +1,5 @@
 // src/pages/Administrador/Solicitacoes/SolicitacoesAdmin.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import "./SolicitacoesAdmin.css";
@@ -19,8 +19,16 @@ const ABAS = [
   { key: "",          label: "Todas" },
 ];
 
+// Atualiza a lista sozinha a cada 20s — pra ver solicitações novas
+// (ou respostas, do lado do estabelecimento) sem precisar recarregar
+// a página na mão.
+const INTERVALO_ATUALIZACAO = 20000;
+
 export default function SolicitacoesAdmin() {
   const [aba,          setAba]          = useState("pendente");
+  const [filtroTipo,      setFiltroTipo]      = useState("");
+  const [filtroDataInicio, setFiltroDataInicio] = useState("");
+  const [filtroDataFim,    setFiltroDataFim]    = useState("");
   const [lista,        setLista]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [processando,  setProcessando]  = useState(null); // id da solicitação em ação
@@ -39,27 +47,52 @@ export default function SolicitacoesAdmin() {
     });
   }
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
+  const carregar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setLoading(true);
     try {
-      const params = aba ? `?status=${aba}` : "";
-      const resp = await apiFetch(`/api/solicitacoes/admin${params}`);
+      const params = new URLSearchParams({
+        ...(aba && { status: aba }),
+        ...(filtroTipo && { tipo_estabelecimento: filtroTipo }),
+        ...(filtroDataInicio && { data_inicio: filtroDataInicio }),
+        ...(filtroDataFim && { data_fim: filtroDataFim }),
+      });
+      const resp = await apiFetch(`/api/solicitacoes/admin?${params}`);
       const data = resp.ok ? await resp.json() : [];
       setLista(data);
     } catch {
-      setLista([]);
+      if (!silencioso) setLista([]);
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
-  }, [aba]);
+  }, [aba, filtroTipo, filtroDataInicio, filtroDataFim]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Atualização automática em segundo plano — sem piscar loading nem
+  // precisar recarregar a página pra ver solicitação nova ou resposta.
+  useEffect(() => {
+    const id = setInterval(() => carregar(true), INTERVALO_ATUALIZACAO);
+    return () => clearInterval(id);
+  }, [carregar]);
+
+  // Tipos de estabelecimento que aparecem na lista carregada — usado
+  // pra montar as opções do filtro sem precisar de outra rota.
+  const tiposDisponiveis = useMemo(() => {
+    return [...new Set(lista.map(s => s.tipo_estabelecimento).filter(Boolean))].sort();
+  }, [lista]);
 
   function abrirWhatsApp(s) {
     const numero = (s.telefone_estabelecimento || "").replace(/\D/g, "");
     if (!numero) return;
     const msg = `Olá! Sobre a sua solicitação de alteração de dados enviada em ${formatarDataHora(s.criado_em)}...`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+  }
+
+  function abrirEmail(s) {
+    if (!s.email_estabelecimento) return;
+    const assunto = `Sobre sua solicitação de alteração de dados — ${s.nome_estabelecimento || ""}`;
+    const corpo   = `Olá! Sobre a sua solicitação de alteração de dados enviada em ${formatarDataHora(s.criado_em)}...`;
+    window.location.href = `mailto:${s.email_estabelecimento}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   }
 
   function abrirResposta(id, status) {
@@ -114,6 +147,32 @@ export default function SolicitacoesAdmin() {
           ))}
         </div>
 
+        <div className="sol-filtros">
+          <div className="sol-filtro-group">
+            <label className="sol-filtro-label">Tipo</label>
+            <select className="sol-filtro-select" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+              <option value="">Todos</option>
+              {tiposDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="sol-filtro-group">
+            <label className="sol-filtro-label">De</label>
+            <input className="sol-filtro-input" type="date" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} />
+          </div>
+          <div className="sol-filtro-group">
+            <label className="sol-filtro-label">Até</label>
+            <input className="sol-filtro-input" type="date" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} />
+          </div>
+          {(filtroTipo || filtroDataInicio || filtroDataFim) && (
+            <button
+              className="sol-filtro-limpar"
+              onClick={() => { setFiltroTipo(""); setFiltroDataInicio(""); setFiltroDataFim(""); }}
+            >
+              ✕ Limpar
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <div className="sol-loading"><div className="sol-spinner" /> Carregando…</div>
         ) : lista.length === 0 ? (
@@ -144,6 +203,11 @@ export default function SolicitacoesAdmin() {
                         💬 WhatsApp
                       </button>
                     </>
+                  )}
+                  {s.email_estabelecimento && (
+                    <button className="sol-btn-email" onClick={() => abrirEmail(s)} title="Enviar e-mail">
+                      ✉️ E-mail
+                    </button>
                   )}
                 </div>
 
