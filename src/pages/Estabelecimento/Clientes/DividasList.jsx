@@ -10,6 +10,12 @@ import * as XLSX from 'xlsx';
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// CPF tem 11 dígitos, CNPJ tem 14 — rotula certinho na exibição sem
+// precisar de um campo separado marcando o tipo.
+function labelDocumento(valor) {
+  return (valor || '').replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+}
+
 // Formata Date -> 'YYYY-MM-DD' usando horário LOCAL (nunca toISOString,
 // que joga pra UTC e pode voltar um dia à noite no fuso do Brasil)
 function paraInputDate(d) {
@@ -720,7 +726,7 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
           )}
         </div>
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
-        {cliente.cpf && <span className="cli-card-tel">🪪 CPF: {cliente.cpf}</span>}
+        {cliente.cpf && <span className="cli-card-tel">🪪 {labelDocumento(cliente.cpf)}: {cliente.cpf}</span>}
       </div>
 
       {/* Corpo com dívida/limite/vencimento — só na aba Fiado */}

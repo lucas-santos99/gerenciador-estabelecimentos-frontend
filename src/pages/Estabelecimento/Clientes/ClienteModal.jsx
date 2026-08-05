@@ -21,12 +21,23 @@ function formatarDataInput(s) {
   catch { return ''; }
 }
 
-function formatarCpf(valor) {
-  const d = (valor || '').replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
-  return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+// Detecta CPF (até 11 dígitos) ou CNPJ (12-14 dígitos) pela quantidade
+// digitada — mesmo padrão usado no PDV, campo único que troca de
+// máscara sozinho conforme a pessoa digita.
+function formatarCpfCnpj(valor) {
+  const d = (valor || '').replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 11) {
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  }
+  // CNPJ
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0,2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`;
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
 }
 
 /* ════════════════════════════════════════════════════════════ */
@@ -42,7 +53,7 @@ export default function ClienteModal({
 
   const [nome,           setNome]           = useState(cliente?.nome || '');
   const [telefone,       setTelefone]       = useState(cliente?.telefone || '');
-  const [cpf,            setCpf]            = useState(cliente?.cpf || '');
+  const [cpf,            setCpf]            = useState(formatarCpfCnpj(cliente?.cpf || ''));
   const [permiteFiado,   setPermiteFiado]   = useState(cliente?.permite_fiado !== false);
   const [semLimite,      setSemLimite]      = useState(
     !cliente || parseFloat(cliente?.limite_credito || 0) === 0
@@ -172,13 +183,13 @@ export default function ClienteModal({
               />
             </div>
             <div className="cli-form-group">
-              <label className="cli-form-label">CPF (opcional)</label>
+              <label className="cli-form-label">CPF ou CNPJ (opcional)</label>
               <input
                 className="cli-form-input"
                 type="text"
-                placeholder="000.000.000-00"
+                placeholder="CPF ou CNPJ"
                 value={cpf}
-                onChange={e => setCpf(formatarCpf(e.target.value))}
+                onChange={e => setCpf(formatarCpfCnpj(e.target.value))}
                 disabled={salvando}
               />
               <span className="cli-form-small">

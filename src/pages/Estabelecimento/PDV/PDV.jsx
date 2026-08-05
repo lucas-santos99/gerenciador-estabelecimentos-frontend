@@ -6,6 +6,14 @@ import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// CPF tem 11 dígitos, CNPJ tem 14 — usado só pra rotular certinho nos
+// resumos ("CPF:" ou "CNPJ:"), sem precisar de um campo separado pra
+// marcar o tipo. Compartilhado entre o PagamentoModal (onde a pessoa
+// digita) e o ModalPosVenda (recibo), que são componentes diferentes.
+function labelDocumento(valor) {
+  return (valor || '').replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+}
+
 /* ════════════════════════════════════════════════════════════
    BALANÇA — decodificador EAN-13 pesável
    Prefixo "2" = produto com peso embutido
@@ -123,8 +131,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // um CPF (bastante dígito), oferece reaproveitar isso
   const digitosUltimoTermo = termoBuscaIdentUltimo.replace(/\D/g, '');
   const sugestaoCpf = clienteVinculado?.cpf
-    ? formatarCpfInput(clienteVinculado.cpf)
-    : (digitosUltimoTermo.length >= 8 ? formatarCpfInput(digitosUltimoTermo) : '');
+    ? formatarCpfCnpjInput(clienteVinculado.cpf)
+    : (digitosUltimoTermo.length >= 8 ? formatarCpfCnpjInput(digitosUltimoTermo) : '');
 
   // Pix pela tela do sistema (BR Code direto da chave do estabelecimento)
   const [pixModo,      setPixModo]      = useState(pixConfig.modo === 'sistema' && pixConfig.disponivel ? 'sistema' : 'maquininha');
@@ -379,11 +387,18 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   // Navega entre os botões "Não"/"Sim" pela seta (esquerda/direita ou
   // cima/baixo) — botão nativo só responde a Tab por padrão, então sem
-  // isso o fluxo ficaria preso no mouse
-  function handleSimNaoKey(e, outroRef) {
+  // isso o fluxo ficaria preso no mouse. Também aceita digitar 1 (Sim)
+  // ou 2 (Não) direto, sem precisar navegar até o botão certo primeiro.
+  function handleSimNaoKey(e, outroRef, onSim, onNao) {
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
       outroRef.current?.focus();
+    } else if (e.key === '1') {
+      e.preventDefault();
+      onSim?.();
+    } else if (e.key === '2') {
+      e.preventDefault();
+      onNao?.();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
@@ -413,12 +428,25 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function formatarCpfInput(valor) {
-    const d = valor.replace(/\D/g, '').slice(0, 11);
-    if (d.length <= 3) return d;
-    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
-    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
-    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  // Detecta CPF (até 11 dígitos) ou CNPJ (12-14 dígitos) pela quantidade
+  // digitada — mesmo padrão de detecção automática já usado em
+  // Fornecedores/Estabelecimentos, só que aqui sem aba, o campo já troca
+  // de máscara sozinho conforme a pessoa digita, pra não travar o fluxo
+  // rápido do PDV com mais uma etapa.
+  function formatarCpfCnpjInput(valor) {
+    const d = valor.replace(/\D/g, '').slice(0, 14);
+    if (d.length <= 11) {
+      if (d.length <= 3) return d;
+      if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+      if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+      return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+    }
+    // CNPJ
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return `${d.slice(0,2)}.${d.slice(2)}`;
+    if (d.length <= 8) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`;
+    if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`;
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
   }
 
   function selecionarCliente(cli) {
@@ -606,10 +634,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">🪪 Quer identificar o cliente nessa venda?</span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identSimClienteRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)} onKeyDown={e => handleSimNaoKey(e, identNaoClienteRef)}>Sim</button>
-                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)} onKeyDown={e => handleSimNaoKey(e, identSimClienteRef)}>Não</button>
+                      <button type="button" ref={identSimClienteRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCliente(true)} onKeyDown={e => handleSimNaoKey(e, identNaoClienteRef, () => responderPerguntaCliente(true), () => responderPerguntaCliente(false))}>Sim</button>
+                      <button type="button" ref={identNaoClienteRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCliente(false)} onKeyDown={e => handleSimNaoKey(e, identSimClienteRef, () => responderPerguntaCliente(true), () => responderPerguntaCliente(false))}>Não</button>
                     </div>
-                    <span className="pdv-ident-hint">Opcional — não muda o pagamento.</span>
+                    <span className="pdv-ident-hint">Opcional — não muda o pagamento. (1 = Sim · 2 = Não)</span>
                   </div>
                 )}
 
@@ -617,9 +645,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">O cliente já está cadastrado?</span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identSimCadastradoRef} className="pdv-ident-btn-sim" onClick={() => responderClienteCadastrado(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCadastradoRef)}>Sim</button>
-                      <button type="button" ref={identNaoCadastradoRef} className="pdv-ident-btn-nao" onClick={() => responderClienteCadastrado(false)} onKeyDown={e => handleSimNaoKey(e, identSimCadastradoRef)}>Não</button>
+                      <button type="button" ref={identSimCadastradoRef} className="pdv-ident-btn-sim" onClick={() => responderClienteCadastrado(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCadastradoRef, () => responderClienteCadastrado(true), () => responderClienteCadastrado(false))}>Sim</button>
+                      <button type="button" ref={identNaoCadastradoRef} className="pdv-ident-btn-nao" onClick={() => responderClienteCadastrado(false)} onKeyDown={e => handleSimNaoKey(e, identSimCadastradoRef, () => responderClienteCadastrado(true), () => responderClienteCadastrado(false))}>Não</button>
                     </div>
+                    <span className="pdv-ident-hint">1 = Sim · 2 = Não</span>
                   </div>
                 )}
 
@@ -678,9 +707,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       className="pdv-cliente-busca-input"
                       type="text"
                       inputMode="numeric"
-                      placeholder="CPF (opcional)"
+                      placeholder="CPF ou CNPJ (opcional)"
                       value={cadCpf}
-                      onChange={e => setCadCpf(formatarCpfInput(e.target.value))}
+                      onChange={e => setCadCpf(formatarCpfCnpjInput(e.target.value))}
                       onKeyDown={handleCadCpfKey}
                     />
                     {cadErro && <div className="pdv-pagamento-erro" style={{ marginTop: 0 }}>⚠️ {cadErro}</div>}
@@ -698,28 +727,29 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       </div>
                     )}
                     <span className="pdv-ident-pergunta-texto">
-                      🪪 Quer informar CPF na nota?
+                      🪪 Quer informar CPF/CNPJ na nota?
                     </span>
                     <div className="pdv-ident-pergunta-botoes">
-                      <button type="button" ref={identSimCpfRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCpfRef)}>
+                      <button type="button" ref={identSimCpfRef} className="pdv-ident-btn-sim" onClick={() => responderPerguntaCpf(true)} onKeyDown={e => handleSimNaoKey(e, identNaoCpfRef, () => responderPerguntaCpf(true), () => responderPerguntaCpf(false))}>
                         Sim
                       </button>
-                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef)}>Não</button>
+                      <button type="button" ref={identNaoCpfRef} className="pdv-ident-btn-nao" onClick={() => responderPerguntaCpf(false)} onKeyDown={e => handleSimNaoKey(e, identSimCpfRef, () => responderPerguntaCpf(true), () => responderPerguntaCpf(false))}>Não</button>
                     </div>
+                    <span className="pdv-ident-hint">1 = Sim · 2 = Não</span>
                   </div>
                 )}
 
                 {identEtapa === 'inputCpf' && (
                   <div className="pdv-ident-pergunta">
-                    <span className="pdv-ident-pergunta-texto">CPF na nota</span>
+                    <span className="pdv-ident-pergunta-texto">CPF/CNPJ na nota</span>
                     <input
                       ref={identCpfInputRef}
                       className="pdv-cliente-busca-input"
                       type="text"
                       inputMode="numeric"
-                      placeholder="000.000.000-00"
+                      placeholder="CPF ou CNPJ"
                       value={cpfNota}
-                      onChange={e => setCpfNota(formatarCpfInput(e.target.value))}
+                      onChange={e => setCpfNota(formatarCpfCnpjInput(e.target.value))}
                       onKeyDown={handleIdentCpfInputKey}
                     />
                     <span className="pdv-ident-hint">Enter pra confirmar e continuar.</span>
@@ -824,7 +854,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   🪪
                   {clienteVinculado && <> Cliente: <strong>{clienteVinculado.nome}</strong></>}
                   {clienteVinculado && cpfNota && ' · '}
-                  {cpfNota && <> CPF: <strong>{cpfNota}</strong></>}
+                  {cpfNota && <> {labelDocumento(cpfNota)}: <strong>{cpfNota}</strong></>}
                 </span>
                 <button type="button" className="pdv-ident-recap-editar" onClick={() => setIdentEtapa('perguntaCliente')}>
                   ✏️ Editar
@@ -860,9 +890,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       className="pdv-cliente-busca-input"
                       type="text"
                       inputMode="numeric"
-                      placeholder="CPF (opcional)"
+                      placeholder="CPF ou CNPJ (opcional)"
                       value={cadFiadoCpf}
-                      onChange={e => setCadFiadoCpf(formatarCpfInput(e.target.value))}
+                      onChange={e => setCadFiadoCpf(formatarCpfCnpjInput(e.target.value))}
                       onKeyDown={handleCadFiadoCpfKey}
                     />
                     <label className="pdv-ident-cpf-label" style={{ marginTop: 4 }}>Limite de crédito</label>
@@ -1087,7 +1117,7 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           <div className="pdv-posv-fiado">
             🪪 {venda.clienteNome && <>Cliente: <strong>{venda.clienteNome}</strong></>}
             {venda.clienteNome && venda.cpfNota && ' · '}
-            {venda.cpfNota && <>CPF na nota: <strong>{venda.cpfNota}</strong></>}
+            {venda.cpfNota && <>{labelDocumento(venda.cpfNota)} na nota: <strong>{venda.cpfNota}</strong></>}
           </div>
         )}
 
@@ -1158,7 +1188,7 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
             )}
             {venda.cpfNota && (
               <div className="rec-pagamento">
-                <span>CPF</span>
+                <span>{labelDocumento(venda.cpfNota)}</span>
                 <span>{venda.cpfNota}</span>
               </div>
             )}
