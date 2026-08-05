@@ -1,0 +1,269 @@
+/* src/pages/Administrador/Solicitacoes/SolicitacoesAdmin.css */
+
+.sol-wrapper {
+  padding: 24px 28px 60px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.sol-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.sol-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--text-primary, #f2f2f2);
+}
+
+.sol-subtitle {
+  color: var(--text-secondary, #9a9a9a);
+  font-size: 0.9rem;
+}
+
+/* ── abas ─────────────────────────────────────────────── */
+.sol-abas {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--est-border, #2a2a2a);
+  padding-bottom: 0;
+}
+
+.sol-aba-btn {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary, #9a9a9a);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sol-aba-btn:hover { color: var(--text-primary, #f2f2f2); }
+.sol-aba-btn.ativa {
+  color: #14b8a6;
+  border-bottom-color: #14b8a6;
+}
+
+/* ── lista / cards ────────────────────────────────────── */
+.sol-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sol-card {
+  background: var(--est-card, #1a1a1a);
+  border: 1px solid var(--est-border, #2a2a2a);
+  border-left: 3px solid var(--est-border, #2a2a2a);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.sol-card--pendente  { border-left-color: #f59e0b; }
+.sol-card--atendida  { border-left-color: #14b8a6; }
+.sol-card--recusada  { border-left-color: #e5484d; opacity: 0.85; }
+
+.sol-card-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sol-card-estabelecimento {
+  font-weight: 700;
+  font-size: 1.02rem;
+  color: var(--text-primary, #f2f2f2);
+  margin-right: 10px;
+}
+
+.sol-card-data {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #9a9a9a);
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sol-card-meta {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #9a9a9a);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sol-btn-whatsapp {
+  background: #25d366;
+  color: #06231f;
+  border: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.sol-btn-whatsapp:hover { filter: brightness(1.08); }
+
+.sol-status-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.sol-status-badge--pendente { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.sol-status-badge--atendida { background: rgba(20,184,166,0.15); color: #14b8a6; }
+.sol-status-badge--recusada { background: rgba(229,72,77,0.15); color: #e5484d; }
+
+/* ── campos alterados (atual → novo) ─────────────────────── */
+.sol-campos {
+  background: var(--est-sidebar, #141414);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sol-campo-linha {
+  display: grid;
+  grid-template-columns: 140px 1fr 20px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.sol-campo-label {
+  font-weight: 600;
+  color: var(--text-secondary, #9a9a9a);
+}
+
+.sol-campo-atual {
+  color: var(--text-secondary, #9a9a9a);
+  text-decoration: line-through;
+  opacity: 0.7;
+  word-break: break-word;
+}
+
+.sol-campo-seta {
+  text-align: center;
+  color: #14b8a6;
+}
+
+.sol-campo-novo {
+  color: var(--text-primary, #f2f2f2);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.sol-detalhes {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #9a9a9a);
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+/* ── ações ────────────────────────────────────────────── */
+.sol-card-acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.sol-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.sol-btn:hover { filter: brightness(1.1); }
+.sol-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.sol-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--est-border, #2a2a2a);
+  color: var(--text-secondary, #9a9a9a);
+}
+.sol-btn-sucesso { background: #14b8a6; color: #06231f; }
+.sol-btn-perigo  { background: #e5484d; color: #fff; }
+
+.sol-resposta-box {
+  margin-top: 8px;
+  border-top: 1px dashed var(--est-border, #2a2a2a);
+  padding-top: 10px;
+}
+
+.sol-resposta-textarea {
+  width: 100%;
+  background: var(--est-sidebar, #141414);
+  border: 1px solid var(--est-border, #2a2a2a);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-primary, #f2f2f2);
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.sol-resolvido {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #9a9a9a);
+  border-top: 1px dashed var(--est-border, #2a2a2a);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.sol-resposta-final {
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ── estados vazio / loading ──────────────────────────── */
+.sol-vazio {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary, #9a9a9a);
+}
+.sol-vazio-icone { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+.sol-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-secondary, #9a9a9a);
+}
+
+.sol-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--est-border, #2a2a2a);
+  border-top-color: #14b8a6;
+  border-radius: 50%;
+  animation: sol-spin 0.7s linear infinite;
+}
+@keyframes sol-spin { to { transform: rotate(360deg); } }
+
+/* ── responsivo ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .sol-campo-linha { grid-template-columns: 1fr; gap: 2px; }
+  .sol-campo-seta { display: none; }
+}

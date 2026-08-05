@@ -77,6 +77,10 @@ export default function DashboardAdmin() {
     return s ? parseFloat(s) : 1;
   });
 
+  // Solicitações de alteração pendentes — badge no alerta + popup ao logar
+  const [solicitacoesPendentes, setSolicitacoesPendentes] = useState(0);
+  const [popupSolicitacoes,     setPopupSolicitacoes]     = useState(false);
+
   function changeFontScale(delta) {
     setFontScale(prev => {
       const next = Math.min(1.4, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
@@ -104,6 +108,32 @@ export default function DashboardAdmin() {
   }
 
   useEffect(() => { carregarDados(); }, []);
+
+  // Solicitações pendentes — busca ao carregar e decide se mostra o
+  // popup. sessionStorage guarda quantas já foram "vistas" nessa sessão
+  // do navegador, pra não ficar reaparecendo toda hora que a pessoa
+  // navega pelo painel — só reaparece se chegou pendência nova.
+  useEffect(() => {
+    async function buscarSolicitacoesPendentes() {
+      try {
+        const resp = await apiFetch('/api/solicitacoes/admin/contagem-pendentes');
+        if (!resp.ok) return;
+        const { pendentes } = await resp.json();
+        setSolicitacoesPendentes(pendentes || 0);
+
+        const jaVistas = parseInt(sessionStorage.getItem('solicitacoes-popup-vistas') || '0', 10);
+        if (pendentes > 0 && pendentes > jaVistas) {
+          setPopupSolicitacoes(true);
+        }
+      } catch { /* silencioso — não é crítico pro painel carregar */ }
+    }
+    buscarSolicitacoesPendentes();
+  }, []);
+
+  function dispensarPopupSolicitacoes() {
+    sessionStorage.setItem('solicitacoes-popup-vistas', String(solicitacoesPendentes));
+    setPopupSolicitacoes(false);
+  }
 
   useEffect(() => {
     async function buscarNome() {
@@ -274,6 +304,42 @@ export default function DashboardAdmin() {
     <LayoutAdmin>
       <div className="dash-wrapper" style={{ "--dash-font-scale": fontScale }}>
 
+        {popupSolicitacoes && (
+          <div
+            style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+            }}
+            onClick={dispensarPopupSolicitacoes}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: "var(--est-card, #1e1e1e)", borderRadius: 12, padding: 28,
+                maxWidth: 420, width: "90%", textAlign: "center",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
+              }}
+            >
+              <div style={{ fontSize: 40, marginBottom: 8 }}>📨</div>
+              <h3 style={{ margin: "0 0 8px" }}>
+                {solicitacoesPendentes} solicitaç{solicitacoesPendentes > 1 ? "ões" : "ão"} de alteração pendente{solicitacoesPendentes > 1 ? "s" : ""}
+              </h3>
+              <p style={{ opacity: 0.75, marginBottom: 20 }}>
+                {solicitacoesPendentes > 1 ? "Alguns estabelecimentos pediram" : "Um estabelecimento pediu"} alteração de dados cadastrais.
+              </p>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                <button className="btn btn-ghost" onClick={dispensarPopupSolicitacoes}>Depois</button>
+                <button
+                  className="btn btn-teal"
+                  onClick={() => { dispensarPopupSolicitacoes(); navigate("/admin/solicitacoes"); }}
+                >
+                  Ver agora
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── HEADER ─────────────────────────────────────── */}
         <div className="dash-header">
           <div className="dash-header-left">
@@ -323,8 +389,18 @@ export default function DashboardAdmin() {
           </button>
         </div>
 
-        {mostrarAlertas && (alertas.vencidos > 0 || alertas.proximos > 0) && (
+        {mostrarAlertas && (alertas.vencidos > 0 || alertas.proximos > 0 || solicitacoesPendentes > 0) && (
           <div className="dash-alertas-box">
+            {solicitacoesPendentes > 0 && (
+              <div
+                className="alerta-item alerta-warning"
+                onClick={() => navigate("/admin/solicitacoes")}
+                style={{ cursor: "pointer" }}
+                title="Ver solicitações de alteração enviadas pelos estabelecimentos"
+              >
+                📨 {solicitacoesPendentes} solicitaç{solicitacoesPendentes > 1 ? "ões" : "ão"} de alteração pendente{solicitacoesPendentes > 1 ? "s" : ""}
+              </div>
+            )}
             {alertas.vencidos > 0 && (
               <div
                 className="alerta-item alerta-danger"

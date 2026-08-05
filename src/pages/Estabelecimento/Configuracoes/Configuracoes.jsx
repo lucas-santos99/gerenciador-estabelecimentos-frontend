@@ -38,43 +38,73 @@ function formatarChavePixTelefone(valor) {
   return `+${digitos}`;
 }
 
-function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar }) {
-  const [camposSelecionados, setCamposSelecionados] = useState([]);
+// Valor atual de cada campo alterável, lido direto dos dados do estabelecimento
+function valorAtualDoCampo(key, dadosAtuais) {
+  switch (key) {
+    case 'nome_fantasia':     return dadosAtuais.nome_fantasia || '';
+    case 'cnpj':               return dadosAtuais.cnpj || '';
+    case 'telefone':           return dadosAtuais.telefone || '';
+    case 'telefones_extras':   return (dadosAtuais.telefones_extras || []).join(', ');
+    case 'email_contato':      return dadosAtuais.email_contato || '';
+    case 'endereco_completo':  return dadosAtuais.endereco_completo || '';
+    case 'enderecos_extras':   return (dadosAtuais.enderecos_extras || []).join(', ');
+    case 'logo':               return '(imagem atual)';
+    default:                   return '';
+  }
+}
+
+function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecimentoId, onFechar }) {
+  // valoresNovos: { [chaveDoCampo]: novoValorDigitado } — a presença da
+  // chave aqui é o que define se o campo está selecionado ou não.
+  const [valoresNovos, setValoresNovos] = useState({});
   const [detalhes, setDetalhes]     = useState('');
   const [enviado,  setEnviado]      = useState(false);
+  const [enviandoPainel, setEnviandoPainel] = useState(false);
+  const [erroPainel,     setErroPainel]     = useState('');
 
   function toggleCampo(key) {
-    setCamposSelecionados(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+    setValoresNovos(prev => {
+      if (key in prev) {
+        const { [key]: _, ...resto } = prev;
+        return resto;
+      }
+      return { ...prev, [key]: '' };
+    });
+  }
+
+  function atualizarValorNovo(key, valor) {
+    setValoresNovos(prev => ({ ...prev, [key]: valor }));
+  }
+
+  const camposSelecionados = Object.keys(valoresNovos);
+
+  function montarListaCampos() {
+    return camposSelecionados.map(key => ({
+      campo:        key,
+      label:        CAMPOS_ALTERAVEIS.find(c => c.key === key)?.label || key,
+      valor_atual:  valorAtualDoCampo(key, dadosAtuais),
+      valor_novo:   valoresNovos[key],
+    }));
   }
 
   function gerarMensagem() {
-    const campos = camposSelecionados
-      .map(k => CAMPOS_ALTERAVEIS.find(c => c.key === k)?.label)
-      .filter(Boolean)
-      .join(', ');
-
     const linhas = [
       `*Solicitação de Alteração de Dados*`,
       `Estabelecimento: *${nomeEstabelecimento}*`,
       '',
-      `Campos a alterar: ${campos || '(não especificado)'}`,
     ];
 
-    if (detalhes.trim()) {
-      linhas.push('', `Detalhes: ${detalhes.trim()}`);
+    if (camposSelecionados.length > 0) {
+      linhas.push('*Campos a alterar:*');
+      montarListaCampos().forEach(c => {
+        linhas.push(`• ${c.label}: "${c.valor_atual || '—'}" → "${c.valor_novo || '(não informado)'}"`);
+      });
+      linhas.push('');
     }
 
-    // Dados atuais relevantes
-    linhas.push('', '*Dados atuais:*');
-    if (dadosAtuais.nome_fantasia)     linhas.push(`• Nome: ${dadosAtuais.nome_fantasia}`);
-    if (dadosAtuais.cnpj)             linhas.push(`• CNPJ: ${dadosAtuais.cnpj}`);
-    if (dadosAtuais.telefone)         linhas.push(`• Tel: ${dadosAtuais.telefone}`);
-    (dadosAtuais.telefones_extras || []).forEach(tel => linhas.push(`• Tel adicional: ${tel}`));
-    if (dadosAtuais.email_contato)    linhas.push(`• E-mail: ${dadosAtuais.email_contato}`);
-    if (dadosAtuais.endereco_completo) linhas.push(`• Endereço: ${dadosAtuais.endereco_completo}`);
-    (dadosAtuais.enderecos_extras || []).forEach(end => linhas.push(`• Local adicional: ${end}`));
+    if (detalhes.trim()) {
+      linhas.push(`Detalhes: ${detalhes.trim()}`, '');
+    }
 
     return linhas.join('\n');
   }
@@ -91,6 +121,31 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar })
     setEnviado(true);
   }
 
+  async function enviarPainel() {
+    setEnviandoPainel(true);
+    setErroPainel('');
+    try {
+      const resp = await apiFetch('/api/solicitacoes', {
+        method: 'POST',
+        body: JSON.stringify({
+          campos: montarListaCampos(),
+          detalhes: detalhes.trim() || null,
+        }),
+      });
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => ({}));
+        setErroPainel(j.error || 'Erro ao enviar solicitação.');
+      } else {
+        setEnviado(true);
+      }
+    } catch {
+      setErroPainel('Erro ao enviar solicitação. Verifique sua conexão.');
+    }
+    setEnviandoPainel(false);
+  }
+
+  const podeEnviar = camposSelecionados.length > 0 || detalhes.trim();
+
   useEffect(() => {
     function handleEsc(e) { if (e.key === 'Escape') onFechar(); }
     window.addEventListener('keydown', handleEsc);
@@ -102,39 +157,79 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar })
       <div className="cfg-modal" onClick={e => e.stopPropagation()}>
         <div className="cfg-modal-titulo">📨 Solicitar Alteração de Dados</div>
         <div className="cfg-modal-desc">
-          Selecione o que deseja alterar e envie a solicitação ao administrador do sistema.
+          Selecione o que deseja alterar, digite o novo valor e envie a solicitação ao administrador do sistema.
         </div>
 
         <div className="cfg-modal-campos">
           <span className="cfg-label">O que deseja alterar?</span>
-          <div className="cfg-modal-checkboxes">
-            {CAMPOS_ALTERAVEIS.map(c => (
-              <label key={c.key} className="cfg-modal-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={camposSelecionados.includes(c.key)}
-                  onChange={() => toggleCampo(c.key)}
-                />
-                {c.label}
-              </label>
-            ))}
+          <div className="cfg-modal-campos-lista">
+            {CAMPOS_ALTERAVEIS.map(c => {
+              const selecionado = c.key in valoresNovos;
+              const atual = valorAtualDoCampo(c.key, dadosAtuais);
+              return (
+                <div key={c.key} className="cfg-modal-campo-item">
+                  <label className="cfg-modal-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selecionado}
+                      onChange={() => toggleCampo(c.key)}
+                    />
+                    {c.label}
+                  </label>
+
+                  {selecionado && c.key !== 'outro' && c.key !== 'logo' && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0 10px 24px" }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-muted, #888)", display: "block" }}>Atual</span>
+                        <div className="cfg-campo-valor" style={{ opacity: 0.7 }}>
+                          {atual || <span className="cfg-campo-vazio">Não informado</span>}
+                        </div>
+                      </div>
+                      <span style={{ color: "var(--text-muted, #888)" }}>→</span>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-muted, #888)", display: "block" }}>Novo valor</span>
+                        <input
+                          className="est-input"
+                          value={valoresNovos[c.key]}
+                          onChange={e => atualizarValorNovo(c.key, e.target.value)}
+                          placeholder="Digite o novo valor…"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {selecionado && (c.key === 'outro' || c.key === 'logo') && (
+                    <div style={{ margin: "6px 0 10px 24px" }}>
+                      <input
+                        className="est-input"
+                        value={valoresNovos[c.key]}
+                        onChange={e => atualizarValorNovo(c.key, e.target.value)}
+                        placeholder={c.key === 'logo' ? 'Alguma observação sobre a nova logo? (opcional)' : 'Descreva o que precisa mudar…'}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="cfg-modal-campos">
-          <span className="cfg-label">Detalhes / novos valores</span>
+          <span className="cfg-label">Detalhes adicionais (opcional)</span>
           <textarea
             className="cfg-textarea"
-            rows={4}
-            placeholder="Ex: Novo nome: Mercearia do João&#10;Novo telefone: (54) 99999-8888"
+            rows={3}
+            placeholder="Alguma outra informação que ajude o administrador a entender o pedido…"
             value={detalhes}
             onChange={e => setDetalhes(e.target.value)}
           />
         </div>
 
+        {erroPainel && <div className="cfg-alert erro">⚠️ {erroPainel}</div>}
+
         {enviado && (
           <div className="cfg-modal-enviado">
-            ✓ Solicitação preparada! Envie a mensagem ao administrador.
+            ✓ Solicitação enviada! O administrador vai receber o pedido.
           </div>
         )}
 
@@ -145,17 +240,25 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, onFechar })
           <button
             className="cfg-modal-btn-copiar"
             onClick={copiarMensagem}
-            disabled={camposSelecionados.length === 0 && !detalhes.trim()}
+            disabled={!podeEnviar}
             title="Copiar mensagem para área de transferência"
           >
-            📋 Copiar mensagem
+            📋 Copiar
           </button>
           <button
             className="cfg-modal-btn-whatsapp"
             onClick={enviarWhatsApp}
-            disabled={camposSelecionados.length === 0 && !detalhes.trim()}
+            disabled={!podeEnviar}
           >
-            💬 Enviar pelo WhatsApp
+            💬 WhatsApp
+          </button>
+          <button
+            className="cfg-modal-btn-whatsapp"
+            onClick={enviarPainel}
+            disabled={!podeEnviar || enviandoPainel}
+            title="Envia a solicitação direto pro painel do administrador"
+          >
+            {enviandoPainel ? "⏳ Enviando…" : "📨 Enviar pro Painel"}
           </button>
         </div>
       </div>
@@ -390,6 +493,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
         <ModalSolicitarAlteracao
           nomeEstabelecimento={dados.nome_fantasia}
           dadosAtuais={dados}
+          estabelecimentoId={estabelecimentoId}
           onFechar={() => setShowSolicitar(false)}
         />
       )}

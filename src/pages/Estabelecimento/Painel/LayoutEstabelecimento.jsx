@@ -249,6 +249,31 @@ export default function LayoutEstabelecimento({
     })();
   }, [estabelecimentoId]);
 
+  // Avisa quando uma solicitação de alteração de dados foi atendida ou
+  // recusada e o comerciante ainda não viu o resultado.
+  const [notificacoesResolucao, setNotificacoesResolucao] = useState([]);
+  useEffect(() => {
+    if (!estabelecimentoId || !isMerchant) return;
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/solicitacoes/minhas');
+        if (resp.ok) {
+          const data = await resp.json();
+          setNotificacoesResolucao(
+            (data || []).filter(s => s.status !== 'pendente' && !s.visto_pelo_estabelecimento)
+          );
+        }
+      } catch { /* aviso não é crítico pro painel carregar */ }
+    })();
+  }, [estabelecimentoId, isMerchant]);
+
+  async function dispensarNotificacao(id) {
+    setNotificacoesResolucao(prev => prev.filter(n => n.id !== id));
+    try {
+      await apiFetch(`/api/solicitacoes/minhas/${id}/marcar-visto`, { method: 'PATCH' });
+    } catch { /* se falhar, só volta a aparecer no próximo carregamento — sem problema */ }
+  }
+
   const ABAS = (() => {
     const base = isMerchant
       ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG]
@@ -495,6 +520,33 @@ export default function LayoutEstabelecimento({
               onRenovado={onLicencaAtualizada}
             />
           )}
+
+          {notificacoesResolucao.map(n => (
+            <div
+              key={n.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: n.status === "atendida" ? "rgba(20,184,166,0.12)" : "rgba(229,72,77,0.12)",
+                border: `1px solid ${n.status === "atendida" ? "#14b8a6" : "#e5484d"}`,
+                borderRadius: 10, padding: "10px 14px", margin: "0 0 12px",
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{n.status === "atendida" ? "✅" : "❌"}</span>
+              <div style={{ flex: 1, fontSize: 13.5 }}>
+                Sua solicitação de alteração ({(n.campos || []).map(c => c.label).join(", ") || "dados cadastrais"}) foi{" "}
+                <strong>{n.status === "atendida" ? "atendida" : "recusada"}</strong>.
+                {n.resposta && <div style={{ opacity: 0.8, marginTop: 2 }}>💬 {n.resposta}</div>}
+              </div>
+              <button
+                onClick={() => dispensarNotificacao(n.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, opacity: 0.6 }}
+                title="Dispensar aviso"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+
           {children}
         </div>
       </main>

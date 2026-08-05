@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
+import { apiFetch } from "../../../utils/api";
 import "./Sidebar.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -31,6 +32,12 @@ const Icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 1v22"/>
       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  ),
+  Mail: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <path d="m22 6-10 7L2 6"/>
     </svg>
   ),
   Logout: () => (
@@ -108,6 +115,23 @@ export default function Sidebar() {
   /* ── modal de confirmação de logout ─────────────────────── */
   const [modalLogout, setModalLogout] = useState(false);
 
+  /* ── badge de solicitações pendentes ─────────────────────── */
+  const [solicitacoesPendentes, setSolicitacoesPendentes] = useState(0);
+  useEffect(() => {
+    let ativo = true;
+    async function buscar() {
+      try {
+        const resp = await apiFetch('/api/solicitacoes/admin/contagem-pendentes');
+        if (!resp.ok || !ativo) return;
+        const { pendentes } = await resp.json();
+        if (ativo) setSolicitacoesPendentes(pendentes || 0);
+      } catch { /* silencioso — badge não é crítico */ }
+    }
+    buscar();
+    const id = setInterval(buscar, 60000);
+    return () => { ativo = false; clearInterval(id); };
+  }, []);
+
   /* ── persiste preferência de colapso ─────────────────────── */
   useEffect(() => {
     localStorage.setItem(SIDEBAR_KEY, collapsed);
@@ -135,6 +159,7 @@ export default function Sidebar() {
       section: "Menu",
       items: [
         { label: "Painel",               path: "/admin",                     icon: Icons.Dashboard },
+        { label: "Solicitações",         path: "/admin/solicitacoes",        icon: Icons.Mail, badge: solicitacoesPendentes },
         { label: "Cobranças",            path: "/admin/cobrancas",           icon: Icons.Cobranca  },
         { label: "Auditoria",            path: "/admin/auditoria",           icon: Icons.Audit     },
         { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings  },
@@ -201,8 +226,19 @@ export default function Sidebar() {
                     <Link to={item.path}>
                       <span className="sb-icon"><item.icon /></span>
                       <span className="sb-label">{item.label}</span>
+                      {!!item.badge && (
+                        <span
+                          style={{
+                            background: "var(--est-danger, #e5484d)", color: "#fff",
+                            borderRadius: 999, fontSize: 11, fontWeight: 700,
+                            padding: "1px 6px", marginLeft: "auto", lineHeight: 1.4,
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
-                    <span className="sb-tooltip">{item.label}</span>
+                    <span className="sb-tooltip">{item.label}{!!item.badge && ` (${item.badge})`}</span>
                   </li>
                 );
               })}
