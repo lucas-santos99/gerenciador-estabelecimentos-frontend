@@ -91,6 +91,13 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [cadFiadoLimite,    setCadFiadoLimite]    = useState('');
   const [erro,               setErro]               = useState('');
 
+  // Confirmação antes de fechar o modal de vez — só aparece quando o
+  // Esc é apertado já na primeira tela (escolha de forma de pagamento),
+  // pra não fechar sem querer num Esc a mais durante a navegação.
+  const [confirmarFechar, setConfirmarFechar] = useState(false);
+  const confirmFecharSimRef = useRef(null);
+  const confirmFecharNaoRef = useRef(null);
+
   // Identificação opcional na venda (qualquer forma de pagamento,
   // diferente do fluxo de Fiado que já obriga cliente) — sequência de
   // perguntas por Enter: "quer identificar cliente?" → "já cadastrado?"
@@ -272,7 +279,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       // fiado" fica de fora dessa busca específica (mas continua
       // aparecendo normal na identificação opcional de outras formas
       // de pagamento, que não tem nada a ver com crédito)
-      setResultadosCliente(todos.filter(c => c.permite_fiado !== false));
+      const filtrados = todos.filter(c => c.permite_fiado !== false);
+      setResultadosCliente(filtrados);
+      setResultadosCliente(filtrados);
+      // Primeiro resultado já vem selecionado — Enter direto confirma,
+      // sem precisar apertar seta pra baixo antes.
+      setClienteIndex(filtrados.length > 0 ? 0 : -1);
     } catch { setErro('Erro ao buscar clientes.'); }
     finally { setLoadingCliente(false); }
   }
@@ -289,6 +301,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       if (!resp.ok) throw new Error();
       const todos = await resp.json();
       setResultadosIdent(todos);
+      // Primeiro resultado já vem selecionado — Enter direto confirma,
+      // sem precisar apertar seta pra baixo antes.
+      setIdentClienteIndex(todos.length > 0 ? 0 : -1);
     } catch { /* silencioso — identificação é opcional, não trava a venda */ }
     finally { setLoadingIdent(false); }
   }
@@ -569,17 +584,42 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   function handleOverlayKey(e) {
     if (e.key === 'Escape') {
       e.preventDefault();
+      if (confirmarFechar) return; // os próprios botões da confirmação cuidam do Escape
       if (metodoConfirmado) { setMetodoConfirmado(false); return; }
-      onCancelar();
+      setConfirmarFechar(true);
       return;
     }
     if (e.target.tagName === 'INPUT') return;
+    if (confirmarFechar) return; // não deixa seta/Enter da lista de pagamento vazar por baixo da confirmação
     if (!metodoConfirmado) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(p => (p + 1) % MEIOS.length); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(p => (p - 1 + MEIOS.length) % MEIOS.length); }
       else if (e.key === 'Enter') { e.preventDefault(); confirmarMetodo(MEIOS[selectedIndex].key, selectedIndex); }
     }
   }
+
+  // Teclado da confirmação de fechar — 1/2 direto, seta alterna, Esc
+  // desiste de fechar (não fecha o modal, só cancela a confirmação).
+  function handleConfirmFecharKey(e, outroRef) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      outroRef.current?.focus();
+    } else if (e.key === '1') {
+      e.preventDefault();
+      onCancelar();
+    } else if (e.key === '2') {
+      e.preventDefault();
+      setConfirmarFechar(false);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      setConfirmarFechar(false);
+    }
+  }
+
+  useEffect(() => {
+    if (confirmarFechar) setTimeout(() => confirmFecharNaoRef.current?.focus(), 0);
+  }, [confirmarFechar]);
 
   function handleDinheiroKey(e) {
     if (e.key === 'Enter') { e.preventDefault(); confirmarFinal(); }
@@ -613,6 +653,20 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
           <span className="pdv-pagamento-total-valor">{fmt(total)}</span>
         </div>
         {!metodoConfirmado && (
+          confirmarFechar ? (
+            <div className="pdv-ident-pergunta">
+              <span className="pdv-ident-pergunta-texto">⚠️ Cancelar o pagamento e fechar?</span>
+              <div className="pdv-ident-pergunta-botoes">
+                <button type="button" ref={confirmFecharSimRef} className="pdv-ident-btn-sim" onClick={onCancelar} onKeyDown={e => handleConfirmFecharKey(e, confirmFecharNaoRef)}>
+                  Sim
+                </button>
+                <button type="button" ref={confirmFecharNaoRef} className="pdv-ident-btn-nao" onClick={() => setConfirmarFechar(false)} onKeyDown={e => handleConfirmFecharKey(e, confirmFecharSimRef)}>
+                  Não, continuar
+                </button>
+              </div>
+              <span className="pdv-ident-hint">1 = Sim · 2 = Não · Esc pra continuar</span>
+            </div>
+          ) : (
           <>
             <span className="pdv-pagamento-label">Forma de pagamento  ↑ ↓ Enter</span>
             <ul className="pdv-meios-lista" ref={listaMeiosRef}>
@@ -625,6 +679,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
               ))}
             </ul>
           </>
+          )
         )}
         {metodoConfirmado && (
           <div className="pdv-pagamento-conteudo">
