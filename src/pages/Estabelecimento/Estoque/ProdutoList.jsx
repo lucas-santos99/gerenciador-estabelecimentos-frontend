@@ -21,6 +21,15 @@ function normalizar(t) {
   return (t || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Cor do avatar de cada categoria — sempre a mesma pro mesmo nome (hash
+// simples), escolhida de uma paleta que harmoniza com o teal da marca.
+const CORES_AVATAR = ['teal', 'azul', 'roxo', 'rosa', 'ambar', 'verde'];
+function corDaCategoria(nome) {
+  let hash = 0;
+  for (let i = 0; i < nome.length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash);
+  return CORES_AVATAR[Math.abs(hash) % CORES_AVATAR.length];
+}
+
 function estoqueStatus(produto) {
   const e = parseFloat(produto.estoque_atual);
   const m = parseFloat(produto.estoque_minimo);
@@ -477,7 +486,10 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       {/* ── SIDEBAR CATEGORIAS ───────────────────────────── */}
       <aside className={`estoque-sidebar${sidebarMobile ? ' aberta' : ''}`}>
         <div className="estoque-sidebar-header">
-          <div className="estoque-sidebar-titulo">Categorias</div>
+          <div className="estoque-sidebar-titulo">
+            Categorias
+            {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
+          </div>
           <button
             className="estoque-cat-btn-nova"
             onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
@@ -528,12 +540,18 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         {/* Busca de categoria */}
         {categorias.length > 4 && (
           <div className="estoque-cat-busca-wrap">
-            <input
-              className="estoque-cat-busca"
-              placeholder="🔍 Filtrar…"
-              value={catBusca}
-              onChange={e => setCatBusca(e.target.value)}
-            />
+            <div className="estoque-cat-busca-inner">
+              <svg className="estoque-cat-busca-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                className="estoque-cat-busca"
+                placeholder="Filtrar categorias…"
+                value={catBusca}
+                onChange={e => setCatBusca(e.target.value)}
+              />
+            </div>
           </div>
         )}
 
@@ -552,13 +570,13 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                   <span className="estoque-cat-item-nome">Todos os produtos</span>
                   <div className="estoque-cat-item-right">
                     {criticos > 0 && (
-                      <span className="estoque-cat-alerta est-alerta-critico" title={`${criticos} produto(s) sem estoque`}>
-                        🔴 {criticos}
+                      <span className="estoque-cat-dot estoque-cat-dot--critico" title={`${criticos} produto(s) sem estoque`}>
+                        <span className="estoque-cat-dot-ponto" />{criticos}
                       </span>
                     )}
                     {baixos > 0 && (
-                      <span className="estoque-cat-alerta est-alerta-baixo" title={`${baixos} produto(s) com estoque baixo`}>
-                        ⚠️ {baixos}
+                      <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${baixos} produto(s) com estoque baixo`}>
+                        <span className="estoque-cat-dot-ponto" />{baixos}
                       </span>
                     )}
                     <span className="estoque-cat-count">{produtos.length}</span>
@@ -615,11 +633,11 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                     <div className="estoque-cat-row">
                       {subs.length > 0 ? (
                         <button
-                          className="estoque-cat-chevron"
+                          className={`estoque-cat-chevron${colapsada ? ' colapsada' : ''}`}
                           onClick={() => toggleColapsada(cat.id)}
                           title={colapsada ? 'Expandir subcategorias' : 'Recolher subcategorias'}
                         >
-                          {colapsada ? '▸' : '▾'}
+                          ▾
                         </button>
                       ) : (
                         <span className="estoque-cat-chevron-espaco" />
@@ -628,16 +646,19 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                         className={`estoque-cat-item${categoriaAtiva === cat.id ? ' ativo' : ''}`}
                         onClick={() => setCategoriaAtiva(cat.id)}
                       >
+                        <span className={`estoque-cat-avatar estoque-cat-avatar--${corDaCategoria(cat.nome)}`}>
+                          {cat.nome.charAt(0).toUpperCase()}
+                        </span>
                         <span className="estoque-cat-item-nome">{cat.nome}</span>
                         <div className="estoque-cat-item-right">
                           {criticos > 0 && (
-                            <span className="estoque-cat-alerta est-alerta-critico" title={`${criticos} sem estoque`}>
-                              🔴 {criticos}
+                            <span className="estoque-cat-dot estoque-cat-dot--critico" title={`${criticos} sem estoque`}>
+                              <span className="estoque-cat-dot-ponto" />{criticos}
                             </span>
                           )}
                           {baixos > 0 && (
-                            <span className="estoque-cat-alerta est-alerta-baixo" title={`${baixos} baixo`}>
-                              ⚠️ {baixos}
+                            <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${baixos} baixo`}>
+                              <span className="estoque-cat-dot-ponto" />{baixos}
                             </span>
                           )}
                           <span className="estoque-cat-count">{prods.length}</span>
@@ -664,8 +685,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                   )}
 
                   {/* ── Subcategorias ── */}
-                  {!colapsada && subsVisiveis.length > 0 && (
-                    <ul className="estoque-subcats">
+                  {subsVisiveis.length > 0 && (
+                    <ul className={`estoque-subcats${colapsada ? ' colapsada' : ''}`}>
                       {subsVisiveis.map(sub => {
                         const subProds    = produtos.filter(p => p.categoria_id === sub.id);
                         const subCriticos = subProds.filter(p => estoqueStatus(p) === 'critico').length;
@@ -700,16 +721,16 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                                   className={`estoque-cat-item estoque-cat-item--sub${categoriaAtiva === sub.id ? ' ativo' : ''}`}
                                   onClick={() => setCategoriaAtiva(sub.id)}
                                 >
-                                  <span className="estoque-cat-item-nome">↳ {sub.nome}</span>
+                                  <span className="estoque-cat-item-nome">{sub.nome}</span>
                                   <div className="estoque-cat-item-right">
                                     {subCriticos > 0 && (
-                                      <span className="estoque-cat-alerta est-alerta-critico" title={`${subCriticos} sem estoque`}>
-                                        🔴 {subCriticos}
+                                      <span className="estoque-cat-dot estoque-cat-dot--critico" title={`${subCriticos} sem estoque`}>
+                                        <span className="estoque-cat-dot-ponto" />{subCriticos}
                                       </span>
                                     )}
                                     {subBaixos > 0 && (
-                                      <span className="estoque-cat-alerta est-alerta-baixo" title={`${subBaixos} baixo`}>
-                                        ⚠️ {subBaixos}
+                                      <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${subBaixos} baixo`}>
+                                        <span className="estoque-cat-dot-ponto" />{subBaixos}
                                       </span>
                                     )}
                                     <span className="estoque-cat-count">{subProds.length}</span>
