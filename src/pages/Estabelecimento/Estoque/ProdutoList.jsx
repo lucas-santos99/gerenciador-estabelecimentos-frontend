@@ -515,25 +515,20 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         }}
       >
         <div className="estoque-sidebar-header">
-          <div className="estoque-sidebar-titulo">
-            Categorias
-            {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
-          </div>
-          <div className="estoque-sidebar-header-acoes">
-            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(-0.1)} disabled={catFontScale <= 0.8} title="Diminuir fonte">A−</button>
-            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(0.1)}  disabled={catFontScale >= 1.4} title="Aumentar fonte">A+</button>
+          <div className="estoque-sidebar-header-topo">
+            <div className="estoque-sidebar-titulo">
+              Categorias
+              {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
+            </div>
             <button
               className="estoque-cat-btn-nova"
               onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
               title="Nova categoria"
             >+</button>
-            <button
-              className="estoque-sidebar-toggle-inline"
-              onClick={() => toggleSidebarColapsada()}
-              title={sidebarColapsada ? 'Expandir categorias' : 'Recolher categorias'}
-            >
-              {sidebarColapsada ? '›' : '‹'}
-            </button>
+          </div>
+          <div className="estoque-sidebar-header-zoom">
+            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(-0.1)} disabled={catFontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(0.1)}  disabled={catFontScale >= 1.4} title="Aumentar fonte">A+</button>
           </div>
         </div>
 

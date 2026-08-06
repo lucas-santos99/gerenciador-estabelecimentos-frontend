@@ -37,25 +37,6 @@
   width: 56px;
 }
 
-.estoque-sidebar-toggle-inline {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid var(--est-border);
-  background: var(--est-input);
-  color: var(--est-text-muted);
-  font-size: 0.85rem;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.15s;
-  padding: 0;
-}
-.estoque-sidebar-toggle-inline:hover { background: var(--est-accent); color: #fff; border-color: transparent; }
-
 /* Modo recolhido — só os avatares (e o botão de expandir) ficam visíveis */
 .estoque-sidebar.colapsada .estoque-sidebar-titulo,
 .estoque-sidebar.colapsada .estoque-cat-zoom-btn,
@@ -86,14 +67,20 @@
 }
 
 .estoque-sidebar-header {
-  padding: 14px 12px 12px;
+  padding: 14px 12px 10px;
   border-bottom: 1px solid var(--est-border);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--est-card);
+}
+
+.estoque-sidebar-header-topo {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: var(--est-card);
 }
 
 .estoque-sidebar-titulo {
@@ -105,20 +92,20 @@
   flex-shrink: 0;
 }
 
-.estoque-sidebar-header-acoes {
+.estoque-sidebar-header-zoom {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .estoque-cat-zoom-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   border: 1px solid var(--est-border);
   background: var(--est-input);
   color: var(--est-text-muted);
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
   cursor: pointer;
   display: flex;
@@ -132,14 +119,15 @@
 .estoque-cat-zoom-btn:hover:not(:disabled) { border-color: var(--est-border-accent); color: var(--est-accent); }
 .estoque-cat-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Botão de nova categoria — é o destaque principal do header agora */
 .estoque-cat-btn-nova {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid var(--est-border-accent);
-  background: var(--est-accent-dim);
-  color: var(--est-accent);
-  font-size: 1rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: var(--est-accent);
+  color: #fff;
+  font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -148,11 +136,12 @@
   transition: all 0.15s;
   flex-shrink: 0;
   line-height: 1;
+  box-shadow: 0 2px 8px rgba(20,184,166,0.35);
 }
 .estoque-cat-btn-nova:hover {
-  background: var(--est-accent);
-  color: #fff;
-  border-color: transparent;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20,184,166,0.45);
 }
 
 /* Form inline nova/edição de categoria */
@@ -236,6 +225,7 @@
 
 .estoque-cat-row .estoque-cat-item {
   flex: 1;
+  min-width: 0;
   border-radius: 9px 0 0 9px;
 }
 .estoque-cat-row .estoque-cat-item:hover { background: none; }
