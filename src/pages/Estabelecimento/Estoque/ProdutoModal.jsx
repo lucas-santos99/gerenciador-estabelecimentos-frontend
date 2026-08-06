@@ -250,6 +250,106 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
   );
 }
 
+// Combobox de categoria — busca por nome e mostra o contexto quando é
+// uma subcategoria ("Jeans — em Calças"), coisa que um <select> nativo
+// não consegue fazer bem.
+function CategoriaSelect({ categorias, value, onChange, somenteLeitura }) {
+  const [aberto, setAberto] = useState(false);
+  const [busca,  setBusca]  = useState('');
+  const wrapRef  = useRef(null);
+  const buscaRef = useRef(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function handleClickFora(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) { setAberto(false); setBusca(''); }
+    }
+    document.addEventListener('mousedown', handleClickFora);
+    return () => document.removeEventListener('mousedown', handleClickFora);
+  }, [aberto]);
+
+  useEffect(() => {
+    if (aberto) setTimeout(() => buscaRef.current?.focus(), 0);
+  }, [aberto]);
+
+  const raizes = categorias.filter(c => !c.categoria_pai_id);
+  const porPai = {};
+  categorias.forEach(c => { if (c.categoria_pai_id) (porPai[c.categoria_pai_id] ||= []).push(c); });
+
+  const selecionada     = categorias.find(c => c.id === value);
+  const paiDaSelecionada = selecionada?.categoria_pai_id ? categorias.find(c => c.id === selecionada.categoria_pai_id) : null;
+
+  const termo = busca.trim().toLowerCase();
+  const bate  = nome => !termo || nome.toLowerCase().includes(termo);
+
+  const grupos = raizes
+    .map(raiz => ({ raiz, subs: (porPai[raiz.id] || []).filter(s => bate(s.nome)) }))
+    .filter(g => bate(g.raiz.nome) || g.subs.length > 0);
+
+  function selecionar(id) {
+    onChange(id);
+    setAberto(false);
+    setBusca('');
+  }
+
+  return (
+    <div className="prod-cat-select-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="prod-cat-select-trigger"
+        onClick={() => !somenteLeitura && setAberto(a => !a)}
+        disabled={somenteLeitura}
+      >
+        <span className="prod-cat-select-trigger-texto">
+          {!selecionada ? 'Sem categoria' : selecionada.nome}
+          {paiDaSelecionada && <span className="prod-cat-select-trigger-pai"> — em "{paiDaSelecionada.nome}"</span>}
+        </span>
+        <span className="prod-cat-select-seta">{aberto ? '▲' : '▼'}</span>
+      </button>
+
+      {aberto && (
+        <div className="prod-cat-select-painel">
+          <input
+            ref={buscaRef}
+            className="prod-cat-select-busca"
+            placeholder="Buscar categoria…"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setAberto(false); setBusca(''); } }}
+          />
+          <div className="prod-cat-select-lista">
+            <button type="button" className={`prod-cat-select-opcao${!value ? ' ativa' : ''}`} onClick={() => selecionar('')}>
+              Sem categoria
+            </button>
+            {grupos.length === 0 && (
+              <div className="prod-cat-select-vazio">Nenhuma categoria encontrada</div>
+            )}
+            {grupos.map(({ raiz, subs }) => (
+              <React.Fragment key={raiz.id}>
+                {bate(raiz.nome) && (
+                  <button type="button" className={`prod-cat-select-opcao${value === raiz.id ? ' ativa' : ''}`} onClick={() => selecionar(raiz.id)}>
+                    {raiz.nome}
+                  </button>
+                )}
+                {subs.map(sub => (
+                  <button
+                    type="button"
+                    key={sub.id}
+                    className={`prod-cat-select-opcao prod-cat-select-opcao--sub${value === sub.id ? ' ativa' : ''}`}
+                    onClick={() => selecionar(sub.id)}
+                  >
+                    {sub.nome} <span className="prod-cat-select-opcao-pai">em "{raiz.nome}"</span>
+                  </button>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoModal({
   estabelecimentoId,
@@ -783,23 +883,12 @@ export default function ProdutoModal({
                     <CampoAjuda texto="Agrupa o produto na barra lateral do Estoque e nos relatórios de produtos mais vendidos. Clique no + pra criar uma categoria nova sem sair daqui." />
                   </label>
                   <div className="prod-cat-row">
-                    <select
-                      className="prod-select"
-                      name="categoria_id"
+                    <CategoriaSelect
+                      categorias={categorias}
                       value={form.categoria_id}
-                      onChange={atualizar}
-                    >
-                      <option value="">Sem categoria</option>
-                      {categorias
-                        .filter(c => !c.categoria_pai_id)
-                        .flatMap(raiz => [
-                          raiz,
-                          ...categorias.filter(c => c.categoria_pai_id === raiz.id),
-                        ])
-                        .map(c => (
-                          <option key={c.id} value={c.id}>{c.categoria_pai_id ? `↳ ${c.nome}` : c.nome}</option>
-                        ))}
-                    </select>
+                      onChange={id => setForm(prev => ({ ...prev, categoria_id: id }))}
+                      somenteLeitura={somenteLeitura}
+                    />
                     <button
                       type="button"
                       className="prod-btn-nova-cat"

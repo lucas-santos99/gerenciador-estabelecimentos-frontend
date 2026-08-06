@@ -72,6 +72,25 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const [catErro,          setCatErro]          = useState('');
   const [catBusca,         setCatBusca]         = useState('');
   const [sidebarMobile,    setSidebarMobile]    = useState(false);
+  const [sidebarColapsada, setSidebarColapsada] = useState(() => localStorage.getItem('estoque-sidebar-colapsada') === 'true');
+  const [catFontScale,     setCatFontScale]     = useState(() => {
+    const s = localStorage.getItem('estoque-cat-font-scale');
+    return s ? parseFloat(s) : 1;
+  });
+  function changeCatFontScale(delta) {
+    setCatFontScale(prev => {
+      const next = Math.min(1.4, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('estoque-cat-font-scale', next);
+      return next;
+    });
+  }
+  function toggleSidebarColapsada() {
+    setSidebarColapsada(prev => {
+      const next = !prev;
+      localStorage.setItem('estoque-sidebar-colapsada', next);
+      return next;
+    });
+  }
   const [fontScale,        setFontScale]        = useState(() => {
     const saved = localStorage.getItem('estoque-font-scale');
     return saved ? parseFloat(saved) : 1;
@@ -484,17 +503,32 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       />
 
       {/* ── SIDEBAR CATEGORIAS ───────────────────────────── */}
-      <aside className={`estoque-sidebar${sidebarMobile ? ' aberta' : ''}`}>
+      <aside
+        className={`estoque-sidebar${sidebarMobile ? ' aberta' : ''}${sidebarColapsada ? ' colapsada' : ''}`}
+        style={{ '--estoque-cat-font-scale': catFontScale }}
+      >
+        <button
+          className="estoque-sidebar-toggle"
+          onClick={toggleSidebarColapsada}
+          title={sidebarColapsada ? 'Expandir categorias' : 'Recolher categorias'}
+        >
+          {sidebarColapsada ? '›' : '‹'}
+        </button>
+
         <div className="estoque-sidebar-header">
           <div className="estoque-sidebar-titulo">
             Categorias
             {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
           </div>
-          <button
-            className="estoque-cat-btn-nova"
-            onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
-            title="Nova categoria"
-          >+</button>
+          <div className="estoque-sidebar-header-acoes">
+            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(-0.1)} disabled={catFontScale <= 0.8} title="Diminuir fonte">A−</button>
+            <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(0.1)}  disabled={catFontScale >= 1.4} title="Aumentar fonte">A+</button>
+            <button
+              className="estoque-cat-btn-nova"
+              onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
+              title="Nova categoria"
+            >+</button>
+          </div>
         </div>
 
         {/* Formulário nova categoria */}
@@ -567,6 +601,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                   className={`estoque-cat-item estoque-cat-item--todos${categoriaAtiva === 'todos' ? ' ativo' : ''}`}
                   onClick={() => setCategoriaAtiva('todos')}
                 >
+                  <span className="estoque-cat-avatar estoque-cat-avatar--geral">≡</span>
                   <span className="estoque-cat-item-nome">Todos os produtos</span>
                   <div className="estoque-cat-item-right">
                     {criticos > 0 && (
@@ -766,6 +801,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 className={`estoque-cat-item${categoriaAtiva === 'sem_categoria' ? ' ativo' : ''}`}
                 onClick={() => setCategoriaAtiva('sem_categoria')}
               >
+                <span className="estoque-cat-avatar estoque-cat-avatar--geral">—</span>
                 <span className="estoque-cat-item-nome estoque-cat-nome-muted">Sem categoria</span>
                 <div className="estoque-cat-item-right">
                   <span className="estoque-cat-count">{semCategoria}</span>
