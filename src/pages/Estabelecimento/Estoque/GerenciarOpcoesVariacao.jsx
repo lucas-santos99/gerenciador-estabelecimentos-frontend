@@ -1,7 +1,7 @@
 // src/pages/Estabelecimento/Estoque/GerenciarOpcoesVariacao.jsx
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import './Estoque.css';
+import '../Estoque.css';
 
 export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, onAlterado }) {
   const [aba,       setAba]       = useState('tamanho');
