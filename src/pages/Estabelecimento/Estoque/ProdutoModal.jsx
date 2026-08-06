@@ -653,6 +653,11 @@ export default function ProdutoModal({
                           unidade_medida: op.value,
                           estoque_atual:  formatarValorBR(prev.estoque_atual,  op.value === 'kg' ? 3 : 0),
                           estoque_minimo: formatarValorBR(prev.estoque_minimo, op.value === 'kg' ? 3 : 0),
+                          // "Pesável com etiqueta de balança" só faz sentido vendendo por
+                          // Quilo — trocando pra Unidade, desmarca e limpa o PLU, senão
+                          // fica um valor escondido (checkbox some da tela, mas o dado
+                          // continua marcado por baixo e seria enviado do mesmo jeito)
+                          ...(op.value === 'un' ? { vendido_por_peso: false, plu_balanca: '' } : {}),
                         }))}
                       >
                         <span className="prod-unidade-icon">{op.icon}</span>
@@ -662,6 +667,40 @@ export default function ProdutoModal({
                     ))}
                   </div>
                 </div>
+
+                {form.unidade_medida === 'kg' && (
+                  <div className="prod-form-group prod-form-full prod-balanca-inline">
+                    <label className="prod-balanca-checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="vendido_por_peso"
+                        checked={form.vendido_por_peso}
+                        onChange={atualizar}
+                        disabled={somenteLeitura}
+                        className="prod-balanca-checkbox"
+                      />
+                      <span>
+                        <strong>⚖️ Produto pesável com etiqueta de balança</strong>
+                        <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
+                          A balança imprime etiqueta com código EAN-13. O caixa bipa e o preço é calculado pelo peso automaticamente.
+                        </span>
+                      </span>
+                    </label>
+
+                    {form.vendido_por_peso && (
+                      <div className="prod-balanca-info">
+                        <span>💡</span>
+                        <div>
+                          <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
+                          <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
+                          Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
+                          <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
+                          apenas referência para o atendente saber qual número digitar na balança.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="prod-form-group">
                   <label className="prod-label">
@@ -772,47 +811,6 @@ export default function ProdutoModal({
               </div>
             </div>
 
-            {/* ── Balança ───────────────────────────────── */}
-            <div className="prod-form-section">
-              <div className="prod-form-section-titulo">⚖️ Balança</div>
-              <div className="prod-form-grid">
-
-                <div className="prod-form-group prod-form-full">
-                  <label className="prod-balanca-checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="vendido_por_peso"
-                      checked={form.vendido_por_peso}
-                      onChange={atualizar}
-                      disabled={somenteLeitura}
-                      className="prod-balanca-checkbox"
-                    />
-                    <span>
-                      <strong>Produto pesável com etiqueta de balança</strong>
-                      <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
-                        A balança imprime etiqueta com código EAN-13. O caixa bipa e o preço é calculado pelo peso automaticamente.
-                      </span>
-                    </span>
-                  </label>
-                </div>
-
-                {form.vendido_por_peso && (
-                  <div className="prod-form-group prod-form-full">
-                    <div className="prod-balanca-info">
-                      <span>💡</span>
-                      <div>
-                        <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
-                        <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
-                        Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
-                        <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
-                        apenas referência para o atendente saber qual número digitar na balança.
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
 
             {/* ── Preços ────────────────────────────────── */}
             <div className="prod-form-section">

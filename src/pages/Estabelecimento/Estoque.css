@@ -1398,6 +1398,14 @@
    BALANÇA — Seção de produto pesável no ProdutoModal
    ════════════════════════════════════════════════════════════ */
 
+/* Agrupa o checkbox + info logo abaixo do toggle "Vendido por" */
+.prod-balanca-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: -4px;
+}
+
 /* Checkbox de produto pesável */
 .prod-balanca-checkbox-label {
   display: flex;
