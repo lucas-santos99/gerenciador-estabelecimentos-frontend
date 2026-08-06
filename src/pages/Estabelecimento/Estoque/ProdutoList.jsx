@@ -506,15 +506,14 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       <aside
         className={`estoque-sidebar${sidebarMobile ? ' aberta' : ''}${sidebarColapsada ? ' colapsada' : ''}`}
         style={{ '--estoque-cat-font-scale': catFontScale }}
+        onClick={e => {
+          // Clicar em qualquer espaço vazio recolhe/expande — mesmo padrão
+          // do menu do estabelecimento. Ignora cliques em botões, links,
+          // inputs e selects, pra não atrapalhar o uso normal da lista.
+          if (e.target.closest('button, input, a, select, textarea')) return;
+          toggleSidebarColapsada();
+        }}
       >
-        <button
-          className="estoque-sidebar-toggle"
-          onClick={toggleSidebarColapsada}
-          title={sidebarColapsada ? 'Expandir categorias' : 'Recolher categorias'}
-        >
-          {sidebarColapsada ? '›' : '‹'}
-        </button>
-
         <div className="estoque-sidebar-header">
           <div className="estoque-sidebar-titulo">
             Categorias
@@ -528,6 +527,13 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
               title="Nova categoria"
             >+</button>
+            <button
+              className="estoque-sidebar-toggle-inline"
+              onClick={() => toggleSidebarColapsada()}
+              title={sidebarColapsada ? 'Expandir categorias' : 'Recolher categorias'}
+            >
+              {sidebarColapsada ? '›' : '‹'}
+            </button>
           </div>
         </div>
 
