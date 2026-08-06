@@ -1741,3 +1741,73 @@
   text-align: left;
 }
 .prod-balanca-como-configurar-btn:hover { text-decoration: underline; }
+
+/* ════════════════════════════════════════════════════════════
+   SUBCATEGORIAS — árvore de categorias na sidebar do Estoque
+   ════════════════════════════════════════════════════════════ */
+
+.estoque-cat-acao.subcategoria:hover { background: var(--est-accent-dim); color: var(--est-accent); }
+
+/* Chevron de expandir/recolher */
+.estoque-cat-chevron {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--est-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+.estoque-cat-chevron:hover { background: var(--est-hover); color: var(--est-text); }
+
+.estoque-cat-chevron-espaco {
+  width: 18px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* Lista de subcategorias — recuada, com uma linha guia à esquerda */
+.estoque-subcats {
+  list-style: none;
+  margin: 2px 0 4px 27px;
+  padding: 0 0 0 8px;
+  border-left: 2px solid var(--est-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.estoque-cat-li--sub .estoque-cat-item--sub {
+  padding: 7px 10px 7px 12px;
+  font-size: 0.79rem;
+  font-weight: 500;
+}
+
+.estoque-cat-row--sub:hover { background: var(--est-hover); }
+
+/* Formulário de nova categoria — agora com o seletor de categoria-pai */
+.estoque-cat-form--nova { gap: 6px; }
+
+.estoque-cat-select-pai {
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.estoque-cat-select-pai:focus {
+  outline: none;
+  border-color: var(--est-accent);
+}

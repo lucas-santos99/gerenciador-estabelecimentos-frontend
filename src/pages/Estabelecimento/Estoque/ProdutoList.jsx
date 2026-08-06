@@ -57,6 +57,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const [catEditandoNome,  setCatEditandoNome]  = useState('');
   const [catNovaNome,      setCatNovaNome]      = useState('');
   const [catNovaAberta,    setCatNovaAberta]    = useState(false);
+  const [catNovaPaiId,     setCatNovaPaiId]     = useState(''); // '' = categoria principal
+  const [catColapsadas,    setCatColapsadas]    = useState(() => new Set()); // ids de categoria-mãe com subcategorias escondidas
   const [catSalvando,      setCatSalvando]      = useState(false);
   const [catErro,          setCatErro]          = useState('');
   const [catBusca,         setCatBusca]         = useState('');
@@ -298,11 +300,28 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   /* ── Filtros ─────────────────────────────────────────────── */
   const semCategoria = produtos.filter(p => !p.categoria_id).length;
 
+  // Agrupa: raízes (sem pai) + mapa paiId -> subcategorias
+  const categoriasRaiz = categorias.filter(c => !c.categoria_pai_id);
+  const subPorPai = {};
+  categorias.forEach(c => {
+    if (c.categoria_pai_id) {
+      (subPorPai[c.categoria_pai_id] ||= []).push(c);
+    }
+  });
+
+  // ids que "contam" pra categoria ativa selecionada — se for uma
+  // categoria-mãe, inclui as subcategorias dela também (clicar em
+  // "Calças" mostra jeans + moletom junto, não só o que está direto nela)
+  function idsDaCategoriaAtiva(catId) {
+    const subs = subPorPai[catId];
+    return subs ? [catId, ...subs.map(s => s.id)] : [catId];
+  }
+
   const produtosFiltrados = produtos.filter(p => {
     const catOK =
       categoriaAtiva === 'todos' ? true
       : categoriaAtiva === 'sem_categoria' ? !p.categoria_id
-      : p.categoria_id === categoriaAtiva;
+      : idsDaCategoriaAtiva(categoriaAtiva).includes(p.categoria_id);
 
     const busca = normalizar(termoBusca).trim();
     let buscaOK = true;
@@ -320,6 +339,14 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     return catOK && buscaOK;
   });
 
+  function toggleColapsada(id) {
+    setCatColapsadas(prev => {
+      const novo = new Set(prev);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  }
+
   /* ── Criar categoria ────────────────────────────────────── */
   async function criarCategoria() {
     if (!catNovaNome.trim()) return;
@@ -329,12 +356,13 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       const resp = await apiFetch('/api/categorias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: catNovaNome.trim() }),
+        body: JSON.stringify({ nome: catNovaNome.trim(), categoria_pai_id: catNovaPaiId || null }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao criar categoria');
       setCategorias(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
       setCatNovaNome('');
+      setCatNovaPaiId('');
       setCatNovaAberta(false);
       setCategoriaAtiva(data.id);
     } catch (err) {
@@ -373,8 +401,12 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   /* ── Excluir categoria ──────────────────────────────────── */
   async function excluirCategoria(id, nome) {
     const count = produtos.filter(p => p.categoria_id === id).length;
-    const msg = count > 0
-      ? `A categoria "${nome}" tem ${count} produto(s). Eles ficarão sem categoria. Confirmar exclusão?`
+    const numSubs = (subPorPai[id] || []).length;
+    const partes = [];
+    if (count > 0)   partes.push(`${count} produto(s) (ficam sem categoria)`);
+    if (numSubs > 0) partes.push(`${numSubs} subcategoria(s) (viram categoria principal)`);
+    const msg = partes.length > 0
+      ? `A categoria "${nome}" tem ${partes.join(' e ')}. Confirmar exclusão?`
       : `Excluir a categoria "${nome}"?`;
     if (!window.confirm(msg)) return;
     setCatErro('');
@@ -384,13 +416,24 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         const data = await resp.json();
         throw new Error(data.error || 'Erro ao excluir');
       }
-      setCategorias(prev => prev.filter(c => c.id !== id));
+      setCategorias(prev => prev
+        .filter(c => c.id !== id)
+        .map(c => c.categoria_pai_id === id ? { ...c, categoria_pai_id: null } : c) // banco já promove sozinho — reflete localmente
+      );
       if (categoriaAtiva === id) setCategoriaAtiva('todos');
-      // Atualiza produtos removendo categoria_id deletada
       setProdutos(prev => prev.map(p => p.categoria_id === id ? { ...p, categoria_id: null } : p));
     } catch (err) {
       setCatErro(err.message);
     }
+  }
+
+  /* ── Abrir form de nova subcategoria já com o pai escolhido ── */
+  function abrirNovaSubcategoria(paiId) {
+    setCatNovaPaiId(paiId);
+    setCatNovaAberta(true);
+    setCatEditandoId(null);
+    setCatErro('');
+    setCatColapsadas(prev => { const n = new Set(prev); n.delete(paiId); return n; }); // garante que a lista abre pra ver a nova subcategoria depois
   }
 
   /* ── Handlers modal ─────────────────────────────────────── */
@@ -437,31 +480,43 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
           <div className="estoque-sidebar-titulo">Categorias</div>
           <button
             className="estoque-cat-btn-nova"
-            onClick={() => { setCatNovaAberta(p => !p); setCatEditandoId(null); setCatErro(''); }}
+            onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
             title="Nova categoria"
           >+</button>
         </div>
 
         {/* Formulário nova categoria */}
         {catNovaAberta && (
-          <div className="estoque-cat-form">
+          <div className="estoque-cat-form estoque-cat-form--nova">
             <input
               ref={catNovaRef}
               className="estoque-cat-input"
-              placeholder="Nome da categoria…"
+              placeholder={catNovaPaiId ? 'Nome da subcategoria…' : 'Nome da categoria…'}
               value={catNovaNome}
               onChange={e => setCatNovaNome(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter') { e.preventDefault(); criarCategoria(); }
-                if (e.key === 'Escape') { setCatNovaAberta(false); setCatNovaNome(''); }
+                if (e.key === 'Escape') { setCatNovaAberta(false); setCatNovaNome(''); setCatNovaPaiId(''); }
               }}
               disabled={catSalvando}
             />
+            <select
+              className="estoque-cat-select-pai"
+              value={catNovaPaiId}
+              onChange={e => setCatNovaPaiId(e.target.value)}
+              disabled={catSalvando}
+              title="Categoria principal (opcional)"
+            >
+              <option value="">— Categoria principal —</option>
+              {categoriasRaiz.map(cat => (
+                <option key={cat.id} value={cat.id}>↳ dentro de "{cat.nome}"</option>
+              ))}
+            </select>
             <div className="estoque-cat-form-btns">
               <button className="estoque-cat-form-btn confirmar" onClick={criarCategoria} disabled={catSalvando}>
                 {catSalvando ? '…' : '✓'}
               </button>
-              <button className="estoque-cat-form-btn cancelar" onClick={() => { setCatNovaAberta(false); setCatNovaNome(''); }}>
+              <button className="estoque-cat-form-btn cancelar" onClick={() => { setCatNovaAberta(false); setCatNovaNome(''); setCatNovaPaiId(''); }}>
                 ✕
               </button>
             </div>
@@ -514,12 +569,24 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
           </li>
 
           {/* ── Categorias ── */}
-          {categorias
-            .filter(cat => !catBusca.trim() || cat.nome.toLowerCase().includes(catBusca.toLowerCase()))
+          {categoriasRaiz
+            .filter(cat => {
+              const termo = catBusca.trim().toLowerCase();
+              if (!termo) return true;
+              const subs = subPorPai[cat.id] || [];
+              return cat.nome.toLowerCase().includes(termo) || subs.some(s => s.nome.toLowerCase().includes(termo));
+            })
             .map(cat => {
-              const prods    = produtos.filter(p => p.categoria_id === cat.id);
+              const subs = subPorPai[cat.id] || [];
+              const idsAgregados = idsDaCategoriaAtiva(cat.id);
+              const prods    = produtos.filter(p => idsAgregados.includes(p.categoria_id));
               const criticos = prods.filter(p => estoqueStatus(p) === 'critico').length;
               const baixos   = prods.filter(p => estoqueStatus(p) === 'baixo').length;
+              const termo    = catBusca.trim().toLowerCase();
+              const catBateBusca = !termo || cat.nome.toLowerCase().includes(termo);
+              const subsVisiveis = catBateBusca ? subs : subs.filter(s => s.nome.toLowerCase().includes(termo));
+              const colapsada = catColapsadas.has(cat.id);
+
               return (
                 <li key={cat.id} className="estoque-cat-li">
                   {catEditandoId === cat.id ? (
@@ -546,6 +613,17 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                     </div>
                   ) : (
                     <div className="estoque-cat-row">
+                      {subs.length > 0 ? (
+                        <button
+                          className="estoque-cat-chevron"
+                          onClick={() => toggleColapsada(cat.id)}
+                          title={colapsada ? 'Expandir subcategorias' : 'Recolher subcategorias'}
+                        >
+                          {colapsada ? '▸' : '▾'}
+                        </button>
+                      ) : (
+                        <span className="estoque-cat-chevron-espaco" />
+                      )}
                       <button
                         className={`estoque-cat-item${categoriaAtiva === cat.id ? ' ativo' : ''}`}
                         onClick={() => setCategoriaAtiva(cat.id)}
@@ -567,6 +645,11 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                       </button>
                       <div className="estoque-cat-acoes">
                         <button
+                          className="estoque-cat-acao subcategoria"
+                          title="Nova subcategoria"
+                          onClick={() => abrirNovaSubcategoria(cat.id)}
+                        >➕</button>
+                        <button
                           className="estoque-cat-acao editar"
                           title="Renomear"
                           onClick={() => { setCatEditandoId(cat.id); setCatEditandoNome(cat.nome); setCatNovaAberta(false); setCatErro(''); }}
@@ -578,6 +661,78 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                         >🗑</button>
                       </div>
                     </div>
+                  )}
+
+                  {/* ── Subcategorias ── */}
+                  {!colapsada && subsVisiveis.length > 0 && (
+                    <ul className="estoque-subcats">
+                      {subsVisiveis.map(sub => {
+                        const subProds    = produtos.filter(p => p.categoria_id === sub.id);
+                        const subCriticos = subProds.filter(p => estoqueStatus(p) === 'critico').length;
+                        const subBaixos   = subProds.filter(p => estoqueStatus(p) === 'baixo').length;
+                        return (
+                          <li key={sub.id} className="estoque-cat-li estoque-cat-li--sub">
+                            {catEditandoId === sub.id ? (
+                              <div className="estoque-cat-form">
+                                <input
+                                  ref={catEditRef}
+                                  className="estoque-cat-input"
+                                  value={catEditandoNome}
+                                  onChange={e => setCatEditandoNome(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') { e.preventDefault(); salvarEdicaoCategoria(sub.id); }
+                                    if (e.key === 'Escape') { setCatEditandoId(null); setCatEditandoNome(''); }
+                                  }}
+                                  disabled={catSalvando}
+                                />
+                                <div className="estoque-cat-form-btns">
+                                  <button className="estoque-cat-form-btn confirmar" onClick={() => salvarEdicaoCategoria(sub.id)} disabled={catSalvando}>
+                                    {catSalvando ? '…' : '✓'}
+                                  </button>
+                                  <button className="estoque-cat-form-btn cancelar" onClick={() => { setCatEditandoId(null); setCatEditandoNome(''); }}>
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="estoque-cat-row estoque-cat-row--sub">
+                                <button
+                                  className={`estoque-cat-item estoque-cat-item--sub${categoriaAtiva === sub.id ? ' ativo' : ''}`}
+                                  onClick={() => setCategoriaAtiva(sub.id)}
+                                >
+                                  <span className="estoque-cat-item-nome">↳ {sub.nome}</span>
+                                  <div className="estoque-cat-item-right">
+                                    {subCriticos > 0 && (
+                                      <span className="estoque-cat-alerta est-alerta-critico" title={`${subCriticos} sem estoque`}>
+                                        🔴 {subCriticos}
+                                      </span>
+                                    )}
+                                    {subBaixos > 0 && (
+                                      <span className="estoque-cat-alerta est-alerta-baixo" title={`${subBaixos} baixo`}>
+                                        ⚠️ {subBaixos}
+                                      </span>
+                                    )}
+                                    <span className="estoque-cat-count">{subProds.length}</span>
+                                  </div>
+                                </button>
+                                <div className="estoque-cat-acoes">
+                                  <button
+                                    className="estoque-cat-acao editar"
+                                    title="Renomear"
+                                    onClick={() => { setCatEditandoId(sub.id); setCatEditandoNome(sub.nome); setCatNovaAberta(false); setCatErro(''); }}
+                                  >✏️</button>
+                                  <button
+                                    className="estoque-cat-acao excluir"
+                                    title="Excluir"
+                                    onClick={() => excluirCategoria(sub.id, sub.nome)}
+                                  >🗑</button>
+                                </div>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </li>
               );

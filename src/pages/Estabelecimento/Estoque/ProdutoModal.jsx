@@ -790,9 +790,15 @@ export default function ProdutoModal({
                       onChange={atualizar}
                     >
                       <option value="">Sem categoria</option>
-                      {categorias.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))}
+                      {categorias
+                        .filter(c => !c.categoria_pai_id)
+                        .flatMap(raiz => [
+                          raiz,
+                          ...categorias.filter(c => c.categoria_pai_id === raiz.id),
+                        ])
+                        .map(c => (
+                          <option key={c.id} value={c.id}>{c.categoria_pai_id ? `↳ ${c.nome}` : c.nome}</option>
+                        ))}
                     </select>
                     <button
                       type="button"
