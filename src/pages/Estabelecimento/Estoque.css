@@ -678,7 +678,7 @@
   border-radius: 20px;
   padding: 28px;
   width: 100%;
-  max-width: 640px;
+  max-width: 760px;
   max-height: 90vh;
   overflow-y: auto;
   margin: 16px;
@@ -1604,8 +1604,8 @@
 
 .prod-variacao-linha {
   display: grid;
-  grid-template-columns: 1fr 1fr 100px 130px 28px;
-  gap: 8px;
+  grid-template-columns: 1fr 1fr 130px 160px 28px;
+  gap: 10px;
   align-items: center;
   margin-bottom: 8px;
 }
@@ -1706,3 +1706,38 @@
   margin-bottom: 10px;
 }
 .prod-btn-gerenciar-opcoes:hover { border-color: var(--est-border-accent); color: var(--est-accent); }
+
+/* ════════════════════════════════════════════════════════════
+   PREFIXO R$ nos campos de preço — o número não fica mais solto
+   ════════════════════════════════════════════════════════════ */
+
+.prod-input-moeda-wrap {
+  position: relative;
+}
+
+.prod-moeda-prefixo {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--est-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.prod-input-moeda {
+  padding-left: 32px !important;
+}
+
+.prod-balanca-como-configurar-btn {
+  background: none;
+  border: none;
+  color: var(--est-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: left;
+}
+.prod-balanca-como-configurar-btn:hover { text-decoration: underline; }

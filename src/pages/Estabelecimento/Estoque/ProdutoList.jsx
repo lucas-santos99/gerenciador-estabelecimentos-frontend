@@ -1,7 +1,7 @@
 // src/pages/Estabelecimento/Estoque/ProdutoList.jsx
 import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import ProdutoModal from './ProdutoModal';
 import '../Estoque.css';
 
@@ -164,24 +164,133 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   /* ── Exportar Excel ──────────────────────────────────────── */
   function exportarExcel() {
     if (produtos.length === 0) return;
-    const dados = produtos.map(p => {
-      const cat = categorias.find(c => c.id === p.categoria_id)?.nome || 'Sem Categoria';
-      const custo = parseFloat(p.preco_custo || 0);
-      const venda = parseFloat(p.preco_venda || 0);
-      return {
-        'Categoria': cat,
-        'Produto': p.nome,
-        'Cód. Barras': p.codigo_barras || '',
-        'Estoque': parseFloat(p.estoque_atual),
-        'Unid.': p.unidade_medida,
-        'Custo (R$)': fmt(custo),
-        'Venda (R$)': fmt(venda),
-        'Lucro/Un': fmt(venda - custo),
-      };
+
+    const TEAL      = '14B8A6';
+    const TEAL_DARK = '0D9488';
+    const CINZA     = 'E2E8F0';
+    const AMARELO   = 'FEF3C7'; // estoque baixo
+    const VERMELHO  = 'FEE2E2'; // estoque crítico
+
+    const MOEDA_FMT = '"R$" #,##0.00';
+    const PCT_FMT   = '0.0%';
+
+    const headerStyle = {
+      font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+      fill: { patternType: 'solid', fgColor: { rgb: TEAL } },
+      alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: TEAL_DARK } }, bottom: { style: 'thin', color: { rgb: TEAL_DARK } },
+        left: { style: 'thin', color: { rgb: TEAL_DARK } }, right: { style: 'thin', color: { rgb: TEAL_DARK } },
+      },
+    };
+    const bordaFina = {
+      border: {
+        top: { style: 'thin', color: { rgb: CINZA } }, bottom: { style: 'thin', color: { rgb: CINZA } },
+        left: { style: 'thin', color: { rgb: CINZA } }, right: { style: 'thin', color: { rgb: CINZA } },
+      },
+    };
+
+    function estilizarAba(ws, numColunas, numLinhas, colunaMoeda = [], colunaPct = [], destaqueLinha = null) {
+      for (let c = 0; c < numColunas; c++) {
+        const ref = XLSX.utils.encode_cell({ r: 0, c });
+        if (ws[ref]) ws[ref].s = headerStyle;
+      }
+      for (let r = 1; r <= numLinhas; r++) {
+        const destaque = destaqueLinha?.(r - 1);
+        const fillExtra = destaque === 'critico' ? { fill: { patternType: 'solid', fgColor: { rgb: VERMELHO } } }
+                         : destaque === 'baixo'   ? { fill: { patternType: 'solid', fgColor: { rgb: AMARELO } } }
+                         : {};
+        for (let c = 0; c < numColunas; c++) {
+          const ref = XLSX.utils.encode_cell({ r, c });
+          const cell = ws[ref];
+          if (!cell) continue;
+          cell.s = { ...bordaFina, ...fillExtra };
+          if (colunaMoeda.includes(c)) cell.z = MOEDA_FMT;
+          if (colunaPct.includes(c))   cell.z = PCT_FMT;
+        }
+      }
+      ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(numColunas - 1)}1` };
+    }
+
+    // ── Aba 1: Produtos (resumo, 1 linha por produto) ──────────
+    const headerProdutos = [
+      'Categoria', 'Produto', 'Marca', 'Cód. Barras', 'Tipo',
+      'Estoque Total', 'Unid.', 'Custo (R$)', 'Venda (R$)',
+      'Margem (%)', 'Valor em Estoque (R$)', 'Status',
+    ];
+
+    const linhasProdutos = produtos.map(p => {
+      const cat    = categorias.find(c => c.id === p.categoria_id)?.nome || 'Sem Categoria';
+      const custo  = parseFloat(p.preco_custo || 0);
+      const venda  = parseFloat(p.preco_venda || 0);
+      const estoque = parseFloat(p.estoque_atual || 0);
+      const margem  = venda > 0 ? (venda - custo) / venda : 0;
+      const status  = estoqueStatus(p);
+      const statusLabel = status === 'critico' ? 'Estoque crítico' : status === 'baixo' ? 'Estoque baixo' : 'OK';
+      return [
+        cat, p.nome, p.marca || '', p.codigo_barras || '',
+        p.tem_variacoes ? `Com variações (${(p.variacoes || []).length})` : 'Simples',
+        estoque, p.unidade_medida, custo, venda, margem, estoque * custo, statusLabel,
+      ];
     });
-    const ws = XLSX.utils.json_to_sheet(dados);
+
+    const wsProdutos = XLSX.utils.aoa_to_sheet([headerProdutos, ...linhasProdutos]);
+    wsProdutos['!cols'] = [
+      { wch: 16 }, { wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 20 },
+      { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 11 }, { wch: 18 }, { wch: 14 },
+    ];
+    estilizarAba(
+      wsProdutos, headerProdutos.length, linhasProdutos.length,
+      [7, 8, 10], [9],
+      i => linhasProdutos[i][11] === 'Estoque crítico' ? 'critico' : linhasProdutos[i][11] === 'Estoque baixo' ? 'baixo' : null,
+    );
+
+    // Linha de totais, com fórmulas de verdade (recalcula se abrir e editar)
+    const linhaTotais = linhasProdutos.length + 1;
+    const totaisRef = {
+      produto: XLSX.utils.encode_cell({ r: linhaTotais, c: 1 }),
+      valorEstoque: XLSX.utils.encode_cell({ r: linhaTotais, c: 10 }),
+    };
+    XLSX.utils.sheet_add_aoa(wsProdutos, [[
+      '', `Total: ${linhasProdutos.length} produto${linhasProdutos.length === 1 ? '' : 's'}`, '', '', '', '', '', '', '', '',
+      { t: 'n', f: `SUM(K2:K${linhaTotais})`, z: MOEDA_FMT }, '',
+    ]], { origin: linhaTotais });
+    [1, 10].forEach(c => {
+      const ref = XLSX.utils.encode_cell({ r: linhaTotais, c });
+      if (wsProdutos[ref]) wsProdutos[ref].s = { font: { bold: true }, border: bordaFina.border };
+    });
+
+    // ── Aba 2: Variações (detalhe, 1 linha por tamanho/cor) ────
+    const headerVariacoes = [
+      'Produto', 'Marca', 'Tamanho', 'Cor', 'Estoque', 'Unid.',
+      'Custo (R$)', 'Venda (R$)', 'Valor em Estoque (R$)',
+    ];
+    const linhasVariacoes = [];
+    produtos.forEach(p => {
+      if (!p.tem_variacoes) return;
+      (p.variacoes || []).forEach(v => {
+        const custo   = parseFloat(v.preco_custo != null ? v.preco_custo : p.preco_custo || 0);
+        const venda   = parseFloat(v.preco_venda != null ? v.preco_venda : p.preco_venda || 0);
+        const estoque = parseFloat(v.estoque_atual || 0);
+        linhasVariacoes.push([
+          p.nome, p.marca || '', v.tamanho || '', v.cor || '',
+          estoque, p.unidade_medida, custo, venda, estoque * custo,
+        ]);
+      });
+    });
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+    XLSX.utils.book_append_sheet(wb, wsProdutos, 'Produtos');
+
+    if (linhasVariacoes.length > 0) {
+      const wsVariacoes = XLSX.utils.aoa_to_sheet([headerVariacoes, ...linhasVariacoes]);
+      wsVariacoes['!cols'] = [
+        { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
+      ];
+      estilizarAba(wsVariacoes, headerVariacoes.length, linhasVariacoes.length, [6, 7, 8], []);
+      XLSX.utils.book_append_sheet(wb, wsVariacoes, 'Variações');
+    }
+
     const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
     XLSX.writeFile(wb, `Estoque-${data}.xlsx`);
   }

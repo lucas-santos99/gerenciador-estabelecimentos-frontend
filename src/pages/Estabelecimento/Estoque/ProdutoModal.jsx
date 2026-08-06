@@ -213,16 +213,19 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
             onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
             disabled={somenteLeitura}
           />
-          <input
-            className="prod-input"
-            type="text"
-            inputMode="decimal"
-            placeholder={`R$ ${precoBase || '0,00'}`}
-            value={v.preco_venda}
-            onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
-            disabled={somenteLeitura}
-            title="Deixe em branco pra usar o preço padrão do produto"
-          />
+          <div className="prod-input-moeda-wrap">
+            <span className="prod-moeda-prefixo">R$</span>
+            <input
+              className="prod-input prod-input-moeda"
+              type="text"
+              inputMode="decimal"
+              placeholder={precoBase || '0,00'}
+              value={v.preco_venda}
+              onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
+              disabled={somenteLeitura}
+              title="Deixe em branco pra usar o preço padrão do produto"
+            />
+          </div>
           {!somenteLeitura && (
             <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
               ✕
@@ -280,6 +283,7 @@ export default function ProdutoModal({
   const [opcoesTamanho, setOpcoesTamanho] = useState([]);
   const [opcoesCor,     setOpcoesCor]     = useState([]);
   const [gerenciarOpcoesAberto, setGerenciarOpcoesAberto] = useState(false);
+  const [comoConfigurarAberto, setComoConfigurarAberto]   = useState(false);
 
   const [categorias,        setCategorias]        = useState(categoriasProp || []);
   const [novaCatAberta,     setNovaCatAberta]     = useState(false);
@@ -625,14 +629,6 @@ export default function ProdutoModal({
         />
       )}
 
-      {gerenciarOpcoesAberto && (
-        <GerenciarOpcoesVariacao
-          estabelecimentoId={estabelecimentoId}
-          onClose={() => setGerenciarOpcoesAberto(false)}
-          onAlterado={carregarOpcoesVariacao}
-        />
-      )}
-
       <div className="prod-modal-overlay">
         <div className="prod-modal">
 
@@ -905,15 +901,25 @@ export default function ProdutoModal({
                     </label>
 
                     {form.vendido_por_peso && (
-                      <div className="prod-balanca-info">
-                        <span>💡</span>
-                        <div>
-                          <strong>Como configurar:</strong> No campo "Código de barras" acima, informe o{' '}
-                          <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
-                          Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
-                          <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
-                          apenas referência para o atendente saber qual número digitar na balança.
-                        </div>
+                      <div className="prod-balanca-como-configurar">
+                        <button
+                          type="button"
+                          className="prod-balanca-como-configurar-btn"
+                          onClick={() => setComoConfigurarAberto(a => !a)}
+                        >
+                          💡 Como configurar {comoConfigurarAberto ? '▲' : '▼'}
+                        </button>
+                        {comoConfigurarAberto && (
+                          <div className="prod-balanca-info">
+                            <div>
+                              No campo "Código de barras" acima, informe o{' '}
+                              <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
+                              Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
+                              <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
+                              apenas referência para o atendente saber qual número digitar na balança.
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1097,15 +1103,18 @@ export default function ProdutoModal({
                     {labelCusto}
                     <CampoAjuda texto="Quanto você pagou pelo produto (com frete/impostos incluídos, se quiser ser exato). Usado só pra calcular a margem de lucro mostrada acima — opcional, mas ajuda a saber se está vendendo com prejuízo." />
                   </label>
-                  <input
-                    className="prod-input"
-                    type="text"
-                    inputMode="decimal"
-                    name="preco_custo"
-                    readOnly={somenteLeitura}
-                    value={form.preco_custo}
-                    onChange={atualizar}
-                  />
+                  <div className="prod-input-moeda-wrap">
+                    <span className="prod-moeda-prefixo">R$</span>
+                    <input
+                      className="prod-input prod-input-moeda"
+                      type="text"
+                      inputMode="decimal"
+                      name="preco_custo"
+                      readOnly={somenteLeitura}
+                      value={form.preco_custo}
+                      onChange={atualizar}
+                    />
+                  </div>
                 </div>
 
                 <div className="prod-form-group">
@@ -1113,16 +1122,19 @@ export default function ProdutoModal({
                     {labelVenda}
                     <CampoAjuda texto="Preço cobrado do cliente no PDV. Se o produto tiver variações com preço próprio (abaixo), esse aqui vira só o padrão pras variações que não tiverem um preço específico definido." />
                   </label>
-                  <input
-                    className="prod-input"
-                    type="text"
-                    inputMode="decimal"
-                    name="preco_venda"
-                    readOnly={somenteLeitura}
-                    value={form.preco_venda}
-                    onChange={atualizar}
-                    required
-                  />
+                  <div className="prod-input-moeda-wrap">
+                    <span className="prod-moeda-prefixo">R$</span>
+                    <input
+                      className="prod-input prod-input-moeda"
+                      type="text"
+                      inputMode="decimal"
+                      name="preco_venda"
+                      readOnly={somenteLeitura}
+                      value={form.preco_venda}
+                      onChange={atualizar}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1142,6 +1154,14 @@ export default function ProdutoModal({
           </form>
         </div>
       </div>
+
+      {gerenciarOpcoesAberto && (
+        <GerenciarOpcoesVariacao
+          estabelecimentoId={estabelecimentoId}
+          onClose={() => setGerenciarOpcoesAberto(false)}
+          onAlterado={carregarOpcoesVariacao}
+        />
+      )}
     </>
   );
 }
