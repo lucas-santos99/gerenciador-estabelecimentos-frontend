@@ -608,6 +608,18 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
 
+  // Com variações, cada linha pode ter preço próprio (ou herdar o preço
+  // base do produto, quando não sobrescrito) — mostra faixa se os
+  // valores efetivos não forem todos iguais, senão mostra um preço só.
+  const temVariacoes = produto.tem_variacoes && (produto.variacoes || []).length > 0;
+  let precoVendaExibido = fmt(produto.preco_venda);
+  let precoCustoExibido = fmt(produto.preco_custo);
+  if (temVariacoes) {
+    const precosVenda = produto.variacoes.map(v => parseFloat(v.preco_venda != null ? v.preco_venda : produto.preco_venda) || 0);
+    const min = Math.min(...precosVenda), max = Math.max(...precosVenda);
+    precoVendaExibido = min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
+  }
+
   return (
     <div
       id={`prod-${produto.id}`}
@@ -620,6 +632,11 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
         <div className="prod-nome">{produto.nome}</div>
         {produto.marca && <div className="prod-marca">{produto.marca}</div>}
         <div className="prod-card-meta">
+          {temVariacoes && (
+            <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor].filter(Boolean).join(' ')).join(', ')}>
+              🎨 {produto.variacoes.length} variaç{produto.variacoes.length > 1 ? 'ões' : 'ão'}
+            </span>
+          )}
           {produto.nome_categoria && (
             <span className="prod-badge-categoria">{produto.nome_categoria}</span>
           )}
@@ -628,11 +645,11 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
         <div className="prod-precos">
           <div className="prod-preco-item">
             <span className="prod-preco-label">Custo{unSufixo}</span>
-            <span className="prod-preco-valor">{fmt(produto.preco_custo)}</span>
+            <span className="prod-preco-valor">{precoCustoExibido}</span>
           </div>
           <div className="prod-preco-item">
             <span className="prod-preco-label">Venda{unSufixo}</span>
-            <span className="prod-preco-valor venda">{fmt(produto.preco_venda)}</span>
+            <span className="prod-preco-valor venda">{precoVendaExibido}</span>
           </div>
         </div>
       </div>

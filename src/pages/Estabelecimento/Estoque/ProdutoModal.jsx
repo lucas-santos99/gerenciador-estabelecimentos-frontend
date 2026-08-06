@@ -2,6 +2,7 @@
 import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
+import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
 import '../Estoque.css';
 
 /* ── Comparação "inteligente" de marcas ──────────────────────
@@ -106,6 +107,146 @@ function formatarValorBR(valor, casasDecimais) {
   return (numero || 0).toLocaleString('pt-BR', { minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
 }
 
+// Ajuda de campo: aparece no hover (desktop) E dá pra clicar (celular,
+// onde não tem hover). Um só componente reutilizado em todos os labels
+// do formulário.
+function CampoAjuda({ texto }) {
+  const [aberto, setAberto] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    function handleClickFora(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setAberto(false);
+    }
+    document.addEventListener('mousedown', handleClickFora);
+    return () => document.removeEventListener('mousedown', handleClickFora);
+  }, [aberto]);
+
+  return (
+    <span className="prod-ajuda-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="prod-ajuda-btn"
+        onClick={e => { e.preventDefault(); setAberto(a => !a); }}
+        aria-label="Ajuda sobre este campo"
+      >
+        ?
+      </button>
+      <span className={`prod-ajuda-texto${aberto ? ' aberto' : ''}`} role="tooltip">
+        {texto}
+      </span>
+    </span>
+  );
+}
+
+// Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
+// preço opcional (em branco = usa o preço de venda padrão do produto).
+function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes }) {
+  function adicionar() {
+    setVariacoes(prev => [...prev, {
+      _key: Math.random().toString(36).slice(2),
+      tamanho: '', cor: '',
+      estoque_atual: '0',
+      preco_venda: '',
+    }]);
+  }
+  function atualizarCampo(idx, campo, valor) {
+    setVariacoes(prev => prev.map((v, i) => i === idx ? { ...v, [campo]: valor } : v));
+  }
+  function remover(idx) {
+    setVariacoes(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  const totalEstoque = variacoes.reduce((acc, v) => acc + (paraFloatBR(v.estoque_atual) || 0), 0);
+
+  return (
+    <div className="prod-form-group prod-form-full">
+      <div className="prod-variacoes-header">
+        <label className="prod-label" style={{ marginBottom: 0 }}>
+          Variações
+          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor, com estoque próprio. Digite um valor novo em Tamanho ou Cor pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços)." />
+        </label>
+        {variacoes.length > 0 && (
+          <span className="prod-label-unit">Estoque total: {fmtQ(totalEstoque, unidadeMedida)}</span>
+        )}
+      </div>
+
+      {!somenteLeitura && (
+        <button type="button" className="prod-btn-gerenciar-opcoes" onClick={onGerenciarOpcoes}>
+          ⚙️ Gerenciar tamanhos e cores
+        </button>
+      )}
+
+      {variacoes.length === 0 ? (
+        <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
+      ) : (
+        <div className="prod-variacao-linha prod-variacao-cabecalho">
+          <span>Tamanho</span><span>Cor</span><span>Estoque ({unidadeMedida})</span><span>Preço (opcional)</span><span></span>
+        </div>
+      )}
+
+      {variacoes.map((v, idx) => (
+        <div className="prod-variacao-linha" key={v.id || v._key || idx}>
+          <input
+            className="prod-input"
+            list="opcoes-tamanho-datalist"
+            placeholder="P, M, G…"
+            value={v.tamanho}
+            onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
+            disabled={somenteLeitura}
+          />
+          <input
+            className="prod-input"
+            list="opcoes-cor-datalist"
+            placeholder="Cor"
+            value={v.cor}
+            onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
+            disabled={somenteLeitura}
+          />
+          <input
+            className="prod-input"
+            type="text"
+            inputMode="decimal"
+            placeholder="0"
+            value={v.estoque_atual}
+            onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
+            disabled={somenteLeitura}
+          />
+          <input
+            className="prod-input"
+            type="text"
+            inputMode="decimal"
+            placeholder={`R$ ${precoBase || '0,00'}`}
+            value={v.preco_venda}
+            onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
+            disabled={somenteLeitura}
+            title="Deixe em branco pra usar o preço padrão do produto"
+          />
+          {!somenteLeitura && (
+            <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
+              ✕
+            </button>
+          )}
+        </div>
+      ))}
+
+      <datalist id="opcoes-tamanho-datalist">
+        {opcoesTamanho.map(o => <option key={o} value={o} />)}
+      </datalist>
+      <datalist id="opcoes-cor-datalist">
+        {opcoesCor.map(o => <option key={o} value={o} />)}
+      </datalist>
+
+      {!somenteLeitura && (
+        <button type="button" className="prod-btn-add-variacao" onClick={adicionar}>
+          + Adicionar variação
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoModal({
   estabelecimentoId,
@@ -131,7 +272,14 @@ export default function ProdutoModal({
     // ── Campos balança ──
     vendido_por_peso: false,
     plu_balanca:      '',
+    // ── Variações ──
+    tem_variacoes: false,
   });
+
+  const [variacoes,     setVariacoes]     = useState([]);
+  const [opcoesTamanho, setOpcoesTamanho] = useState([]);
+  const [opcoesCor,     setOpcoesCor]     = useState([]);
+  const [gerenciarOpcoesAberto, setGerenciarOpcoesAberto] = useState(false);
 
   const [categorias,        setCategorias]        = useState(categoriasProp || []);
   const [novaCatAberta,     setNovaCatAberta]     = useState(false);
@@ -174,7 +322,15 @@ export default function ProdutoModal({
         preco_venda:      formatarValorBR(produtoEditar.preco_venda, 2),
         vendido_por_peso: produtoEditar.vendido_por_peso || false,
         plu_balanca:      produtoEditar.plu_balanca      || '',
+        tem_variacoes:    produtoEditar.tem_variacoes     || false,
       });
+      setVariacoes((produtoEditar.variacoes || []).map(v => ({
+        id:             v.id,
+        tamanho:        v.tamanho || '',
+        cor:            v.cor || '',
+        estoque_atual:  formatarValorBR(v.estoque_atual, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
+        preco_venda:    v.preco_venda != null ? formatarValorBR(v.preco_venda, 2) : '',
+      })));
     }
     // Produto novo: foco direto em código de barras, já que o fluxo normal
     // é bipar/digitar primeiro pra puxar nome/marca automaticamente.
@@ -199,6 +355,19 @@ export default function ProdutoModal({
       } catch { /* sugestão é acessório, falha silenciosa */ }
     })();
   }, [estabelecimentoId]);
+
+  /* ── Carregar presets de tamanho/cor (sugestão nas variações) ── */
+  async function carregarOpcoesVariacao() {
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`);
+      if (resp.ok) {
+        const d = await resp.json();
+        setOpcoesTamanho(d.tamanho || []);
+        setOpcoesCor(d.cor || []);
+      }
+    } catch { /* sugestão é acessório, falha silenciosa */ }
+  }
+  useEffect(() => { carregarOpcoesVariacao(); }, [estabelecimentoId]);
 
   /* ── ESC fecha ──────────────────────────────────────────── */
   useEffect(() => {
@@ -366,6 +535,16 @@ export default function ProdutoModal({
       }
     }
 
+    // Produto com variações precisa de pelo menos uma
+    if (form.tem_variacoes && variacoes.length === 0) {
+      setErro('Adicione ao menos uma variação, ou desmarque "Este produto tem variações".');
+      return;
+    }
+    if (form.tem_variacoes && variacoes.some(v => !v.tamanho.trim() && !v.cor.trim())) {
+      setErro('Toda variação precisa de pelo menos um Tamanho ou uma Cor preenchidos.');
+      return;
+    }
+
     setSalvando(true);
 
     const url = isEdit
@@ -379,6 +558,15 @@ export default function ProdutoModal({
         estoque_minimo: paraFloatBR(form.estoque_minimo) || 0,
         preco_custo:    paraFloatBR(form.preco_custo)    || 0,
         preco_venda:    paraFloatBR(form.preco_venda)    || 0,
+        variacoes: form.tem_variacoes
+          ? variacoes.map(v => ({
+              ...(v.id ? { id: v.id } : {}),
+              tamanho:       v.tamanho.trim() || null,
+              cor:           v.cor.trim() || null,
+              estoque_atual: paraFloatBR(v.estoque_atual) || 0,
+              preco_venda:   v.preco_venda.trim() ? paraFloatBR(v.preco_venda) : null,
+            }))
+          : [],
       };
       const resp = await apiFetch(url, {
         method:  isEdit ? 'PUT' : 'POST',
@@ -437,6 +625,14 @@ export default function ProdutoModal({
         />
       )}
 
+      {gerenciarOpcoesAberto && (
+        <GerenciarOpcoesVariacao
+          estabelecimentoId={estabelecimentoId}
+          onClose={() => setGerenciarOpcoesAberto(false)}
+          onAlterado={carregarOpcoesVariacao}
+        />
+      )}
+
       <div className="prod-modal-overlay">
         <div className="prod-modal">
 
@@ -454,7 +650,10 @@ export default function ProdutoModal({
               <div className="prod-form-grid">
 
                 <div className="prod-form-group prod-form-full">
-                  <label className="prod-label">Código de barras</label>
+                  <label className="prod-label">
+                    Código de barras
+                    <CampoAjuda texto="Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)." />
+                  </label>
                   <div className="prod-codigo-row">
                     <input
                       ref={codigoBarrasRef}
@@ -495,6 +694,7 @@ export default function ProdutoModal({
                     <label className="prod-label">
                       ⚖️ PLU na balança
                       <span className="prod-label-unit"> (referência)</span>
+                      <CampoAjuda texto="Só um lembrete pro atendente — o número que ele digita direto na balança pra selecionar esse produto na hora de pesar. O código de verdade que o sistema usa pra identificar a etiqueta é o código de barras acima." />
                     </label>
                     <input
                       className="prod-input"
@@ -510,7 +710,10 @@ export default function ProdutoModal({
                 )}
 
                 <div className="prod-form-group prod-form-full">
-                  <label className="prod-label">Nome do produto *</label>
+                  <label className="prod-label">
+                    Nome do produto *
+                    <CampoAjuda texto="Como o produto aparece na busca do PDV, na lista de Estoque e no recibo impresso pro cliente. Seja específico (ex: 'Arroz Tipo 1 5kg' em vez de só 'Arroz') pra facilitar achar depois." />
+                  </label>
                   <input
                     ref={nomeRef}
                     className="prod-input"
@@ -524,7 +727,10 @@ export default function ProdutoModal({
                 </div>
 
                 <div className="prod-form-group">
-                  <label className="prod-label">Marca</label>
+                  <label className="prod-label">
+                    Marca
+                    <CampoAjuda texto="Ajuda a diferenciar produtos com o mesmo nome de marcas diferentes (ex: dois 'Arroz 5kg', um da Camil e outro do Tio João). Opcional." />
+                  </label>
                   <input
                     className="prod-input"
                     name="marca"
@@ -576,7 +782,10 @@ export default function ProdutoModal({
                 </div>
 
                 <div className="prod-form-group prod-form-full">
-                  <label className="prod-label">Categoria</label>
+                  <label className="prod-label">
+                    Categoria
+                    <CampoAjuda texto="Agrupa o produto na barra lateral do Estoque e nos relatórios de produtos mais vendidos. Clique no + pra criar uma categoria nova sem sair daqui." />
+                  </label>
                   <div className="prod-cat-row">
                     <select
                       className="prod-select"
@@ -638,7 +847,10 @@ export default function ProdutoModal({
               <div className="prod-form-grid">
 
                 <div className="prod-form-group prod-form-full">
-                  <label className="prod-label">Vendido por *</label>
+                  <label className="prod-label">
+                    Vendido por *
+                    <CampoAjuda texto="Unidade: peças, caixas, pacotes — venda por número inteiro. Quilo: produtos a granel, frios, hortifruti — venda por peso, com casas decimais." />
+                  </label>
                   <div className="prod-unidade-toggle">
                     {[
                       { value: 'un', label: 'Unidade', sub: 'peças, caixas, pacotes', icon: '📦' },
@@ -685,7 +897,7 @@ export default function ProdutoModal({
                         className="prod-balanca-checkbox"
                       />
                       <span>
-                        <strong>⚖️ Produto pesável com etiqueta de balança</strong>
+                        <strong>⚖️ Produto pesável com etiqueta de balança <CampoAjuda texto="Marque se a balança da loja imprime uma etiqueta com código de barras próprio pra esse produto. No PDV, basta bipar a etiqueta que o preço já é calculado pelo peso automaticamente — sem digitar nada na mão." /></strong>
                         <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
                           A balança imprime etiqueta com código EAN-13. O caixa bipa e o preço é calculado pelo peso automaticamente.
                         </span>
@@ -707,9 +919,45 @@ export default function ProdutoModal({
                   </div>
                 )}
 
+                <div className="prod-form-group prod-form-full">
+                  <label className="prod-balanca-checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="tem_variacoes"
+                      checked={form.tem_variacoes}
+                      onChange={atualizar}
+                      disabled={somenteLeitura}
+                      className="prod-balanca-checkbox"
+                    />
+                    <span>
+                      <strong>
+                        🎨 Este produto tem variações (tamanho/cor)
+                        <CampoAjuda texto="Ative pra produtos que existem em mais de uma opção — ex: uma camiseta em P/M/G, ou em cores diferentes. Cada variação vira sua própria linha de estoque, e pode ter preço diferente das outras." />
+                      </strong>
+                      <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
+                        O estoque e o preço passam a ser controlados por variação, não no produto como um todo.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                {form.tem_variacoes ? (
+                  <VariacoesTabela
+                    variacoes={variacoes}
+                    setVariacoes={setVariacoes}
+                    opcoesTamanho={opcoesTamanho}
+                    opcoesCor={opcoesCor}
+                    unidadeMedida={form.unidade_medida}
+                    somenteLeitura={somenteLeitura}
+                    precoBase={form.preco_venda}
+                    onGerenciarOpcoes={() => setGerenciarOpcoesAberto(true)}
+                  />
+                ) : (
+                <>
                 <div className="prod-form-group">
                   <label className="prod-label">
                     Estoque atual * <span className="prod-label-unit">({form.unidade_medida})</span>
+                    <CampoAjuda texto="Quantidade disponível agora pra vender. Depois de criado, esse valor só muda pelo Ajuste de Estoque (abaixo) ou por vendas/movimentações — evita editar aqui sem deixar rastro." />
                   </label>
                   {isEdit ? (
                     <div className="prod-estoque-readonly">
@@ -732,6 +980,7 @@ export default function ProdutoModal({
                 <div className="prod-form-group">
                   <label className="prod-label">
                     Estoque mínimo <span className="prod-label-unit">({form.unidade_medida})</span>
+                    <CampoAjuda texto="Quando o estoque cair abaixo desse valor, o produto passa a aparecer com alerta de estoque baixo na lista. Ajuste conforme a velocidade de venda de cada produto." />
                   </label>
                   <input
                     className="prod-input"
@@ -812,6 +1061,8 @@ export default function ProdutoModal({
                     </div>
                   </div>
                 )}
+                </>
+                )}
 
               </div>
             </div>
@@ -821,7 +1072,7 @@ export default function ProdutoModal({
             <div className="prod-form-section">
               <div className="prod-form-section-titulo">💰 Preços</div>
 
-              {paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
+              {!form.tem_variacoes && paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
                 <div className="prod-margem-preview">
                   {(() => {
                     const custo = paraFloatBR(form.preco_custo);
@@ -842,7 +1093,10 @@ export default function ProdutoModal({
 
               <div className="prod-form-grid">
                 <div className="prod-form-group">
-                  <label className="prod-label">{labelCusto}</label>
+                  <label className="prod-label">
+                    {labelCusto}
+                    <CampoAjuda texto="Quanto você pagou pelo produto (com frete/impostos incluídos, se quiser ser exato). Usado só pra calcular a margem de lucro mostrada acima — opcional, mas ajuda a saber se está vendendo com prejuízo." />
+                  </label>
                   <input
                     className="prod-input"
                     type="text"
@@ -855,7 +1109,10 @@ export default function ProdutoModal({
                 </div>
 
                 <div className="prod-form-group">
-                  <label className="prod-label">{labelVenda}</label>
+                  <label className="prod-label">
+                    {labelVenda}
+                    <CampoAjuda texto="Preço cobrado do cliente no PDV. Se o produto tiver variações com preço próprio (abaixo), esse aqui vira só o padrão pras variações que não tiverem um preço específico definido." />
+                  </label>
                   <input
                     className="prod-input"
                     type="text"

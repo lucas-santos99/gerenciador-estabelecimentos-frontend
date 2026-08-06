@@ -1278,6 +1278,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   });
   const [buscaIndex,      setBuscaIndex]      = useState(-1);
   const [itemQuantificar, setItemQuantificar] = useState(null);
+  // Produto com tem_variacoes=true selecionado — precisa escolher qual
+  // variação (tamanho/cor) antes de ir pro modal de quantidade de sempre.
+  const [itemEscolherVariacao, setItemEscolherVariacao] = useState(null);
+  const [variacaoIndex,        setVariacaoIndex]        = useState(0);
+  const variacaoModalRef = useRef(null);
   const [inputQtd,        setInputQtd]        = useState('1');
   const [editIndex,       setEditIndex]       = useState(null);
   const [showPagamento,   setShowPagamento]   = useState(false);
@@ -1449,10 +1454,10 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   }
 
   useEffect(() => {
-    if (!showPagamento && !itemQuantificar && editIndex === null && !showCamera && !modalPeso) {
+    if (!showPagamento && !itemQuantificar && !itemEscolherVariacao && editIndex === null && !showCamera && !modalPeso) {
       inputBuscaRef.current?.focus();
     }
-  }, [showPagamento, itemQuantificar, editIndex, showCamera, modalPeso]);
+  }, [showPagamento, itemQuantificar, itemEscolherVariacao, editIndex, showCamera, modalPeso]);
 
   // Atalhos globais do PDV
   useEffect(() => {
@@ -1462,7 +1467,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         if (confirmSaida)            { setConfirmSaida(false);  return; }
         if (modalPeso)               { setModalPeso(null);      return; }
       }
-      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !showCamera && !modalPeso && carrinho.length > 0) {
+      if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !itemEscolherVariacao && !showCamera && !modalPeso && carrinho.length > 0) {
         e.preventDefault();
         setShowPagamento(true);
         return;
@@ -1548,6 +1553,22 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     const estoque = parseFloat(produto.estoque_atual);
     if (estoque <= 0) { mostrarStatus('erro', `"${produto.nome}" sem estoque!`); limparBusca(); return; }
 
+    // ── Produto com variações (tamanho/cor) → escolhe a variação antes
+    // de tudo. O estoque "geral" do produto é só a soma — a checagem de
+    // verdade acontece por variação, lá na hora de definir a quantidade.
+    if (produto.tem_variacoes) {
+      const comEstoque = (produto.variacoes || []).filter(v => parseFloat(v.estoque_atual) > 0);
+      if (comEstoque.length === 0) {
+        mostrarStatus('erro', `"${produto.nome}" sem estoque em nenhuma variação!`);
+        limparBusca(); return;
+      }
+      limparBusca();
+      setItemEscolherVariacao({ ...produto, variacoes: comEstoque });
+      setVariacaoIndex(0);
+      return;
+    }
+    // ─────────────────────────────────────────────────────────
+
     // ── Produto pesável selecionado manualmente → pedir peso ──
     if (produto.vendido_por_peso || produto.unidade_medida === 'kg') {
       limparBusca();
@@ -1564,7 +1585,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     }
     // ─────────────────────────────────────────────────────────
 
-    const qtdNoCarrinho = carrinho.filter(i => i.id === produto.id).reduce((acc, i) => acc + i.quantidade, 0);
+    const qtdNoCarrinho = carrinho.filter(i => i.id === produto.id && i.produto_variacao_id === produto.produto_variacao_id).reduce((acc, i) => acc + i.quantidade, 0);
     if (produto.unidade_medida !== 'kg' && qtdNoCarrinho + 1 > estoque) {
       mostrarStatus('erro', `Estoque máximo de "${produto.nome}" (${estoque} un.) atingido.`);
       limparBusca(); return;
@@ -1580,6 +1601,44 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     setTimeout(() => inputBuscaRef.current?.focus(), 0);
   }
 
+  // Variação escolhida → segue pro modal de quantidade de sempre, só que
+  // com um "produto" sintético carregando os dados DA VARIAÇÃO (estoque,
+  // preço se tiver um específico, e o id da variação pra ir junto na venda).
+  function escolherVariacao(variacao) {
+    const base = itemEscolherVariacao;
+    const nomeComVariacao = base.nome + (variacao.tamanho || variacao.cor
+      ? ` (${[variacao.tamanho, variacao.cor].filter(Boolean).join(' ')})`
+      : '');
+    const produtoComVariacao = {
+      ...base,
+      produto_variacao_id: variacao.id,
+      estoque_atual: variacao.estoque_atual,
+      preco_venda:   variacao.preco_venda != null ? variacao.preco_venda : base.preco_venda,
+      nome: nomeComVariacao,
+    };
+    setItemEscolherVariacao(null);
+    setInputQtd(produtoComVariacao.unidade_medida === 'kg' ? '1,000' : '1');
+    setItemQuantificar(produtoComVariacao);
+    setEditIndex(null);
+  }
+
+  function fecharSeletorVariacao() {
+    setItemEscolherVariacao(null);
+    setTimeout(() => inputBuscaRef.current?.focus(), 0);
+  }
+
+  function handleVariacaoKey(e) {
+    const n = itemEscolherVariacao?.variacoes.length || 0;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setVariacaoIndex(p => (p + 1) % n); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setVariacaoIndex(p => (p - 1 + n) % n); }
+    else if (e.key === 'Enter') { e.preventDefault(); escolherVariacao(itemEscolherVariacao.variacoes[variacaoIndex]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fecharSeletorVariacao(); }
+  }
+
+  useEffect(() => {
+    if (itemEscolherVariacao) setTimeout(() => variacaoModalRef.current?.focus(), 0);
+  }, [itemEscolherVariacao]);
+
   function confirmarQuantidade(e) {
     e?.preventDefault();
     const produto = itemQuantificar;
@@ -1587,11 +1646,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     if (qtd <= 0) { fecharModalQtd(); return; }
     const estoque = parseFloat(produto.estoque_atual);
     if (editIndex !== null) {
-      const outrasQtds = carrinho.filter((item, idx) => item.id === produto.id && idx !== editIndex).reduce((acc, i) => acc + i.quantidade, 0);
+      const outrasQtds = carrinho.filter((item, idx) => item.id === produto.id && item.produto_variacao_id === produto.produto_variacao_id && idx !== editIndex).reduce((acc, i) => acc + i.quantidade, 0);
       if (outrasQtds + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${produto.unidade_medida}`); return; }
       const novo = [...carrinho]; novo[editIndex] = { ...produto, quantidade: qtd }; setCarrinho(novo);
     } else {
-      const qtdJa = carrinho.filter(i => i.id === produto.id).reduce((acc, i) => acc + i.quantidade, 0);
+      const qtdJa = carrinho.filter(i => i.id === produto.id && i.produto_variacao_id === produto.produto_variacao_id).reduce((acc, i) => acc + i.quantidade, 0);
       if (qtdJa + qtd > estoque) { mostrarStatus('erro', `Estoque máximo: ${estoque.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${produto.unidade_medida}`); return; }
       setCarrinho(prev => [...prev, { ...produto, quantidade: qtd }]);
     }
@@ -1632,7 +1691,12 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         method: 'POST',
         body: JSON.stringify({
           estabelecimentoId, valor_total: total, meio_pagamento: meioPagamento,
-          carrinho: carrinho.map(i => ({ produto_id: i.id, quantidade: parseFloat(i.quantidade), valor_unitario: parseFloat(i.preco_venda) })),
+          carrinho: carrinho.map(i => ({
+            produto_id: i.id,
+            produto_variacao_id: i.produto_variacao_id || null,
+            quantidade: parseFloat(i.quantidade),
+            valor_unitario: parseFloat(i.preco_venda),
+          })),
           clienteId,
           cpfNota: dadosPagamento?.cpfNota || null,
         }),
@@ -1748,6 +1812,50 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
               >
                 ✕ Remover
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de escolher variação (tamanho/cor) */}
+      {itemEscolherVariacao && (
+        <div className="pdv-modal-overlay" onClick={fecharSeletorVariacao}>
+          <div
+            className="pdv-modal"
+            ref={variacaoModalRef}
+            tabIndex={-1}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={handleVariacaoKey}
+          >
+            <div className="pdv-modal-qtd-titulo">🎨 Escolha a variação</div>
+            <div className="pdv-modal-qtd-produto">
+              {itemEscolherVariacao.nome}
+              {itemEscolherVariacao.marca && <span className="pdv-modal-qtd-marca"> · {itemEscolherVariacao.marca}</span>}
+            </div>
+            <span className="pdv-pagamento-label">Tamanho / Cor  ↑ ↓ Enter</span>
+            <ul className="pdv-meios-lista">
+              {itemEscolherVariacao.variacoes.map((v, i) => {
+                const precoVar = v.preco_venda != null ? v.preco_venda : itemEscolherVariacao.preco_venda;
+                const estoqueVar = parseFloat(v.estoque_atual);
+                return (
+                  <li
+                    key={v.id}
+                    className={`pdv-meio-item${variacaoIndex === i ? ' ativo' : ''}`}
+                    onClick={() => escolherVariacao(v)}
+                  >
+                    <span style={{ flex: 1 }}>
+                      {[v.tamanho, v.cor].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                    <span className="pdv-label-hint" style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
+                      {fmt(precoVar)} · {estoqueVar.toLocaleString('pt-BR', itemEscolherVariacao.unidade_medida === 'kg' ? { minimumFractionDigits: 3 } : {})} {itemEscolherVariacao.unidade_medida}
+                    </span>
+                    {variacaoIndex === i && <span className="pdv-meio-enter">↩ Enter</span>}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="pdv-modal-acoes">
+              <button type="button" className="pdv-modal-btn-cancelar" onClick={fecharSeletorVariacao}>Cancelar (Esc)</button>
             </div>
           </div>
         </div>

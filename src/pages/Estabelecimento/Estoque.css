@@ -782,6 +782,20 @@
   white-space: nowrap;
 }
 
+.prod-badge-variacoes {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  white-space: nowrap;
+  cursor: default;
+}
+
 .prod-codigo-inline {
   font-size: 0.68rem;
   font-family: 'JetBrains Mono', monospace;
@@ -1499,3 +1513,196 @@
   0%   { background: rgba(20, 184, 166, 0.15); }
   100% { background: var(--est-input); }
 }
+/* ════════════════════════════════════════════════════════════
+   CAMPO DE AJUDA — hover no desktop, clicável no celular
+   ════════════════════════════════════════════════════════════ */
+
+.prod-ajuda-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.prod-ajuda-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--est-border-accent, var(--est-border));
+  background: transparent;
+  color: var(--est-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.prod-ajuda-btn:hover { background: var(--est-accent-dim); color: var(--est-accent); border-color: var(--est-accent); }
+
+.prod-ajuda-texto {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--est-text);
+  text-transform: none;
+  letter-spacing: normal;
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+/* hover (desktop) */
+.prod-ajuda-wrap:hover .prod-ajuda-texto {
+  opacity: 1;
+  visibility: visible;
+}
+/* clique (celular, ou pra deixar fixo no desktop também) */
+.prod-ajuda-texto.aberto {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ════════════════════════════════════════════════════════════
+   VARIAÇÕES DE PRODUTO (tamanho/cor)
+   ════════════════════════════════════════════════════════════ */
+
+.prod-variacoes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.prod-variacoes-vazio {
+  font-size: 0.82rem;
+  color: var(--est-text-muted);
+  background: var(--est-input);
+  border: 1px dashed var(--est-border);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.prod-variacao-linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr 100px 130px 28px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.prod-variacao-cabecalho {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--est-text-muted);
+  margin-bottom: 4px;
+}
+
+.prod-variacao-remover {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.prod-variacao-remover:hover { background: var(--est-danger-dim); color: var(--est-danger); border-color: var(--est-danger); }
+
+.prod-btn-add-variacao {
+  background: var(--est-accent-dim);
+  border: 1px dashed var(--est-border-accent, var(--est-accent));
+  color: var(--est-accent);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 4px;
+}
+.prod-btn-add-variacao:hover { background: var(--est-accent); color: #fff; }
+
+@media (max-width: 640px) {
+  .prod-variacao-linha { grid-template-columns: 1fr 1fr; }
+  .prod-variacao-cabecalho { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   GERENCIAR OPÇÕES DE VARIAÇÃO — chips de tamanho/cor
+   ════════════════════════════════════════════════════════════ */
+
+.prod-opcoes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.prod-opcao-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-radius: 20px;
+  padding: 5px 8px 5px 12px;
+  font-size: 0.82rem;
+  color: var(--est-text);
+}
+
+.prod-opcao-chip button {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--est-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.prod-opcao-chip button:hover { background: var(--est-danger-dim); color: var(--est-danger); }
+
+.prod-btn-gerenciar-opcoes {
+  background: transparent;
+  border: 1px solid var(--est-border);
+  color: var(--est-text-muted);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.prod-btn-gerenciar-opcoes:hover { border-color: var(--est-border-accent); color: var(--est-accent); }
