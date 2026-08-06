@@ -654,10 +654,15 @@ export default function ProdutoModal({
                           estoque_atual:  formatarValorBR(prev.estoque_atual,  op.value === 'kg' ? 3 : 0),
                           estoque_minimo: formatarValorBR(prev.estoque_minimo, op.value === 'kg' ? 3 : 0),
                           // "Pesável com etiqueta de balança" só faz sentido vendendo por
-                          // Quilo — trocando pra Unidade, desmarca e limpa o PLU, senão
+                          // Quilo. Trocando pra Unidade, desmarca e limpa o PLU, senão
                           // fica um valor escondido (checkbox some da tela, mas o dado
-                          // continua marcado por baixo e seria enviado do mesmo jeito)
-                          ...(op.value === 'un' ? { vendido_por_peso: false, plu_balanca: '' } : {}),
+                          // continua marcado por baixo e seria enviado do mesmo jeito).
+                          // Trocando DE Unidade PARA Quilo, já vem marcado — é o caso
+                          // mais comum. Não força de novo se já estava em Quilo, pra
+                          // não desfazer caso a pessoa tenha desmarcado de propósito.
+                          ...(op.value === 'un'
+                            ? { vendido_por_peso: false, plu_balanca: '' }
+                            : prev.unidade_medida !== 'kg' ? { vendido_por_peso: true } : {}),
                         }))}
                       >
                         <span className="prod-unidade-icon">{op.icon}</span>
