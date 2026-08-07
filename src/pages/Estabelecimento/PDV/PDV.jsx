@@ -1562,6 +1562,20 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         mostrarStatus('erro', `"${produto.nome}" sem estoque em nenhuma variação!`);
         limparBusca(); return;
       }
+
+      // Bipou o código de barras de UMA variação específica (etiqueta
+      // própria colada na peça) → já sabe qual é tamanho/cor, não
+      // precisa perguntar de novo, vai direto pra quantidade
+      if (produto.variacao_bipada_id) {
+        const variacaoBipada = comEstoque.find(v => v.id === produto.variacao_bipada_id);
+        if (variacaoBipada) {
+          limparBusca();
+          escolherVariacao(variacaoBipada, produto);
+          return;
+        }
+        // Achou o id mas ela tá sem estoque agora — cai pro seletor normal abaixo
+      }
+
       limparBusca();
       setItemEscolherVariacao({ ...produto, variacoes: comEstoque });
       setVariacaoIndex(0);
@@ -1604,8 +1618,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   // Variação escolhida → segue pro modal de quantidade de sempre, só que
   // com um "produto" sintético carregando os dados DA VARIAÇÃO (estoque,
   // preço se tiver um específico, e o id da variação pra ir junto na venda).
-  function escolherVariacao(variacao) {
-    const base = itemEscolherVariacao;
+  function escolherVariacao(variacao, baseOverride = null) {
+    const base = baseOverride || itemEscolherVariacao;
     const nomeComVariacao = base.nome + (variacao.tamanho || variacao.cor
       ? ` (${[variacao.tamanho, variacao.cor].filter(Boolean).join(' ')})`
       : '');
@@ -1954,6 +1968,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           {!loadingBusca && resultados.length === 0 && termoBusca.length <= 1 && <li className="pdv-resultados-status"><span>🛒</span>Digite o nome ou código do produto</li>}
           {resultados.map((p, i) => (
             <li key={p.id} className={`pdv-produto-card${buscaIndex === i ? ' selecionado' : ''}`} onClick={() => selecionarProduto(p)} onMouseEnter={() => setBuscaIndex(i)}>
+              <div className="pdv-card-imagem">
+                {p.imagem_url ? <img src={p.imagem_url} alt="" loading="lazy" /> : <span className="pdv-card-imagem-placeholder">📦</span>}
+              </div>
               <span className="pdv-card-nome">{p.nome}{p.marca ? <span className="pdv-card-marca"> — {p.marca}</span> : ''}</span>
               <span className="pdv-card-preco">{fmt(p.preco_venda)}</span>
               <span className={`pdv-card-estoque ${estoqueClass(p)}`}>{estoqueLabel(p)}</span>
@@ -1993,6 +2010,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           ) : (
             carrinho.map((item, idx) => (
               <li key={`${item.id}-${idx}`} className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}`}>
+                <div className="pdv-item-imagem">
+                  {item.imagem_url ? <img src={item.imagem_url} alt="" loading="lazy" /> : <span className="pdv-item-imagem-placeholder">📦</span>}
+                </div>
                 <div className="pdv-item-info" onClick={() => !item.pesavel && editarItem(item, idx)}>
                   <span className="pdv-item-nome">
                     {item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}

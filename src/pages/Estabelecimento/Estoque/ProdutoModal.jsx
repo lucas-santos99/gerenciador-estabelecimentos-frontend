@@ -142,11 +142,14 @@ function CampoAjuda({ texto }) {
 
 // Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes }) {
+function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes, estabelecimentoId }) {
+  const [gerandoIdx, setGerandoIdx] = useState(null);
+
   function adicionar() {
     setVariacoes(prev => [...prev, {
       _key: Math.random().toString(36).slice(2),
       tamanho: '', cor: '',
+      codigo_barras: '',
       estoque_atual: '0',
       preco_venda: '',
     }]);
@@ -158,6 +161,16 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
     setVariacoes(prev => prev.filter((_, i) => i !== idx));
   }
 
+  async function gerarCodigo(idx) {
+    setGerandoIdx(idx);
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/gerar-codigo-interno`);
+      const data = await resp.json();
+      if (resp.ok) atualizarCampo(idx, 'codigo_barras', data.codigo);
+    } catch { /* falha silenciosa — comerciante pode tentar de novo ou digitar na mão */ }
+    finally { setGerandoIdx(null); }
+  }
+
   const totalEstoque = variacoes.reduce((acc, v) => acc + (paraFloatBR(v.estoque_atual) || 0), 0);
 
   return (
@@ -165,7 +178,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
       <div className="prod-variacoes-header">
         <label className="prod-label" style={{ marginBottom: 0 }}>
           Variações
-          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor, com estoque próprio. Digite um valor novo em Tamanho ou Cor pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços)." />
+          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor, com estoque próprio. Digite um valor novo em Tamanho ou Cor pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
         </label>
         {variacoes.length > 0 && (
           <span className="prod-label-unit">Estoque total: {fmtQ(totalEstoque, unidadeMedida)}</span>
@@ -187,50 +200,72 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
       )}
 
       {variacoes.map((v, idx) => (
-        <div className="prod-variacao-linha" key={v.id || v._key || idx}>
-          <input
-            className="prod-input"
-            list="opcoes-tamanho-datalist"
-            placeholder="P, M, G…"
-            value={v.tamanho}
-            onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
-            disabled={somenteLeitura}
-          />
-          <input
-            className="prod-input"
-            list="opcoes-cor-datalist"
-            placeholder="Cor"
-            value={v.cor}
-            onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
-            disabled={somenteLeitura}
-          />
-          <input
-            className="prod-input"
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            value={v.estoque_atual}
-            onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
-            disabled={somenteLeitura}
-          />
-          <div className="prod-input-moeda-wrap">
-            <span className="prod-moeda-prefixo">R$</span>
+        <div className="prod-variacao-grupo" key={v.id || v._key || idx}>
+          <div className="prod-variacao-linha">
             <input
-              className="prod-input prod-input-moeda"
+              className="prod-input"
+              list="opcoes-tamanho-datalist"
+              placeholder="P, M, G…"
+              value={v.tamanho}
+              onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
+              disabled={somenteLeitura}
+            />
+            <input
+              className="prod-input"
+              list="opcoes-cor-datalist"
+              placeholder="Cor"
+              value={v.cor}
+              onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
+              disabled={somenteLeitura}
+            />
+            <input
+              className="prod-input"
               type="text"
               inputMode="decimal"
-              placeholder={precoBase || '0,00'}
-              value={v.preco_venda}
-              onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
+              placeholder="0"
+              value={v.estoque_atual}
+              onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
               disabled={somenteLeitura}
-              title="Deixe em branco pra usar o preço padrão do produto"
             />
+            <div className="prod-input-moeda-wrap">
+              <span className="prod-moeda-prefixo">R$</span>
+              <input
+                className="prod-input prod-input-moeda"
+                type="text"
+                inputMode="decimal"
+                placeholder={precoBase || '0,00'}
+                value={v.preco_venda}
+                onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
+                disabled={somenteLeitura}
+                title="Deixe em branco pra usar o preço padrão do produto"
+              />
+            </div>
+            {!somenteLeitura && (
+              <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
+                ✕
+              </button>
+            )}
           </div>
-          {!somenteLeitura && (
-            <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
-              ✕
-            </button>
-          )}
+          <div className="prod-variacao-codigo-linha">
+            <input
+              className="prod-input prod-variacao-codigo-input"
+              placeholder="Código de barras da variação (opcional)"
+              value={v.codigo_barras || ''}
+              onChange={e => atualizarCampo(idx, 'codigo_barras', e.target.value)}
+              disabled={somenteLeitura}
+            />
+            {!somenteLeitura && (
+              <button
+                type="button"
+                className="prod-variacao-codigo-gerar"
+                onClick={() => gerarCodigo(idx)}
+                disabled={gerandoIdx === idx}
+                title="Gerar um código de barras próprio pra essa variação (tamanho/cor sem etiqueta de fábrica)"
+              >
+                {gerandoIdx === idx ? '…' : '🏷️ Gerar'}
+              </button>
+            )}
+          </div>
         </div>
       ))}
 
@@ -377,6 +412,9 @@ export default function ProdutoModal({
     plu_balanca:      '',
     // ── Variações ──
     tem_variacoes: false,
+    // ── Imagem ──
+    imagem_url:    '',
+    imagem_origem: '',
   });
 
   const [variacoes,     setVariacoes]     = useState([]);
@@ -396,6 +434,11 @@ export default function ProdutoModal({
   const [scanFlash,         setScanFlash]         = useState(false);
   const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
+  const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
+  const [imagemPendenteBase64, setImagemPendenteBase64] = useState(null); // foto própria staged até o produto (novo) ganhar um id
+  const [enviandoImagem,       setEnviandoImagem]       = useState(false);
+  const imagemInputRef = useRef(null);
+  const imagemCameraRef = useRef(null);
   const [marcasExistentes,  setMarcasExistentes]  = useState([]);
   const [sugestaoMarca,     setSugestaoMarca]     = useState(null); // { marca, exata } | null
 
@@ -428,11 +471,14 @@ export default function ProdutoModal({
         vendido_por_peso: produtoEditar.vendido_por_peso || false,
         plu_balanca:      produtoEditar.plu_balanca      || '',
         tem_variacoes:    produtoEditar.tem_variacoes     || false,
+        imagem_url:       produtoEditar.imagem_url        || '',
+        imagem_origem:    produtoEditar.imagem_origem     || '',
       });
       setVariacoes((produtoEditar.variacoes || []).map(v => ({
         id:             v.id,
         tamanho:        v.tamanho || '',
         cor:            v.cor || '',
+        codigo_barras:  v.codigo_barras || '',
         estoque_atual:  formatarValorBR(v.estoque_atual, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
         preco_venda:    v.preco_venda != null ? formatarValorBR(v.preco_venda, 2) : '',
       })));
@@ -524,6 +570,24 @@ export default function ProdutoModal({
     });
   }
 
+  /* ── Gera um código de barras interno (EAN-13, faixa 20-29) pro
+     produto principal — usado quando ele não veio com código de
+     fábrica (comum em roupa, calçado, artesanal). ── */
+  async function gerarCodigoInterno() {
+    setGerandoCodigo(true);
+    setErro('');
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/gerar-codigo-interno`);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao gerar código.');
+      setForm(prev => ({ ...prev, codigo_barras: data.codigo }));
+    } catch (err) {
+      setErro(err.message);
+    } finally {
+      setGerandoCodigo(false);
+    }
+  }
+
   /* ── Auto-preenche nome/marca a partir do código de barras ──
      Só entra em ação se os campos ainda estiverem vazios — nunca
      sobrescreve o que o comerciante já digitou/editou. */
@@ -539,6 +603,8 @@ export default function ProdutoModal({
           ...prev,
           nome:  prev.nome.trim()  ? prev.nome  : json.nome,
           marca: prev.marca.trim() ? prev.marca : (json.marca || prev.marca),
+          imagem_url:    (!prev.imagem_url && json.imagem_url) ? json.imagem_url : prev.imagem_url,
+          imagem_origem: (!prev.imagem_url && json.imagem_url) ? json.fonte      : prev.imagem_origem,
         }));
         setAutoPreenchido(json.fonte);
       }
@@ -547,6 +613,89 @@ export default function ProdutoModal({
     }
     setBuscandoCodigo(false);
   }
+
+  /* ── Comprime a foto no navegador antes de enviar — nunca sobe a
+     imagem em tamanho original. Redimensiona pro maior lado ficar em
+     480px e converte pra JPEG 80%, deixando cada foto na faixa de
+     30-100KB. ── */
+  function comprimirImagem(file) {
+    return new Promise((resolve, reject) => {
+      const leitor = new FileReader();
+      leitor.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 480;
+          let { width, height } = img;
+          if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+          else if (height >= width && height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
+        img.src = e.target.result;
+      };
+      leitor.onerror = () => reject(new Error('Não foi possível ler esse arquivo.'));
+      leitor.readAsDataURL(file);
+    });
+  }
+
+  async function selecionarImagem(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite escolher o mesmo arquivo de novo depois, se quiser trocar e voltar
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErro('Selecione um arquivo de imagem.'); return; }
+
+    setErro('');
+    try {
+      const base64 = await comprimirImagem(file);
+
+      if (isEdit) {
+        // Edição: produto já existe, sobe direto e persiste na hora
+        setEnviandoImagem(true);
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ imagem_base64: base64 }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Erro ao enviar imagem.');
+        setForm(prev => ({ ...prev, imagem_url: data.imagem_url, imagem_origem: 'upload' }));
+      } else {
+        // Criação: produto ainda não tem id — fica só na prévia local,
+        // e sobe de verdade logo depois que o produto for criado
+        setImagemPendenteBase64(base64);
+        setForm(prev => ({ ...prev, imagem_url: '', imagem_origem: '' }));
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro ao processar a imagem.');
+    } finally {
+      setEnviandoImagem(false);
+    }
+  }
+
+  async function removerImagem() {
+    setErro('');
+    if (isEdit && (form.imagem_url || produtoEditar?.imagem_url)) {
+      try {
+        setEnviandoImagem(true);
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Erro ao remover imagem.');
+        setForm(prev => ({ ...prev, imagem_url: '', imagem_origem: '' }));
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviandoImagem(false);
+      }
+    } else {
+      setImagemPendenteBase64(null);
+      setForm(prev => ({ ...prev, imagem_url: '', imagem_origem: '' }));
+    }
+  }
+
+  const imagemPreview = imagemPendenteBase64 || form.imagem_url || '';
 
   /* ── Verifica se a marca digitada é igual/parecida com uma que
      já existe, pra evitar cadastrar "Coca Cola" e "Coca-Cola" como
@@ -669,6 +818,7 @@ export default function ProdutoModal({
               ...(v.id ? { id: v.id } : {}),
               tamanho:       v.tamanho.trim() || null,
               cor:           v.cor.trim() || null,
+              codigo_barras: (v.codigo_barras || '').trim() || null,
               estoque_atual: paraFloatBR(v.estoque_atual) || 0,
               preco_venda:   v.preco_venda.trim() ? paraFloatBR(v.preco_venda) : null,
             }))
@@ -681,6 +831,21 @@ export default function ProdutoModal({
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao salvar produto');
+
+      // Produto novo com foto própria selecionada — não existia id até
+      // agora pra poder subir, então sobe só depois de criado
+      if (!isEdit && imagemPendenteBase64 && data?.id) {
+        try {
+          await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${data.id}/imagem`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ imagem_base64: imagemPendenteBase64 }),
+          });
+        } catch {
+          // Produto já foi criado normalmente — só a foto que não subiu,
+          // dá pra adicionar depois editando o produto
+        }
+      }
 
       // Produto salvo — se tinha ajuste de estoque preenchido, aplica agora
       if (temAjustePreenchido) {
@@ -749,6 +914,82 @@ export default function ProdutoModal({
 
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
+                    Imagem do produto
+                    <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida (Open Food Facts ou catálogo colaborativo) já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas." />
+                  </label>
+                  <div className="prod-imagem-row">
+                    <div className="prod-imagem-preview">
+                      {imagemPreview ? (
+                        <img src={imagemPreview} alt="" loading="lazy" />
+                      ) : (
+                        <span className="prod-imagem-placeholder">📦</span>
+                      )}
+                      {enviandoImagem && <div className="prod-imagem-overlay">⏳</div>}
+                    </div>
+                    <div className="prod-imagem-acoes">
+                      {imagemPreview && (
+                        <span className={`prod-imagem-origem prod-imagem-origem--${form.imagem_origem || (imagemPendenteBase64 ? 'upload' : '')}`}>
+                          {imagemPendenteBase64 || form.imagem_origem === 'upload' ? '📷 Sua foto' :
+                           form.imagem_origem === 'openfoodfacts' ? '🌐 Open Food Facts' :
+                           form.imagem_origem === 'openproductsfacts' ? '🌐 Open Products Facts' :
+                           form.imagem_origem === 'catalogo' ? '🗂️ Catálogo' : ''}
+                        </span>
+                      )}
+                      {!somenteLeitura && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="prod-imagem-btn"
+                            onClick={() => imagemCameraRef.current?.click()}
+                            disabled={enviandoImagem}
+                            title="Abre a câmera do celular direto"
+                          >
+                            📷 Tirar foto
+                          </button>
+                          <button
+                            type="button"
+                            className="prod-imagem-btn"
+                            onClick={() => imagemInputRef.current?.click()}
+                            disabled={enviandoImagem}
+                            title="Escolher uma foto já existente"
+                          >
+                            🖼️ Galeria
+                          </button>
+                          {imagemPreview && (
+                            <button
+                              type="button"
+                              className="prod-imagem-btn prod-imagem-btn--remover"
+                              onClick={removerImagem}
+                              disabled={enviandoImagem}
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {/* Câmera direto — só no celular isso abre a câmera de verdade;
+                          no desktop cai no mesmo seletor de arquivo de sempre */}
+                      <input
+                        ref={imagemCameraRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: 'none' }}
+                        onChange={selecionarImagem}
+                      />
+                      <input
+                        ref={imagemInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={selecionarImagem}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="prod-form-group prod-form-full">
+                  <label className="prod-label">
                     Código de barras
                     <CampoAjuda texto="Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)." />
                   </label>
@@ -774,7 +1015,23 @@ export default function ProdutoModal({
                         📷
                       </button>
                     )}
+                    {!somenteLeitura && !form.codigo_barras && (
+                      <button
+                        type="button"
+                        className="prod-btn-gerar-codigo"
+                        onClick={gerarCodigoInterno}
+                        disabled={gerandoCodigo}
+                        title="Gera um código de barras próprio pra esse produto, pra imprimir e colar na peça (faixa reservada 20-29, não colide com nenhum código de fabricante)"
+                      >
+                        {gerandoCodigo ? '…' : '🏷️ Gerar código'}
+                      </button>
+                    )}
                   </div>
+                  {!buscandoCodigo && !autoPreenchido && !form.codigo_barras && (
+                    <span className="prod-label-hint">
+                      Produto sem código de barras de fábrica (comum em roupa/calçado)? Clique em "Gerar código" — a etiqueta pode ser impressa e colada na peça, funciona igual qualquer código de barras no bipe.
+                    </span>
+                  )}
                   {buscandoCodigo && (
                     <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-text-muted, #94a3b8)' }}>
                       🔎 Buscando nome e marca…
@@ -782,7 +1039,11 @@ export default function ProdutoModal({
                   )}
                   {!buscandoCodigo && autoPreenchido && (
                     <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-success, #16a34a)' }}>
-                      ✓ Preenchido automaticamente {autoPreenchido === 'catalogo' ? '(catálogo interno)' : '(Open Food Facts)'} — confira antes de salvar
+                      ✓ Preenchido automaticamente {
+                        autoPreenchido === 'catalogo' ? '(catálogo interno)' :
+                        autoPreenchido === 'openproductsfacts' ? '(Open Products Facts)' :
+                        '(Open Food Facts)'
+                      } — confira antes de salvar
                     </small>
                   )}
                 </div>
@@ -1065,6 +1326,7 @@ export default function ProdutoModal({
                     somenteLeitura={somenteLeitura}
                     precoBase={form.preco_venda}
                     onGerenciarOpcoes={() => setGerenciarOpcoesAberto(true)}
+                    estabelecimentoId={estabelecimentoId}
                   />
                 ) : (
                 <>

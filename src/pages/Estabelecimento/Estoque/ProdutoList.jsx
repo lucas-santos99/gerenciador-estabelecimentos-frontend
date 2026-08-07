@@ -56,6 +56,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const [erro,             setErro]             = useState('');
   const [categoriaAtiva,   setCategoriaAtiva]   = useState('todos');
   const [termoBusca,       setTermoBusca]       = useState('');
+  const [visualizacao,     setVisualizacao]     = useState(() => localStorage.getItem('estoque-visualizacao') || 'lista');
   const [produtoFocadoId,  setProdutoFocadoId]  = useState(null);
   const [modalAberto,      setModalAberto]      = useState(false);
   const [produtoEditar,    setProdutoEditar]    = useState(null);
@@ -135,6 +136,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   }
 
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
+  useEffect(() => { localStorage.setItem('estoque-visualizacao', visualizacao); }, [visualizacao]);
 
   // Recarrega só as categorias — usado ao criar uma categoria nova de
   // dentro do modal de produto. Não mexe em `loading`, então a tela não
@@ -854,6 +856,18 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
             <button className="estoque-btn" onClick={() => window.print()} title="Imprimir">
               🖨️
             </button>
+            <div className="estoque-view-toggle">
+              <button
+                className={`estoque-view-btn${visualizacao === 'lista' ? ' ativo' : ''}`}
+                onClick={() => setVisualizacao('lista')}
+                title="Visualização em lista"
+              >☰</button>
+              <button
+                className={`estoque-view-btn${visualizacao === 'grade' ? ' ativo' : ''}`}
+                onClick={() => setVisualizacao('grade')}
+                title="Visualização em grade (catálogo)"
+              >▦</button>
+            </div>
             {podeAdicionar && (
               <button className="estoque-btn primary" onClick={abrirNovo}>
                 + Produto
@@ -871,7 +885,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       {erro && <div className="estoque-erro">⚠️ {erro}</div>}
 
         {/* Grid */}
-        <div className="estoque-grid">
+        <div className={`estoque-grid${visualizacao === 'grade' ? ' modo-grade' : ''}`}>
           {produtosFiltrados.length === 0 ? (
             <div className="estoque-vazio">
               <span className="estoque-vazio-icon">📦</span>
@@ -891,6 +905,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 podeEditar={podeEditar}
                 podeExcluir={podeExcluir}
                 somenteLeitura={somenteLeitura}
+                visualizacao={visualizacao}
               />
             ))
           )}
@@ -902,9 +917,10 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 }
 
 /* ── Card de produto ─────────────────────────────────────────*/
-function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false }) {
+function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false, visualizacao = 'lista' }) {
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
+  const modoGrade = visualizacao === 'grade';
 
   // Com variações, cada linha pode ter preço próprio (ou herdar o preço
   // base do produto, quando não sobrescrito) — mostra faixa se os
@@ -918,36 +934,52 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
     precoVendaExibido = min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
   }
 
+  const imagem = (
+    <div className="prod-card-imagem">
+      {produto.imagem_url ? (
+        <img src={produto.imagem_url} alt="" loading="lazy" />
+      ) : (
+        <span className="prod-card-imagem-placeholder">📦</span>
+      )}
+    </div>
+  );
+
   return (
     <div
       id={`prod-${produto.id}`}
-      className={`prod-card${focado ? ' focado' : ''}`}
+      className={`prod-card${focado ? ' focado' : ''}${modoGrade ? ' modo-grade' : ''}`}
     >
       <div className="prod-card-corpo" onClick={podeEditar || somenteLeitura ? onEditar : undefined} style={{ cursor: podeEditar || somenteLeitura ? "pointer" : "default" }}>
-        <span className={`prod-badge-estoque ${status}`}>
-          {formatarEstoque(produto.estoque_atual, produto.unidade_medida)}
-        </span>
-        <div className="prod-nome">{produto.nome}</div>
-        {produto.marca && <div className="prod-marca">{produto.marca}</div>}
-        <div className="prod-card-meta">
-          {temVariacoes && (
-            <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor].filter(Boolean).join(' ')).join(', ')}>
-              🎨 {produto.variacoes.length} variaç{produto.variacoes.length > 1 ? 'ões' : 'ão'}
+        {modoGrade && imagem}
+        <div className="prod-card-corpo-info">
+          <div className="prod-card-topo-linha">
+            {!modoGrade && imagem}
+            <span className={`prod-badge-estoque ${status}`}>
+              {formatarEstoque(produto.estoque_atual, produto.unidade_medida)}
             </span>
-          )}
-          {produto.nome_categoria && (
-            <span className="prod-badge-categoria">{produto.nome_categoria}</span>
-          )}
-          <span className="prod-codigo-inline">{produto.codigo_barras || ''}</span>
-        </div>
-        <div className="prod-precos">
-          <div className="prod-preco-item">
-            <span className="prod-preco-label">Custo{unSufixo}</span>
-            <span className="prod-preco-valor">{precoCustoExibido}</span>
           </div>
-          <div className="prod-preco-item">
-            <span className="prod-preco-label">Venda{unSufixo}</span>
-            <span className="prod-preco-valor venda">{precoVendaExibido}</span>
+          <div className="prod-nome">{produto.nome}</div>
+          {produto.marca && <div className="prod-marca">{produto.marca}</div>}
+          <div className="prod-card-meta">
+            {temVariacoes && (
+              <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor].filter(Boolean).join(' ')).join(', ')}>
+                🎨 {produto.variacoes.length} variaç{produto.variacoes.length > 1 ? 'ões' : 'ão'}
+              </span>
+            )}
+            {produto.nome_categoria && (
+              <span className="prod-badge-categoria">{produto.nome_categoria}</span>
+            )}
+            {!modoGrade && <span className="prod-codigo-inline">{produto.codigo_barras || ''}</span>}
+          </div>
+          <div className="prod-precos">
+            <div className="prod-preco-item">
+              <span className="prod-preco-label">Custo{unSufixo}</span>
+              <span className="prod-preco-valor">{precoCustoExibido}</span>
+            </div>
+            <div className="prod-preco-item">
+              <span className="prod-preco-label">Venda{unSufixo}</span>
+              <span className="prod-preco-valor venda">{precoVendaExibido}</span>
+            </div>
           </div>
         </div>
       </div>
