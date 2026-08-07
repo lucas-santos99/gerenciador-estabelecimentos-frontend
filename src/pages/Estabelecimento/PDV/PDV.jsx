@@ -6,6 +6,27 @@ import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Ícone de "sem imagem" — SVG em vez de emoji, pra nunca depender da
+// fonte de emoji do sistema
+function IconePacote({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
+// Imagem de produto com fallback — se não tiver URL, ou se a URL falhar
+// ao carregar (link quebrado), cai pro ícone genérico em vez do ícone
+// feio de "imagem quebrada" do navegador
+function ImagemProduto({ url, className, iconeClassName }) {
+  const [erro, setErro] = useState(false);
+  if (!url || erro) return <IconePacote className={iconeClassName} />;
+  return <img src={url} alt="" loading="lazy" onError={() => setErro(true)} className={className} />;
+}
+
 // CPF tem 11 dígitos, CNPJ tem 14 — usado só pra rotular certinho nos
 // resumos ("CPF:" ou "CNPJ:"), sem precisar de um campo separado pra
 // marcar o tipo. Compartilhado entre o PagamentoModal (onde a pessoa
@@ -1969,7 +1990,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           {resultados.map((p, i) => (
             <li key={p.id} className={`pdv-produto-card${buscaIndex === i ? ' selecionado' : ''}`} onClick={() => selecionarProduto(p)} onMouseEnter={() => setBuscaIndex(i)}>
               <div className="pdv-card-imagem">
-                {p.imagem_url ? <img src={p.imagem_url} alt="" loading="lazy" /> : <span className="pdv-card-imagem-placeholder">📦</span>}
+                <ImagemProduto url={p.imagem_url} iconeClassName="pdv-card-imagem-placeholder" />
               </div>
               <span className="pdv-card-nome">{p.nome}{p.marca ? <span className="pdv-card-marca"> — {p.marca}</span> : ''}</span>
               <span className="pdv-card-preco">{fmt(p.preco_venda)}</span>
@@ -2011,7 +2032,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             carrinho.map((item, idx) => (
               <li key={`${item.id}-${idx}`} className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}`}>
                 <div className="pdv-item-imagem">
-                  {item.imagem_url ? <img src={item.imagem_url} alt="" loading="lazy" /> : <span className="pdv-item-imagem-placeholder">📦</span>}
+                  <ImagemProduto url={item.imagem_url} iconeClassName="pdv-item-imagem-placeholder" />
                 </div>
                 <div className="pdv-item-info" onClick={() => !item.pesavel && editarItem(item, idx)}>
                   <span className="pdv-item-nome">

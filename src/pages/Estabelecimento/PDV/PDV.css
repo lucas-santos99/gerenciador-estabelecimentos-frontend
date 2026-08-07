@@ -1976,7 +1976,7 @@ button:disabled[title*="Sem permissão"] {
   margin-bottom: 2px;
 }
 .pdv-card-imagem img { width: 100%; height: 100%; object-fit: cover; }
-.pdv-card-imagem-placeholder { font-size: 1.4rem; opacity: 0.3; }
+.pdv-card-imagem-placeholder { width: 22px; height: 22px; color: var(--est-text-muted); opacity: 0.4; }
 
 .pdv-item-imagem {
   width: calc(36px * var(--pdv-font-scale, 1));
@@ -1991,4 +1991,4 @@ button:disabled[title*="Sem permissão"] {
   flex-shrink: 0;
 }
 .pdv-item-imagem img { width: 100%; height: 100%; object-fit: cover; }
-.pdv-item-imagem-placeholder { font-size: 1rem; opacity: 0.3; }
+.pdv-item-imagem-placeholder { width: 16px; height: 16px; color: var(--est-text-muted); opacity: 0.4; }

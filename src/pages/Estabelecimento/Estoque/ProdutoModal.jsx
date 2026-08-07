@@ -385,6 +385,18 @@ function CategoriaSelect({ categorias, value, onChange, somenteLeitura }) {
   );
 }
 
+// Ícone de "sem imagem" — SVG em vez de emoji, pra não depender da fonte
+// de emoji do sistema (renderiza igual em qualquer navegador/SO)
+function IconePacote({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoModal({
   estabelecimentoId,
@@ -435,6 +447,7 @@ export default function ProdutoModal({
   const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
   const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
+  const [imagemErro,        setImagemErro]        = useState(false);
   const [imagemPendenteBase64, setImagemPendenteBase64] = useState(null); // foto própria staged até o produto (novo) ganhar um id
   const [enviandoImagem,       setEnviandoImagem]       = useState(false);
   const imagemInputRef = useRef(null);
@@ -593,6 +606,7 @@ export default function ProdutoModal({
      sobrescreve o que o comerciante já digitou/editou. */
   async function buscarPorCodigoBarras(codigo) {
     if (isEdit || !codigo || codigo.trim().length < 6) return;
+    if (buscandoCodigo) return; // já tem uma busca rolando (ex: debounce e onBlur coincidiram)
     setAutoPreenchido(null);
     setBuscandoCodigo(true);
     try {
@@ -613,6 +627,20 @@ export default function ProdutoModal({
     }
     setBuscandoCodigo(false);
   }
+
+  /* ── Dispara a busca automaticamente uma pausa depois de parar de
+     digitar — funciona igual pro bipador (digita tudo de uma vez, sem
+     pausa, e já dispara rapidinho) e pra quem digita na mão devagar
+     (não precisa apertar Enter nem sair do campo, só parar de digitar
+     por meio segundo). onBlur/Enter continuam funcionando também, como
+     atalho pra quem preferir. ── */
+  useEffect(() => {
+    if (isEdit) return;
+    const codigo = form.codigo_barras;
+    if (!codigo || codigo.trim().length < 6) return;
+    const timer = setTimeout(() => buscarPorCodigoBarras(codigo), 500);
+    return () => clearTimeout(timer);
+  }, [form.codigo_barras, isEdit]);
 
   /* ── Comprime a foto no navegador antes de enviar — nunca sobe a
      imagem em tamanho original. Redimensiona pro maior lado ficar em
@@ -696,6 +724,7 @@ export default function ProdutoModal({
   }
 
   const imagemPreview = imagemPendenteBase64 || form.imagem_url || '';
+  useEffect(() => { setImagemErro(false); }, [imagemPreview]);
 
   /* ── Verifica se a marca digitada é igual/parecida com uma que
      já existe, pra evitar cadastrar "Coca Cola" e "Coca-Cola" como
@@ -919,10 +948,10 @@ export default function ProdutoModal({
                   </label>
                   <div className="prod-imagem-row">
                     <div className="prod-imagem-preview">
-                      {imagemPreview ? (
-                        <img src={imagemPreview} alt="" loading="lazy" />
+                      {imagemPreview && !imagemErro ? (
+                        <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} />
                       ) : (
-                        <span className="prod-imagem-placeholder">📦</span>
+                        <IconePacote className="prod-imagem-placeholder" />
                       )}
                       {enviandoImagem && <div className="prod-imagem-overlay">⏳</div>}
                     </div>

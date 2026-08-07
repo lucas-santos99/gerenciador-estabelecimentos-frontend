@@ -633,6 +633,15 @@
   border: 1px solid rgba(239,68,68,0.2);
 }
 
+/* Modo grade: o badge flutua sobre a foto do produto — precisa de fundo
+   sólido + sombra, senão fica ilegível dependendo da cor da imagem */
+.prod-card.modo-grade .prod-badge-estoque {
+  background: var(--est-card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
 .prod-nome {
   font-size: calc(0.9rem * var(--est-font-scale, 1));
   font-weight: 700;
@@ -2155,8 +2164,10 @@
   object-fit: cover;
 }
 .prod-imagem-placeholder {
-  font-size: 1.8rem;
-  opacity: 0.35;
+  width: 30px;
+  height: 30px;
+  color: var(--est-text-muted);
+  opacity: 0.5;
 }
 .prod-imagem-overlay {
   position: absolute;
@@ -2244,7 +2255,7 @@
   flex-shrink: 0;
 }
 .prod-card-imagem img { width: 100%; height: 100%; object-fit: cover; }
-.prod-card-imagem-placeholder { font-size: 1rem; opacity: 0.3; }
+.prod-card-imagem-placeholder { width: 16px; height: 16px; color: var(--est-text-muted); opacity: 0.5; }
 
 .prod-card-topo-linha {
   display: flex;
@@ -2266,7 +2277,7 @@
   border: none;
   border-bottom: 1px solid var(--est-border);
 }
-.prod-card.modo-grade .prod-card-imagem-placeholder { font-size: 2.2rem; }
+.prod-card.modo-grade .prod-card-imagem-placeholder { width: 34px; height: 34px; }
 .prod-card.modo-grade .prod-card-corpo-info {
   padding: 10px 12px 0;
 }

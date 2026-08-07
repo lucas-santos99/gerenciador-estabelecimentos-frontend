@@ -30,6 +30,19 @@ function corDaCategoria(nome) {
   return CORES_AVATAR[Math.abs(hash) % CORES_AVATAR.length];
 }
 
+// Ícone de "sem imagem" — SVG em vez de emoji, pra nunca depender da
+// fonte de emoji do sistema (em alguns Windows/navegadores o 📦 rendeiza
+// como um símbolo genérico quebrado em vez do desenho colorido)
+function IconePacote({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
 function estoqueStatus(produto) {
   const e = parseFloat(produto.estoque_atual);
   const m = parseFloat(produto.estoque_minimo);
@@ -921,6 +934,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
   const modoGrade = visualizacao === 'grade';
+  const [imgErro, setImgErro] = useState(false);
 
   // Com variações, cada linha pode ter preço próprio (ou herdar o preço
   // base do produto, quando não sobrescrito) — mostra faixa se os
@@ -936,10 +950,10 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
 
   const imagem = (
     <div className="prod-card-imagem">
-      {produto.imagem_url ? (
-        <img src={produto.imagem_url} alt="" loading="lazy" />
+      {produto.imagem_url && !imgErro ? (
+        <img src={produto.imagem_url} alt="" loading="lazy" onError={() => setImgErro(true)} />
       ) : (
-        <span className="prod-card-imagem-placeholder">📦</span>
+        <IconePacote className="prod-card-imagem-placeholder" />
       )}
     </div>
   );
