@@ -1161,9 +1161,9 @@
   width: 38px;
   flex-shrink: 0;
   border-radius: 10px;
-  border: 1px solid var(--est-border-accent);
-  background: var(--est-accent-dim);
-  color: var(--est-accent);
+  border: none;
+  background: var(--est-accent);
+  color: #fff;
   font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
@@ -1171,20 +1171,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(20,184,166,0.35);
 }
 .prod-btn-nova-cat:hover {
-  background: var(--est-accent);
-  color: #fff;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20,184,166,0.45);
+}
+.prod-btn-nova-cat:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Mini form nova categoria */
 .prod-nova-cat-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
   grid-column: 1 / -1;
 }
 .prod-nova-cat-form .prod-input { flex: 1; }
+.prod-nova-cat-select-pai {
+  flex-basis: 100%;
+  order: 3;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.prod-nova-cat-select-pai:focus { outline: none; border-color: var(--est-border-accent); }
 .prod-nova-cat-btn-salvar {
   padding: 8px 12px;
   border-radius: 8px;
@@ -2037,9 +2060,11 @@
   left: 0;
   right: 0;
   background: var(--est-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--est-border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
   z-index: 20;
   overflow: hidden;
 }

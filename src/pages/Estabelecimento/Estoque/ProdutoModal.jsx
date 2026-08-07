@@ -388,6 +388,7 @@ export default function ProdutoModal({
   const [categorias,        setCategorias]        = useState(categoriasProp || []);
   const [novaCatAberta,     setNovaCatAberta]     = useState(false);
   const [novaCatNome,       setNovaCatNome]       = useState('');
+  const [novaCatPaiId,      setNovaCatPaiId]      = useState('');
   const [salvandoCat,       setSalvandoCat]       = useState(false);
   const [salvando,          setSalvando]          = useState(false);
   const [erro,              setErro]              = useState('');
@@ -580,13 +581,14 @@ export default function ProdutoModal({
       const resp = await apiFetch(`/api/categorias`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ nome: novaCatNome.trim() }),
+        body:    JSON.stringify({ nome: novaCatNome.trim(), categoria_pai_id: novaCatPaiId || null }),
       });
       const nova = await resp.json();
       if (!resp.ok) throw new Error(nova.error || 'Erro ao criar categoria');
       setCategorias(prev => [...prev, nova]);
       setForm(prev => ({ ...prev, categoria_id: nova.id }));
       setNovaCatNome('');
+      setNovaCatPaiId('');
       setNovaCatAberta(false);
       onCategoriaCriada?.();
     } catch (err) {
@@ -892,7 +894,7 @@ export default function ProdutoModal({
                     <button
                       type="button"
                       className="prod-btn-nova-cat"
-                      onClick={() => setNovaCatAberta(p => !p)}
+                      onClick={() => { setNovaCatAberta(p => !p); setNovaCatPaiId(''); }}
                       disabled={somenteLeitura}
                       title="Nova categoria"
                     >
@@ -905,11 +907,22 @@ export default function ProdutoModal({
                       <input
                         ref={novaCatRef}
                         className="prod-input"
-                        placeholder="Nome da categoria…"
+                        placeholder={novaCatPaiId ? 'Nome da subcategoria…' : 'Nome da categoria…'}
                         value={novaCatNome}
                         onChange={e => setNovaCatNome(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); criarCategoria(); } }}
                       />
+                      <select
+                        className="prod-nova-cat-select-pai"
+                        value={novaCatPaiId}
+                        onChange={e => setNovaCatPaiId(e.target.value)}
+                        title="Categoria principal (opcional)"
+                      >
+                        <option value="">— Categoria principal —</option>
+                        {categorias.filter(c => !c.categoria_pai_id).map(c => (
+                          <option key={c.id} value={c.id}>↳ dentro de "{c.nome}"</option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         className="prod-nova-cat-btn-salvar"
@@ -921,7 +934,7 @@ export default function ProdutoModal({
                       <button
                         type="button"
                         className="prod-nova-cat-btn-cancelar"
-                        onClick={() => { setNovaCatAberta(false); setNovaCatNome(''); }}
+                        onClick={() => { setNovaCatAberta(false); setNovaCatNome(''); setNovaCatPaiId(''); }}
                       >
                         ✕
                       </button>
