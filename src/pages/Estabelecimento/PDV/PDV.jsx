@@ -21,10 +21,19 @@ function IconePacote({ className }) {
 // Imagem de produto com fallback — se não tiver URL, ou se a URL falhar
 // ao carregar (link quebrado), cai pro ícone genérico em vez do ícone
 // feio de "imagem quebrada" do navegador
-function ImagemProduto({ url, className, iconeClassName }) {
+function ImagemProduto({ url, className, iconeClassName, onExpandir }) {
   const [erro, setErro] = useState(false);
   if (!url || erro) return <IconePacote className={iconeClassName} />;
-  return <img src={url} alt="" loading="lazy" onError={() => setErro(true)} className={className} />;
+  return (
+    <img
+      src={url}
+      alt=""
+      loading="lazy"
+      onError={() => setErro(true)}
+      onClick={onExpandir ? e => { e.stopPropagation(); onExpandir(url); } : undefined}
+      className={className}
+    />
+  );
 }
 
 // CPF tem 11 dígitos, CNPJ tem 14 — usado só pra rotular certinho nos
@@ -1286,6 +1295,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
   const SEM_PERM = 'Sem permissão — contate o administrador';
   const [termoBusca,      setTermoBusca]      = useState('');
+  const [imagemExpandida, setImagemExpandida] = useState(null);
   const [resultados,      setResultados]      = useState([]);
   const [carrinho,        setCarrinho]        = useState([]);
   const [total,           setTotal]           = useState(0);
@@ -1990,7 +2000,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           {resultados.map((p, i) => (
             <li key={p.id} className={`pdv-produto-card${buscaIndex === i ? ' selecionado' : ''}`} onClick={() => selecionarProduto(p)} onMouseEnter={() => setBuscaIndex(i)}>
               <div className="pdv-card-imagem">
-                <ImagemProduto url={p.imagem_url} iconeClassName="pdv-card-imagem-placeholder" />
+                <ImagemProduto url={p.imagem_url} iconeClassName="pdv-card-imagem-placeholder" onExpandir={setImagemExpandida} />
               </div>
               <span className="pdv-card-nome">{p.nome}{p.marca ? <span className="pdv-card-marca"> — {p.marca}</span> : ''}</span>
               <span className="pdv-card-preco">{fmt(p.preco_venda)}</span>
@@ -2032,7 +2042,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             carrinho.map((item, idx) => (
               <li key={`${item.id}-${idx}`} className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}`}>
                 <div className="pdv-item-imagem">
-                  <ImagemProduto url={item.imagem_url} iconeClassName="pdv-item-imagem-placeholder" />
+                  <ImagemProduto url={item.imagem_url} iconeClassName="pdv-item-imagem-placeholder" onExpandir={setImagemExpandida} />
                 </div>
                 <div className="pdv-item-info" onClick={() => !item.pesavel && editarItem(item, idx)}>
                   <span className="pdv-item-nome">
@@ -2075,6 +2085,13 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           </button>
         </div>
       </div>
+
+      {imagemExpandida && (
+        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

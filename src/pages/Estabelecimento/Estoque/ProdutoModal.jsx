@@ -446,8 +446,10 @@ export default function ProdutoModal({
   const [scanFlash,         setScanFlash]         = useState(false);
   const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
+  const [ultimoAutoPreenchido, setUltimoAutoPreenchido] = useState(null); // { codigo, nome, marca, imagem_url } — snapshot do que a última busca preencheu
   const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
   const [imagemErro,        setImagemErro]        = useState(false);
+  const [imagemExpandidaAberta, setImagemExpandidaAberta] = useState(false);
   const [imagemPendenteBase64, setImagemPendenteBase64] = useState(null); // foto própria staged até o produto (novo) ganhar um id
   const [enviandoImagem,       setEnviandoImagem]       = useState(false);
   const imagemInputRef = useRef(null);
@@ -613,14 +615,22 @@ export default function ProdutoModal({
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/lookup-codigo?codigo=${encodeURIComponent(codigo.trim())}`);
       const json = await resp.json();
       if (resp.ok && json.encontrado) {
+        const nomeNovo   = form.nome.trim()  ? form.nome  : json.nome;
+        const marcaNovo  = form.marca.trim() ? form.marca : (json.marca || form.marca);
+        const imagemNova = (!form.imagem_url && json.imagem_url) ? json.imagem_url : form.imagem_url;
         setForm(prev => ({
           ...prev,
-          nome:  prev.nome.trim()  ? prev.nome  : json.nome,
-          marca: prev.marca.trim() ? prev.marca : (json.marca || prev.marca),
-          imagem_url:    (!prev.imagem_url && json.imagem_url) ? json.imagem_url : prev.imagem_url,
-          imagem_origem: (!prev.imagem_url && json.imagem_url) ? json.fonte      : prev.imagem_origem,
+          nome:  nomeNovo,
+          marca: marcaNovo,
+          imagem_url:    imagemNova,
+          imagem_origem: (!prev.imagem_url && json.imagem_url) ? json.fonte : prev.imagem_origem,
         }));
         setAutoPreenchido(json.fonte);
+        // Guarda o que ficou preenchido por causa dessa busca — se o
+        // código mudar depois, só limpa os campos que ainda baterem
+        // exatamente com isso (ou seja, que o comerciante não editou
+        // por cima manualmente)
+        setUltimoAutoPreenchido({ codigo: codigo.trim(), nome: nomeNovo, marca: marcaNovo, imagem_url: imagemNova });
       }
     } catch {
       // Falha silenciosa — comerciante preenche na mão normalmente
@@ -636,23 +646,48 @@ export default function ProdutoModal({
      atalho pra quem preferir. ── */
   useEffect(() => {
     if (isEdit) return;
-    const codigo = form.codigo_barras;
-    if (!codigo || codigo.trim().length < 6) return;
+    const codigo = form.codigo_barras.trim();
+
+    // O código mudou (ou foi apagado) depois de uma busca anterior já
+    // ter preenchido algo — se o comerciante não editou por cima do que
+    // veio de lá, limpa, pra não ficar mostrando produto/imagem errados
+    // pra esse código novo. Cada campo é checado separado: se só editou
+    // o nome na mão, por exemplo, marca e imagem ainda são limpas.
+    if (ultimoAutoPreenchido && codigo !== ultimoAutoPreenchido.codigo) {
+      setForm(prev => {
+        const nomeAindaAuto   = prev.nome === ultimoAutoPreenchido.nome;
+        const marcaAindaAuto  = prev.marca === ultimoAutoPreenchido.marca;
+        const imagemAindaAuto = prev.imagem_url === ultimoAutoPreenchido.imagem_url;
+        if (!nomeAindaAuto && !marcaAindaAuto && !imagemAindaAuto) return prev; // editou tudo na mão, não mexe
+        return {
+          ...prev,
+          nome:  nomeAindaAuto  ? '' : prev.nome,
+          marca: marcaAindaAuto ? '' : prev.marca,
+          imagem_url:    imagemAindaAuto ? '' : prev.imagem_url,
+          imagem_origem: imagemAindaAuto ? '' : prev.imagem_origem,
+        };
+      });
+      setAutoPreenchido(null);
+      setUltimoAutoPreenchido(null);
+    }
+
+    if (!codigo || codigo.length < 6) return;
     const timer = setTimeout(() => buscarPorCodigoBarras(codigo), 500);
     return () => clearTimeout(timer);
   }, [form.codigo_barras, isEdit]);
 
   /* ── Comprime a foto no navegador antes de enviar — nunca sobe a
      imagem em tamanho original. Redimensiona pro maior lado ficar em
-     480px e converte pra JPEG 80%, deixando cada foto na faixa de
-     30-100KB. ── */
+     720px e converte pra JPEG 82%, deixando cada foto na faixa de
+     60-180KB — ainda leve, mas com definição boa o suficiente pra
+     expandir em tela cheia sem ficar borrada. ── */
   function comprimirImagem(file) {
     return new Promise((resolve, reject) => {
       const leitor = new FileReader();
       leitor.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const MAX = 480;
+          const MAX = 720;
           let { width, height } = img;
           if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
           else if (height >= width && height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
@@ -660,7 +695,7 @@ export default function ProdutoModal({
           canvas.width = width;
           canvas.height = height;
           canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
         };
         img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
         img.src = e.target.result;
@@ -949,7 +984,7 @@ export default function ProdutoModal({
                   <div className="prod-imagem-row">
                     <div className="prod-imagem-preview">
                       {imagemPreview && !imagemErro ? (
-                        <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} />
+                        <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} onClick={() => setImagemExpandidaAberta(true)} />
                       ) : (
                         <IconePacote className="prod-imagem-placeholder" />
                       )}
@@ -1560,6 +1595,13 @@ export default function ProdutoModal({
           onClose={() => setGerenciarOpcoesAberto(false)}
           onAlterado={carregarOpcoesVariacao}
         />
+      )}
+
+      {imagemExpandidaAberta && imagemPreview && (
+        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandidaAberta(false)}>
+          <button className="prod-lightbox-fechar" onClick={() => setImagemExpandidaAberta(false)}>✕</button>
+          <img src={imagemPreview} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+        </div>
       )}
     </>
   );

@@ -53,6 +53,7 @@ function estoqueStatus(produto) {
 
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoList({ estabelecimentoId, permissoes = null, isMerchant = true }) {
+  const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
   const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
   const SEM_PERM = 'Sem permissão — contate o administrador';
 
@@ -919,18 +920,26 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 podeExcluir={podeExcluir}
                 somenteLeitura={somenteLeitura}
                 visualizacao={visualizacao}
+                onExpandirImagem={setImagemExpandida}
               />
             ))
           )}
         </div>
 
       </div>
+
+      {imagemExpandida && (
+        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
 
 /* ── Card de produto ─────────────────────────────────────────*/
-function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false, visualizacao = 'lista' }) {
+function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false, visualizacao = 'lista', onExpandirImagem }) {
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
   const modoGrade = visualizacao === 'grade';
@@ -951,7 +960,13 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
   const imagem = (
     <div className="prod-card-imagem">
       {produto.imagem_url && !imgErro ? (
-        <img src={produto.imagem_url} alt="" loading="lazy" onError={() => setImgErro(true)} />
+        <img
+          src={produto.imagem_url}
+          alt=""
+          loading="lazy"
+          onError={() => setImgErro(true)}
+          onClick={e => { e.stopPropagation(); onExpandirImagem?.(produto.imagem_url); }}
+        />
       ) : (
         <IconePacote className="prod-card-imagem-placeholder" />
       )}
