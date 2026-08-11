@@ -941,6 +941,13 @@ export default function ProdutoModal({
 
   /* ── Labels dinâmicos por unidade ───────────────────────── */
   const isKg        = form.unidade_medida === 'kg';
+  // Produto pesado (kg) SEM etiqueta de balança (granel puro, tipo
+  // hortifruti) não tem código de barras nenhum pra bipar — no PDV
+  // esse produto é sempre achado pela busca por nome, nunca por scan.
+  // Só faz sentido ter código de barras aqui se for 'un' (produto de
+  // fábrica/etiqueta própria) OU 'kg' COM etiqueta de balança (nesse
+  // caso o campo guarda o código interno de 5 dígitos, não um EAN normal).
+  const granelSemEtiqueta = isKg && !form.vendido_por_peso;
 
   /* ── Prévia do ajuste de estoque, ao vivo conforme digita ── */
   const ajusteQtdDigitada  = paraFloatBR(ajusteQtd);
@@ -1060,7 +1067,10 @@ export default function ProdutoModal({
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
                     Código de barras
-                    <CampoAjuda texto="Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)." />
+                    {granelSemEtiqueta && <span className="prod-label-unit"> (opcional)</span>}
+                    <CampoAjuda texto={granelSemEtiqueta
+                      ? "Produto pesado sem etiqueta de balança geralmente não tem código de barras — no PDV ele é encontrado pela busca por nome, não por scan. Só preencha se esse produto tiver mesmo um código de fábrica (ex: saco fechado do fornecedor)."
+                      : "Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)."} />
                   </label>
                   <div className="prod-codigo-row">
                     <input
@@ -1068,7 +1078,7 @@ export default function ProdutoModal({
                       className={`prod-input${scanFlash ? ' prod-input-scan-flash' : ''}`}
                       name="codigo_barras"
                       readOnly={somenteLeitura}
-                      placeholder="Digite ou escaneie…"
+                      placeholder={granelSemEtiqueta ? 'Normalmente fica em branco…' : 'Digite ou escaneie…'}
                       value={form.codigo_barras}
                       onChange={atualizar}
                       onBlur={e => buscarPorCodigoBarras(e.target.value)}
@@ -1084,7 +1094,7 @@ export default function ProdutoModal({
                         📷
                       </button>
                     )}
-                    {!somenteLeitura && !form.codigo_barras && (
+                    {!somenteLeitura && !form.codigo_barras && !granelSemEtiqueta && (
                       <button
                         type="button"
                         className="prod-btn-gerar-codigo"
@@ -1096,7 +1106,12 @@ export default function ProdutoModal({
                       </button>
                     )}
                   </div>
-                  {!buscandoCodigo && !autoPreenchido && !form.codigo_barras && (
+                  {granelSemEtiqueta && !form.codigo_barras && (
+                    <span className="prod-label-hint">
+                      Produto pesado vendido a granel (sem etiqueta de balança) não precisa de código de barras — pode deixar em branco. No PDV, esse produto é encontrado digitando o nome na busca.
+                    </span>
+                  )}
+                  {!granelSemEtiqueta && !buscandoCodigo && !autoPreenchido && !form.codigo_barras && (
                     <span className="prod-label-hint">
                       Produto sem código de barras de fábrica (comum em roupa/calçado)? Clique em "Gerar código" — a etiqueta pode ser impressa e colada na peça, funciona igual qualquer código de barras no bipe.
                     </span>
