@@ -39,6 +39,7 @@ const ACAO_LABEL = {
   produto_excluido: '🗑️ Produto excluído', cliente_criado: '👤 Cliente criado',
   cliente_editado: '✏️ Cliente editado', cliente_excluido: '🗑️ Cliente excluído',
   fiado_recebido: '💰 Fiado recebido', config_atualizada: '⚙️ Config atualizada',
+  produto_bloqueado_palavra: '🚫 Nome/marca bloqueado (palavra proibida)',
 };
 const META_LABEL = {
   nome: 'Nome', marca: 'Marca', preco_venda: 'Preço venda', preco_custo: 'Preço custo',
@@ -87,7 +88,7 @@ export default function Auditoria({ estabelecimentoId, nomeEstabelecimento }) {
 
   const [operadores, setOperadores] = useState([]);
   const [filtros, setFiltros] = useState({
-    data_inicio: dataHa30(), data_fim: dataHoje(), modulo: '', operador_id: '', acao: '',
+    data_inicio: dataHa30(), data_fim: dataHoje(), modulo: '', operador_id: '', acao: '', busca: '',
   });
   const [registros,   setRegistros]   = useState([]);
   const [totalRegs,   setTotalRegs]   = useState(0);
@@ -109,6 +110,7 @@ export default function Auditoria({ estabelecimentoId, nomeEstabelecimento }) {
         ...(filtros.modulo      && { modulo:      filtros.modulo }),
         ...(filtros.operador_id && { operador_id: filtros.operador_id }),
         ...(filtros.acao        && { acao:        filtros.acao }),
+        ...(filtros.busca.trim() && { busca:      filtros.busca.trim() }),
       });
       const resp = await apiFetch(`/api/auditoria?${params}`);
       if (!resp.ok) throw new Error();
@@ -171,6 +173,18 @@ export default function Auditoria({ estabelecimentoId, nomeEstabelecimento }) {
               {operadores.map(op => <option key={op.id} value={op.id}>{op.nome}</option>)}
             </select>
           </div>
+          <div className="rel-filtro-group">
+            <label className="rel-filtro-label">Buscar</label>
+            <input
+              className="rel-filtro-input"
+              type="text"
+              placeholder="Palavra na descrição…"
+              value={filtros.busca}
+              onChange={e => setFiltros(p => ({ ...p, busca: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') aplicarFiltros(); }}
+              title="Busca dentro da descrição do registro — ex: um nome de produto bloqueado por palavra proibida"
+            />
+          </div>
           <button className="rel-btn-filtrar" onClick={aplicarFiltros}>🔍 Filtrar</button>
         </div>
 
@@ -186,7 +200,7 @@ export default function Auditoria({ estabelecimentoId, nomeEstabelecimento }) {
           <>
             <div className="rel-lista">
               {registros.map(r => (
-                <div key={r.id} className={`rel-registro rel-mod-${MODULO_COR[r.modulo] || 'gray'}`}>
+                <div key={r.id} className={`rel-registro rel-mod-${r.acao === 'produto_bloqueado_palavra' ? 'red' : (MODULO_COR[r.modulo] || 'gray')}`}>
                   <div className="rel-registro-corpo">
                     <div className="rel-registro-linha1">
                       <div className="rel-registro-badges">

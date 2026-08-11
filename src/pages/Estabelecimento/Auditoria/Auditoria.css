@@ -188,6 +188,7 @@
 .rel-mod-orange { border-left-color: #f59e0b; }
 .rel-mod-cyan   { border-left-color: #06b6d4; }
 .rel-mod-pink   { border-left-color: #ec4899; }
+.rel-mod-red    { border-left-color: #dc2626; } /* eventos de segurança, ex: nome bloqueado */
 
 /* Corpo do registro — coluna */
 .rel-registro-corpo {
