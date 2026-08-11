@@ -1989,7 +1989,13 @@
   pointer-events: none;
 }
 
+/* width:100% explícito — sem isso, o <input> não preenche o wrap sozinho
+   (fica no tamanho padrão do navegador, ~170px) mesmo com o wrap esticado
+   certinho pelo grid/flex do pai. box-sizing:border-box garante que o
+   padding-left (pro "R$") não estoure essa largura. */
 .prod-input-moeda {
+  width: 100%;
+  box-sizing: border-box;
   padding-left: 32px !important;
 }
 
