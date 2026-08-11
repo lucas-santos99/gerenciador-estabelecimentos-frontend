@@ -60,6 +60,7 @@ export default function AuditoriaAdmin() {
   // Filtros — inicializados a partir da URL (permite chegar aqui já filtrado)
   const [escopo,       setEscopo]      = useState(params.get("escopo") || "");
   const [merceariaId,  setMerceariaId] = useState(params.get("mercearia_id") || "");
+  const [modulo,       setModulo]      = useState(params.get("modulo") || "");
   const [acao,         setAcao]        = useState(params.get("acao") || "");
   const [usuario,      setUsuario]     = useState(params.get("usuario") || "");
   const [busca,        setBusca]       = useState(params.get("busca") || "");
@@ -101,6 +102,7 @@ export default function AuditoriaAdmin() {
     const qs = new URLSearchParams();
     if (escopo)      qs.set("escopo", escopo);
     if (merceariaId) qs.set("mercearia_id", merceariaId);
+    if (modulo)      qs.set("modulo", modulo);
     if (acao)        qs.set("acao", acao);
     if (usuario)      qs.set("usuario", usuario);
     if (busca)        qs.set("busca", busca.trim());
@@ -136,8 +138,8 @@ export default function AuditoriaAdmin() {
       setErro("Erro interno ao buscar auditoria.");
     }
     setLoading(false);
-   
-  }, [API_URL, escopo, merceariaId, acao, usuario, busca, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
+
+  }, [API_URL, escopo, merceariaId, modulo, acao, usuario, busca, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -160,20 +162,21 @@ export default function AuditoriaAdmin() {
     const next = {};
     if (escopo)      next.escopo = escopo;
     if (merceariaId) next.mercearia_id = merceariaId;
+    if (modulo)      next.modulo = modulo;
     if (acao)        next.acao = acao;
     if (usuario)      next.usuario = usuario;
     if (busca)        next.busca = busca;
     setParams(next, { replace: true });
     setPagina(0);
 
-  }, [escopo, merceariaId, acao, usuario, busca]);
+  }, [escopo, merceariaId, modulo, acao, usuario, busca]);
 
   function nomeEstab(id) {
     return estabs.find(e => e.id === id)?.nome_fantasia || (id ? id.slice(0, 8) + "…" : "—");
   }
 
   function limparFiltros() {
-    setEscopo(""); setMerceariaId(""); setAcao(""); setUsuario(""); setBusca(""); setDataInicio(""); setDataFim("");
+    setEscopo(""); setMerceariaId(""); setModulo(""); setAcao(""); setUsuario(""); setBusca(""); setDataInicio(""); setDataFim("");
   }
 
   /* ── ordenação por coluna ─────────────────────────────────── */
@@ -322,6 +325,14 @@ export default function AuditoriaAdmin() {
           </div>
 
           <div className="aud-filter-group">
+            <label className="aud-filter-label">Módulo</label>
+            <select className="aud-select" value={modulo} onChange={e => setModulo(e.target.value)}>
+              <option value="">Todos</option>
+              {Object.entries(MODULO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+
+          <div className="aud-filter-group">
             <label className="aud-filter-label">Usuário</label>
             <select className="aud-select" value={usuario} onChange={e => setUsuario(e.target.value)}>
               <option value="">Todos</option>
@@ -337,7 +348,7 @@ export default function AuditoriaAdmin() {
             </select>
           </div>
 
-          <div className="aud-filter-group">
+          <div className="aud-filter-group aud-filter-group--busca">
             <label className="aud-filter-label">Buscar</label>
             <input
               className="aud-input"
@@ -350,17 +361,17 @@ export default function AuditoriaAdmin() {
             />
           </div>
 
-          <div className="aud-filter-group">
+          <div className="aud-filter-group aud-filter-group--data">
             <label className="aud-filter-label">De</label>
             <input className="aud-input" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
           </div>
 
-          <div className="aud-filter-group">
+          <div className="aud-filter-group aud-filter-group--data">
             <label className="aud-filter-label">Até</label>
             <input className="aud-input" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
           </div>
 
-          <div className="aud-filter-group">
+          <div className="aud-filter-group aud-filter-group--pequeno">
             <label className="aud-filter-label">Por página</label>
             <select className="aud-select" value={tamanhoPagina} onChange={e => { setTamanhoPagina(parseInt(e.target.value)); setPagina(0); }}>
               {TAMANHOS_PAGINA.map(n => <option key={n} value={n}>{n}</option>)}

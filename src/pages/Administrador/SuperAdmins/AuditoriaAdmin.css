@@ -93,7 +93,7 @@
 
 .aud-filters-box {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   align-items: flex-end;
   background: var(--bg-card);
@@ -108,6 +108,24 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  flex: 1 1 130px;
+  min-width: 130px;
+}
+
+/* Campos que não precisam de tanta largura — deixa mais espaço
+   sobrando pra tudo caber na mesma linha em telas de desktop */
+.aud-filter-group--data {
+  flex: 0 1 118px;
+  min-width: 118px;
+}
+
+.aud-filter-group--pequeno {
+  flex: 0 1 90px;
+  min-width: 90px;
+}
+
+.aud-filter-group--busca {
+  flex: 1 1 160px;
   min-width: 150px;
 }
 
