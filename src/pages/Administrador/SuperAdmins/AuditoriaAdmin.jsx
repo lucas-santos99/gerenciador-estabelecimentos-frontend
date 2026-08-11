@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
+import { MODULO_LABEL, ACAO_LABEL } from "../../../utils/auditoriaLabels";
 import * as XLSX from "xlsx";
 import "./AuditoriaAdmin.css";
 
@@ -215,8 +216,8 @@ export default function AuditoriaAdmin() {
       "Escopo":          r.escopo || "estabelecimento",
       "Estabelecimento": r.mercearia_id ? nomeEstab(r.mercearia_id) : "—",
       "Usuário":         r.usuario_nome || "Sistema",
-      "Módulo":          r.modulo || "",
-      "Ação":            r.acao || "",
+      "Módulo":          (MODULO_LABEL[r.modulo] || r.modulo || ""),
+      "Ação":            (ACAO_LABEL[r.acao] || r.acao || ""),
       "Descrição":       r.descricao || "",
     };
   }
@@ -332,7 +333,7 @@ export default function AuditoriaAdmin() {
             <label className="aud-filter-label">Ação</label>
             <select className="aud-select" value={acao} onChange={e => setAcao(e.target.value)}>
               <option value="">Todas</option>
-              {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{a}</option>)}
+              {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{ACAO_LABEL[a] || a}</option>)}
             </select>
           </div>
 
@@ -418,11 +419,8 @@ export default function AuditoriaAdmin() {
                         </td>
                         <td className="nowrap">{r.mercearia_id ? nomeEstab(r.mercearia_id) : "—"}</td>
                         <td className="nowrap">{r.usuario_nome || "Sistema"}</td>
-                        <td>{r.modulo}</td>
-                        <td className="mono">
-                          {bloqueado && <span title="Tentativa bloqueada pelo filtro de palavras">🚫 </span>}
-                          {r.acao}
-                        </td>
+                        <td className="nowrap">{MODULO_LABEL[r.modulo] || r.modulo}</td>
+                        <td className="nowrap">{ACAO_LABEL[r.acao] || r.acao}</td>
                         <td className="aud-desc">{r.descricao}</td>
                       </tr>
                     );

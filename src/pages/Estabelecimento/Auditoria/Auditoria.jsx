@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Auditoria/Auditoria.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
+import { MODULO_LABEL, MODULO_COR, ACAO_LABEL } from '../../../utils/auditoriaLabels';
 import './Auditoria.css';
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -21,26 +22,6 @@ function formatarDataHora(iso) {
   });
 }
 
-const MODULO_LABEL = {
-  pdv: '🖥️ PDV', estoque: '📦 Estoque', clientes: '👥 Clientes',
-  financeiro: '💰 Financeiro', configuracoes: '⚙️ Config',
-  fornecedores: '🚚 Fornecedores', inventario: '📋 Inventário',
-  operadores: '🧑‍💼 Operadores',
-};
-const MODULO_COR = {
-  pdv: 'teal', estoque: 'blue', clientes: 'purple',
-  financeiro: 'green', configuracoes: 'gray',
-  fornecedores: 'orange', inventario: 'cyan',
-  operadores: 'pink',
-};
-const ACAO_LABEL = {
-  venda_realizada: '🛒 Venda', venda_cancelada: '❌ Cancelamento',
-  produto_criado: '➕ Produto criado', produto_editado: '✏️ Produto editado',
-  produto_excluido: '🗑️ Produto excluído', cliente_criado: '👤 Cliente criado',
-  cliente_editado: '✏️ Cliente editado', cliente_excluido: '🗑️ Cliente excluído',
-  fiado_recebido: '💰 Fiado recebido', config_atualizada: '⚙️ Config atualizada',
-  produto_bloqueado_palavra: '🚫 Nome/marca bloqueado (palavra proibida)',
-};
 const META_LABEL = {
   nome: 'Nome', marca: 'Marca', preco_venda: 'Preço venda', preco_custo: 'Preço custo',
   estoque_atual: 'Estoque', estoque_minimo: 'Est. mínimo',
