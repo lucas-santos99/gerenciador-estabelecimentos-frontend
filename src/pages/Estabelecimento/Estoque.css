@@ -1160,6 +1160,10 @@
   cursor: pointer;
   transition: all 0.18s;
   text-align: center;
+  /* Remove o outline padrão do navegador no foco — o estado "selecionado"
+     já é mostrado pela classe .ativo (borda + fundo destacados); manter os
+     dois ao mesmo tempo dava a impressão de duas opções marcadas juntas. */
+  outline: none;
 }
 .prod-unidade-btn:hover {
   border-color: var(--est-border-accent);
@@ -1168,6 +1172,12 @@
 .prod-unidade-btn.ativo {
   border-color: var(--est-accent);
   background: var(--est-accent-dim);
+}
+/* Foco por teclado (Tab) numa opção que NÃO é a selecionada — um anel
+   discreto, só pra acessibilidade, sem competir visualmente com .ativo */
+.prod-unidade-btn:focus-visible:not(.ativo) {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
 .prod-unidade-icon { font-size: 1.3rem; }
@@ -1182,6 +1192,18 @@
   color: var(--est-text-muted);
   font-weight: 500;
 }
+
+/* ── Versão compacta — usada na etapa inicial (pergunta antes do form),
+   onde as duas opções são as únicas coisas na tela e não precisam do
+   mesmo tamanho que ocupam lá dentro do formulário cheio de campos. ── */
+.prod-unidade-toggle--compacta { gap: 8px; }
+.prod-unidade-btn--compacta {
+  padding: 9px 8px;
+  gap: 2px;
+}
+.prod-unidade-btn--compacta .prod-unidade-icon { font-size: 1.05rem; }
+.prod-unidade-btn--compacta .prod-unidade-label { font-size: 0.76rem; }
+.prod-unidade-btn--compacta .prod-unidade-sub { font-size: 0.6rem; }
 
 /* Preview de margem */
 .prod-margem-preview {
@@ -1752,7 +1774,7 @@
 
 .prod-variacao-linha {
   display: grid;
-  grid-template-columns: 1fr 1fr 130px 160px 28px;
+  grid-template-columns: 1fr 1fr 1fr 130px 160px 28px;
   gap: 10px;
   align-items: center;
   margin-bottom: 8px;

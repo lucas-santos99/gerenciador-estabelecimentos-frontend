@@ -315,7 +315,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 
     // ── Aba 2: Variações (detalhe, 1 linha por tamanho/cor) ────
     const headerVariacoes = [
-      'Produto', 'Marca', 'Tamanho', 'Cor', 'Estoque', 'Unid.',
+      'Produto', 'Marca', 'Tamanho', 'Cor', 'Gênero', 'Estoque', 'Unid.',
       'Custo (R$)', 'Venda (R$)', 'Valor em Estoque (R$)',
     ];
     const linhasVariacoes = [];
@@ -326,7 +326,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         const venda   = parseFloat(v.preco_venda != null ? v.preco_venda : p.preco_venda || 0);
         const estoque = parseFloat(v.estoque_atual || 0);
         linhasVariacoes.push([
-          p.nome, p.marca || '', v.tamanho || '', v.cor || '',
+          p.nome, p.marca || '', v.tamanho || '', v.cor || '', v.genero || '',
           estoque, p.unidade_medida, custo, venda, estoque * custo,
         ]);
       });
@@ -338,9 +338,9 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     if (linhasVariacoes.length > 0) {
       const wsVariacoes = XLSX.utils.aoa_to_sheet([headerVariacoes, ...linhasVariacoes]);
       wsVariacoes['!cols'] = [
-        { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
+        { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
       ];
-      estilizarAba(wsVariacoes, headerVariacoes.length, linhasVariacoes.length, [6, 7, 8], []);
+      estilizarAba(wsVariacoes, headerVariacoes.length, linhasVariacoes.length, [7, 8, 9], []);
       XLSX.utils.book_append_sheet(wb, wsVariacoes, 'Variações');
     }
 
@@ -999,7 +999,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
           {produto.marca && <div className="prod-marca">{produto.marca}</div>}
           <div className="prod-card-meta">
             {temVariacoes && (
-              <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor].filter(Boolean).join(' ')).join(', ')}>
+              <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor, v.genero].filter(Boolean).join(' ')).join(', ')}>
                 🎨 {produto.variacoes.length} variaç{produto.variacoes.length > 1 ? 'ões' : 'ão'}
               </span>
             )}

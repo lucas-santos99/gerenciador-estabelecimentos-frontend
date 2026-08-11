@@ -1661,8 +1661,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   // preço se tiver um específico, e o id da variação pra ir junto na venda).
   function escolherVariacao(variacao, baseOverride = null) {
     const base = baseOverride || itemEscolherVariacao;
-    const nomeComVariacao = base.nome + (variacao.tamanho || variacao.cor
-      ? ` (${[variacao.tamanho, variacao.cor].filter(Boolean).join(' ')})`
+    const nomeComVariacao = base.nome + (variacao.tamanho || variacao.cor || variacao.genero
+      ? ` (${[variacao.tamanho, variacao.cor, variacao.genero].filter(Boolean).join(' ')})`
       : '');
     const produtoComVariacao = {
       ...base,
@@ -1899,7 +1899,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                     onClick={() => escolherVariacao(v)}
                   >
                     <span style={{ flex: 1 }}>
-                      {[v.tamanho, v.cor].filter(Boolean).join(' · ') || '—'}
+                      {[v.tamanho, v.cor, v.genero].filter(Boolean).join(' · ') || '—'}
                     </span>
                     <span className="pdv-label-hint" style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
                       {fmt(precoVar)} · {estoqueVar.toLocaleString('pt-BR', itemEscolherVariacao.unidade_medida === 'kg' ? { minimumFractionDigits: 3 } : {})} {itemEscolherVariacao.unidade_medida}

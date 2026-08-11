@@ -142,13 +142,13 @@ function CampoAjuda({ texto }) {
 
 // Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes, estabelecimentoId }) {
+function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes, estabelecimentoId }) {
   const [gerandoIdx, setGerandoIdx] = useState(null);
 
   function adicionar() {
     setVariacoes(prev => [...prev, {
       _key: Math.random().toString(36).slice(2),
-      tamanho: '', cor: '',
+      tamanho: '', cor: '', genero: '',
       codigo_barras: '',
       estoque_atual: '0',
       preco_venda: '',
@@ -178,7 +178,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
       <div className="prod-variacoes-header">
         <label className="prod-label" style={{ marginBottom: 0 }}>
           Variações
-          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor, com estoque próprio. Digite um valor novo em Tamanho ou Cor pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
+          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor/gênero, com estoque próprio. Digite um valor novo em qualquer um dos três pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
         </label>
         {variacoes.length > 0 && (
           <span className="prod-label-unit">Estoque total: {fmtQ(totalEstoque, unidadeMedida)}</span>
@@ -187,7 +187,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
 
       {!somenteLeitura && (
         <button type="button" className="prod-btn-gerenciar-opcoes" onClick={onGerenciarOpcoes}>
-          ⚙️ Gerenciar tamanhos e cores
+          ⚙️ Gerenciar tamanhos, cores e gênero
         </button>
       )}
 
@@ -195,7 +195,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
         <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
       ) : (
         <div className="prod-variacao-linha prod-variacao-cabecalho">
-          <span>Tamanho</span><span>Cor</span><span>Estoque ({unidadeMedida})</span><span>Preço (opcional)</span><span></span>
+          <span>Tamanho</span><span>Cor</span><span>Gênero</span><span>Estoque ({unidadeMedida})</span><span>Preço (opcional)</span><span></span>
         </div>
       )}
 
@@ -216,6 +216,14 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
               placeholder="Cor"
               value={v.cor}
               onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
+              disabled={somenteLeitura}
+            />
+            <input
+              className="prod-input"
+              list="opcoes-genero-datalist"
+              placeholder="Masc, Fem, Unissex…"
+              value={v.genero || ''}
+              onChange={e => atualizarCampo(idx, 'genero', e.target.value)}
               disabled={somenteLeitura}
             />
             <input
@@ -274,6 +282,9 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, un
       </datalist>
       <datalist id="opcoes-cor-datalist">
         {opcoesCor.map(o => <option key={o} value={o} />)}
+      </datalist>
+      <datalist id="opcoes-genero-datalist">
+        {opcoesGenero.map(o => <option key={o} value={o} />)}
       </datalist>
 
       {!somenteLeitura && (
@@ -440,6 +451,7 @@ export default function ProdutoModal({
   const [variacoes,     setVariacoes]     = useState([]);
   const [opcoesTamanho, setOpcoesTamanho] = useState([]);
   const [opcoesCor,     setOpcoesCor]     = useState([]);
+  const [opcoesGenero,  setOpcoesGenero]  = useState([]);
   const [gerenciarOpcoesAberto, setGerenciarOpcoesAberto] = useState(false);
   const [comoConfigurarAberto, setComoConfigurarAberto]   = useState(false);
 
@@ -466,17 +478,27 @@ export default function ProdutoModal({
   const [marcasExistentes,  setMarcasExistentes]  = useState([]);
   const [sugestaoMarca,     setSugestaoMarca]     = useState(null); // { marca, exata } | null
 
-  // ── Etapa inicial "Unidade x Quilo" (só produto novo, sem preferência
-  // salva) — pergunta antes de abrir o formulário completo, navegável
-  // por teclado (setas + Enter). 'unidade' = 1ª pergunta, 'etiqueta' =
-  // sub-pergunta (só quando escolhe Quilo), null = pula direto pro form.
+  // ── Etapa inicial (só produto novo) — pergunta Unidade x Quilo, e se
+  // for pesável, se tem etiqueta de balança, e se tem variações — tudo
+  // antes de abrir o formulário completo, navegável por teclado (setas +
+  // Enter). 'unidade' = 1ª pergunta, 'etiqueta' = sub-pergunta (só quando
+  // escolhe Quilo), 'variacoes' = última pergunta (sempre), null = pula
+  // direto pro form (edição, somente leitura, ou preferência salva pula
+  // as duas primeiras perguntas e vai direto pra "tem variações?").
   const [etapaAtiva,       setEtapaAtiva]       = useState(
-    (!isEdit && !somenteLeitura && !preferenciaUnidade) ? 'unidade' : null
+    isEdit || somenteLeitura ? null : (preferenciaUnidade ? 'variacoes' : 'unidade')
   );
-  const [etapaUnidadeSel,  setEtapaUnidadeSel]  = useState('un');
-  const [etapaEtiquetaSel, setEtapaEtiquetaSel] = useState(true); // combina com o padrão já usado no form normal
+  const [etapaUnidadeSel,   setEtapaUnidadeSel]   = useState(preferenciaUnidade || 'un');
+  const [etapaEtiquetaSel,  setEtapaEtiquetaSel]  = useState(true); // combina com o padrão já usado no form normal
+  const [etapaVariacoesSel, setEtapaVariacoesSel] = useState(false);
   const [etapaLembrar,     setEtapaLembrar]     = useState(false);
   const [prefUnidadeLimpa, setPrefUnidadeLimpa] = useState(false);
+
+  // Refs dos botões da etapa inicial — usados pra mover o foco de verdade
+  // junto com a navegação por seta (senão o foco visual do navegador fica
+  // "grudado" no botão que tinha autoFocus, mesmo depois de mudar a seleção
+  // só por estado, dando a impressão de que a opção errada ainda tá marcada).
+  const etapaBtnRefs = useRef({});
 
   // ── Ajuste de estoque (só no modo edição — substitui a edição livre) ──
   const [ajusteTipo,     setAjusteTipo]     = useState('entrada');
@@ -514,6 +536,7 @@ export default function ProdutoModal({
         id:             v.id,
         tamanho:        v.tamanho || '',
         cor:            v.cor || '',
+        genero:         v.genero || '',
         codigo_barras:  v.codigo_barras || '',
         estoque_atual:  formatarValorBR(v.estoque_atual, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
         preco_venda:    v.preco_venda != null ? formatarValorBR(v.preco_venda, 2) : '',
@@ -543,7 +566,7 @@ export default function ProdutoModal({
     })();
   }, [estabelecimentoId]);
 
-  /* ── Carregar presets de tamanho/cor (sugestão nas variações) ── */
+  /* ── Carregar presets de tamanho/cor/gênero (sugestão nas variações) ── */
   async function carregarOpcoesVariacao() {
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`);
@@ -551,33 +574,58 @@ export default function ProdutoModal({
         const d = await resp.json();
         setOpcoesTamanho(d.tamanho || []);
         setOpcoesCor(d.cor || []);
+        setOpcoesGenero(d.genero || []);
       }
     } catch { /* sugestão é acessório, falha silenciosa */ }
   }
   useEffect(() => { carregarOpcoesVariacao(); }, [estabelecimentoId]);
 
-  /* ── Etapa inicial Unidade x Quilo — confirmar/voltar ─────── */
-  function aplicarEscolhaEtapa(unidade, comEtiqueta) {
+  /* ── Etapa inicial: Unidade x Quilo → (Etiqueta) → Variações ── */
+  // Só o passo "variações" de fato finaliza — os passos anteriores só
+  // guardam a resposta e avançam, pra tudo virar um único "aplicar" no
+  // form no final (evita re-render/estado inconsistente no meio do caminho).
+  function focarBotaoEtapa(chave) {
+    setTimeout(() => etapaBtnRefs.current[chave]?.focus(), 0);
+  }
+  function finalizarEtapas(temVariacoes) {
     setForm(prev => ({
       ...prev,
-      unidade_medida: unidade,
-      vendido_por_peso: unidade === 'kg' ? comEtiqueta : false,
+      unidade_medida: etapaUnidadeSel,
+      vendido_por_peso: etapaUnidadeSel === 'kg' ? etapaEtiquetaSel : false,
+      tem_variacoes: temVariacoes,
     }));
     if (etapaLembrar) {
-      try { localStorage.setItem(CHAVE_PREF_UNIDADE, unidade); } catch { /* localStorage indisponível, segue sem lembrar */ }
+      try { localStorage.setItem(CHAVE_PREF_UNIDADE, etapaUnidadeSel); } catch { /* localStorage indisponível, segue sem lembrar */ }
     }
     setEtapaAtiva(null);
     setTimeout(() => codigoBarrasRef.current?.focus(), 0);
   }
   function confirmarEtapaUnidade(valor) {
-    if (valor === 'kg') { setEtapaUnidadeSel('kg'); setEtapaAtiva('etiqueta'); return; }
-    aplicarEscolhaEtapa('un', false);
+    setEtapaUnidadeSel(valor);
+    if (valor === 'kg') { setEtapaAtiva('etiqueta'); focarBotaoEtapa('etiqueta:sim'); return; }
+    setEtapaAtiva('variacoes');
+    focarBotaoEtapa('variacoes:nao');
   }
   function confirmarEtapaEtiqueta(comEtiqueta) {
-    aplicarEscolhaEtapa('kg', comEtiqueta);
+    setEtapaEtiquetaSel(comEtiqueta);
+    setEtapaAtiva('variacoes');
+    focarBotaoEtapa('variacoes:nao');
+  }
+  function confirmarEtapaVariacoes(temVariacoes) {
+    setEtapaVariacoesSel(temVariacoes);
+    finalizarEtapas(temVariacoes);
   }
   function voltarEtapaUnidade() {
     setEtapaAtiva('unidade');
+    focarBotaoEtapa('unidade:un');
+  }
+  function voltarDeVariacoes() {
+    // Se a unidade veio de uma preferência salva, não passou pelas
+    // perguntas de unidade/etiqueta nessa sessão — não tem pra onde voltar.
+    if (preferenciaUnidade) return false;
+    if (etapaUnidadeSel === 'kg') { setEtapaAtiva('etiqueta'); focarBotaoEtapa('etiqueta:sim'); }
+    else { setEtapaAtiva('unidade'); focarBotaoEtapa('unidade:un'); }
+    return true;
   }
   function limparPreferenciaUnidade() {
     try { localStorage.removeItem(CHAVE_PREF_UNIDADE); } catch { /* nada a limpar */ }
@@ -589,19 +637,32 @@ export default function ProdutoModal({
     if (!etapaAtiva) return;
     function handleKeyEtapa(e) {
       if (etapaAtiva === 'unidade') {
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaUnidadeSel('un'); }
-        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaUnidadeSel('kg'); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaUnidadeSel('un'); etapaBtnRefs.current['unidade:un']?.focus(); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaUnidadeSel('kg'); etapaBtnRefs.current['unidade:kg']?.focus(); }
         else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaUnidade(etapaUnidadeSel); }
       } else if (etapaAtiva === 'etiqueta') {
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaEtiquetaSel(true); }
-        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaEtiquetaSel(false); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaEtiquetaSel(true); etapaBtnRefs.current['etiqueta:sim']?.focus(); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaEtiquetaSel(false); etapaBtnRefs.current['etiqueta:nao']?.focus(); }
         else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaEtiqueta(etapaEtiquetaSel); }
         else if (e.key === 'Backspace') { e.preventDefault(); voltarEtapaUnidade(); }
+      } else if (etapaAtiva === 'variacoes') {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaVariacoesSel(true); etapaBtnRefs.current['variacoes:sim']?.focus(); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaVariacoesSel(false); etapaBtnRefs.current['variacoes:nao']?.focus(); }
+        else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaVariacoes(etapaVariacoesSel); }
+        else if (e.key === 'Backspace') { e.preventDefault(); voltarDeVariacoes(); }
       }
     }
     window.addEventListener('keydown', handleKeyEtapa);
     return () => window.removeEventListener('keydown', handleKeyEtapa);
-  }, [etapaAtiva, etapaUnidadeSel, etapaEtiquetaSel]);
+  }, [etapaAtiva, etapaUnidadeSel, etapaEtiquetaSel, etapaVariacoesSel]);
+
+  /* ── Foco inicial da etapa (1ª pergunta, ou "variações" direto se já
+     tem preferência de unidade salva) — só roda uma vez, no mount ── */
+  useEffect(() => {
+    if (etapaAtiva === 'unidade') focarBotaoEtapa('unidade:un');
+    else if (etapaAtiva === 'variacoes') focarBotaoEtapa('variacoes:nao');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── ESC fecha ──────────────────────────────────────────── */
   useEffect(() => {
@@ -615,12 +676,13 @@ export default function ProdutoModal({
         if (imagemExpandidaAberta) setImagemExpandidaAberta(false);
         else if (novaCatAberta) setNovaCatAberta(false);
         else if (etapaAtiva === 'etiqueta') setEtapaAtiva('unidade');
+        else if (etapaAtiva === 'variacoes') { if (!voltarDeVariacoes()) onClose(); }
         else onClose();
       }
     }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva]);
+  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva, etapaUnidadeSel]);
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
@@ -932,8 +994,8 @@ export default function ProdutoModal({
       setErro('Adicione ao menos uma variação, ou desmarque "Este produto tem variações".');
       return;
     }
-    if (form.tem_variacoes && variacoes.some(v => !v.tamanho.trim() && !v.cor.trim())) {
-      setErro('Toda variação precisa de pelo menos um Tamanho ou uma Cor preenchidos.');
+    if (form.tem_variacoes && variacoes.some(v => !v.tamanho.trim() && !v.cor.trim() && !(v.genero || '').trim())) {
+      setErro('Toda variação precisa de pelo menos um Tamanho, Cor ou Gênero preenchidos.');
       return;
     }
 
@@ -1053,7 +1115,7 @@ export default function ProdutoModal({
                 <>
                   <p className="prod-etapa-pergunta">Como esse produto é vendido?</p>
                   <p className="prod-etapa-sub">Use as setas (←→) e Enter — ou clique numa opção.</p>
-                  <div className="prod-unidade-toggle" style={{ marginTop: 14 }}>
+                  <div className="prod-unidade-toggle prod-unidade-toggle--compacta" style={{ marginTop: 14 }}>
                     {[
                       { value: 'un', label: 'Unidade', sub: 'peças, caixas, pacotes', icon: '📦' },
                       { value: 'kg', label: 'Quilo',   sub: 'granel, frios, hortifruti', icon: '⚖️' },
@@ -1061,8 +1123,8 @@ export default function ProdutoModal({
                       <button
                         key={op.value}
                         type="button"
-                        autoFocus={op.value === 'un'}
-                        className={`prod-unidade-btn${etapaUnidadeSel === op.value ? ' ativo' : ''}`}
+                        ref={el => { etapaBtnRefs.current[`unidade:${op.value}`] = el; }}
+                        className={`prod-unidade-btn prod-unidade-btn--compacta${etapaUnidadeSel === op.value ? ' ativo' : ''}`}
                         onClick={() => confirmarEtapaUnidade(op.value)}
                         onFocus={() => setEtapaUnidadeSel(op.value)}
                       >
@@ -1073,15 +1135,15 @@ export default function ProdutoModal({
                     ))}
                   </div>
                 </>
-              ) : (
+              ) : etapaAtiva === 'etiqueta' ? (
                 <>
                   <p className="prod-etapa-pergunta">⚖️ Esse produto tem etiqueta de balança com código de barras?</p>
                   <p className="prod-etapa-sub">A balança imprime uma etiqueta EAN-13 e o caixa bipa no PDV — o peso entra sozinho. Use as setas e Enter — ou clique.</p>
-                  <div className="prod-unidade-toggle" style={{ marginTop: 14 }}>
+                  <div className="prod-unidade-toggle prod-unidade-toggle--compacta" style={{ marginTop: 14 }}>
                     <button
                       type="button"
-                      autoFocus
-                      className={`prod-unidade-btn${etapaEtiquetaSel ? ' ativo' : ''}`}
+                      ref={el => { etapaBtnRefs.current['etiqueta:sim'] = el; }}
+                      className={`prod-unidade-btn prod-unidade-btn--compacta${etapaEtiquetaSel ? ' ativo' : ''}`}
                       onClick={() => confirmarEtapaEtiqueta(true)}
                       onFocus={() => setEtapaEtiquetaSel(true)}
                     >
@@ -1091,7 +1153,8 @@ export default function ProdutoModal({
                     </button>
                     <button
                       type="button"
-                      className={`prod-unidade-btn${!etapaEtiquetaSel ? ' ativo' : ''}`}
+                      ref={el => { etapaBtnRefs.current['etiqueta:nao'] = el; }}
+                      className={`prod-unidade-btn prod-unidade-btn--compacta${!etapaEtiquetaSel ? ' ativo' : ''}`}
                       onClick={() => confirmarEtapaEtiqueta(false)}
                       onFocus={() => setEtapaEtiquetaSel(false)}
                     >
@@ -1104,6 +1167,40 @@ export default function ProdutoModal({
                     ‹ Voltar (Backspace)
                   </button>
                 </>
+              ) : (
+                <>
+                  <p className="prod-etapa-pergunta">🎨 Esse produto tem variações (tamanho, cor, gênero)?</p>
+                  <p className="prod-etapa-sub">Ex: uma camiseta em P/M/G, em cores diferentes, ou nas linhas masculina/feminina/infantil. Use as setas e Enter — ou clique.</p>
+                  <div className="prod-unidade-toggle prod-unidade-toggle--compacta" style={{ marginTop: 14 }}>
+                    <button
+                      type="button"
+                      ref={el => { etapaBtnRefs.current['variacoes:sim'] = el; }}
+                      className={`prod-unidade-btn prod-unidade-btn--compacta${etapaVariacoesSel ? ' ativo' : ''}`}
+                      onClick={() => confirmarEtapaVariacoes(true)}
+                      onFocus={() => setEtapaVariacoesSel(true)}
+                    >
+                      <span className="prod-unidade-icon">🎨</span>
+                      <span className="prod-unidade-label">Sim, tem variações</span>
+                      <span className="prod-unidade-sub">tamanho, cor e/ou gênero</span>
+                    </button>
+                    <button
+                      type="button"
+                      ref={el => { etapaBtnRefs.current['variacoes:nao'] = el; }}
+                      className={`prod-unidade-btn prod-unidade-btn--compacta${!etapaVariacoesSel ? ' ativo' : ''}`}
+                      onClick={() => confirmarEtapaVariacoes(false)}
+                      onFocus={() => setEtapaVariacoesSel(false)}
+                    >
+                      <span className="prod-unidade-icon">🔹</span>
+                      <span className="prod-unidade-label">Não, produto único</span>
+                      <span className="prod-unidade-sub">um só estoque e preço</span>
+                    </button>
+                  </div>
+                  {!preferenciaUnidade && (
+                    <button type="button" className="prod-etapa-voltar" onClick={voltarDeVariacoes}>
+                      ‹ Voltar (Backspace)
+                    </button>
+                  )}
+                </>
               )}
 
               <label className="prod-etapa-lembrar">
@@ -1112,7 +1209,7 @@ export default function ProdutoModal({
                   checked={etapaLembrar}
                   onChange={e => setEtapaLembrar(e.target.checked)}
                 />
-                Lembrar essa escolha e não perguntar de novo nos próximos produtos
+                Lembrar a unidade escolhida e não perguntar de novo nos próximos produtos
               </label>
 
               <div className="prod-modal-acoes">
@@ -1550,8 +1647,8 @@ export default function ProdutoModal({
                     />
                     <span>
                       <strong>
-                        🎨 Este produto tem variações (tamanho/cor)
-                        <CampoAjuda texto="Ative pra produtos que existem em mais de uma opção — ex: uma camiseta em P/M/G, ou em cores diferentes. Cada variação vira sua própria linha de estoque, e pode ter preço diferente das outras." />
+                        🎨 Este produto tem variações (tamanho/cor/gênero)
+                        <CampoAjuda texto="Ative pra produtos que existem em mais de uma opção — ex: uma camiseta em P/M/G, em cores diferentes, ou em linha masculina/feminina/infantil. Cada variação vira sua própria linha de estoque, e pode ter preço diferente das outras." />
                       </strong>
                       <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
                         O estoque e o preço passam a ser controlados por variação, não no produto como um todo.
@@ -1566,6 +1663,7 @@ export default function ProdutoModal({
                     setVariacoes={setVariacoes}
                     opcoesTamanho={opcoesTamanho}
                     opcoesCor={opcoesCor}
+                    opcoesGenero={opcoesGenero}
                     unidadeMedida={form.unidade_medida}
                     somenteLeitura={somenteLeitura}
                     precoBase={form.preco_venda}
