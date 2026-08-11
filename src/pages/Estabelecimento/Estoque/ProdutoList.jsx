@@ -186,6 +186,14 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     }
   }, [produtoFocadoId, produtos]);
 
+  /* ── Fechar lightbox de imagem com Esc ───────────────────── */
+  useEffect(() => {
+    if (!imagemExpandida) return;
+    function handleEsc(e) { if (e.key === 'Escape') setImagemExpandida(null); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [imagemExpandida]);
+
   /* ── Deletar produto ─────────────────────────────────────── */
   async function deletarProduto(produto) {
     const nome  = produto.nome  || 'este produto';

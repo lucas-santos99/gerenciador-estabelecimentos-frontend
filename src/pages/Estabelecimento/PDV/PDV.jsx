@@ -1296,6 +1296,16 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const SEM_PERM = 'Sem permissão — contate o administrador';
   const [termoBusca,      setTermoBusca]      = useState('');
   const [imagemExpandida, setImagemExpandida] = useState(null);
+
+  useEffect(() => {
+    if (!imagemExpandida) return;
+    function onKeyDown(e) {
+      if (e.key === 'Escape') setImagemExpandida(null);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [imagemExpandida]);
+
   const [resultados,      setResultados]      = useState([]);
   const [carrinho,        setCarrinho]        = useState([]);
   const [total,           setTotal]           = useState(0);
@@ -2087,9 +2097,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       </div>
 
       {imagemExpandida && (
-        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
-          <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
-          <img src={imagemExpandida} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+        <div className="pdv-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="pdv-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="pdv-lightbox-img" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

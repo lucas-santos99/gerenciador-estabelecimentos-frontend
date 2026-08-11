@@ -674,3 +674,47 @@ body.light .fin-historico-operador {
   transition: background 0.15s;
 }
 .rel-lightbox-fechar:hover { background: rgba(255,255,255,0.22); }
+
+/* ════════════════════════════════════════════════════════════
+   MINIATURA DE PRODUTO — Histórico de Vendas (itens expandidos)
+   ════════════════════════════════════════════════════════════ */
+
+.rel-hist-item-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rel-hist-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rel-hist-item-thumb-placeholder {
+  width: 14px;
+  height: 14px;
+  color: var(--est-text-muted);
+}
+
+/* ════════════════════════════════════════════════════════════
+   MINIATURA DE PRODUTO — Relatório de Estoque
+   ════════════════════════════════════════════════════════════ */
+
+.rel-estoque-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.rel-estoque-nome-bloco {
+  flex: 1;
+  min-width: 0;
+}
+.rel-estoque-nome-bloco .fin-estoque-nome { margin-bottom: 2px; }
+.rel-estoque-nome-bloco .fin-estoque-cat  { margin-bottom: 0; }

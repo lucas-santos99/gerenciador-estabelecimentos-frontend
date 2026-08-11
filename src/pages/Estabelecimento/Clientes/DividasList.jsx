@@ -64,6 +64,14 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
   const [salvandoPag,   setSalvandoPag]   = useState(false); // 'compras' | 'pagamentos'
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
+  /* ── Fechar lightbox de imagem com Esc ───────────────────── */
+  useEffect(() => {
+    if (!imagemExpandida) return;
+    function handleEsc(e) { if (e.key === 'Escape') setImagemExpandida(null); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [imagemExpandida]);
+
   async function carregar() {
       setLoading(true);
       setErro('');
@@ -844,6 +852,14 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
   const [filtroAte, setFiltroAte] = useState(() => periodoPadrao30Dias().ate);
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
+  /* ── Fechar lightbox de imagem com Esc ───────────────────── */
+  useEffect(() => {
+    if (!imagemExpandida) return;
+    function handleEsc(e) { if (e.key === 'Escape') setImagemExpandida(null); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [imagemExpandida]);
+
   async function carregar() {
     setLoading(true);
     setErro('');
@@ -858,7 +874,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
   useEffect(() => { carregar(); }, [cliente.id]);
 
   const vendasFiltradas = vendas.filter(v => {
-    const dataV = v.data_venda.split('T')[0];
+    const dataV = paraInputDate(new Date(v.data_venda));
     if (filtroDe && dataV < filtroDe) return false;
     if (filtroAte && dataV > filtroAte) return false;
     return true;

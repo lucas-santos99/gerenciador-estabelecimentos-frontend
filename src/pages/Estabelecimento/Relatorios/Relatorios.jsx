@@ -95,6 +95,14 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     if (abaAtiva === 'estoque'   && estabelecimentoId) carregarEstoque();
   }, [abaAtiva, estabelecimentoId]);
 
+  /* ── Fechar lightbox de imagem com Esc ───────────────────── */
+  useEffect(() => {
+    if (!imagemExpandida) return;
+    function handleEsc(e) { if (e.key === 'Escape') setImagemExpandida(null); }
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [imagemExpandida]);
+
   /* ── Histórico ── */
   async function carregarHistorico() {
     setLoadingHistorico(true);
@@ -656,6 +664,22 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                             : `${Math.trunc(qtd)}×`;
                           return (
                             <div key={i} className="fin-historico-item">
+                              <div
+                                className="rel-hist-item-thumb"
+                                onClick={() => item.produto_imagem_url && setImagemExpandida(item.produto_imagem_url)}
+                                style={{ cursor: item.produto_imagem_url ? 'pointer' : 'default' }}
+                              >
+                                {item.produto_imagem_url ? (
+                                  <img
+                                    src={item.produto_imagem_url}
+                                    alt=""
+                                    loading="lazy"
+                                    onError={e => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <IconePacote className="rel-hist-item-thumb-placeholder" />
+                                )}
+                              </div>
                               <span className="fin-hist-item-nome">{item.produto_nome}{item.produto_marca && <span className="rel-produto-marca"> · {item.produto_marca}</span>}</span>
                               <span className="fin-hist-item-qtd">{qtdLabel}</span>
                               <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
@@ -859,8 +883,28 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                     <div className={`fin-estoque-badge ${status}`}>
                       {status === 'critico' ? '🔴 Crítico' : status === 'baixo' ? '⚠️ Baixo' : '✅ Normal'}
                     </div>
-                    <div className="fin-estoque-nome">{p.nome}{p.marca && <span className="rel-produto-marca"> · {p.marca}</span>}</div>
-                    <div className="fin-estoque-cat">{p.nome_categoria || 'Sem categoria'}</div>
+                    <div className="rel-estoque-cabecalho">
+                      <div
+                        className="rel-report-thumb"
+                        onClick={() => p.imagem_url && setImagemExpandida(p.imagem_url)}
+                        style={{ cursor: p.imagem_url ? 'pointer' : 'default' }}
+                      >
+                        {p.imagem_url ? (
+                          <img
+                            src={p.imagem_url}
+                            alt=""
+                            loading="lazy"
+                            onError={e => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <IconePacote className="rel-report-thumb-placeholder" />
+                        )}
+                      </div>
+                      <div className="rel-estoque-nome-bloco">
+                        <div className="fin-estoque-nome">{p.nome}{p.marca && <span className="rel-produto-marca"> · {p.marca}</span>}</div>
+                        <div className="fin-estoque-cat">{p.nome_categoria || 'Sem categoria'}</div>
+                      </div>
+                    </div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Estoque</span><span className="fin-estoque-info-valor">{unidade}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Mínimo</span><span className="fin-estoque-info-valor">{p.estoque_minimo} {p.unidade_medida}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Venda</span><span className="fin-estoque-info-valor accent">{fmt(p.preco_venda)}</span></div>

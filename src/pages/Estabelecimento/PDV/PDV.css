@@ -1992,3 +1992,41 @@ button:disabled[title*="Sem permissão"] {
 }
 .pdv-item-imagem img { width: 100%; height: 100%; object-fit: cover; }
 .pdv-item-imagem-placeholder { width: 16px; height: 16px; color: var(--est-text-muted); opacity: 0.4; }
+
+/* Lightbox — ampliar imagem do produto (busca e carrinho) */
+.pdv-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  cursor: zoom-out;
+  padding: 40px;
+  box-sizing: border-box;
+}
+.pdv-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+}
+.pdv-lightbox-fechar {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pdv-lightbox-fechar:hover { background: rgba(255,255,255,0.22); }
