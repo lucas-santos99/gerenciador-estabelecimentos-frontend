@@ -1152,8 +1152,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 12px 10px;
+  gap: 2px;
+  padding: 9px 8px;
   border-radius: 10px;
   border: 2px solid var(--est-border);
   background: var(--est-input);
@@ -1180,15 +1180,15 @@
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
-.prod-unidade-icon { font-size: 1.3rem; }
+.prod-unidade-icon { font-size: 1.05rem; }
 .prod-unidade-label {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--est-text);
 }
 .prod-unidade-btn.ativo .prod-unidade-label { color: var(--est-accent); }
 .prod-unidade-sub {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--est-text-muted);
   font-weight: 500;
 }
@@ -1196,14 +1196,14 @@
 /* ── Versão compacta — usada na etapa inicial (pergunta antes do form),
    onde as duas opções são as únicas coisas na tela e não precisam do
    mesmo tamanho que ocupam lá dentro do formulário cheio de campos. ── */
-.prod-unidade-toggle--compacta { gap: 8px; }
+.prod-unidade-toggle--compacta { gap: 6px; }
 .prod-unidade-btn--compacta {
-  padding: 9px 8px;
+  padding: 7px 6px;
   gap: 2px;
 }
-.prod-unidade-btn--compacta .prod-unidade-icon { font-size: 1.05rem; }
-.prod-unidade-btn--compacta .prod-unidade-label { font-size: 0.76rem; }
-.prod-unidade-btn--compacta .prod-unidade-sub { font-size: 0.6rem; }
+.prod-unidade-btn--compacta .prod-unidade-icon { font-size: 0.92rem; }
+.prod-unidade-btn--compacta .prod-unidade-label { font-size: 0.72rem; }
+.prod-unidade-btn--compacta .prod-unidade-sub { font-size: 0.58rem; }
 
 /* Preview de margem */
 .prod-margem-preview {
@@ -1779,7 +1779,7 @@
      empurrar as colunas seguintes, desalinhando a linha em relação ao
      cabeçalho (que usa <span>, sem esse mínimo). O min-width:0 nos campos
      logo abaixo reforça a mesma correção do lado do item, não só da coluna. */
-  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 112px 148px 28px;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 112px 28px;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
@@ -1788,6 +1788,89 @@
 .prod-variacao-linha > .prod-input-moeda-wrap {
   min-width: 0;
   width: 100%;
+}
+
+/* ── Sub-linha de foto + preços da variação — fica embaixo da linha
+   principal (tamanho/cor/gênero/estoque), com sua própria miniatura de
+   foto e os dois campos de preço (custo/venda) lado a lado. ── */
+.prod-variacao-preco-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prod-variacao-preco-linha > .prod-input-moeda-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.prod-variacao-foto-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.prod-variacao-foto-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.prod-variacao-foto-btn:hover:not(:disabled) { border-color: var(--est-border-accent); }
+.prod-variacao-foto-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.prod-variacao-foto-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.prod-variacao-foto-placeholder {
+  width: 16px;
+  height: 16px;
+  color: var(--est-text-muted);
+}
+.prod-variacao-foto-loading { font-size: 0.8rem; }
+.prod-variacao-foto-remover {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: var(--est-danger, #dc2626);
+  color: #fff;
+  font-size: 0.55rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Legenda pequena "custo"/"venda" dentro do campo de preço da variação —
+   sem isso as duas caixas ficam idênticas visualmente e não dá pra saber
+   qual é qual só de bater o olho. */
+.prod-input-moeda-legenda {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--est-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+.prod-variacao-preco-linha .prod-input-moeda {
+  padding-right: 42px !important;
 }
 
 .prod-variacao-cabecalho {

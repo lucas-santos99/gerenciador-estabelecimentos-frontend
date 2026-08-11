@@ -107,6 +107,45 @@ function formatarValorBR(valor, casasDecimais) {
   return (numero || 0).toLocaleString('pt-BR', { minimumFractionDigits: casasDecimais, maximumFractionDigits: casasDecimais });
 }
 
+// Mesma coisa que formatarValorBR, mas preserva "em branco" — usada ao
+// re-formatar um campo (ex: trocando Unidade↔Quilo) sem forçar um "0"
+// a aparecer num campo que a pessoa deixou vazio de propósito.
+function formatarValorBRSeTiver(valor, casasDecimais) {
+  if (valor === '' || valor === null || valor === undefined) return '';
+  return formatarValorBR(valor, casasDecimais);
+}
+
+/* ── Comprime a foto no navegador antes de enviar — nunca sobe a
+   imagem em tamanho original. Redimensiona pro maior lado ficar em
+   720px e converte pra JPEG 82%, deixando cada foto na faixa de
+   60-180KB — ainda leve, mas com definição boa o suficiente pra
+   expandir em tela cheia sem ficar borrada. Fica em escopo de módulo
+   (não dentro do ProdutoModal) pra VariacoesTabela também poder usar,
+   na foto por variação. ── */
+function comprimirImagem(file) {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 720;
+        let { width, height } = img;
+        if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+        else if (height >= width && height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
+      img.src = e.target.result;
+    };
+    leitor.onerror = () => reject(new Error('Não foi possível ler esse arquivo.'));
+    leitor.readAsDataURL(file);
+  });
+}
+
 // Ajuda de campo: aparece no hover (desktop) E dá pra clicar (celular,
 // onde não tem hover). Um só componente reutilizado em todos os labels
 // do formulário.
@@ -142,16 +181,23 @@ function CampoAjuda({ texto }) {
 
 // Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, onGerenciarOpcoes, estabelecimentoId }) {
+function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit }) {
   const [gerandoIdx, setGerandoIdx] = useState(null);
+  const [enviandoImagemIdx, setEnviandoImagemIdx] = useState(null);
+  const [erroImagem, setErroImagem] = useState('');
+  const imagemInputRef = useRef(null);
+  const idxImagemAlvo = useRef(null);
 
   function adicionar() {
     setVariacoes(prev => [...prev, {
       _key: Math.random().toString(36).slice(2),
       tamanho: '', cor: '', genero: '',
       codigo_barras: '',
-      estoque_atual: '0',
+      estoque_atual: '',
+      preco_custo: '',
       preco_venda: '',
+      imagem_url: '',
+      imagem_origem: '',
     }]);
   }
   function atualizarCampo(idx, campo, valor) {
@@ -171,6 +217,63 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
     finally { setGerandoIdx(null); }
   }
 
+  // Foto por variação — só funciona depois que a variação já foi salva ao
+  // menos uma vez (tem um id de verdade no banco). Numa variação recém
+  // adicionada nesta mesma sessão (ainda sem id), o botão avisa isso em
+  // vez de tentar subir a foto pra um id que ainda não existe.
+  function abrirSeletorImagem(idx) {
+    const v = variacoes[idx];
+    if (!isEdit || !v?.id) return;
+    idxImagemAlvo.current = idx;
+    imagemInputRef.current?.click();
+  }
+
+  async function selecionarImagemVariacao(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const idx = idxImagemAlvo.current;
+    if (!file || idx == null) return;
+    const v = variacoes[idx];
+    if (!v?.id) return;
+    if (!file.type.startsWith('image/')) { setErroImagem('Selecione um arquivo de imagem.'); return; }
+
+    setErroImagem('');
+    setEnviandoImagemIdx(idx);
+    try {
+      const base64 = await comprimirImagem(file);
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoId}/variacoes/${v.id}/imagem`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ imagem_base64: base64 }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao enviar imagem.');
+      atualizarCampo(idx, 'imagem_url', data.imagem_url);
+      atualizarCampo(idx, 'imagem_origem', 'upload');
+    } catch (err) {
+      setErroImagem(err.message || 'Erro ao processar a imagem.');
+    } finally {
+      setEnviandoImagemIdx(null);
+    }
+  }
+
+  async function removerImagemVariacao(idx) {
+    const v = variacoes[idx];
+    if (!v?.id) return;
+    setEnviandoImagemIdx(idx);
+    setErroImagem('');
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoId}/variacoes/${v.id}/imagem`, { method: 'DELETE' });
+      if (!resp.ok) { const data = await resp.json().catch(() => ({})); throw new Error(data.error || 'Erro ao remover imagem.'); }
+      atualizarCampo(idx, 'imagem_url', '');
+      atualizarCampo(idx, 'imagem_origem', '');
+    } catch (err) {
+      setErroImagem(err.message || 'Erro ao remover a imagem.');
+    } finally {
+      setEnviandoImagemIdx(null);
+    }
+  }
+
   const totalEstoque = variacoes.reduce((acc, v) => acc + (paraFloatBR(v.estoque_atual) || 0), 0);
 
   return (
@@ -178,7 +281,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       <div className="prod-variacoes-header">
         <label className="prod-label" style={{ marginBottom: 0 }}>
           Variações
-          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor/gênero, com estoque próprio. Digite um valor novo em qualquer um dos três pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço de venda padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
+          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor/gênero, com estoque, foto e preços próprios. Digite um valor novo em tamanho/cor/gênero pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
         </label>
         {variacoes.length > 0 && (
           <span className="prod-label-unit">Estoque total: {fmtQ(totalEstoque, unidadeMedida)}</span>
@@ -191,11 +294,13 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
         </button>
       )}
 
+      {erroImagem && <div className="prod-modal-erro">⚠️ {erroImagem}</div>}
+
       {variacoes.length === 0 ? (
         <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
       ) : (
         <div className="prod-variacao-linha prod-variacao-cabecalho">
-          <span>Tamanho</span><span>Cor</span><span>Gênero</span><span>Estoque ({unidadeMedida})</span><span>Preço (opcional)</span><span></span>
+          <span>Tamanho</span><span>Cor</span><span>Gênero</span><span>Estoque ({unidadeMedida})</span><span></span>
         </div>
       )}
 
@@ -235,6 +340,56 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
               disabled={somenteLeitura}
             />
+            {!somenteLeitura && (
+              <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="prod-variacao-preco-linha">
+            <div className="prod-variacao-foto-wrap">
+              <button
+                type="button"
+                className="prod-variacao-foto-btn"
+                onClick={() => abrirSeletorImagem(idx)}
+                disabled={somenteLeitura || !isEdit || !v.id || enviandoImagemIdx === idx}
+                title={!isEdit || !v.id ? 'Salve o produto primeiro pra poder adicionar foto desta variação' : 'Foto desta variação'}
+              >
+                {enviandoImagemIdx === idx ? (
+                  <span className="prod-variacao-foto-loading">⏳</span>
+                ) : v.imagem_url ? (
+                  <img src={v.imagem_url} alt="" />
+                ) : (
+                  <IconePacote className="prod-variacao-foto-placeholder" />
+                )}
+              </button>
+              {v.imagem_url && !somenteLeitura && (
+                <button
+                  type="button"
+                  className="prod-variacao-foto-remover"
+                  onClick={() => removerImagemVariacao(idx)}
+                  disabled={enviandoImagemIdx === idx}
+                  title="Remover foto desta variação"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="prod-input-moeda-wrap">
+              <span className="prod-moeda-prefixo">R$</span>
+              <input
+                className="prod-input prod-input-moeda"
+                type="text"
+                inputMode="decimal"
+                placeholder={precoCustoBase || '0,00'}
+                value={v.preco_custo || ''}
+                onChange={e => atualizarCampo(idx, 'preco_custo', digitarValorMascarado(e.target.value, 2))}
+                disabled={somenteLeitura}
+                title="Custo específico desta variação — em branco usa o preço de custo padrão do produto"
+              />
+              <span className="prod-input-moeda-legenda">custo</span>
+            </div>
             <div className="prod-input-moeda-wrap">
               <span className="prod-moeda-prefixo">R$</span>
               <input
@@ -245,15 +400,12 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 value={v.preco_venda}
                 onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
                 disabled={somenteLeitura}
-                title="Deixe em branco pra usar o preço padrão do produto"
+                title="Preço de venda desta variação — em branco usa o preço de venda padrão do produto"
               />
+              <span className="prod-input-moeda-legenda">venda</span>
             </div>
-            {!somenteLeitura && (
-              <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
-                ✕
-              </button>
-            )}
           </div>
+
           <div className="prod-variacao-codigo-linha">
             <input
               className="prod-input prod-variacao-codigo-input"
@@ -276,6 +428,14 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           </div>
         </div>
       ))}
+
+      <input
+        ref={imagemInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={selecionarImagemVariacao}
+      />
 
       <datalist id="opcoes-tamanho-datalist">
         {opcoesTamanho.map(o => <option key={o} value={o} />)}
@@ -434,10 +594,10 @@ export default function ProdutoModal({
     codigo_barras:   '',
     categoria_id:    '',
     unidade_medida:  preferenciaUnidade || 'un',
-    estoque_atual:   '0',
+    estoque_atual:   '',
     estoque_minimo:  '10',
-    preco_custo:     '0,00',
-    preco_venda:     '0,00',
+    preco_custo:     '',
+    preco_venda:     '',
     // ── Campos balança ──
     vendido_por_peso: false,
     plu_balanca:      '',
@@ -539,7 +699,10 @@ export default function ProdutoModal({
         genero:         v.genero || '',
         codigo_barras:  v.codigo_barras || '',
         estoque_atual:  formatarValorBR(v.estoque_atual, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
+        preco_custo:    v.preco_custo != null ? formatarValorBR(v.preco_custo, 2) : '',
         preco_venda:    v.preco_venda != null ? formatarValorBR(v.preco_venda, 2) : '',
+        imagem_url:     v.imagem_url    || '',
+        imagem_origem:  v.imagem_origem || '',
       })));
     }
     // Produto novo: foco direto em código de barras, já que o fluxo normal
@@ -710,8 +873,8 @@ export default function ProdutoModal({
       // Se marcar vendido_por_peso, força unidade_medida para 'kg'
       if (name === 'vendido_por_peso' && checked) {
         novo.unidade_medida = 'kg';
-        novo.estoque_atual  = formatarValorBR(prev.estoque_atual, 3);
-        novo.estoque_minimo = formatarValorBR(prev.estoque_minimo, 3);
+        novo.estoque_atual  = formatarValorBRSeTiver(prev.estoque_atual, 3);
+        novo.estoque_minimo = formatarValorBRSeTiver(prev.estoque_minimo, 3);
       }
       return novo;
     });
@@ -810,35 +973,6 @@ export default function ProdutoModal({
     const timer = setTimeout(() => buscarPorCodigoBarras(codigo), 500);
     return () => clearTimeout(timer);
   }, [form.codigo_barras, isEdit]);
-
-  /* ── Comprime a foto no navegador antes de enviar — nunca sobe a
-     imagem em tamanho original. Redimensiona pro maior lado ficar em
-     720px e converte pra JPEG 82%, deixando cada foto na faixa de
-     60-180KB — ainda leve, mas com definição boa o suficiente pra
-     expandir em tela cheia sem ficar borrada. ── */
-  function comprimirImagem(file) {
-    return new Promise((resolve, reject) => {
-      const leitor = new FileReader();
-      leitor.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const MAX = 720;
-          let { width, height } = img;
-          if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
-          else if (height >= width && height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
-        };
-        img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
-        img.src = e.target.result;
-      };
-      leitor.onerror = () => reject(new Error('Não foi possível ler esse arquivo.'));
-      leitor.readAsDataURL(file);
-    });
-  }
 
   async function selecionarImagem(e) {
     const file = e.target.files?.[0];
@@ -1017,9 +1151,13 @@ export default function ProdutoModal({
               ...(v.id ? { id: v.id } : {}),
               tamanho:       v.tamanho.trim() || null,
               cor:           v.cor.trim() || null,
+              genero:        (v.genero || '').trim() || null,
               codigo_barras: (v.codigo_barras || '').trim() || null,
               estoque_atual: paraFloatBR(v.estoque_atual) || 0,
+              preco_custo:   (v.preco_custo || '').trim() ? paraFloatBR(v.preco_custo) : null,
               preco_venda:   v.preco_venda.trim() ? paraFloatBR(v.preco_venda) : null,
+              imagem_url:    v.imagem_url || null,
+              imagem_origem: v.imagem_url ? (v.imagem_origem || null) : null,
             }))
           : [],
       };
@@ -1396,14 +1534,14 @@ export default function ProdutoModal({
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
                     Nome do produto *
-                    <CampoAjuda texto="Como o produto aparece na busca do PDV, na lista de Estoque e no recibo impresso pro cliente. Seja específico (ex: 'Arroz Tipo 1 5kg' em vez de só 'Arroz') pra facilitar achar depois." />
+                    <CampoAjuda texto="Como o produto aparece na busca do PDV, na lista de Estoque e no recibo impresso pro cliente. Seja específico (ex: inclua tamanho, cor ou modelo) pra facilitar achar depois." />
                   </label>
                   <input
                     ref={nomeRef}
                     className="prod-input"
                     name="nome"
                     readOnly={somenteLeitura}
-                    placeholder="Ex: Arroz Tipo 1 5kg"
+                    placeholder="Nome do produto"
                     value={form.nome}
                     onChange={atualizar}
                     required
@@ -1413,14 +1551,14 @@ export default function ProdutoModal({
                 <div className="prod-form-group">
                   <label className="prod-label">
                     Marca
-                    <CampoAjuda texto="Ajuda a diferenciar produtos com o mesmo nome de marcas diferentes (ex: dois 'Arroz 5kg', um da Camil e outro do Tio João). Opcional." />
+                    <CampoAjuda texto="Ajuda a diferenciar produtos com o mesmo nome de marcas diferentes (ex: dois produtos com nome parecido, mas de fabricantes diferentes). Opcional." />
                   </label>
                   <input
                     className="prod-input"
                     name="marca"
                     list="marcas-existentes-datalist"
                     readOnly={somenteLeitura}
-                    placeholder="Ex: Tio João, Camil…"
+                    placeholder="Marca do produto"
                     value={form.marca}
                     onChange={e => {
                       atualizar(e);
@@ -1553,8 +1691,8 @@ export default function ProdutoModal({
                         onClick={() => !somenteLeitura && setForm(prev => ({
                           ...prev,
                           unidade_medida: op.value,
-                          estoque_atual:  formatarValorBR(prev.estoque_atual,  op.value === 'kg' ? 3 : 0),
-                          estoque_minimo: formatarValorBR(prev.estoque_minimo, op.value === 'kg' ? 3 : 0),
+                          estoque_atual:  formatarValorBRSeTiver(prev.estoque_atual,  op.value === 'kg' ? 3 : 0),
+                          estoque_minimo: formatarValorBRSeTiver(prev.estoque_minimo, op.value === 'kg' ? 3 : 0),
                           // "Pesável com etiqueta de balança" só faz sentido vendendo por
                           // Quilo. Trocando pra Unidade, desmarca e limpa o PLU, senão
                           // fica um valor escondido (checkbox some da tela, mas o dado
@@ -1667,8 +1805,11 @@ export default function ProdutoModal({
                     unidadeMedida={form.unidade_medida}
                     somenteLeitura={somenteLeitura}
                     precoBase={form.preco_venda}
+                    precoCustoBase={form.preco_custo}
                     onGerenciarOpcoes={() => setGerenciarOpcoesAberto(true)}
                     estabelecimentoId={estabelecimentoId}
+                    produtoId={produtoEditar?.id}
+                    isEdit={isEdit}
                   />
                 ) : (
                 <>
@@ -1687,6 +1828,7 @@ export default function ProdutoModal({
                       type="text"
                       inputMode="decimal"
                       name="estoque_atual"
+                      placeholder="0"
                       readOnly={somenteLeitura}
                       value={form.estoque_atual}
                       onChange={atualizar}
@@ -1822,6 +1964,7 @@ export default function ProdutoModal({
                       type="text"
                       inputMode="decimal"
                       name="preco_custo"
+                      placeholder="0,00"
                       readOnly={somenteLeitura}
                       value={form.preco_custo}
                       onChange={atualizar}
@@ -1841,6 +1984,7 @@ export default function ProdutoModal({
                       type="text"
                       inputMode="decimal"
                       name="preco_venda"
+                      placeholder="0,00"
                       readOnly={somenteLeitura}
                       value={form.preco_venda}
                       onChange={atualizar}
