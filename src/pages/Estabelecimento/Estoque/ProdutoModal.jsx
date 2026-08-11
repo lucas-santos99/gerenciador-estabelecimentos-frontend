@@ -409,12 +409,20 @@ export default function ProdutoModal({
 }) {
   const isEdit = !!produtoEditar;
 
+  // ── Preferência salva de "Unidade x Quilo" (só produto novo) — se o
+  // comerciante marcou "lembrar minha escolha" da última vez, pula a
+  // etapa de pergunta e já abre o formulário com essa unidade.
+  const CHAVE_PREF_UNIDADE = `produto_pref_unidade_${estabelecimentoId}`;
+  const preferenciaUnidade = (!isEdit && !somenteLeitura)
+    ? (() => { try { return localStorage.getItem(CHAVE_PREF_UNIDADE) || ''; } catch { return ''; } })()
+    : '';
+
   const [form, setForm] = useState({
     nome:            '',
     marca:           '',
     codigo_barras:   '',
     categoria_id:    '',
-    unidade_medida:  'un',
+    unidade_medida:  preferenciaUnidade || 'un',
     estoque_atual:   '0',
     estoque_minimo:  '10',
     preco_custo:     '0,00',
@@ -457,6 +465,18 @@ export default function ProdutoModal({
   const imagemCameraRef = useRef(null);
   const [marcasExistentes,  setMarcasExistentes]  = useState([]);
   const [sugestaoMarca,     setSugestaoMarca]     = useState(null); // { marca, exata } | null
+
+  // ── Etapa inicial "Unidade x Quilo" (só produto novo, sem preferência
+  // salva) — pergunta antes de abrir o formulário completo, navegável
+  // por teclado (setas + Enter). 'unidade' = 1ª pergunta, 'etiqueta' =
+  // sub-pergunta (só quando escolhe Quilo), null = pula direto pro form.
+  const [etapaAtiva,       setEtapaAtiva]       = useState(
+    (!isEdit && !somenteLeitura && !preferenciaUnidade) ? 'unidade' : null
+  );
+  const [etapaUnidadeSel,  setEtapaUnidadeSel]  = useState('un');
+  const [etapaEtiquetaSel, setEtapaEtiquetaSel] = useState(true); // combina com o padrão já usado no form normal
+  const [etapaLembrar,     setEtapaLembrar]     = useState(false);
+  const [prefUnidadeLimpa, setPrefUnidadeLimpa] = useState(false);
 
   // ── Ajuste de estoque (só no modo edição — substitui a edição livre) ──
   const [ajusteTipo,     setAjusteTipo]     = useState('entrada');
@@ -536,6 +556,53 @@ export default function ProdutoModal({
   }
   useEffect(() => { carregarOpcoesVariacao(); }, [estabelecimentoId]);
 
+  /* ── Etapa inicial Unidade x Quilo — confirmar/voltar ─────── */
+  function aplicarEscolhaEtapa(unidade, comEtiqueta) {
+    setForm(prev => ({
+      ...prev,
+      unidade_medida: unidade,
+      vendido_por_peso: unidade === 'kg' ? comEtiqueta : false,
+    }));
+    if (etapaLembrar) {
+      try { localStorage.setItem(CHAVE_PREF_UNIDADE, unidade); } catch { /* localStorage indisponível, segue sem lembrar */ }
+    }
+    setEtapaAtiva(null);
+    setTimeout(() => codigoBarrasRef.current?.focus(), 0);
+  }
+  function confirmarEtapaUnidade(valor) {
+    if (valor === 'kg') { setEtapaUnidadeSel('kg'); setEtapaAtiva('etiqueta'); return; }
+    aplicarEscolhaEtapa('un', false);
+  }
+  function confirmarEtapaEtiqueta(comEtiqueta) {
+    aplicarEscolhaEtapa('kg', comEtiqueta);
+  }
+  function voltarEtapaUnidade() {
+    setEtapaAtiva('unidade');
+  }
+  function limparPreferenciaUnidade() {
+    try { localStorage.removeItem(CHAVE_PREF_UNIDADE); } catch { /* nada a limpar */ }
+    setPrefUnidadeLimpa(true);
+  }
+
+  /* ── Navegação por teclado na etapa inicial (setas + Enter) ── */
+  useEffect(() => {
+    if (!etapaAtiva) return;
+    function handleKeyEtapa(e) {
+      if (etapaAtiva === 'unidade') {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaUnidadeSel('un'); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaUnidadeSel('kg'); }
+        else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaUnidade(etapaUnidadeSel); }
+      } else if (etapaAtiva === 'etiqueta') {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaEtiquetaSel(true); }
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaEtiquetaSel(false); }
+        else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaEtiqueta(etapaEtiquetaSel); }
+        else if (e.key === 'Backspace') { e.preventDefault(); voltarEtapaUnidade(); }
+      }
+    }
+    window.addEventListener('keydown', handleKeyEtapa);
+    return () => window.removeEventListener('keydown', handleKeyEtapa);
+  }, [etapaAtiva, etapaUnidadeSel, etapaEtiquetaSel]);
+
   /* ── ESC fecha ──────────────────────────────────────────── */
   useEffect(() => {
     return () => clearTimeout(debounceMarcaRef.current);
@@ -547,12 +614,13 @@ export default function ProdutoModal({
         if (showCamera) return;
         if (imagemExpandidaAberta) setImagemExpandidaAberta(false);
         else if (novaCatAberta) setNovaCatAberta(false);
+        else if (etapaAtiva === 'etiqueta') setEtapaAtiva('unidade');
         else onClose();
       }
     }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera]);
+  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva]);
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
@@ -979,6 +1047,82 @@ export default function ProdutoModal({
             {somenteLeitura ? '👁️ Visualizar produto' : isEdit ? '✏️ Editar produto' : '➕ Novo produto'}
           </div>
 
+          {etapaAtiva ? (
+            <div className="prod-etapa-unidade">
+              {etapaAtiva === 'unidade' ? (
+                <>
+                  <p className="prod-etapa-pergunta">Como esse produto é vendido?</p>
+                  <p className="prod-etapa-sub">Use as setas (←→) e Enter — ou clique numa opção.</p>
+                  <div className="prod-unidade-toggle" style={{ marginTop: 14 }}>
+                    {[
+                      { value: 'un', label: 'Unidade', sub: 'peças, caixas, pacotes', icon: '📦' },
+                      { value: 'kg', label: 'Quilo',   sub: 'granel, frios, hortifruti', icon: '⚖️' },
+                    ].map(op => (
+                      <button
+                        key={op.value}
+                        type="button"
+                        autoFocus={op.value === 'un'}
+                        className={`prod-unidade-btn${etapaUnidadeSel === op.value ? ' ativo' : ''}`}
+                        onClick={() => confirmarEtapaUnidade(op.value)}
+                        onFocus={() => setEtapaUnidadeSel(op.value)}
+                      >
+                        <span className="prod-unidade-icon">{op.icon}</span>
+                        <span className="prod-unidade-label">{op.label}</span>
+                        <span className="prod-unidade-sub">{op.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="prod-etapa-pergunta">⚖️ Esse produto tem etiqueta de balança com código de barras?</p>
+                  <p className="prod-etapa-sub">A balança imprime uma etiqueta EAN-13 e o caixa bipa no PDV — o peso entra sozinho. Use as setas e Enter — ou clique.</p>
+                  <div className="prod-unidade-toggle" style={{ marginTop: 14 }}>
+                    <button
+                      type="button"
+                      autoFocus
+                      className={`prod-unidade-btn${etapaEtiquetaSel ? ' ativo' : ''}`}
+                      onClick={() => confirmarEtapaEtiqueta(true)}
+                      onFocus={() => setEtapaEtiquetaSel(true)}
+                    >
+                      <span className="prod-unidade-icon">🏷️</span>
+                      <span className="prod-unidade-label">Sim, tem etiqueta</span>
+                      <span className="prod-unidade-sub">bipa no PDV, peso automático</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`prod-unidade-btn${!etapaEtiquetaSel ? ' ativo' : ''}`}
+                      onClick={() => confirmarEtapaEtiqueta(false)}
+                      onFocus={() => setEtapaEtiquetaSel(false)}
+                    >
+                      <span className="prod-unidade-icon">✋</span>
+                      <span className="prod-unidade-label">Não, é granel</span>
+                      <span className="prod-unidade-sub">atendente digita o peso</span>
+                    </button>
+                  </div>
+                  <button type="button" className="prod-etapa-voltar" onClick={voltarEtapaUnidade}>
+                    ‹ Voltar (Backspace)
+                  </button>
+                </>
+              )}
+
+              <label className="prod-etapa-lembrar">
+                <input
+                  type="checkbox"
+                  checked={etapaLembrar}
+                  onChange={e => setEtapaLembrar(e.target.checked)}
+                />
+                Lembrar essa escolha e não perguntar de novo nos próximos produtos
+              </label>
+
+              <div className="prod-modal-acoes">
+                <button type="button" className="prod-modal-btn-cancelar" onClick={onClose}>
+                  Cancelar (Esc)
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
           {erro && <div className="prod-modal-erro">⚠️ {erro}</div>}
 
           <form onSubmit={salvar}>
@@ -1332,6 +1476,22 @@ export default function ProdutoModal({
                       </button>
                     ))}
                   </div>
+                  {!isEdit && !somenteLeitura && (
+                    prefUnidadeLimpa ? (
+                      <span className="prod-label-hint">✓ Preferência removida — o próximo produto novo vai perguntar de novo.</span>
+                    ) : preferenciaUnidade ? (
+                      <span className="prod-label-hint">
+                        🔒 Produto novo sempre abre como <strong>{preferenciaUnidade === 'kg' ? 'Quilo' : 'Unidade'}</strong>.{' '}
+                        <button
+                          type="button"
+                          onClick={limparPreferenciaUnidade}
+                          style={{ background: 'none', border: 'none', padding: 0, color: 'var(--est-accent)', fontWeight: 700, fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Mudar preferência
+                        </button>
+                      </span>
+                    ) : null
+                  )}
                 </div>
 
                 {form.unidade_medida === 'kg' && (
@@ -1606,6 +1766,8 @@ export default function ProdutoModal({
             </div>
 
           </form>
+          </>
+          )}
         </div>
       </div>
 

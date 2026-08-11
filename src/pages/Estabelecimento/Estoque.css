@@ -780,6 +780,52 @@
   margin-bottom: 22px;
 }
 
+/* ── Etapa inicial "Unidade x Quilo" (antes do formulário) ── */
+.prod-etapa-unidade {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 2px;
+}
+.prod-etapa-pergunta {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin: 0;
+}
+.prod-etapa-sub {
+  font-size: 0.78rem;
+  color: var(--est-text-muted);
+  margin: 4px 0 0;
+}
+.prod-etapa-lembrar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--est-text-soft);
+  margin-top: 20px;
+  cursor: pointer;
+}
+.prod-etapa-lembrar input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--est-accent);
+}
+.prod-etapa-voltar {
+  align-self: flex-start;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: var(--est-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.prod-etapa-voltar:hover { text-decoration: underline; }
+
 /* Seções do form */
 .prod-form-section {
   margin-bottom: 20px;
