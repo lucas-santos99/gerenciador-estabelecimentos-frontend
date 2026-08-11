@@ -40,6 +40,18 @@ function formatarData(s) {
   } catch { return '—'; }
 }
 
+// Ícone de "sem imagem" — SVG em vez de emoji, mesmo padrão já usado no
+// Estoque (ProdutoList.jsx), pra não depender da fonte de emoji do sistema
+function IconePacoteMini({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
 /* ── Painel de detalhes do fiado ───────────────────────────── */
 function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
   const [vendas,        setVendas]        = useState([]);
@@ -50,6 +62,7 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
   const [pagandoVenda,  setPagandoVenda]  = useState(null); // venda sendo paga
   const [meioPagVenda,  setMeioPagVenda]  = useState('Dinheiro');
   const [salvandoPag,   setSalvandoPag]   = useState(false); // 'compras' | 'pagamentos'
+  const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
   async function carregar() {
       setLoading(true);
@@ -148,6 +161,22 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
                         : `${parseFloat(item.quantidade).toFixed(0)}×`;
                       return (
                         <li key={i} className="cli-venda-item">
+                          <div
+                            className="cli-item-thumb"
+                            onClick={() => item.produto_imagem_url && setImagemExpandida(item.produto_imagem_url)}
+                            style={{ cursor: item.produto_imagem_url ? 'pointer' : 'default' }}
+                          >
+                            {item.produto_imagem_url ? (
+                              <img
+                                src={item.produto_imagem_url}
+                                alt=""
+                                loading="lazy"
+                                onError={e => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <IconePacoteMini className="cli-item-thumb-placeholder" />
+                            )}
+                          </div>
                           <span className="cli-item-qtd">{qtdLabel}</span>
                           <span className="cli-item-nome">{item.produto_nome}</span>
                           <span className="cli-item-subtotal">
@@ -220,6 +249,13 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
           </>
         )}
       </div>
+
+      {imagemExpandida && (
+        <div className="cli-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="cli-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="cli-lightbox-img" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
@@ -806,6 +842,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
   const [cancelandoId, setCancelandoId] = useState(null);
   const [filtroDe,  setFiltroDe]  = useState(() => periodoPadrao30Dias().de);
   const [filtroAte, setFiltroAte] = useState(() => periodoPadrao30Dias().ate);
+  const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
   async function carregar() {
     setLoading(true);
@@ -1013,6 +1050,22 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
                         : `${parseFloat(item.quantidade).toFixed(0)}×`;
                       return (
                         <li key={i} className="cli-venda-item">
+                          <div
+                            className="cli-item-thumb"
+                            onClick={() => item.produto_imagem_url && setImagemExpandida(item.produto_imagem_url)}
+                            style={{ cursor: item.produto_imagem_url ? 'pointer' : 'default' }}
+                          >
+                            {item.produto_imagem_url ? (
+                              <img
+                                src={item.produto_imagem_url}
+                                alt=""
+                                loading="lazy"
+                                onError={e => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <IconePacoteMini className="cli-item-thumb-placeholder" />
+                            )}
+                          </div>
                           <span className="cli-item-qtd">{qtdLabel}</span>
                           <span className="cli-item-nome">{item.produto_nome}{item.produto_marca && ` · ${item.produto_marca}`}</span>
                           <span className="cli-item-subtotal">
@@ -1039,6 +1092,13 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           )
         )}
       </div>
+
+      {imagemExpandida && (
+        <div className="cli-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="cli-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="cli-lightbox-img" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

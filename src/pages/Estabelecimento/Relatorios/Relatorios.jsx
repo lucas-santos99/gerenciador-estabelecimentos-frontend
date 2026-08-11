@@ -26,11 +26,24 @@ function formatarData(s) {
   catch { return '—'; }
 }
 
+// Ícone de "sem imagem" — SVG em vez de emoji, mesmo padrão já usado no
+// Estoque (ProdutoList.jsx), pra não depender da fonte de emoji do sistema
+function IconePacote({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════ */
 export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, logoUrl }) {
 
   const [abaAtiva, setAbaAtiva] = useState('historico');
   const [categorias, setCategorias] = useState([]);
+  const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
   const [fontScale, setFontScale] = useState(() => {
     const s = localStorage.getItem('rel-font-scale');
     return s ? parseFloat(s) : 1;
@@ -721,7 +734,25 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                 return (
                   <div key={i} className="fin-report-card">
                     <div className="fin-report-rank">#{i + 1}</div>
-                    <div className="fin-report-nome">{prod.produto_nome}{prod.produto_marca && <span className="rel-produto-marca"> · {prod.produto_marca}</span>}</div>
+                    <div className="rel-report-cabecalho">
+                      <div
+                        className="rel-report-thumb"
+                        onClick={() => prod.produto_imagem_url && setImagemExpandida(prod.produto_imagem_url)}
+                        style={{ cursor: prod.produto_imagem_url ? 'pointer' : 'default' }}
+                      >
+                        {prod.produto_imagem_url ? (
+                          <img
+                            src={prod.produto_imagem_url}
+                            alt=""
+                            loading="lazy"
+                            onError={e => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <IconePacote className="rel-report-thumb-placeholder" />
+                        )}
+                      </div>
+                      <div className="rel-report-nome-texto">{prod.produto_nome}{prod.produto_marca && <span className="rel-produto-marca"> · {prod.produto_marca}</span>}</div>
+                    </div>
                     <div className="fin-report-info">
                       <span className="fin-report-info-label">Categoria</span>
                       <span className="fin-report-info-valor">{prod.categoria_nome || 'Sem categoria'}</span>
@@ -839,6 +870,13 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {imagemExpandida && (
+        <div className="rel-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+          <button className="rel-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
+          <img src={imagemExpandida} alt="" className="rel-lightbox-img" onClick={e => e.stopPropagation()} />
         </div>
       )}
 
