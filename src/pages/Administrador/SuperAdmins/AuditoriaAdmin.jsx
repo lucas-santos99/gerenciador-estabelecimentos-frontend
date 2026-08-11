@@ -61,6 +61,7 @@ export default function AuditoriaAdmin() {
   const [merceariaId,  setMerceariaId] = useState(params.get("mercearia_id") || "");
   const [acao,         setAcao]        = useState(params.get("acao") || "");
   const [usuario,      setUsuario]     = useState(params.get("usuario") || "");
+  const [busca,        setBusca]       = useState(params.get("busca") || "");
   const [dataInicio,   setDataInicio]  = useState("");
   const [dataFim,      setDataFim]     = useState("");
 
@@ -101,6 +102,7 @@ export default function AuditoriaAdmin() {
     if (merceariaId) qs.set("mercearia_id", merceariaId);
     if (acao)        qs.set("acao", acao);
     if (usuario)      qs.set("usuario", usuario);
+    if (busca)        qs.set("busca", busca.trim());
     if (dataInicio)  qs.set("data_inicio", dataInicio);
     if (dataFim)      qs.set("data_fim", dataFim);
     qs.set("sort_by", sortBy);
@@ -134,7 +136,7 @@ export default function AuditoriaAdmin() {
     }
     setLoading(false);
    
-  }, [API_URL, escopo, merceariaId, acao, usuario, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
+  }, [API_URL, escopo, merceariaId, acao, usuario, busca, dataInicio, dataFim, sortBy, sortOrder, pagina, tamanhoPagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -159,17 +161,18 @@ export default function AuditoriaAdmin() {
     if (merceariaId) next.mercearia_id = merceariaId;
     if (acao)        next.acao = acao;
     if (usuario)      next.usuario = usuario;
+    if (busca)        next.busca = busca;
     setParams(next, { replace: true });
     setPagina(0);
-   
-  }, [escopo, merceariaId, acao, usuario]);
+
+  }, [escopo, merceariaId, acao, usuario, busca]);
 
   function nomeEstab(id) {
     return estabs.find(e => e.id === id)?.nome_fantasia || (id ? id.slice(0, 8) + "…" : "—");
   }
 
   function limparFiltros() {
-    setEscopo(""); setMerceariaId(""); setAcao(""); setUsuario(""); setDataInicio(""); setDataFim("");
+    setEscopo(""); setMerceariaId(""); setAcao(""); setUsuario(""); setBusca(""); setDataInicio(""); setDataFim("");
   }
 
   /* ── ordenação por coluna ─────────────────────────────────── */
@@ -334,6 +337,19 @@ export default function AuditoriaAdmin() {
           </div>
 
           <div className="aud-filter-group">
+            <label className="aud-filter-label">Buscar</label>
+            <input
+              className="aud-input"
+              type="text"
+              placeholder="Palavra na descrição…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { setPagina(0); carregar(); } }}
+              title="Busca dentro da descrição do registro, em todos os estabelecimentos — ex: uma tentativa de nome/marca com palavra proibida"
+            />
+          </div>
+
+          <div className="aud-filter-group">
             <label className="aud-filter-label">De</label>
             <input className="aud-input" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
           </div>
@@ -389,8 +405,9 @@ export default function AuditoriaAdmin() {
                 <tbody>
                   {registros.map(r => {
                     const cor = badgeCorEscopo(r.escopo);
+                    const bloqueado = r.acao === "produto_bloqueado_palavra";
                     return (
-                      <tr key={r.id}>
+                      <tr key={r.id} style={bloqueado ? { background: "rgba(220,38,38,0.06)" } : undefined}>
                         <td className="mono nowrap">
                           {new Date(r.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                         </td>
@@ -402,7 +419,10 @@ export default function AuditoriaAdmin() {
                         <td className="nowrap">{r.mercearia_id ? nomeEstab(r.mercearia_id) : "—"}</td>
                         <td className="nowrap">{r.usuario_nome || "Sistema"}</td>
                         <td>{r.modulo}</td>
-                        <td className="mono">{r.acao}</td>
+                        <td className="mono">
+                          {bloqueado && <span title="Tentativa bloqueada pelo filtro de palavras">🚫 </span>}
+                          {r.acao}
+                        </td>
                         <td className="aud-desc">{r.descricao}</td>
                       </tr>
                     );
