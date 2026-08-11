@@ -446,6 +446,7 @@ export default function ProdutoModal({
   const [scanFlash,         setScanFlash]         = useState(false);
   const [buscandoCodigo,    setBuscandoCodigo]    = useState(false);
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
+  const [nomeTraduzido,     setNomeTraduzido]     = useState(false); // nome veio em outro idioma e foi traduzido automático
   const [ultimoAutoPreenchido, setUltimoAutoPreenchido] = useState(null); // { codigo, nome, marca, imagem_url } — snapshot do que a última busca preencheu
   const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
   const [imagemErro,        setImagemErro]        = useState(false);
@@ -544,13 +545,14 @@ export default function ProdutoModal({
     function handleEsc(e) {
       if (e.key === 'Escape') {
         if (showCamera) return;
-        if (novaCatAberta) setNovaCatAberta(false);
+        if (imagemExpandidaAberta) setImagemExpandidaAberta(false);
+        else if (novaCatAberta) setNovaCatAberta(false);
         else onClose();
       }
     }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [novaCatAberta, onClose, showCamera]);
+  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera]);
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
@@ -610,6 +612,7 @@ export default function ProdutoModal({
     if (isEdit || !codigo || codigo.trim().length < 6) return;
     if (buscandoCodigo) return; // já tem uma busca rolando (ex: debounce e onBlur coincidiram)
     setAutoPreenchido(null);
+    setNomeTraduzido(false);
     setBuscandoCodigo(true);
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/lookup-codigo?codigo=${encodeURIComponent(codigo.trim())}`);
@@ -626,6 +629,7 @@ export default function ProdutoModal({
           imagem_origem: (!prev.imagem_url && json.imagem_url) ? json.fonte : prev.imagem_origem,
         }));
         setAutoPreenchido(json.fonte);
+        setNomeTraduzido(!!json.traduzido);
         // Guarda o que ficou preenchido por causa dessa busca — se o
         // código mudar depois, só limpa os campos que ainda baterem
         // exatamente com isso (ou seja, que o comerciante não editou
@@ -668,6 +672,7 @@ export default function ProdutoModal({
         };
       });
       setAutoPreenchido(null);
+      setNomeTraduzido(false);
       setUltimoAutoPreenchido(null);
     }
 
@@ -1102,12 +1107,12 @@ export default function ProdutoModal({
                     </small>
                   )}
                   {!buscandoCodigo && autoPreenchido && (
-                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: 'var(--est-success, #16a34a)' }}>
-                      ✓ Preenchido automaticamente {
+                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: nomeTraduzido ? 'var(--est-text-warning, #b45309)' : 'var(--est-success, #16a34a)' }}>
+                      {nomeTraduzido ? '🌐 Nome traduzido automaticamente' : '✓ Preenchido automaticamente'} {
                         autoPreenchido === 'catalogo' ? '(catálogo interno)' :
                         autoPreenchido === 'openproductsfacts' ? '(Open Products Facts)' :
                         '(Open Food Facts)'
-                      } — confira antes de salvar
+                      } — {nomeTraduzido ? 'confira e corrija se necessário' : 'confira'} antes de salvar
                     </small>
                   )}
                 </div>

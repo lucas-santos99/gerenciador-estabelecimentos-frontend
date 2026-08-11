@@ -2361,7 +2361,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 500;
+  /* precisa ficar acima do .prod-modal-overlay (z-index: 3000) — senão,
+     quando o lightbox é aberto de dentro do modal de produto (novo/editar),
+     ele renderiza atrás do modal: fica invisível e sem clique (nem o X
+     nem o clique fora funcionam, porque o modal por cima intercepta tudo) */
+  z-index: 3200;
   cursor: zoom-out;
   animation: prodLightboxIn 0.15s ease;
   padding: 40px;

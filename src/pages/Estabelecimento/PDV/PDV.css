@@ -1975,7 +1975,7 @@ button:disabled[title*="Sem permissão"] {
   overflow: hidden;
   margin-bottom: 2px;
 }
-.pdv-card-imagem img { width: 100%; height: 100%; object-fit: cover; }
+.pdv-card-imagem img { width: 100%; height: 100%; object-fit: contain; }
 .pdv-card-imagem-placeholder { width: 22px; height: 22px; color: var(--est-text-muted); opacity: 0.4; }
 
 .pdv-item-imagem {
