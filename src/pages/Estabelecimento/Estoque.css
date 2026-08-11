@@ -757,7 +757,7 @@
   border-radius: 20px;
   padding: 28px;
   width: 100%;
-  max-width: 760px;
+  max-width: 840px; /* +80px — dá mais espaço pra linha de variação (tamanho/cor/gênero) caber sem apertar */
   max-height: 90vh;
   overflow-y: auto;
   margin: 16px;
@@ -1774,10 +1774,20 @@
 
 .prod-variacao-linha {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 130px 160px 28px;
-  gap: 10px;
+  /* minmax(0, 1fr), não só "1fr" — sem o mínimo travado em 0, o navegador
+     deixa cada <input> "estourar" pro tamanho mínimo de conteúdo dele e
+     empurrar as colunas seguintes, desalinhando a linha em relação ao
+     cabeçalho (que usa <span>, sem esse mínimo). O min-width:0 nos campos
+     logo abaixo reforça a mesma correção do lado do item, não só da coluna. */
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 112px 148px 28px;
+  gap: 8px;
   align-items: center;
   margin-bottom: 8px;
+}
+.prod-variacao-linha > input,
+.prod-variacao-linha > .prod-input-moeda-wrap {
+  min-width: 0;
+  width: 100%;
 }
 
 .prod-variacao-cabecalho {
