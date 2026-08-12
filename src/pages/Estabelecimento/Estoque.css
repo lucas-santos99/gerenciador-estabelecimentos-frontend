@@ -1792,16 +1792,29 @@
 
 /* ── Sub-linha de foto + preços da variação — fica embaixo da linha
    principal (tamanho/cor/gênero/estoque), com sua própria miniatura de
-   foto e os dois campos de preço (custo/venda) lado a lado. ── */
+   foto e os dois campos de preço (custo/venda) lado a lado, cada um com
+   um rótulo por extenso em cima — nada de abreviação tipo "custo"/"venda"
+   dentro da caixa, que ficava pequeno demais pra ler bem. ── */
 .prod-variacao-preco-linha {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   margin-bottom: 6px;
 }
-.prod-variacao-preco-linha > .prod-input-moeda-wrap {
+.prod-variacao-preco-item {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.prod-variacao-preco-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--est-text-muted);
+}
+.prod-variacao-preco-item > .prod-input-moeda-wrap {
+  width: 100%;
 }
 
 .prod-variacao-foto-wrap {
@@ -1852,25 +1865,6 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-}
-
-/* Legenda pequena "custo"/"venda" dentro do campo de preço da variação —
-   sem isso as duas caixas ficam idênticas visualmente e não dá pra saber
-   qual é qual só de bater o olho. */
-.prod-input-moeda-legenda {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: var(--est-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  pointer-events: none;
-}
-.prod-variacao-preco-linha .prod-input-moeda {
-  padding-right: 42px !important;
 }
 
 .prod-variacao-cabecalho {

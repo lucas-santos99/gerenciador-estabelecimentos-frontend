@@ -376,33 +376,37 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 </button>
               )}
             </div>
-            <div className="prod-input-moeda-wrap">
-              <span className="prod-moeda-prefixo">R$</span>
-              <input
-                className="prod-input prod-input-moeda"
-                type="text"
-                inputMode="decimal"
-                placeholder={precoCustoBase || '0,00'}
-                value={v.preco_custo || ''}
-                onChange={e => atualizarCampo(idx, 'preco_custo', digitarValorMascarado(e.target.value, 2))}
-                disabled={somenteLeitura}
-                title="Custo específico desta variação — em branco usa o preço de custo padrão do produto"
-              />
-              <span className="prod-input-moeda-legenda">custo</span>
+            <div className="prod-variacao-preco-item">
+              <span className="prod-variacao-preco-label">Preço de custo</span>
+              <div className="prod-input-moeda-wrap">
+                <span className="prod-moeda-prefixo">R$</span>
+                <input
+                  className="prod-input prod-input-moeda"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={precoCustoBase || '0,00'}
+                  value={v.preco_custo || ''}
+                  onChange={e => atualizarCampo(idx, 'preco_custo', digitarValorMascarado(e.target.value, 2))}
+                  disabled={somenteLeitura}
+                  title="Custo específico desta variação — em branco usa o preço de custo padrão do produto"
+                />
+              </div>
             </div>
-            <div className="prod-input-moeda-wrap">
-              <span className="prod-moeda-prefixo">R$</span>
-              <input
-                className="prod-input prod-input-moeda"
-                type="text"
-                inputMode="decimal"
-                placeholder={precoBase || '0,00'}
-                value={v.preco_venda}
-                onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
-                disabled={somenteLeitura}
-                title="Preço de venda desta variação — em branco usa o preço de venda padrão do produto"
-              />
-              <span className="prod-input-moeda-legenda">venda</span>
+            <div className="prod-variacao-preco-item">
+              <span className="prod-variacao-preco-label">Preço de venda</span>
+              <div className="prod-input-moeda-wrap">
+                <span className="prod-moeda-prefixo">R$</span>
+                <input
+                  className="prod-input prod-input-moeda"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={precoBase || '0,00'}
+                  value={v.preco_venda}
+                  onChange={e => atualizarCampo(idx, 'preco_venda', digitarValorMascarado(e.target.value, 2))}
+                  disabled={somenteLeitura}
+                  title="Preço de venda desta variação — em branco usa o preço de venda padrão do produto"
+                />
+              </div>
             </div>
           </div>
 
@@ -1133,6 +1137,22 @@ export default function ProdutoModal({
       return;
     }
 
+    // Preço de venda geral é obrigatório — a não ser que o produto tenha
+    // variações e cada uma delas já tenha o próprio preço de venda definido
+    // (nesse caso o preço geral nunca seria usado, então fica dispensável).
+    // Mesma regra validada de novo no backend — isso aqui só evita a viagem
+    // até o servidor pra descobrir que faltou preço em alguma variação.
+    const precoGeralPreenchido = form.preco_venda.trim() && paraFloatBR(form.preco_venda) > 0;
+    if (!precoGeralPreenchido) {
+      const semPrecoProprio = !form.tem_variacoes || variacoes.some(v => !(v.preco_venda || '').trim() || paraFloatBR(v.preco_venda) <= 0);
+      if (semPrecoProprio) {
+        setErro(form.tem_variacoes
+          ? 'Informe o Preço de venda geral do produto, ou defina um preço de venda próprio pra cada variação.'
+          : 'Informe o Preço de venda do produto.');
+        return;
+      }
+    }
+
     setSalvando(true);
 
     const url = isEdit
@@ -1226,7 +1246,11 @@ export default function ProdutoModal({
         : ['entrada', 'devolucao'].includes(ajusteTipo) ? estoqueAtualNum + ajusteQtdConvertida
         : Math.max(0, estoqueAtualNum - ajusteQtdConvertida))
     : null;
-  const labelVenda  = isKg ? 'Preço de venda (R$/kg) *' : 'Preço de venda (R$/un) *';
+  // O "*" só aparece quando o preço geral é realmente obrigatório — com
+  // variações, ele pode virar opcional (ver validação de precoGeralPreenchido
+  // em salvar()), então forçar o asterisco sempre daria a entender uma
+  // obrigatoriedade que nem sempre existe.
+  const labelVenda  = `Preço de venda (R$/${isKg ? 'kg' : 'un'})${form.tem_variacoes ? '' : ' *'}`;
   const labelCusto  = isKg ? 'Preço de custo (R$/kg)' : 'Preço de custo (R$/un)';
 
   /* ════════════════════════════════════════════════════════ */
@@ -1930,7 +1954,12 @@ export default function ProdutoModal({
 
             {/* ── Preços ────────────────────────────────── */}
             <div className="prod-form-section">
-              <div className="prod-form-section-titulo">💰 Preços</div>
+              <div className="prod-form-section-titulo">
+                💰 Preços {form.tem_variacoes && <span className="prod-label-unit">(padrão do produto)</span>}
+                <CampoAjuda texto={form.tem_variacoes
+                  ? "Esse é o preço padrão/geral do produto — não o de uma variação específica. Cada variação (acima, em Variações) pode ter seu próprio preço de custo/venda; quando ela não tiver, o PDV usa esse aqui. Se TODAS as variações já tiverem preço de venda próprio, esse campo geral vira opcional (nunca seria usado mesmo). Mas se sobrar qualquer variação sem preço, esse aqui volta a ser obrigatório — garante que nada fique à venda sem um preço válido."
+                  : "Preço de custo e venda deste produto. Se um dia ele ganhar variações (tamanho/cor/gênero), esse preço vira o padrão — usado só pras variações que não tiverem um preço próprio definido."} />
+              </div>
 
               {!form.tem_variacoes && paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
                 <div className="prod-margem-preview">
@@ -1988,7 +2017,7 @@ export default function ProdutoModal({
                       readOnly={somenteLeitura}
                       value={form.preco_venda}
                       onChange={atualizar}
-                      required
+                      required={!form.tem_variacoes}
                     />
                   </div>
                 </div>
