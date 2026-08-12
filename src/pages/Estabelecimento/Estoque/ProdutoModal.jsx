@@ -584,13 +584,21 @@ export default function ProdutoModal({
 }) {
   const isEdit = !!produtoEditar;
 
-  // ── Preferência salva de "Unidade x Quilo" (só produto novo) — se o
-  // comerciante marcou "lembrar minha escolha" da última vez, pula a
-  // etapa de pergunta e já abre o formulário com essa unidade.
-  const CHAVE_PREF_UNIDADE = `produto_pref_unidade_${estabelecimentoId}`;
-  const preferenciaUnidade = (!isEdit && !somenteLeitura)
-    ? (() => { try { return localStorage.getItem(CHAVE_PREF_UNIDADE) || ''; } catch { return ''; } })()
-    : '';
+  // ── Preferências salvas da etapa inicial (só produto novo) — se o
+  // comerciante marcou "lembrar minha escolha" da última vez em cada
+  // pergunta (unidade, etiqueta de balança, variações), pula essa etapa
+  // específica e já abre o formulário com essa resposta. As três são
+  // independentes — dá pra lembrar só uma, duas ou as três.
+  const CHAVE_PREF_UNIDADE   = `produto_pref_unidade_${estabelecimentoId}`;
+  const CHAVE_PREF_ETIQUETA  = `produto_pref_etiqueta_${estabelecimentoId}`;
+  const CHAVE_PREF_VARIACOES = `produto_pref_variacoes_${estabelecimentoId}`;
+  const lerPreferencia = chave => {
+    if (isEdit || somenteLeitura) return '';
+    try { return localStorage.getItem(chave) || ''; } catch { return ''; }
+  };
+  const preferenciaUnidade   = lerPreferencia(CHAVE_PREF_UNIDADE);
+  const preferenciaEtiqueta  = lerPreferencia(CHAVE_PREF_ETIQUETA);   // '' | 'sim' | 'nao'
+  const preferenciaVariacoes = lerPreferencia(CHAVE_PREF_VARIACOES);  // '' | 'sim' | 'nao'
 
   const [form, setForm] = useState({
     nome:            '',
@@ -602,11 +610,14 @@ export default function ProdutoModal({
     estoque_minimo:  '10',
     preco_custo:     '',
     preco_venda:     '',
-    // ── Campos balança ──
-    vendido_por_peso: false,
+    // ── Campos balança — se a unidade E a etiqueta já vieram de uma
+    // preferência salva, a etapa inicial nem chega a aparecer (pula direto
+    // pro form), então esse valor default já precisa vir certo daqui. ──
+    vendido_por_peso: preferenciaUnidade === 'kg' && preferenciaEtiqueta === 'sim',
     plu_balanca:      '',
-    // ── Variações ──
-    tem_variacoes: false,
+    // ── Variações — mesmo raciocínio: se já tem preferência salva, aplica
+    // direto sem passar pela etapa inicial. ──
+    tem_variacoes: preferenciaVariacoes === 'sim',
     // ── Imagem ──
     imagem_url:    '',
     imagem_origem: '',
@@ -645,18 +656,54 @@ export default function ProdutoModal({
   // ── Etapa inicial (só produto novo) — pergunta Unidade x Quilo, e se
   // for pesável, se tem etiqueta de balança, e se tem variações — tudo
   // antes de abrir o formulário completo, navegável por teclado (setas +
-  // Enter). 'unidade' = 1ª pergunta, 'etiqueta' = sub-pergunta (só quando
-  // escolhe Quilo), 'variacoes' = última pergunta (sempre), null = pula
-  // direto pro form (edição, somente leitura, ou preferência salva pula
-  // as duas primeiras perguntas e vai direto pra "tem variações?").
-  const [etapaAtiva,       setEtapaAtiva]       = useState(
-    isEdit || somenteLeitura ? null : (preferenciaUnidade ? 'variacoes' : 'unidade')
-  );
+  // Enter). Cada uma das três perguntas é pulada independentemente se já
+  // tiver uma preferência salva pra ela — o "próximo passo" é sempre
+  // calculado dinamicamente (calcularProximaEtapa), então qualquer
+  // combinação de perguntas já respondidas/pendentes funciona igual, sem
+  // precisar de um caminho fixo. null = pula direto pro form (edição,
+  // somente leitura, ou as três preferências já salvas).
+  function calcularProximaEtapa(unidade, etapaAtualId) {
+    // Depois de saber a unidade: só pergunta etiqueta se for Quilo E ainda
+    // não tiver preferência de etiqueta salva.
+    if (etapaAtualId !== 'etiqueta' && unidade === 'kg' && !preferenciaEtiqueta) return 'etiqueta';
+    // Por fim, só pergunta variações se ainda não tiver preferência salva.
+    if (!preferenciaVariacoes) return 'variacoes';
+    return null;
+  }
+  const [etapaAtiva, setEtapaAtiva] = useState(() => {
+    if (isEdit || somenteLeitura) return null;
+    if (!preferenciaUnidade) return 'unidade';
+    return calcularProximaEtapa(preferenciaUnidade, 'unidade');
+  });
   const [etapaUnidadeSel,   setEtapaUnidadeSel]   = useState(preferenciaUnidade || 'un');
-  const [etapaEtiquetaSel,  setEtapaEtiquetaSel]  = useState(true); // combina com o padrão já usado no form normal
-  const [etapaVariacoesSel, setEtapaVariacoesSel] = useState(false);
-  const [etapaLembrar,     setEtapaLembrar]     = useState(false);
-  const [prefUnidadeLimpa, setPrefUnidadeLimpa] = useState(false);
+  const [etapaEtiquetaSel,  setEtapaEtiquetaSel]  = useState(preferenciaEtiqueta ? preferenciaEtiqueta === 'sim' : true);
+  const [etapaVariacoesSel, setEtapaVariacoesSel] = useState(preferenciaVariacoes === 'sim');
+  // Uma caixinha "lembrar" por pergunta — cada uma só é aplicada de fato
+  // se a pergunta correspondente foi mesmo respondida nesta sessão.
+  const [etapaLembrarUnidade,   setEtapaLembrarUnidade]   = useState(false);
+  const [etapaLembrarEtiqueta,  setEtapaLembrarEtiqueta]  = useState(false);
+  const [etapaLembrarVariacoes, setEtapaLembrarVariacoes] = useState(false);
+  const [prefUnidadeLimpa,   setPrefUnidadeLimpa]   = useState(false);
+  const [prefEtiquetaLimpa,  setPrefEtiquetaLimpa]  = useState(false);
+  const [prefVariacoesLimpa, setPrefVariacoesLimpa] = useState(false);
+  // Pilha de telas já visitadas nesta sessão — permite "voltar" funcionar
+  // certinho não importa quais perguntas foram puladas por preferência.
+  const [etapaHistorico, setEtapaHistorico] = useState([]);
+
+  // ── Zoom geral do modal — aumenta a fonte de tudo (perguntas, labels,
+  // campos) pra quem tá com dificuldade de enxergar. Fica salvo e vale
+  // pros próximos produtos também, igual as outras preferências daqui.
+  const [modalFontScale, setModalFontScale] = useState(() => {
+    const s = localStorage.getItem('estoque-prod-modal-font-scale');
+    return s ? parseFloat(s) : 1;
+  });
+  function mudarZoomModal(delta) {
+    setModalFontScale(prev => {
+      const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
+      localStorage.setItem('estoque-prod-modal-font-scale', next);
+      return next;
+    });
+  }
 
   // Refs dos botões da etapa inicial — usados pra mover o foco de verdade
   // junto com a navegação por seta (senão o foco visual do navegador fica
@@ -761,42 +808,64 @@ export default function ProdutoModal({
       vendido_por_peso: etapaUnidadeSel === 'kg' ? etapaEtiquetaSel : false,
       tem_variacoes: temVariacoes,
     }));
-    if (etapaLembrar) {
-      try { localStorage.setItem(CHAVE_PREF_UNIDADE, etapaUnidadeSel); } catch { /* localStorage indisponível, segue sem lembrar */ }
-    }
+    // Cada preferência só é salva se a caixinha "lembrar" daquela pergunta
+    // específica foi marcada — as três são independentes.
+    try {
+      if (etapaLembrarUnidade) localStorage.setItem(CHAVE_PREF_UNIDADE, etapaUnidadeSel);
+      if (etapaUnidadeSel === 'kg' && etapaLembrarEtiqueta) localStorage.setItem(CHAVE_PREF_ETIQUETA, etapaEtiquetaSel ? 'sim' : 'nao');
+      if (etapaLembrarVariacoes) localStorage.setItem(CHAVE_PREF_VARIACOES, temVariacoes ? 'sim' : 'nao');
+    } catch { /* localStorage indisponível, segue sem lembrar */ }
     setEtapaAtiva(null);
     setTimeout(() => codigoBarrasRef.current?.focus(), 0);
   }
+  // Avança pra próxima etapa (calculada dinamicamente) ou finaliza se não
+  // sobrar mais nenhuma pergunta pendente — empilha a etapa atual no
+  // histórico pra "voltar" funcionar depois.
+  function irParaProximaEtapa(etapaAtualId, unidadeParaCalculo, temVariacoesSeAcabou) {
+    const proxima = calcularProximaEtapa(unidadeParaCalculo, etapaAtualId);
+    if (proxima) {
+      setEtapaHistorico(h => [...h, etapaAtualId]);
+      setEtapaAtiva(proxima);
+      focarBotaoEtapa(proxima === 'etiqueta' ? 'etiqueta:sim' : 'variacoes:nao');
+    } else {
+      finalizarEtapas(temVariacoesSeAcabou());
+    }
+  }
   function confirmarEtapaUnidade(valor) {
     setEtapaUnidadeSel(valor);
-    if (valor === 'kg') { setEtapaAtiva('etiqueta'); focarBotaoEtapa('etiqueta:sim'); return; }
-    setEtapaAtiva('variacoes');
-    focarBotaoEtapa('variacoes:nao');
+    irParaProximaEtapa('unidade', valor, () => preferenciaVariacoes === 'sim');
   }
   function confirmarEtapaEtiqueta(comEtiqueta) {
     setEtapaEtiquetaSel(comEtiqueta);
-    setEtapaAtiva('variacoes');
-    focarBotaoEtapa('variacoes:nao');
+    irParaProximaEtapa('etiqueta', etapaUnidadeSel, () => preferenciaVariacoes === 'sim');
   }
   function confirmarEtapaVariacoes(temVariacoes) {
     setEtapaVariacoesSel(temVariacoes);
     finalizarEtapas(temVariacoes);
   }
-  function voltarEtapaUnidade() {
-    setEtapaAtiva('unidade');
-    focarBotaoEtapa('unidade:un');
-  }
-  function voltarDeVariacoes() {
-    // Se a unidade veio de uma preferência salva, não passou pelas
-    // perguntas de unidade/etiqueta nessa sessão — não tem pra onde voltar.
-    if (preferenciaUnidade) return false;
-    if (etapaUnidadeSel === 'kg') { setEtapaAtiva('etiqueta'); focarBotaoEtapa('etiqueta:sim'); }
-    else { setEtapaAtiva('unidade'); focarBotaoEtapa('unidade:un'); }
+  // "Voltar" funciona a partir do histórico de telas realmente visitadas
+  // nesta sessão — não importa quais perguntas foram puladas por
+  // preferência salva, sempre volta pra tela certa (ou fecha, se não tiver
+  // nenhuma tela anterior nesta sessão).
+  function voltarEtapa() {
+    if (etapaHistorico.length === 0) return false;
+    const anterior = etapaHistorico[etapaHistorico.length - 1];
+    setEtapaHistorico(h => h.slice(0, -1));
+    setEtapaAtiva(anterior);
+    focarBotaoEtapa(anterior === 'unidade' ? 'unidade:un' : anterior === 'etiqueta' ? 'etiqueta:sim' : 'variacoes:nao');
     return true;
   }
   function limparPreferenciaUnidade() {
     try { localStorage.removeItem(CHAVE_PREF_UNIDADE); } catch { /* nada a limpar */ }
     setPrefUnidadeLimpa(true);
+  }
+  function limparPreferenciaEtiqueta() {
+    try { localStorage.removeItem(CHAVE_PREF_ETIQUETA); } catch { /* nada a limpar */ }
+    setPrefEtiquetaLimpa(true);
+  }
+  function limparPreferenciaVariacoes() {
+    try { localStorage.removeItem(CHAVE_PREF_VARIACOES); } catch { /* nada a limpar */ }
+    setPrefVariacoesLimpa(true);
   }
 
   /* ── Navegação por teclado na etapa inicial (setas + Enter) ── */
@@ -811,17 +880,17 @@ export default function ProdutoModal({
         if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaEtiquetaSel(true); etapaBtnRefs.current['etiqueta:sim']?.focus(); }
         else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaEtiquetaSel(false); etapaBtnRefs.current['etiqueta:nao']?.focus(); }
         else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaEtiqueta(etapaEtiquetaSel); }
-        else if (e.key === 'Backspace') { e.preventDefault(); voltarEtapaUnidade(); }
+        else if (e.key === 'Backspace') { e.preventDefault(); voltarEtapa(); }
       } else if (etapaAtiva === 'variacoes') {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); setEtapaVariacoesSel(true); etapaBtnRefs.current['variacoes:sim']?.focus(); }
         else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); setEtapaVariacoesSel(false); etapaBtnRefs.current['variacoes:nao']?.focus(); }
         else if (e.key === 'Enter') { e.preventDefault(); confirmarEtapaVariacoes(etapaVariacoesSel); }
-        else if (e.key === 'Backspace') { e.preventDefault(); voltarDeVariacoes(); }
+        else if (e.key === 'Backspace') { e.preventDefault(); voltarEtapa(); }
       }
     }
     window.addEventListener('keydown', handleKeyEtapa);
     return () => window.removeEventListener('keydown', handleKeyEtapa);
-  }, [etapaAtiva, etapaUnidadeSel, etapaEtiquetaSel, etapaVariacoesSel]);
+  }, [etapaAtiva, etapaUnidadeSel, etapaEtiquetaSel, etapaVariacoesSel, etapaHistorico]);
 
   /* ── Foco inicial da etapa (1ª pergunta, ou "variações" direto se já
      tem preferência de unidade salva) — só roda uma vez, no mount ── */
@@ -842,14 +911,13 @@ export default function ProdutoModal({
         if (showCamera) return;
         if (imagemExpandidaAberta) setImagemExpandidaAberta(false);
         else if (novaCatAberta) setNovaCatAberta(false);
-        else if (etapaAtiva === 'etiqueta') setEtapaAtiva('unidade');
-        else if (etapaAtiva === 'variacoes') { if (!voltarDeVariacoes()) onClose(); }
+        else if (etapaAtiva) { if (!voltarEtapa()) onClose(); }
         else onClose();
       }
     }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva, etapaUnidadeSel]);
+  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva, etapaHistorico]);
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
@@ -1265,10 +1333,29 @@ export default function ProdutoModal({
       )}
 
       <div className="prod-modal-overlay">
-        <div className="prod-modal">
+        <div className="prod-modal" style={{ '--prod-modal-font-scale': modalFontScale }}>
 
-          <div className="prod-modal-titulo">
-            {somenteLeitura ? '👁️ Visualizar produto' : isEdit ? '✏️ Editar produto' : '➕ Novo produto'}
+          <div className="prod-modal-titulo-row">
+            <div className="prod-modal-titulo">
+              {somenteLeitura ? '👁️ Visualizar produto' : isEdit ? '✏️ Editar produto' : '➕ Novo produto'}
+            </div>
+            <div className="prod-modal-zoom" title="Zoom do formulário — aumenta a fonte de tudo">
+              <button
+                type="button"
+                className="estoque-zoom-btn"
+                onClick={() => mudarZoomModal(-0.1)}
+                disabled={modalFontScale <= 0.8}
+                title="Diminuir fonte"
+              >A−</button>
+              <span className="prod-modal-zoom-valor">{Math.round(modalFontScale * 100)}%</span>
+              <button
+                type="button"
+                className="estoque-zoom-btn"
+                onClick={() => mudarZoomModal(0.1)}
+                disabled={modalFontScale >= 1.6}
+                title="Aumentar fonte"
+              >A+</button>
+            </div>
           </div>
 
           {etapaAtiva ? (
@@ -1296,6 +1383,15 @@ export default function ProdutoModal({
                       </button>
                     ))}
                   </div>
+
+                  <label className="prod-etapa-lembrar">
+                    <input
+                      type="checkbox"
+                      checked={etapaLembrarUnidade}
+                      onChange={e => setEtapaLembrarUnidade(e.target.checked)}
+                    />
+                    Lembrar a unidade escolhida e não perguntar de novo nos próximos produtos
+                  </label>
                 </>
               ) : etapaAtiva === 'etiqueta' ? (
                 <>
@@ -1325,9 +1421,20 @@ export default function ProdutoModal({
                       <span className="prod-unidade-sub">atendente digita o peso</span>
                     </button>
                   </div>
-                  <button type="button" className="prod-etapa-voltar" onClick={voltarEtapaUnidade}>
-                    ‹ Voltar (Backspace)
-                  </button>
+                  {etapaHistorico.length > 0 && (
+                    <button type="button" className="prod-etapa-voltar" onClick={voltarEtapa}>
+                      ‹ Voltar (Backspace)
+                    </button>
+                  )}
+
+                  <label className="prod-etapa-lembrar">
+                    <input
+                      type="checkbox"
+                      checked={etapaLembrarEtiqueta}
+                      onChange={e => setEtapaLembrarEtiqueta(e.target.checked)}
+                    />
+                    Lembrar essa resposta e não perguntar de novo nos próximos produtos por Quilo
+                  </label>
                 </>
               ) : (
                 <>
@@ -1357,22 +1464,22 @@ export default function ProdutoModal({
                       <span className="prod-unidade-sub">um só estoque e preço</span>
                     </button>
                   </div>
-                  {!preferenciaUnidade && (
-                    <button type="button" className="prod-etapa-voltar" onClick={voltarDeVariacoes}>
+                  {etapaHistorico.length > 0 && (
+                    <button type="button" className="prod-etapa-voltar" onClick={voltarEtapa}>
                       ‹ Voltar (Backspace)
                     </button>
                   )}
+
+                  <label className="prod-etapa-lembrar">
+                    <input
+                      type="checkbox"
+                      checked={etapaLembrarVariacoes}
+                      onChange={e => setEtapaLembrarVariacoes(e.target.checked)}
+                    />
+                    Lembrar essa resposta e não perguntar de novo nos próximos produtos
+                  </label>
                 </>
               )}
-
-              <label className="prod-etapa-lembrar">
-                <input
-                  type="checkbox"
-                  checked={etapaLembrar}
-                  onChange={e => setEtapaLembrar(e.target.checked)}
-                />
-                Lembrar a unidade escolhida e não perguntar de novo nos próximos produtos
-              </label>
 
               <div className="prod-modal-acoes">
                 <button type="button" className="prod-modal-btn-cancelar" onClick={onClose}>
@@ -1772,6 +1879,23 @@ export default function ProdutoModal({
                       </span>
                     </label>
 
+                    {!isEdit && !somenteLeitura && (
+                      prefEtiquetaLimpa ? (
+                        <span className="prod-label-hint">✓ Preferência removida — o próximo produto por Quilo vai perguntar de novo.</span>
+                      ) : preferenciaEtiqueta ? (
+                        <span className="prod-label-hint">
+                          🔒 Produto novo por Quilo sempre abre <strong>{preferenciaEtiqueta === 'sim' ? 'com etiqueta de balança' : 'sem etiqueta (granel)'}</strong>.{' '}
+                          <button
+                            type="button"
+                            onClick={limparPreferenciaEtiqueta}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--est-accent)', fontWeight: 700, fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            Mudar preferência
+                          </button>
+                        </span>
+                      ) : null
+                    )}
+
                     {form.vendido_por_peso && (
                       <div className="prod-balanca-como-configurar">
                         <button
@@ -1817,6 +1941,23 @@ export default function ProdutoModal({
                       </span>
                     </span>
                   </label>
+
+                  {!isEdit && !somenteLeitura && (
+                    prefVariacoesLimpa ? (
+                      <span className="prod-label-hint">✓ Preferência removida — o próximo produto novo vai perguntar de novo.</span>
+                    ) : preferenciaVariacoes ? (
+                      <span className="prod-label-hint">
+                        🔒 Produto novo sempre abre como <strong>{preferenciaVariacoes === 'sim' ? 'com variações' : 'produto único'}</strong>.{' '}
+                        <button
+                          type="button"
+                          onClick={limparPreferenciaVariacoes}
+                          style={{ background: 'none', border: 'none', padding: 0, color: 'var(--est-accent)', fontWeight: 700, fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          Mudar preferência
+                        </button>
+                      </span>
+                    ) : null
+                  )}
                 </div>
 
                 {form.tem_variacoes ? (
