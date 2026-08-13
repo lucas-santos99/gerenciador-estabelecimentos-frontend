@@ -66,7 +66,7 @@ export default function NovaSenha() {
         {!success && tokenLoaded && (
           <form className="nova-form" onSubmit={handleSubmit}>
             <label>Nova Senha</label>
-            <input 
+            <input maxLength={72} 
               type="password"
               placeholder="Digite sua nova senha"
               value={newPassword}
@@ -75,7 +75,7 @@ export default function NovaSenha() {
             />
 
             <label>Confirmar Senha</label>
-            <input 
+            <input maxLength={72} 
               type="password"
               placeholder="Repita a senha"
               value={confirm}

@@ -145,43 +145,43 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
           <div className="forn-form-grid">
             <div className="cli-form-group forn-full">
               <label className="cli-form-label">Nome do fornecedor *</label>
-              <input ref={nomeRef} className="cli-form-input" name="nome"
+              <input maxLength={100} ref={nomeRef} className="cli-form-input" name="nome"
                 value={form.nome} onChange={atualizar} required />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">Razão social</label>
-              <input className="cli-form-input" name="razao_social" value={form.razao_social} onChange={atualizar} />
+              <input maxLength={150} className="cli-form-input" name="razao_social" value={form.razao_social} onChange={atualizar} />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">CNPJ/CPF</label>
-              <input className="cli-form-input" name="cnpj_cpf" value={form.cnpj_cpf} onChange={atualizar} />
+              <input maxLength={18} className="cli-form-input" name="cnpj_cpf" value={form.cnpj_cpf} onChange={atualizar} />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">Telefone</label>
-              <input className="cli-form-input" name="telefone" value={form.telefone} onChange={atualizar} placeholder="(00) 00000-0000" />
+              <input maxLength={20} className="cli-form-input" name="telefone" value={form.telefone} onChange={atualizar} placeholder="(00) 00000-0000" />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">WhatsApp</label>
-              <input className="cli-form-input" name="whatsapp" value={form.whatsapp} onChange={atualizar} placeholder="(00) 00000-0000" />
+              <input maxLength={20} className="cli-form-input" name="whatsapp" value={form.whatsapp} onChange={atualizar} placeholder="(00) 00000-0000" />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">E-mail</label>
-              <input className="cli-form-input" type="email" name="email" value={form.email} onChange={atualizar} />
+              <input maxLength={150} className="cli-form-input" type="email" name="email" value={form.email} onChange={atualizar} />
             </div>
 
             <div className="cli-form-group">
               <label className="cli-form-label">Nome do contato</label>
-              <input className="cli-form-input" name="contato_nome" value={form.contato_nome} onChange={atualizar} placeholder="Ex: vendedor, representante" />
+              <input maxLength={100} className="cli-form-input" name="contato_nome" value={form.contato_nome} onChange={atualizar} placeholder="Ex: vendedor, representante" />
             </div>
 
             <div className="cli-form-group forn-full">
               <label className="cli-form-label">Endereço</label>
-              <input className="cli-form-input" name="endereco" value={form.endereco} onChange={atualizar} />
+              <input maxLength={200} className="cli-form-input" name="endereco" value={form.endereco} onChange={atualizar} />
             </div>
 
             <div className="cli-form-group">
@@ -207,7 +207,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
 
             <div className="cli-form-group forn-full">
               <label className="cli-form-label">Observações</label>
-              <textarea className="cli-form-input" name="observacoes" rows={2} value={form.observacoes} onChange={atualizar} />
+              <textarea maxLength={500} className="cli-form-input" name="observacoes" rows={2} value={form.observacoes} onChange={atualizar} />
             </div>
           </div>
 

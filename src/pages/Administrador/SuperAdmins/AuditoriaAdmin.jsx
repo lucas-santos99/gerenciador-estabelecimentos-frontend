@@ -350,7 +350,7 @@ export default function AuditoriaAdmin() {
 
           <div className="aud-filter-group aud-filter-group--busca">
             <label className="aud-filter-label">Buscar</label>
-            <input
+            <input maxLength={100}
               className="aud-input"
               type="text"
               placeholder="Palavra na descrição…"

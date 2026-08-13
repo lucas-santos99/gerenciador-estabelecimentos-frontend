@@ -491,7 +491,7 @@ export default function DashboardAdmin() {
         <div className="dash-filters">
           <div className="search-wrap">
             <span className="search-icon"><Icon.Search /></span>
-            <input
+            <input maxLength={100}
               className="dash-input"
               placeholder="Buscar por nome ou CPF/CNPJ..."
               value={busca}
@@ -678,7 +678,7 @@ export default function DashboardAdmin() {
 
             {/* Motivo */}
             <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>📝 Motivo <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></div>
-            <textarea
+            <textarea maxLength={500}
               className="dash-config-input"
               rows={2}
               placeholder="Ex: Pagou em dinheiro na visita, período de teste, cortesia..."
@@ -717,7 +717,7 @@ export default function DashboardAdmin() {
             <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>
               📝 Motivo <span style={{ color: "var(--text-danger)", fontWeight: 700 }}>*</span>
             </div>
-            <textarea
+            <textarea maxLength={500}
               className="dash-config-input"
               rows={3}
               placeholder="Ex: Inadimplência, solicitação do cliente, teste encerrado..."

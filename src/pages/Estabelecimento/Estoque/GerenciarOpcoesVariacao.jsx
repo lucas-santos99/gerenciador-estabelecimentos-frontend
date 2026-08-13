@@ -118,7 +118,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
         {erro && <div className="prod-modal-erro">⚠️ {erro}</div>}
 
         <form onSubmit={adicionar} className="prod-codigo-row" style={{ marginBottom: 14 }}>
-          <input
+          <input maxLength={50}
             className="prod-input"
             placeholder={aba === 'tamanho' ? 'Novo tamanho — ex: XG' : aba === 'cor' ? 'Nova cor — ex: Verde musgo' : 'Novo gênero — ex: Infantil'}
             value={novoValor}

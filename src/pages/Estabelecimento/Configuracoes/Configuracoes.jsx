@@ -197,7 +197,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
                       <span style={{ color: "var(--text-muted, #888)" }}>→</span>
                       <div style={{ flex: 1 }}>
                         <span style={{ fontSize: 11, color: "var(--text-muted, #888)", display: "block" }}>Novo valor</span>
-                        <input
+                        <input maxLength={150}
                           className="est-input"
                           value={valoresNovos[c.key]}
                           onChange={e => atualizarValorNovo(c.key, e.target.value)}
@@ -209,7 +209,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
 
                   {selecionado && (c.key === 'outro' || c.key === 'logo') && (
                     <div style={{ margin: "6px 0 10px 24px" }}>
-                      <input
+                      <input maxLength={150}
                         className="est-input"
                         value={valoresNovos[c.key]}
                         onChange={e => atualizarValorNovo(c.key, e.target.value)}
@@ -225,7 +225,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
 
         <div className="cfg-modal-campos">
           <span className="cfg-label">Detalhes adicionais (opcional)</span>
-          <textarea
+          <textarea maxLength={500}
             className="cfg-textarea"
             rows={3}
             placeholder="Alguma outra informação que ajude o administrador a entender o pedido…"
@@ -688,7 +688,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     </div>
                     <div className="cfg-form-group">
                       <span className="cfg-label">Chave Pix</span>
-                      <input className="cfg-input" value={pixForm.pix_chave}
+                      <input maxLength={100} className="cfg-input" value={pixForm.pix_chave}
                         placeholder={
                           pixForm.pix_tipo_chave === 'telefone' ? '+5553999999999' :
                           pixForm.pix_tipo_chave === 'cpf'       ? '12345678900' :

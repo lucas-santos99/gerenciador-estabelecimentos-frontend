@@ -108,7 +108,7 @@ export default function Login() {
             <div className="login-field">
               <label className="login-label">E-mail</label>
               <div className="login-input-wrap">
-                <input
+                <input maxLength={150}
                   className="login-input"
                   type="text"
                   placeholder="seu@email.com"
@@ -123,7 +123,7 @@ export default function Login() {
             <div className="login-field">
               <label className="login-label">Senha</label>
               <div className="login-input-wrap">
-                <input
+                <input maxLength={72}
                   className="login-input"
                   type="password"
                   placeholder="••••••••"

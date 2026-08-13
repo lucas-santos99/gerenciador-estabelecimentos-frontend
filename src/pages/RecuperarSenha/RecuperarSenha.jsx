@@ -93,7 +93,7 @@ export default function RecuperarSenha() {
             <form onSubmit={handleSubmit} className="recover-form">
               <div className="recover-field">
                 <label className="recover-label">E-mail cadastrado</label>
-                <input
+                <input maxLength={150}
                   className="recover-input"
                   type="email"
                   placeholder="seu@email.com"

@@ -383,13 +383,13 @@ function ModalOperador({ operador, onClose, onSalvo }) {
         <form onSubmit={salvar} className="opest-modal-form">
           <div className="opest-form-group">
             <label className="opest-form-label">Nome completo *</label>
-            <input ref={nomeRef} className="opest-form-input" name="nome"
+            <input maxLength={100} ref={nomeRef} className="opest-form-input" name="nome"
               placeholder="Nome do funcionário" value={form.nome}
               onChange={atualizar} required disabled={salvando} />
           </div>
           <div className="opest-form-group">
             <label className="opest-form-label">E-mail de login *</label>
-            <input className="opest-form-input" name="email" type="email"
+            <input maxLength={150} className="opest-form-input" name="email" type="email"
               placeholder="email@exemplo.com" value={form.email}
               onChange={atualizar} required disabled={salvando || isEdit} />
             {isEdit && (
@@ -398,14 +398,14 @@ function ModalOperador({ operador, onClose, onSalvo }) {
           </div>
           <div className="opest-form-group">
             <label className="opest-form-label">Telefone</label>
-            <input className="opest-form-input" name="telefone"
+            <input maxLength={20} className="opest-form-input" name="telefone"
               placeholder="(00) 00000-0000" value={form.telefone}
               onChange={atualizar} disabled={salvando} />
           </div>
           {!isEdit && (
             <div className="opest-form-group">
               <label className="opest-form-label">Senha inicial *</label>
-              <input className="opest-form-input" name="senha" type="password"
+              <input maxLength={72} className="opest-form-input" name="senha" type="password"
                 placeholder="Mínimo 6 caracteres" value={form.senha}
                 onChange={atualizar} required disabled={salvando} />
               <span className="opest-form-hint">
@@ -669,7 +669,7 @@ function ModalResetSenha({ operador, onClose }) {
             {erro && <div className="opest-modal-erro">⚠️ {erro}</div>}
             <div className="opest-form-group">
               <label className="opest-form-label">Nova senha *</label>
-              <input
+              <input maxLength={72}
                 ref={senhaRef}
                 className="opest-form-input"
                 type="password"
@@ -682,7 +682,7 @@ function ModalResetSenha({ operador, onClose }) {
             </div>
             <div className="opest-form-group">
               <label className="opest-form-label">Confirmar senha *</label>
-              <input
+              <input maxLength={72}
                 className="opest-form-input"
                 type="password"
                 placeholder="Repita a senha"

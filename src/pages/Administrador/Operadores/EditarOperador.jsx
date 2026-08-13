@@ -98,7 +98,7 @@ export default function EditarOperador() {
             <div className="op-form-grid">
               <div className="op-form-group op-form-full">
                 <label className="op-label">Nome *</label>
-                <input
+                <input maxLength={100}
                   className="op-input"
                   name="nome"
                   value={form.nome}
@@ -108,7 +108,7 @@ export default function EditarOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">E-mail *</label>
-                <input
+                <input maxLength={150}
                   className="op-input"
                   name="email"
                   type="email"
@@ -119,7 +119,7 @@ export default function EditarOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">Telefone</label>
-                <input
+                <input maxLength={20}
                   className="op-input"
                   name="telefone"
                   value={form.telefone}

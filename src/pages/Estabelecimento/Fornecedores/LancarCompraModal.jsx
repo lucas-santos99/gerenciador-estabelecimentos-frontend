@@ -207,7 +207,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
             </div>
           ) : (
             <>
-              <input
+              <input maxLength={100}
                 ref={inputFornecedorRef}
                 className="cli-form-input"
                 placeholder="Buscar fornecedor pelo nome…"
@@ -233,7 +233,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
         <div className="forn-form-grid" style={{ marginTop: 10 }}>
           <div className="cli-form-group">
             <label className="cli-form-label">Nº da nota (opcional)</label>
-            <input className="cli-form-input" value={numeroNota} onChange={e => setNumeroNota(e.target.value)} />
+            <input maxLength={50} className="cli-form-input" value={numeroNota} onChange={e => setNumeroNota(e.target.value)} />
           </div>
           <div className="cli-form-group">
             <label className="cli-form-label">Data da compra</label>
@@ -257,7 +257,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
         {/* Produtos */}
         <div className="cli-form-group" style={{ marginTop: 14, position: 'relative' }}>
           <label className="cli-form-label">Adicionar produto</label>
-          <input
+          <input maxLength={100}
             ref={inputProdutoRef}
             className="cli-form-input"
             placeholder="Digite o nome ou código do produto… (Enter adiciona)"
@@ -299,7 +299,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
                     <span className="forn-item-nome">{item.nome}{item.marca && <small> · {item.marca}</small>}</span>
 
                     <div className="forn-item-qtd-wrap">
-                      <input
+                      <input maxLength={15}
                         className="cli-form-input forn-item-input"
                         value={item.quantidade}
                         onChange={e => atualizarItem(item.produto_id, 'quantidade', e.target.value)}
@@ -310,7 +310,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
 
                     <div className="forn-item-preco-wrap">
                       <span>R$</span>
-                      <input
+                      <input maxLength={15}
                         className="cli-form-input forn-item-input"
                         value={item.preco_custo_unitario}
                         onChange={e => atualizarItem(item.produto_id, 'preco_custo_unitario', e.target.value)}
@@ -345,7 +345,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
 
         <div className="cli-form-group" style={{ marginTop: 10 }}>
           <label className="cli-form-label">Observações (opcional)</label>
-          <input className="cli-form-input" value={observacoes} onChange={e => setObservacoes(e.target.value)} />
+          <input maxLength={300} className="cli-form-input" value={observacoes} onChange={e => setObservacoes(e.target.value)} />
         </div>
 
         <div className="cli-modal-acoes">

@@ -181,7 +181,7 @@ export default function ModalRecebimento({ cliente, onClose, onConfirmar, estabe
 
           {/* Valor a receber */}
           <span className="cli-receb-input-label">Valor a receber (R$)  Enter ↵</span>
-          <input
+          <input maxLength={15}
             ref={inputRef}
             className="cli-receb-input"
             type="text"

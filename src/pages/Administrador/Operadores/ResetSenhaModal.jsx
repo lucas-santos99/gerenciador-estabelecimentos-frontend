@@ -51,7 +51,7 @@ export default function ResetSenhaModal({ id, onClose }) {
         <div className="op-modal-form">
           <div className="op-form-group">
             <label className="op-label">Nova senha</label>
-            <input
+            <input maxLength={72}
               className="op-input"
               type="password"
               placeholder="Mínimo 6 caracteres"
@@ -62,7 +62,7 @@ export default function ResetSenhaModal({ id, onClose }) {
           </div>
           <div className="op-form-group">
             <label className="op-label">Confirmar senha</label>
-            <input
+            <input maxLength={72}
               className="op-input"
               type="password"
               placeholder="Repita a senha"

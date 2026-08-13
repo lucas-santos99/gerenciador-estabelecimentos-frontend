@@ -160,7 +160,7 @@ export default function ClienteModal({
             )}
             <div className="cli-form-group">
               <label className="cli-form-label">Nome completo *</label>
-              <input
+              <input maxLength={100}
                 ref={nomeRef}
                 className="cli-form-input"
                 type="text"
@@ -173,7 +173,7 @@ export default function ClienteModal({
             </div>
             <div className="cli-form-group">
               <label className="cli-form-label">Telefone</label>
-              <input
+              <input maxLength={20}
                 className="cli-form-input"
                 type="text"
                 placeholder="(00) 00000-0000"
@@ -184,7 +184,7 @@ export default function ClienteModal({
             </div>
             <div className="cli-form-group">
               <label className="cli-form-label">CPF ou CNPJ (opcional)</label>
-              <input
+              <input maxLength={18}
                 className="cli-form-input"
                 type="text"
                 placeholder="CPF ou CNPJ"
@@ -238,7 +238,7 @@ export default function ClienteModal({
                 </button>
               </div>
               {!semLimite && (
-                <input
+                <input maxLength={15}
                   className="cli-form-input"
                   type="text"
                   placeholder="0,00"

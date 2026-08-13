@@ -85,7 +85,7 @@ export default function ListaEstabelecimentos() {
         <div style={{ marginBottom: 12, maxWidth: 340 }}>
           <div className="search-wrap" style={{ maxWidth: "100%" }}>
             <span className="search-icon">🔍</span>
-            <input
+            <input maxLength={100}
               className="dash-input"
               placeholder="Buscar por nome ou CNPJ…"
               value={busca}

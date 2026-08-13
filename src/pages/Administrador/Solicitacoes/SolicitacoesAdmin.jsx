@@ -231,7 +231,7 @@ export default function SolicitacoesAdmin() {
                 {s.status === "pendente" ? (
                   respostaAberta?.id === s.id ? (
                     <div className="sol-resposta-box">
-                      <textarea
+                      <textarea maxLength={500}
                         className="sol-resposta-textarea"
                         rows={2}
                         placeholder="Observação pro estabelecimento (opcional)…"

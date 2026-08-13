@@ -435,7 +435,7 @@ export default function EditarEstabelecimento() {
             <div className="est-form-grid">
               <div className="est-form-group est-form-full">
                 <label className="est-label">Nome Fantasia</label>
-                <input
+                <input maxLength={150}
                   className="est-input"
                   name="nome_fantasia"
                   value={form.nome_fantasia}
@@ -485,10 +485,10 @@ export default function EditarEstabelecimento() {
             <div className="est-form-grid">
               <div className="est-form-group">
                 <label className="est-label">Telefone/celular principal</label>
-                <input className="est-input" name="telefone" value={form.telefone} onChange={atualizar} />
+                <input maxLength={20} className="est-input" name="telefone" value={form.telefone} onChange={atualizar} />
                 {form.telefones_extras.map((tel, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input
+                    <input maxLength={20}
                       className="est-input"
                       placeholder="(53) 99999-9999"
                       value={tel}
@@ -503,14 +503,14 @@ export default function EditarEstabelecimento() {
               </div>
               <div className="est-form-group">
                 <label className="est-label">E-mail de Contato</label>
-                <input className="est-input" name="email_contato" value={form.email_contato} onChange={atualizar} />
+                <input maxLength={150} className="est-input" name="email_contato" value={form.email_contato} onChange={atualizar} />
               </div>
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
-                <input className="est-input" name="endereco_completo" value={form.endereco_completo} onChange={atualizar} />
+                <input maxLength={200} className="est-input" name="endereco_completo" value={form.endereco_completo} onChange={atualizar} />
                 {form.enderecos_extras.map((end, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input
+                    <input maxLength={200}
                       className="est-input"
                       placeholder="Rua, número, bairro, cidade - UF"
                       value={end}

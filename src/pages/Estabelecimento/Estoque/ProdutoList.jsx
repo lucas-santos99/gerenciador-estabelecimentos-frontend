@@ -557,7 +557,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         {/* Formulário nova categoria */}
         {catNovaAberta && (
           <div className="estoque-cat-form estoque-cat-form--nova">
-            <input
+            <input maxLength={80}
               ref={catNovaRef}
               className="estoque-cat-input"
               placeholder={catNovaPaiId ? 'Nome da subcategoria…' : 'Nome da categoria…'}
@@ -602,7 +602,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
-              <input
+              <input maxLength={100}
                 className="estoque-cat-busca"
                 placeholder="Filtrar categorias…"
                 value={catBusca}
@@ -667,7 +667,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 <li key={cat.id} className="estoque-cat-li">
                   {catEditandoId === cat.id ? (
                     <div className="estoque-cat-form">
-                      <input
+                      <input maxLength={80}
                         ref={catEditRef}
                         className="estoque-cat-input"
                         value={catEditandoNome}
@@ -753,7 +753,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                           <li key={sub.id} className="estoque-cat-li estoque-cat-li--sub">
                             {catEditandoId === sub.id ? (
                               <div className="estoque-cat-form">
-                                <input
+                                <input maxLength={80}
                                   ref={catEditRef}
                                   className="estoque-cat-input"
                                   value={catEditandoNome}
@@ -843,7 +843,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         {/* Header */}
         <div className="estoque-header">
           <div className="estoque-busca-wrap">
-            <input
+            <input maxLength={100}
               ref={searchRef}
               className="estoque-busca-input"
               type="text"

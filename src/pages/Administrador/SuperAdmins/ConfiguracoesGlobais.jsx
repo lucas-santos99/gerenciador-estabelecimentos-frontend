@@ -237,7 +237,7 @@ export default function ConfiguracoesGlobais() {
                   </div>
                   <div className="sa-config-item-control">
                     <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>R$</span>
-                    <input className="sa-config-input" type="text" inputMode="decimal" style={{ width: 100 }}
+                    <input maxLength={15} className="sa-config-input" type="text" inputMode="decimal" style={{ width: 100 }}
                       value={cfgMensalidade} onChange={e => setCfgMensalidade(digitarValorMascarado(e.target.value))} />
                     <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>/mês</span>
                   </div>
@@ -268,15 +268,15 @@ export default function ConfiguracoesGlobais() {
                 </div>
                 <div className="sa-config-field">
                   <span className="sa-config-item-label">Título</span>
-                  <input className="sa-config-textfield" value={cfgTelaTitulo} onChange={e => setCfgTelaTitulo(e.target.value)} />
+                  <input maxLength={150} className="sa-config-textfield" value={cfgTelaTitulo} onChange={e => setCfgTelaTitulo(e.target.value)} />
                 </div>
                 <div className="sa-config-field">
                   <span className="sa-config-item-label">Mensagem principal</span>
-                  <textarea className="sa-config-textfield" rows={3} value={cfgTelaMensagem} onChange={e => setCfgTelaMensagem(e.target.value)} />
+                  <textarea maxLength={1000} className="sa-config-textfield" rows={3} value={cfgTelaMensagem} onChange={e => setCfgTelaMensagem(e.target.value)} />
                 </div>
                 <div className="sa-config-field">
                   <span className="sa-config-item-label">Informação adicional</span>
-                  <textarea className="sa-config-textfield" rows={3} value={cfgTelaInfo} onChange={e => setCfgTelaInfo(e.target.value)} />
+                  <textarea maxLength={1000} className="sa-config-textfield" rows={3} value={cfgTelaInfo} onChange={e => setCfgTelaInfo(e.target.value)} />
                 </div>
 
                 <div className="sa-config-field sa-config-field--promo">
@@ -289,7 +289,7 @@ export default function ConfiguracoesGlobais() {
                   </div>
                   {cfgPromoAtiva && (
                     <>
-                      <input className="sa-config-textfield" value={cfgPromoTexto} onChange={e => setCfgPromoTexto(e.target.value)}
+                      <input maxLength={200} className="sa-config-textfield" value={cfgPromoTexto} onChange={e => setCfgPromoTexto(e.target.value)}
                         placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
                       <input className="sa-config-textfield" type="date" value={cfgPromoValidade} onChange={e => setCfgPromoValidade(e.target.value)} />
                       <span className="sa-config-item-desc">Validade da promoção (opcional)</span>
@@ -340,9 +340,9 @@ export default function ConfiguracoesGlobais() {
                     <option value="whatsapp">🟢 WhatsApp</option>
                     <option value="email">✉️ E-mail</option>
                   </select>
-                  <input className="sa-config-textfield" placeholder={novoTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
+                  <input maxLength={150} className="sa-config-textfield" placeholder={novoTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
                     value={novoValor} onChange={e => setNovoValor(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
-                  <input className="sa-config-textfield" placeholder="Rótulo (opcional, ex: Financeiro)"
+                  <input maxLength={60} className="sa-config-textfield" placeholder="Rótulo (opcional, ex: Financeiro)"
                     value={novoLabel} onChange={e => setNovoLabel(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
                   <button className="sa-btn sa-btn-purple sa-btn-sm" onClick={adicionarContato} disabled={salvandoContato}>
                     {salvandoContato ? "⏳" : "+ Adicionar"}

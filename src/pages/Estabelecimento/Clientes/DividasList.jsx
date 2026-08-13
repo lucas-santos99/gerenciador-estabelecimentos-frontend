@@ -515,7 +515,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 
       {/* ── HEADER ──────────────────────────────────────── */}
       <div className="cli-header">
-        <input
+        <input maxLength={100}
           className="cli-header-busca"
           type="text"
           placeholder="🔍  Buscar por nome ou telefone…"

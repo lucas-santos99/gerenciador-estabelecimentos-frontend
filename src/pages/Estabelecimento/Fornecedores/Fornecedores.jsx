@@ -108,7 +108,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
       ) : (
       <>
       <div className="cli-header">
-        <input
+        <input maxLength={100}
           className="cli-header-busca"
           placeholder="🔍 Buscar fornecedor…"
           value={busca}
@@ -613,7 +613,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
             <div className="forn-detalhes-body">
               {aba === 'compras' && (
                 <div className="forn-historico-filtros">
-                  <input
+                  <input maxLength={50}
                     className="cli-form-input forn-historico-busca"
                     placeholder="🔍 Buscar por nº da nota…"
                     value={buscaNota}

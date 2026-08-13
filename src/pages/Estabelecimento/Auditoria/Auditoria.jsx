@@ -156,7 +156,7 @@ export default function Auditoria({ estabelecimentoId, nomeEstabelecimento }) {
           </div>
           <div className="rel-filtro-group">
             <label className="rel-filtro-label">Buscar</label>
-            <input
+            <input maxLength={100}
               className="rel-filtro-input"
               type="text"
               placeholder="Palavra na descrição…"

@@ -234,15 +234,15 @@ export default function SuperAdmins() {
               <div className="sa-modal-form">
                 <div className="sa-form-group">
                   <label className="sa-label">Nome</label>
-                  <input className="sa-input" placeholder="Nome completo" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} />
+                  <input maxLength={100} className="sa-input" placeholder="Nome completo" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} />
                 </div>
                 <div className="sa-form-group">
                   <label className="sa-label">E-mail</label>
-                  <input className="sa-input" type="email" placeholder="email@exemplo.com" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+                  <input maxLength={150} className="sa-input" type="email" placeholder="email@exemplo.com" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
                 </div>
                 <div className="sa-form-group">
                   <label className="sa-label">Senha inicial</label>
-                  <input className="sa-input" type="password" placeholder="Senha de acesso" value={form.senha} onChange={e => setForm(p => ({ ...p, senha: e.target.value }))} />
+                  <input maxLength={72} className="sa-input" type="password" placeholder="Senha de acesso" value={form.senha} onChange={e => setForm(p => ({ ...p, senha: e.target.value }))} />
                 </div>
               </div>
               <div className="sa-modal-actions">
@@ -274,7 +274,7 @@ export default function SuperAdmins() {
               <div className="sa-modal-form">
                 <div className="sa-form-group">
                   <label className="sa-label">Nova senha</label>
-                  <input className="sa-input" type="password" placeholder="Digite a nova senha" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} />
+                  <input maxLength={72} className="sa-input" type="password" placeholder="Digite a nova senha" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} />
                 </div>
               </div>
               <div className="sa-modal-actions">

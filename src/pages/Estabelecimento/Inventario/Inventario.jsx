@@ -80,7 +80,7 @@ function ModalNovoInventario({ estabelecimentoId, categorias, onCriado, onFechar
         <form onSubmit={criar}>
           <div className="inv-form-group">
             <label className="inv-label">Nome do inventário *</label>
-            <input ref={nomeRef} className="inv-input" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Inventário Mensal — Junho 2026" />
+            <input maxLength={100} ref={nomeRef} className="inv-input" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Inventário Mensal — Junho 2026" />
             <span className="inv-hint">Identifique o inventário com data ou motivo para consulta futura.</span>
           </div>
           <div className="inv-form-group">
@@ -108,7 +108,7 @@ function ModalNovoInventario({ estabelecimentoId, categorias, onCriado, onFechar
           )}
           <div className="inv-form-group">
             <label className="inv-label">Observações</label>
-            <textarea className="inv-textarea" rows={2} value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))} placeholder="Ex: Inventário antes do fechamento mensal, turno da manhã…" />
+            <textarea maxLength={500} className="inv-textarea" rows={2} value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))} placeholder="Ex: Inventário antes do fechamento mensal, turno da manhã…" />
           </div>
           <div className="inv-modal-acoes">
             <button type="button" className="inv-btn-cancelar" onClick={onFechar}>Cancelar (Esc)</button>
@@ -312,7 +312,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
 
         {/* Filtros */}
         <div className="inv-contagem-filtros">
-          <input className="inv-contagem-busca" placeholder="🔍 Buscar produto…" value={busca} onChange={e => setBusca(e.target.value)} />
+          <input maxLength={100} className="inv-contagem-busca" placeholder="🔍 Buscar produto…" value={busca} onChange={e => setBusca(e.target.value)} />
           <div className="inv-filtro-btns">
             {[
               { k: 'todos',          label: `Todos (${itens.length})` },
@@ -854,7 +854,7 @@ function ModalDetalhesContagem({ inv, filtroInicial = 'todos', onFechar }) {
         </div>
 
         <div className="inv-modal-busca-row">
-          <input
+          <input maxLength={100}
             className="inv-input"
             placeholder="🔍 Buscar produto…"
             value={busca}
@@ -1017,7 +1017,7 @@ function AbaMovimentacoes({ estabelecimentoId, categorias }) {
         </div>
         <div className="inv-filtro-group">
           <label className="inv-label">Produto</label>
-          <input className="inv-input" placeholder="Buscar por nome…" value={busca} onChange={e => setBusca(e.target.value)} />
+          <input maxLength={100} className="inv-input" placeholder="Buscar por nome…" value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
         <button className="inv-btn-primary inv-btn-buscar" onClick={() => { setPagina(0); carregar(); }}>▶ Buscar</button>
       </div>
@@ -1227,7 +1227,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
                 </div>
               ) : (
                 <div className="inv-busca-wrap">
-                  <input
+                  <input maxLength={100}
                     ref={inputRef}
                     className="inv-input"
                     value={termoBusca}
@@ -1281,7 +1281,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
               )}
 
               <div className="inv-item-input-wrap inv-item-input-wrap--compacta">
-                <input
+                <input maxLength={15}
                   className="inv-input inv-input-qtd"
                   style={{ borderRadius: '10px 0 0 10px', borderRight: 'none' }}
                   type="text"
@@ -1300,7 +1300,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
             {/* Motivo */}
             <div className="inv-form-group inv-form-group--compacta">
               <label className="inv-label">Motivo *</label>
-              <input
+              <input maxLength={300}
                 className="inv-input"
                 value={motivo}
                 onChange={e => setMotivo(e.target.value)}

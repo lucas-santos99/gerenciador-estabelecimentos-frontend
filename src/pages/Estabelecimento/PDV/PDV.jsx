@@ -740,7 +740,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 {identEtapa === 'buscaCliente' && (
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">Buscar cliente cadastrado</span>
-                    <input
+                    <input maxLength={60}
                       ref={identBuscaInputRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -769,7 +769,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 {identEtapa === 'cadastroRapido' && (
                   <form className="pdv-ident-pergunta" onSubmit={salvarCadastroRapido}>
                     <span className="pdv-ident-pergunta-texto">Cadastro rápido</span>
-                    <input
+                    <input maxLength={100}
                       ref={cadNomeRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -778,7 +778,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       onChange={e => setCadNome(e.target.value)}
                       onKeyDown={handleCadNomeKey}
                     />
-                    <input
+                    <input maxLength={20}
                       ref={cadTelefoneRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -787,7 +787,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       onChange={e => setCadTelefone(e.target.value)}
                       onKeyDown={handleCadTelefoneKey}
                     />
-                    <input
+                    <input maxLength={18}
                       ref={cadCpfRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -827,7 +827,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 {identEtapa === 'inputCpf' && (
                   <div className="pdv-ident-pergunta">
                     <span className="pdv-ident-pergunta-texto">CPF/CNPJ na nota</span>
-                    <input
+                    <input maxLength={18}
                       ref={identCpfInputRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -846,7 +846,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
             {meioPagamento === 'Dinheiro' && (
               <>
                 <span className="pdv-troco-input-label">Valor recebido (R$)</span>
-                <input ref={inputDinheiroRef} className="pdv-troco-input" type="text" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} onKeyDown={handleDinheiroKey} />
+                <input maxLength={15} ref={inputDinheiroRef} className="pdv-troco-input" type="text" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} onKeyDown={handleDinheiroKey} />
                 <div className="pdv-troco-display">
                   <span>Troco</span>
                   <strong>{fmt(troco)}</strong>
@@ -952,7 +952,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 {mostrarCadFiado ? (
                   <form className="pdv-ident-pergunta" onSubmit={salvarCadFiado}>
                     <span className="pdv-ident-pergunta-texto">Cadastrar cliente pro fiado</span>
-                    <input
+                    <input maxLength={100}
                       ref={cadFiadoNomeRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -961,7 +961,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       onChange={e => setCadFiadoNome(e.target.value)}
                       onKeyDown={handleCadFiadoNomeKey}
                     />
-                    <input
+                    <input maxLength={20}
                       ref={cadFiadoTelefoneRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -970,7 +970,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       onChange={e => setCadFiadoTelefone(e.target.value)}
                       onKeyDown={handleCadFiadoTelefoneKey}
                     />
-                    <input
+                    <input maxLength={18}
                       ref={cadFiadoCpfRef}
                       className="pdv-cliente-busca-input"
                       type="text"
@@ -1002,7 +1002,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       </button>
                     </div>
                     {!cadFiadoSemLimite && (
-                      <input
+                      <input maxLength={15}
                         ref={cadFiadoLimiteInputRef}
                         className="pdv-cliente-busca-input"
                         type="text"
@@ -1042,7 +1042,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   </div>
                 ) : (
                   <>
-                    <input ref={inputClienteRef} className="pdv-cliente-busca-input" type="text" placeholder="Buscar cliente por nome ou telefone…" value={termoBuscaCliente} onChange={e => buscarCliente(e.target.value)} onKeyDown={handleClienteKey} />
+                    <input maxLength={100} ref={inputClienteRef} className="pdv-cliente-busca-input" type="text" placeholder="Buscar cliente por nome ou telefone…" value={termoBuscaCliente} onChange={e => buscarCliente(e.target.value)} onKeyDown={handleClienteKey} />
                     {loadingCliente && <div style={{ fontSize: '0.78rem', color: 'var(--est-text-muted)', marginBottom: 6 }}>Buscando…</div>}
                     {(resultadosCliente.length > 0 || termoBuscaCliente.length >= 2) && (
                       <ul className="pdv-cliente-lista" ref={listaClienteRef}>
@@ -1924,7 +1924,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             <div className="pdv-modal-qtd-produto">{itemQuantificar.nome}{itemQuantificar.marca && <span className="pdv-modal-qtd-marca"> · {itemQuantificar.marca}</span>}{' — '}<strong>{fmt(itemQuantificar.preco_venda)}</strong>{' / '}{itemQuantificar.unidade_medida}</div>
             <form onSubmit={confirmarQuantidade}>
               <label className="pdv-modal-qtd-label">{itemQuantificar.unidade_medida === 'kg' ? 'Peso (kg)' : 'Quantidade (un)'}</label>
-              <input
+              <input maxLength={15}
                 ref={inputQtdRef}
                 className="pdv-modal-qtd-input"
                 type={itemQuantificar.unidade_medida === 'kg' ? 'text' : 'number'}
@@ -1982,7 +1982,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
 
       <div className="pdv-busca">
         <div className="pdv-busca-row">
-          <input
+          <input maxLength={100}
             ref={inputBuscaRef}
             className="pdv-busca-input"
             type="text"
@@ -2171,7 +2171,7 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
 
         <form onSubmit={confirmar}>
           <label className="pdv-modal-qtd-label">Peso ({unidade})</label>
-          <input
+          <input maxLength={15}
             ref={inputRef}
             className="pdv-modal-qtd-input pdv-peso-input-grande"
             type="text"

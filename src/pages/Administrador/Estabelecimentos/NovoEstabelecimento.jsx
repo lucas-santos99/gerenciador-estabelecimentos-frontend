@@ -52,7 +52,7 @@ export default function NovoEstabelecimento() {
     senha:                "",
     status_assinatura:    "ativa",
     data_vencimento:      dataMaisUmMes(), // sugestão pra quando o modo for Assinatura Mensal
-    tipo_estabelecimento: "mercearia",
+    tipo_estabelecimento: "loja",
     limite_operadores:    3,
     valor_mensalidade:    "", // vazio = usa o padrão global
     timezone:             "America/Sao_Paulo", // fuso do estabelecimento — Brasília por padrão
@@ -275,7 +275,7 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group est-form-full">
                 <label className="est-label">Nome Fantasia *</label>
-                <input
+                <input maxLength={150}
                   className="est-input"
                   name="nome_fantasia"
                   value={form.nome_fantasia}
@@ -292,11 +292,11 @@ export default function NovoEstabelecimento() {
                   value={form.tipo_estabelecimento}
                   onChange={atualizar}
                 >
+                  <option value="loja">Loja</option>
                   <option value="mercearia">Mercearia</option>
                   <option value="padaria">Padaria</option>
                   <option value="ferragem">Ferragem</option>
                   <option value="agropecuaria">Agropecuária</option>
-                  <option value="loja">Loja</option>
                   <option value="restaurante">Restaurante</option>
                   <option value="outro">Outro…</option>
                 </select>
@@ -306,7 +306,7 @@ export default function NovoEstabelecimento() {
                 <div className="est-form-group">
                   <label className="est-label">Qual tipo?</label>
                   <div className="est-autocomplete-wrap">
-                    <input
+                    <input maxLength={60}
                       className="est-input"
                       placeholder="Ex: Pet Shop, Oficina…"
                       value={tipoCustomizado}
@@ -373,7 +373,7 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group">
                 <label className="est-label">Telefone/celular principal</label>
-                <input
+                <input maxLength={20}
                   className="est-input"
                   name="telefone"
                   placeholder="(53) 99999-9999"
@@ -382,7 +382,7 @@ export default function NovoEstabelecimento() {
                 />
                 {form.telefones_extras.map((tel, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input
+                    <input maxLength={20}
                       className="est-input"
                       placeholder="(53) 99999-9999"
                       value={tel}
@@ -398,7 +398,7 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group">
                 <label className="est-label">E-mail de Contato</label>
-                <input
+                <input maxLength={150}
                   className="est-input"
                   name="email_contato"
                   type="email"
@@ -410,7 +410,7 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
-                <input
+                <input maxLength={200}
                   className="est-input"
                   name="endereco_completo"
                   placeholder="Rua, número, bairro, cidade - UF"
@@ -419,7 +419,7 @@ export default function NovoEstabelecimento() {
                 />
                 {form.enderecos_extras.map((end, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input
+                    <input maxLength={200}
                       className="est-input"
                       placeholder="Rua, número, bairro, cidade - UF"
                       value={end}
@@ -464,7 +464,7 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group est-form-full">
                 <label className="est-label">Senha Inicial *</label>
-                <input
+                <input maxLength={72}
                   className="est-input"
                   type="password"
                   name="senha"
@@ -547,7 +547,7 @@ export default function NovoEstabelecimento() {
 
                   <div className="est-form-group est-form-full">
                     <label className="est-label">Motivo do período de teste (opcional)</label>
-                    <input
+                    <input maxLength={300}
                       className="est-input"
                       placeholder="Ex: indicação de parceiro, negociação em andamento…"
                       value={form.motivo_periodo_teste}

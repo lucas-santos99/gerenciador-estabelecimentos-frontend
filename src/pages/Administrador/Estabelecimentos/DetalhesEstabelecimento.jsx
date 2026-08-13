@@ -503,7 +503,7 @@ export default function DetalhesEstabelecimento() {
             {/* Motivo */}
             <div className="est-form-group">
               <label className="est-label">📝 Motivo <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
-              <textarea className="est-input" rows={2}
+              <textarea maxLength={500} className="est-input" rows={2}
                 placeholder="Ex: Pagou em dinheiro, período de teste, cortesia..."
                 value={motivoLiberar} onChange={e => setMotivoLiberar(e.target.value)}
                 style={{ resize: "none", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: "0.85rem" }} />
@@ -538,7 +538,7 @@ export default function DetalhesEstabelecimento() {
               <label className="est-label">
                 📝 Motivo <span style={{ color: "#ef4444", fontWeight: 700 }}>*</span>
               </label>
-              <textarea className="est-input" rows={3}
+              <textarea maxLength={500} className="est-input" rows={3}
                 placeholder="Ex: Inadimplência, solicitação do cliente, teste encerrado..."
                 value={motivoBloquear} onChange={e => setMotivoBloquear(e.target.value)}
                 autoFocus

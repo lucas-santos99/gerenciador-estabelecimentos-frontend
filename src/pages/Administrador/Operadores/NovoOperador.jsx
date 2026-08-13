@@ -108,7 +108,7 @@ export default function NovoOperador() {
             <div className="op-form-grid">
               <div className="op-form-group op-form-full">
                 <label className="op-label">Nome completo *</label>
-                <input
+                <input maxLength={100}
                   className="op-input"
                   name="nome"
                   placeholder="Nome do operador"
@@ -119,7 +119,7 @@ export default function NovoOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">E-mail de login *</label>
-                <input
+                <input maxLength={150}
                   className="op-input"
                   name="email"
                   type="email"
@@ -131,7 +131,7 @@ export default function NovoOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">Telefone</label>
-                <input
+                <input maxLength={20}
                   className="op-input"
                   name="telefone"
                   placeholder="(53) 99999-9999"
@@ -147,7 +147,7 @@ export default function NovoOperador() {
             <div className="op-form-section-title">🔐 Acesso</div>
             <div className="op-form-group">
               <label className="op-label">Senha inicial *</label>
-              <input
+              <input maxLength={72}
                 className="op-input"
                 name="senha"
                 type="password"

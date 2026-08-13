@@ -937,7 +937,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   <div className="fin-conta-form-grid">
                     <div className="fin-form-group">
                       <label className="fin-form-label">Descrição *</label>
-                      <input
+                      <input maxLength={150}
                         className="fin-form-input"
                         type="text"
                         placeholder="Ex: Fatura de energia"
@@ -948,7 +948,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                     </div>
                     <div className="fin-form-group">
                       <label className="fin-form-label">Valor (R$) *</label>
-                      <input
+                      <input maxLength={15}
                         className="fin-form-input"
                         type="text"
                         placeholder="0,00"

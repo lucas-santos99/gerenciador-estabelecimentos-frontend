@@ -408,17 +408,17 @@ export default function Cobrancas() {
             <div className="cob-config-col">
               <div className="cob-config-card">
                 <div className="cob-config-card-titulo">💬 Mensagem do WhatsApp</div>
-                <textarea className="cob-config-input cob-config-textarea" rows={7}
+                <textarea maxLength={2000} className="cob-config-input cob-config-textarea" rows={7}
                   value={config.msg_whatsapp} onChange={e => setConfig(prev => ({ ...prev, msg_whatsapp: e.target.value }))} />
               </div>
 
               <div className="cob-config-card">
                 <div className="cob-config-card-titulo">✉️ E-mail</div>
                 <label className="cob-config-sublabel">Assunto</label>
-                <input className="cob-config-input" style={{ marginBottom: 12 }}
+                <input maxLength={200} className="cob-config-input" style={{ marginBottom: 12 }}
                   value={config.email_assunto} onChange={e => setConfig(prev => ({ ...prev, email_assunto: e.target.value }))} />
                 <label className="cob-config-sublabel">Corpo</label>
-                <textarea className="cob-config-input cob-config-textarea" rows={7}
+                <textarea maxLength={3000} className="cob-config-input cob-config-textarea" rows={7}
                   value={config.email_corpo} onChange={e => setConfig(prev => ({ ...prev, email_corpo: e.target.value }))} />
               </div>
             </div>

@@ -307,7 +307,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       {variacoes.map((v, idx) => (
         <div className="prod-variacao-grupo" key={v.id || v._key || idx}>
           <div className="prod-variacao-linha">
-            <input
+            <input maxLength={30}
               className="prod-input"
               list="opcoes-tamanho-datalist"
               placeholder="P, M, G…"
@@ -315,7 +315,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
               disabled={somenteLeitura}
             />
-            <input
+            <input maxLength={40}
               className="prod-input"
               list="opcoes-cor-datalist"
               placeholder="Cor"
@@ -323,7 +323,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
               disabled={somenteLeitura}
             />
-            <input
+            <input maxLength={30}
               className="prod-input"
               list="opcoes-genero-datalist"
               placeholder="Masc, Fem, Unissex…"
@@ -331,7 +331,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               onChange={e => atualizarCampo(idx, 'genero', e.target.value)}
               disabled={somenteLeitura}
             />
-            <input
+            <input maxLength={15}
               className="prod-input"
               type="text"
               inputMode="decimal"
@@ -380,7 +380,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               <span className="prod-variacao-preco-label">Preço de custo</span>
               <div className="prod-input-moeda-wrap">
                 <span className="prod-moeda-prefixo">R$</span>
-                <input
+                <input maxLength={15}
                   className="prod-input prod-input-moeda"
                   type="text"
                   inputMode="decimal"
@@ -396,7 +396,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               <span className="prod-variacao-preco-label">Preço de venda</span>
               <div className="prod-input-moeda-wrap">
                 <span className="prod-moeda-prefixo">R$</span>
-                <input
+                <input maxLength={15}
                   className="prod-input prod-input-moeda"
                   type="text"
                   inputMode="decimal"
@@ -411,7 +411,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           </div>
 
           <div className="prod-variacao-codigo-linha">
-            <input
+            <input maxLength={50}
               className="prod-input prod-variacao-codigo-input"
               placeholder="Código de barras da variação (opcional)"
               value={v.codigo_barras || ''}
@@ -519,7 +519,7 @@ function CategoriaSelect({ categorias, value, onChange, somenteLeitura }) {
 
       {aberto && (
         <div className="prod-cat-select-painel">
-          <input
+          <input maxLength={100}
             ref={buscaRef}
             className="prod-cat-select-busca"
             placeholder="Buscar categoria…"
@@ -1583,7 +1583,7 @@ export default function ProdutoModal({
                       : "Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)."} />
                   </label>
                   <div className="prod-codigo-row">
-                    <input
+                    <input maxLength={50}
                       ref={codigoBarrasRef}
                       className={`prod-input${scanFlash ? ' prod-input-scan-flash' : ''}`}
                       name="codigo_barras"
@@ -1667,7 +1667,7 @@ export default function ProdutoModal({
                     Nome do produto *
                     <CampoAjuda texto="Como o produto aparece na busca do PDV, na lista de Estoque e no recibo impresso pro cliente. Seja específico (ex: inclua tamanho, cor ou modelo) pra facilitar achar depois." />
                   </label>
-                  <input
+                  <input maxLength={150}
                     ref={nomeRef}
                     className="prod-input"
                     name="nome"
@@ -1684,7 +1684,7 @@ export default function ProdutoModal({
                     Marca
                     <CampoAjuda texto="Ajuda a diferenciar produtos com o mesmo nome de marcas diferentes (ex: dois produtos com nome parecido, mas de fabricantes diferentes). Opcional." />
                   </label>
-                  <input
+                  <input maxLength={100}
                     className="prod-input"
                     name="marca"
                     list="marcas-existentes-datalist"
@@ -1759,7 +1759,7 @@ export default function ProdutoModal({
 
                   {novaCatAberta && (
                     <div className="prod-nova-cat-form">
-                      <input
+                      <input maxLength={80}
                         ref={novaCatRef}
                         className="prod-input"
                         placeholder={novaCatPaiId ? 'Nome da subcategoria…' : 'Nome da categoria…'}
@@ -1988,7 +1988,7 @@ export default function ProdutoModal({
                       {fmtQ(paraFloatBR(form.estoque_atual), form.unidade_medida)}
                     </div>
                   ) : (
-                    <input
+                    <input maxLength={15}
                       className="prod-input"
                       type="text"
                       inputMode="decimal"
@@ -2007,7 +2007,7 @@ export default function ProdutoModal({
                     Estoque mínimo <span className="prod-label-unit">({form.unidade_medida})</span>
                     <CampoAjuda texto="Quando o estoque cair abaixo desse valor, o produto passa a aparecer com alerta de estoque baixo na lista. Ajuste conforme a velocidade de venda de cada produto." />
                   </label>
-                  <input
+                  <input maxLength={15}
                     className="prod-input"
                     type="text"
                     inputMode="decimal"
@@ -2049,7 +2049,7 @@ export default function ProdutoModal({
                           </div>
                         )}
                         <div className="prod-ajuste-qtd-wrap">
-                          <input
+                          <input maxLength={15}
                             className="prod-input prod-ajuste-qtd"
                             type="text"
                             inputMode="decimal"
@@ -2059,7 +2059,7 @@ export default function ProdutoModal({
                           />
                           {!isKg && <span className="prod-ajuste-qtd-unidade">un</span>}
                         </div>
-                        <input
+                        <input maxLength={300}
                           className="prod-input prod-ajuste-motivo"
                           placeholder="Motivo…"
                           value={ajusteMotivo}
@@ -2129,7 +2129,7 @@ export default function ProdutoModal({
                   </label>
                   <div className="prod-input-moeda-wrap">
                     <span className="prod-moeda-prefixo">R$</span>
-                    <input
+                    <input maxLength={15}
                       className="prod-input prod-input-moeda"
                       type="text"
                       inputMode="decimal"
@@ -2149,7 +2149,7 @@ export default function ProdutoModal({
                   </label>
                   <div className="prod-input-moeda-wrap">
                     <span className="prod-moeda-prefixo">R$</span>
-                    <input
+                    <input maxLength={15}
                       className="prod-input prod-input-moeda"
                       type="text"
                       inputMode="decimal"
