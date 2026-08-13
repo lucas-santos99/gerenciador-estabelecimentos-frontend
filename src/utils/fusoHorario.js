@@ -43,10 +43,21 @@ export function fimDiaTZ(dataStr, timeZone = TIMEZONE_PADRAO) {
   return limiteDiaTZ(dataStr, '23:59:59', timeZone);
 }
 
+/**
+ * Formata um instante (objeto Date) como 'YYYY-MM-DD' no calendário da
+ * timezone informada. Base de hojeStrTZ() e de qualquer conversão de
+ * timestamp (ex: data_venda) pro "dia" no fuso certo — nunca usar
+ * getFullYear/getMonth/getDate direto num Date vindo de um timestamp,
+ * porque isso reflete o fuso do NAVEGADOR de quem está olhando a tela,
+ * não necessariamente o do estabelecimento.
+ */
+export function paraDataStrTZ(date, timeZone = TIMEZONE_PADRAO) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
+}
+
 /** Data de HOJE ('YYYY-MM-DD') no calendário da timezone informada. */
 export function hojeStrTZ(timeZone = TIMEZONE_PADRAO) {
-  // locale 'en-CA' formata datas como YYYY-MM-DD nativamente
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+  return paraDataStrTZ(new Date(), timeZone);
 }
 
 /** Diferença em dias entre duas datas 'YYYY-MM-DD' (dataB - dataA). */
@@ -54,4 +65,16 @@ export function diasEntre(dataA, dataB) {
   const a = new Date(`${dataA}T00:00:00Z`).getTime();
   const b = new Date(`${dataB}T00:00:00Z`).getTime();
   return Math.round((b - a) / 86400000);
+}
+
+/**
+ * Subtrai 'dias' de uma data 'YYYY-MM-DD', devolvendo outra 'YYYY-MM-DD'.
+ * Ancora ao meio-dia UTC antes de subtrair (mesmo padrão defensivo já
+ * usado no backend em asaasRoutes.js/efiRoutes.js) pra nunca cruzar um
+ * limite de dia por causa de fuso — a aritmética roda inteira em UTC.
+ */
+export function subtrairDias(dataStr, dias) {
+  const d = new Date(`${dataStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - dias);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(d);
 }

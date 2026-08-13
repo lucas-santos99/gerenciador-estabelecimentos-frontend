@@ -5,6 +5,7 @@ import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
 import * as XLSX from 'xlsx';
+import { TIMEZONE_PADRAO, hojeStrTZ, paraDataStrTZ, subtrairDias } from '../../../utils/fusoHorario';
 
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -16,21 +17,13 @@ function labelDocumento(valor) {
   return (valor || '').replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
 }
 
-// Formata Date -> 'YYYY-MM-DD' usando horário LOCAL (nunca toISOString,
-// que joga pra UTC e pode voltar um dia à noite no fuso do Brasil)
-function paraInputDate(d) {
-  const ano = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
-}
-
-// Mesmo padrão já usado na tela de Auditoria: últimos 30 dias até hoje
-function periodoPadrao30Dias() {
-  const hoje = new Date();
-  const inicio = new Date();
-  inicio.setDate(hoje.getDate() - 30);
-  return { de: paraInputDate(inicio), ate: paraInputDate(hoje) };
+// Últimos 30 dias até hoje, no calendário do FUSO DO ESTABELECIMENTO (não
+// no fuso do navegador de quem está olhando a tela) — usa hojeStrTZ/
+// subtrairDias (utils/fusoHorario.js) em vez de getFullYear/getMonth/
+// getDate num Date local, que dependeria do fuso do dispositivo.
+function periodoPadrao30Dias(timezone = TIMEZONE_PADRAO) {
+  const hojeStr = hojeStrTZ(timezone);
+  return { de: subtrairDias(hojeStr, 30), ate: hojeStr };
 }
 
 function formatarData(s) {
@@ -291,6 +284,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
   const [pixConfig,         setPixConfig]         = useState({ modo: 'maquininha', disponivel: false });
+  const [estabTimezone,     setEstabTimezone]     = useState(TIMEZONE_PADRAO); // fuso oficial do estabelecimento (mercearias.timezone) — usado pra bucketar datas de venda no dia certo, independente de onde quem está olhando a tela está
   const [fiadoAtivo,        setFiadoAtivo]        = useState(true); // null enquanto carrega = assume true, ajusta depois
   const [fontScale,         setFontScale]         = useState(() => {
     const saved = localStorage.getItem('cli-font-scale');
@@ -347,6 +341,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             modo: d.pix_modo || 'maquininha',
             disponivel: !!(d.pix_chave && d.pix_cidade),
           });
+          setEstabTimezone(d.timezone || TIMEZONE_PADRAO);
           ativo = d.fiado_ativo !== false;
           setFiadoAtivo(ativo);
           if (!ativo) mudarAba('todos'); // sem Fiado, a aba "devedores" nem existe
@@ -708,6 +703,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
             onFechar={() => setClienteHistorico(null)}
             onAtualizar={carregarDados}
             nomeEstabelecimento={nomeEstabelecimento}
+            timezone={estabTimezone}
           />
         )}
 
@@ -843,13 +839,13 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
 
 /* ── Painel de histórico geral de compras (qualquer forma de
    pagamento) — usado na aba Clientes, diferente do painel de Fiado ── */
-function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelecimento }) {
+function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelecimento, timezone = TIMEZONE_PADRAO }) {
   const [vendas,  setVendas]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro,    setErro]    = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
-  const [filtroDe,  setFiltroDe]  = useState(() => periodoPadrao30Dias().de);
-  const [filtroAte, setFiltroAte] = useState(() => periodoPadrao30Dias().ate);
+  const [filtroDe,  setFiltroDe]  = useState(() => periodoPadrao30Dias(timezone).de);
+  const [filtroAte, setFiltroAte] = useState(() => periodoPadrao30Dias(timezone).ate);
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
@@ -873,8 +869,12 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
 
   useEffect(() => { carregar(); }, [cliente.id]);
 
+  // Bucketa cada venda no fuso OFICIAL do estabelecimento (mercearias.timezone),
+  // não no fuso do navegador de quem está olhando a tela — evita reintroduzir
+  // o bug de 11/08 (venda à noite sumindo do filtro) quando o dono/operador
+  // abre essa tela de um fuso diferente do da loja.
   const vendasFiltradas = vendas.filter(v => {
-    const dataV = paraInputDate(new Date(v.data_venda));
+    const dataV = paraDataStrTZ(new Date(v.data_venda), timezone);
     if (filtroDe && dataV < filtroDe) return false;
     if (filtroAte && dataV > filtroAte) return false;
     return true;

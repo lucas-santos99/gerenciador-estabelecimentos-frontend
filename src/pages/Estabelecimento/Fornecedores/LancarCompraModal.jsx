@@ -22,8 +22,16 @@ function fmtQ(v, u) {
     ? parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kg'
     : Math.trunc(parseFloat(v || 0)) + ' un';
 }
+// Data de hoje no fuso LOCAL do dispositivo (nunca toISOString().split('T'),
+// que joga pra UTC e à noite — 21h-23h59 no horário de Brasília — já
+// devolve o dia de amanhã). Mesmo padrão usado no resto do front
+// (DividasList.jsx, Relatorios.jsx, Auditoria.jsx, Financeiro.jsx, Inventario.jsx).
 function hojeISO() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 
 /* ════════════════════════════════════════════════════════════ */

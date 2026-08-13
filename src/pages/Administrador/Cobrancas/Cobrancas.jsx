@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
+import { TIMEZONE_PADRAO, hojeStrTZ, diasEntre } from "../../../utils/fusoHorario";
 import "./Cobrancas.css";
 
 async function getToken() {
@@ -17,13 +18,13 @@ function formatarData(dataStr) {
   const [ano, mes, dia] = dataStr.split("-");
   return `${dia}/${mes}/${ano}`;
 }
-function calcularDiff(dataStr) {
+// Dias até o vencimento, calculado no fuso OFICIAL de cada estabelecimento
+// (mercearias.timezone) — antes usava setHours(0,0,0,0) no fuso de quem
+// está logado como SuperAdmin, o que podia mostrar a contagem errada por
+// até algumas horas perto da virada do dia.
+function calcularDiff(dataStr, timezone) {
   if (!dataStr) return null;
-  const venc = new Date(dataStr + "T12:00:00");
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  venc.setHours(0, 0, 0, 0);
-  return Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+  return diasEntre(hojeStrTZ(timezone || TIMEZONE_PADRAO), dataStr);
 }
 function mesmoDia(isoStr) {
   if (!isoStr) return false;
@@ -151,7 +152,7 @@ export default function Cobrancas() {
     const elegiveis = lista
       .filter(m => m.status_assinatura !== "excluida")
       .filter(m => !filtroTipo || m.tipo_estabelecimento === filtroTipo)
-      .map(m => ({ ...m, _diff: calcularDiff(m.data_vencimento) }))
+      .map(m => ({ ...m, _diff: calcularDiff(m.data_vencimento, m.timezone) }))
       .filter(m => m._diff !== null && m._diff <= diasAviso);
 
     const pend = elegiveis
