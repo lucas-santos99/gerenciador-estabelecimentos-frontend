@@ -5,6 +5,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
+import PersonificarModal from "../../../components/PersonificarModal";
+import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
 import "./Estabelecimentos.css";
 
@@ -17,6 +19,8 @@ export default function DetalhesEstabelecimento() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
+  const { profile } = useAuth();
+  const [modalPersonificar, setModalPersonificar] = useState(false);
 
   const [dados,        setDados]        = useState(null);
   const [loading,      setLoading]      = useState(true);
@@ -236,6 +240,16 @@ export default function DetalhesEstabelecimento() {
               >
                 👥 Operadores
               </button>
+              {profile?.is_master && dados.status_assinatura !== "excluida" && (
+                <button
+                  className="est-btn est-btn-outline"
+                  style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
+                  onClick={() => setModalPersonificar(true)}
+                  title="Entrar no sistema como o dono deste estabelecimento"
+                >
+                  🔑 Entrar como
+                </button>
+              )}
               {dados.status_assinatura === "excluida"
                 ? <button className="est-btn est-btn-success" onClick={restaurar}>↩ Restaurar</button>
                 : <button className="est-btn est-btn-danger"  onClick={excluir}>🗑 Excluir</button>
@@ -559,6 +573,15 @@ export default function DetalhesEstabelecimento() {
             </div>
           </div>
         </div>
+      )}
+
+      {modalPersonificar && (
+        <PersonificarModal
+          tipo="estabelecimento"
+          id={dados.id}
+          nomeExibicao={dados.nome_fantasia}
+          onClose={() => setModalPersonificar(false)}
+        />
       )}
 
     </LayoutAdmin>

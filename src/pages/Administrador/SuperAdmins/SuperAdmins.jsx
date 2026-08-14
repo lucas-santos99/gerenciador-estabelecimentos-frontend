@@ -4,6 +4,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
 import { useAuth } from "../../../contexts/AuthProvider";
+import PersonificarModal from "../../../components/PersonificarModal";
 import "./SuperAdmins.css";
 
 function iniciais(nome) {
@@ -32,6 +33,7 @@ export default function SuperAdmins() {
   const [userSel,        setUserSel]        = useState(null);
   const [novaSenha,      setNovaSenha]      = useState("");
   const [erroSenha,      setErroSenha]      = useState("");
+  const [userPersonif,   setUserPersonif]   = useState(null);
 
   useEffect(() => {
     if (profile?.is_master) carregarLista();
@@ -207,6 +209,11 @@ export default function SuperAdmins() {
                             👑 Tornar Master
                           </button>
                         )}
+                        {!user.is_master && isAtivo && (
+                          <button className="sa-btn sa-btn-sm" onClick={() => setUserPersonif(user)}>
+                            🔑 Entrar como
+                          </button>
+                        )}
                         <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => excluir(user.id, user.nome)}>
                           🗑 Excluir
                         </button>
@@ -283,6 +290,16 @@ export default function SuperAdmins() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* MODAL: PERSONIFICAR */}
+        {userPersonif && (
+          <PersonificarModal
+            tipo="usuario"
+            id={userPersonif.id}
+            nomeExibicao={userPersonif.nome}
+            onClose={() => setUserPersonif(null)}
+          />
         )}
 
       </div>

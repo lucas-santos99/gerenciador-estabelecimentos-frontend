@@ -9,6 +9,7 @@ import TelaBloqueio from "./components/TelaBloqueio";
 // Proteções
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
+import PersonificacaoBanner from "./components/PersonificacaoBanner";
 
 // Páginas Admin
 import DashboardAdmin from "./pages/Administrador/DashboardAdmin";
@@ -81,6 +82,8 @@ function App() {
   }, [profile, loading, user, location.pathname, navigate]);
 
   return (
+    <>
+    <PersonificacaoBanner />
     <Routes>
 
       {/* Públicas */}
@@ -199,6 +202,7 @@ function App() {
       <Route path="*"              element={<div style={{ padding: 20 }}>Página não encontrada.</div>} />
 
     </Routes>
+    </>
   );
 }
 

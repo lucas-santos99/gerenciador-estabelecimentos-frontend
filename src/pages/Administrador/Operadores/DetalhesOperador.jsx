@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import ResetSenhaModal from "./ResetSenhaModal";
+import PersonificarModal from "../../../components/PersonificarModal";
+import { useAuth } from "../../../contexts/AuthProvider";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
 
@@ -15,10 +17,12 @@ export default function DetalhesOperador() {
   const { id }   = useParams();
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
+  const { profile } = useAuth();
 
   const [op,         setOp]         = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [showReset,  setShowReset]  = useState(false);
+  const [modalPersonificar, setModalPersonificar] = useState(false);
   const [permissoes, setPermissoes] = useState([]);
   const [permLoading,setPermLoading]= useState(false);
   const [permSaving, setPermSaving] = useState(false);
@@ -240,6 +244,16 @@ export default function DetalhesOperador() {
             >
               🔑 Resetar Senha
             </button>
+            {profile?.is_master && isAtivo && (
+              <button
+                className="op-btn op-btn-outline op-btn-sm"
+                style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
+                onClick={() => setModalPersonificar(true)}
+                title="Entrar no sistema como este operador"
+              >
+                🔑 Entrar como
+              </button>
+            )}
             <button
               className={`op-btn op-btn-sm ${isAtivo ? "op-btn-warning" : "op-btn-success"}`}
               onClick={toggleStatus}
@@ -343,6 +357,15 @@ export default function DetalhesOperador() {
       {/* MODAL RESET SENHA */}
       {showReset && (
         <ResetSenhaModal id={id} onClose={() => setShowReset(false)} />
+      )}
+
+      {modalPersonificar && (
+        <PersonificarModal
+          tipo="usuario"
+          id={op.id}
+          nomeExibicao={op.nome}
+          onClose={() => setModalPersonificar(false)}
+        />
       )}
     </LayoutAdmin>
   );
