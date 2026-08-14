@@ -75,7 +75,12 @@ function App() {
 
   // Redirecionamento automático baseado na role
   React.useEffect(() => {
-    if (loading || !user || !profile) return;
+    // profile?.id !== user?.id evita usar um profile "atrasado" — troca de
+    // sessão sem reload de página (ex: personificação do SuperAdmin) muda
+    // o `user` na hora, mas o fetch do novo `profile` é assíncrono; sem essa
+    // checagem, redirectByRole() podia rodar com o profile do usuário
+    // ANTERIOR ainda em memória e mandar pra rota errada.
+    if (loading || !user || !profile || profile.id !== user.id) return;
     if (location.pathname === "/") {
       navigate(redirectByRole(profile), { replace: true });
     }
