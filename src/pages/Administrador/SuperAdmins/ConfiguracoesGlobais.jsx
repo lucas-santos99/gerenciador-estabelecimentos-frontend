@@ -52,6 +52,14 @@ export default function ConfiguracoesGlobais() {
   const [salvandoContato, setSalvandoContato] = useState(false);
   const [msgContato,      setMsgContato]      = useState("");
 
+  // Edição inline de contato existente
+  const [editandoId,      setEditandoId]      = useState(null);
+  const [editTipo,        setEditTipo]        = useState("whatsapp");
+  const [editValor,       setEditValor]       = useState("");
+  const [editLabel,       setEditLabel]       = useState("");
+  const [salvandoEdicao,  setSalvandoEdicao]  = useState(false);
+  const [msgEdicao,       setMsgEdicao]       = useState("");
+
   async function carregar() {
     setCarregando(true);
     try {
@@ -166,6 +174,38 @@ export default function ConfiguracoesGlobais() {
       });
       setContatos(prev => prev.filter(c => c.id !== id));
     } catch { alert("Erro ao remover contato."); }
+  }
+
+  function iniciarEdicao(c) {
+    setEditandoId(c.id);
+    setEditTipo(c.tipo);
+    setEditValor(c.valor);
+    setEditLabel(c.label || "");
+    setMsgEdicao("");
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setMsgEdicao("");
+  }
+
+  async function salvarEdicao(id) {
+    if (!editValor.trim()) { setMsgEdicao("❌ Preencha o valor do contato."); return; }
+    setSalvandoEdicao(true);
+    setMsgEdicao("");
+    try {
+      const token = await getToken();
+      const resp = await fetch(`${API_URL}/superadmin/contatos-suporte/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tipo: editTipo, valor: editValor, label: editLabel }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || "Erro ao salvar.");
+      setContatos(prev => prev.map(c => (c.id === id ? json : c)));
+      setEditandoId(null);
+    } catch (e) { setMsgEdicao("❌ " + e.message); }
+    setSalvandoEdicao(false);
   }
 
   /* ── render ──────────────────────────────────────────────── */
@@ -323,15 +363,38 @@ export default function ConfiguracoesGlobais() {
                   <div className="sa-empty" style={{ padding: 20 }}>Nenhum contato cadastrado ainda.</div>
                 ) : (
                   contatos.map(c => (
-                    <div key={c.id} className="sa-config-item">
-                      <div className="sa-config-item-info">
-                        <span className="sa-config-item-label">
-                          {c.tipo === "whatsapp" ? "🟢" : "✉️"} {c.label || (c.tipo === "whatsapp" ? "WhatsApp" : "E-mail")}
-                        </span>
-                        <span className="sa-config-item-desc">{c.valor}</span>
+                    editandoId === c.id ? (
+                      <div key={c.id} className="sa-config-item" style={{ flexWrap: "wrap", gap: 10 }}>
+                        <select className="sa-config-input" value={editTipo} onChange={e => setEditTipo(e.target.value)} style={{ width: 120 }}>
+                          <option value="whatsapp">🟢 WhatsApp</option>
+                          <option value="email">✉️ E-mail</option>
+                        </select>
+                        <input maxLength={150} className="sa-config-textfield" placeholder={editTipo === "whatsapp" ? "5553999998888" : "contato@empresa.com"}
+                          value={editValor} onChange={e => setEditValor(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
+                        <input maxLength={60} className="sa-config-textfield" placeholder="Rótulo (opcional, ex: Financeiro)"
+                          value={editLabel} onChange={e => setEditLabel(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
+                        <button className="sa-btn sa-btn-primary sa-btn-sm" onClick={() => salvarEdicao(c.id)} disabled={salvandoEdicao}>
+                          {salvandoEdicao ? "⏳" : "✓ Salvar"}
+                        </button>
+                        <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={cancelarEdicao} disabled={salvandoEdicao}>
+                          Cancelar
+                        </button>
+                        {msgEdicao && <div className="sa-config-msg erro" style={{ width: "100%" }}>{msgEdicao}</div>}
                       </div>
-                      <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => removerContato(c.id)}>🗑 Remover</button>
-                    </div>
+                    ) : (
+                      <div key={c.id} className="sa-config-item">
+                        <div className="sa-config-item-info">
+                          <span className="sa-config-item-label">
+                            {c.tipo === "whatsapp" ? "🟢" : "✉️"} {c.label || (c.tipo === "whatsapp" ? "WhatsApp" : "E-mail")}
+                          </span>
+                          <span className="sa-config-item-desc">{c.valor}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => iniciarEdicao(c)}>✏️ Editar</button>
+                          <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => removerContato(c.id)}>🗑 Remover</button>
+                        </div>
+                      </div>
+                    )
                   ))
                 )}
 
