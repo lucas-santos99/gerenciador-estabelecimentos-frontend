@@ -2,7 +2,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
+import logo from '../assets/logo-lucasjsystems.png';
 import './TelaBloqueio.css';
+
+// Formata a data de vencimento (string "YYYY-MM-DD") pra exibição —
+// data no padrão brasileiro + "há X dias"/"em X dias", igual ao mesmo
+// padrão cosmético já usado em DetalhesEstabelecimento.jsx.
+function formatarVencimento(dataStr) {
+  if (!dataStr) return null;
+  const dataFmt = dataStr.split("-").reverse().join("/");
+  const diffMs  = new Date() - new Date(dataStr + "T12:00:00");
+  const diff    = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  let relativo;
+  if (diff > 0)      relativo = `há ${diff} dia${diff === 1 ? "" : "s"}`;
+  else if (diff < 0) relativo = `em ${Math.abs(diff)} dia${Math.abs(diff) === 1 ? "" : "s"}`;
+  else                relativo = "hoje";
+  return { dataFmt, relativo, vencida: diff > 0 };
+}
 
 export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const navigate   = useNavigate();
@@ -19,6 +35,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const [pago,        setPago]        = useState(false);
   const [copiado,     setCopiado]     = useState(false);
   const [zoom,        setZoom]        = useState(() => parseFloat(localStorage.getItem("bl-zoom") || "1"));
+  const [vencimento,  setVencimento]  = useState(null); // data_vencimento (string "YYYY-MM-DD")
 
   useEffect(() => {
     btnRef.current?.focus();
@@ -31,8 +48,20 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         if (resp.ok) setContatosSuporte(await resp.json());
       } catch { /* botão de WhatsApp simplesmente não aparece se falhar */ }
     })();
+    // Busca a data de vencimento real do estabelecimento pra exibir na tela
+    if (mercearia_id) {
+      (async () => {
+        try {
+          const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
+          if (resp.ok) {
+            const d = await resp.json();
+            if (d.data_vencimento) setVencimento(d.data_vencimento);
+          }
+        } catch { /* chip de vencimento simplesmente não aparece se falhar */ }
+      })();
+    }
     return () => clearInterval(pollingRef.current);
-  }, []);
+  }, [mercearia_id]);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${zoom * 16}px`;
@@ -151,6 +180,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const mensagem = config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`;
   const info     = config?.info     || "Renove sua licença para continuar usando o sistema.";
   const promo    = config?.promo_ativa ? config.promo_texto : null;
+  const venc     = formatarVencimento(vencimento);
 
   function renderTexto(texto) {
     const partes = texto.split(/\*\*(.+?)\*\*/g);
@@ -160,10 +190,13 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   return (
     <div className="bloqueio-container" onKeyDown={handleKeyDown} tabIndex={0}>
 
+      {/* Glow de fundo — mesmo tratamento visual do login */}
+      <div className="bloqueio-glow" />
+
       {/* Topbar */}
       <div className="bloqueio-topbar">
         <div className="bloqueio-ljs">
-          <span className="bloqueio-ljs-dot" />
+          <img src={logo} alt="" className="bloqueio-ljs-logo" />
           <span className="bloqueio-ljs-nome">Lucas J. Systems</span>
         </div>
         <div className="bloqueio-topbar-acoes">
@@ -175,34 +208,55 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         </div>
       </div>
 
-      <div className="bloqueio-icone">🔒</div>
-      <h2 className="bloqueio-titulo">{titulo}</h2>
-      <p className="bloqueio-msg">{renderTexto(mensagem)}</p>
-      <p className="bloqueio-info">{info}</p>
+      {/* Cartão principal */}
+      <div className="bloqueio-card">
 
-      {promo && <div className="bloqueio-promo">🎉 {promo}</div>}
+        <div className="bloqueio-icone-badge">
+          <span className="bloqueio-icone">🔒</span>
+        </div>
 
-      <div className="bloqueio-acoes">
-        {mercearia_id && (
-          <button className="bloqueio-btn bloqueio-btn--primary" onClick={abrirModal}>
-            💳 Renovar Licença
-          </button>
+        <h2 className="bloqueio-titulo">{titulo}</h2>
+        <p className="bloqueio-msg">{renderTexto(mensagem)}</p>
+
+        {venc && (
+          <div className={`bloqueio-venc-chip${venc.vencida ? " venc-atrasada" : ""}`}>
+            <span className="bloqueio-venc-chip-label">
+              {venc.vencida ? "Venceu em" : "Vence em"}
+            </span>
+            <span className="bloqueio-venc-chip-data">{venc.dataFmt}</span>
+            <span className="bloqueio-venc-chip-relativo">· {venc.relativo}</span>
+          </div>
         )}
-        {contatosSuporte.filter(c => c.tipo === 'whatsapp').map(c => (
-          <a key={c.id} className="bloqueio-btn bloqueio-btn--whatsapp"
-            href={`https://wa.me/${c.valor}`} target="_blank" rel="noreferrer">
-            💬 {c.label || 'Falar no WhatsApp'}
-          </a>
-        ))}
-        {contatosSuporte.filter(c => c.tipo === 'email').map(c => (
-          <a key={c.id} className="bloqueio-btn bloqueio-btn--ghost" href={`mailto:${c.valor}`}>
-            ✉️ {c.label || c.valor}
-          </a>
-        ))}
-        <button ref={btnRef} className="bloqueio-btn bloqueio-btn--ghost" onClick={onLogout}>
-          Sair da Conta
+
+        <p className="bloqueio-info">{info}</p>
+
+        {promo && <div className="bloqueio-promo">🎉 {promo}</div>}
+
+        <div className="bloqueio-acoes">
+          {mercearia_id && (
+            <button className="bloqueio-btn bloqueio-btn--primary" onClick={abrirModal}>
+              💳 Renovar Licença
+            </button>
+          )}
+          {contatosSuporte.filter(c => c.tipo === 'whatsapp').map(c => (
+            <a key={c.id} className="bloqueio-btn bloqueio-btn--whatsapp"
+              href={`https://wa.me/${c.valor}`} target="_blank" rel="noreferrer">
+              💬 {c.label || 'Falar no WhatsApp'}
+            </a>
+          ))}
+          {contatosSuporte.filter(c => c.tipo === 'email').map(c => (
+            <a key={c.id} className="bloqueio-btn bloqueio-btn--outline" href={`mailto:${c.valor}`}>
+              ✉️ {c.label || c.valor}
+            </a>
+          ))}
+        </div>
+
+        <button ref={btnRef} className="bloqueio-link-sair" onClick={onLogout}>
+          Sair da conta
         </button>
       </div>
+
+      <div className="bloqueio-footer">© {new Date().getFullYear()} Lucas J. Systems</div>
 
       {/* Modal */}
       {modalAberto && (
