@@ -24,6 +24,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const navigate   = useNavigate();
   const btnRef     = useRef(null);
   const pollingRef = useRef(null);
+  const visibilidadeHandlerRef = useRef(null); // handler de 'visibilitychange' ativo, se houver
 
   const [modalAberto, setModalAberto] = useState(false);
   const [planos,      setPlanos]      = useState(null);
@@ -60,7 +61,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         } catch { /* chip de vencimento simplesmente não aparece se falhar */ }
       })();
     }
-    return () => clearInterval(pollingRef.current);
+    return () => pararPolling();
   }, [mercearia_id]);
 
   useEffect(() => {
@@ -147,22 +148,57 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     }
   }
 
+  // Para o polling de confirmação de pagamento e remove o listener de
+  // 'visibilitychange' associado, se houver — centralizado aqui pra não
+  // vazar o listener em nenhum dos pontos que interrompem o polling
+  // (unmount, botão "Voltar", confirmação de pagamento).
+  function pararPolling() {
+    clearInterval(pollingRef.current);
+    if (visibilidadeHandlerRef.current) {
+      document.removeEventListener("visibilitychange", visibilidadeHandlerRef.current);
+      visibilidadeHandlerRef.current = null;
+    }
+  }
+
   // Confirmação genérica — não importa se veio do Efí (Pix) ou do Asaas
   // (cartão), o resultado final é o mesmo: status_assinatura vira "ativa".
+  //
+  // ⚠️ BUG REAL corrigido (26/08): no Pix, quem paga fica na MESMA aba
+  // (escaneia o QR com o celular ou copia o código), então o polling de
+  // 5s aqui roda normalmente e detecta a confirmação rápido. No cartão,
+  // "Cartão de Crédito/Débito" abre o checkout do Asaas numa ABA NOVA
+  // (`window.open`) — a aba original com esse `setInterval` fica em
+  // segundo plano, e navegadores (Chrome principalmente) throttlam ou
+  // chegam a pausar `setInterval` de abas em background depois de um
+  // tempo. Resultado: o pagamento no cartão confirmava normalmente no
+  // Asaas, mas a tela só percebia depois de muito tempo (ou nunca, até
+  // um F5 manual). Fix: além do interval, agora também verifica na hora
+  // que a aba volta a ficar visível (`visibilitychange`), sem depender
+  // do próximo tick do interval — cobre exatamente o caso de voltar da
+  // aba do checkout de cartão depois de pagar.
   function iniciarPolling() {
-    clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(async () => {
+    pararPolling();
+
+    const verificar = async () => {
       try {
         const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
         const data = await resp.json();
         if (!resp.ok) return;
         if (data.status_assinatura === "ativa") {
-          clearInterval(pollingRef.current);
+          pararPolling();
           setPago(true);
           setTimeout(() => navigate(`/estabelecimentos/${mercearia_id}`, { replace: true }), 3000);
         }
       } catch {}
-    }, 5000);
+    };
+
+    const aoVoltarAba = () => {
+      if (document.visibilityState === "visible") verificar();
+    };
+    visibilidadeHandlerRef.current = aoVoltarAba;
+    document.addEventListener("visibilitychange", aoVoltarAba);
+
+    pollingRef.current = setInterval(verificar, 5000);
   }
 
   async function copiarPix() {
@@ -324,7 +360,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
                   </p>
                 )}
                 <button className="bloqueio-btn bloqueio-btn--ghost" style={{ marginTop: 4 }}
-                  onClick={() => { setCobranca(null); clearInterval(pollingRef.current); }}>
+                  onClick={() => { setCobranca(null); pararPolling(); }}>
                   ← Voltar
                 </button>
               </>

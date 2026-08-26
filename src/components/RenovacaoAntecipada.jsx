@@ -14,6 +14,7 @@ import './RenovacaoAntecipada.css';
 ════════════════════════════════════════════════════════════ */
 export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, dataVencimento, statusAssinatura, timezone = TIMEZONE_PADRAO, onRenovado }) {
   const pollingRef = useRef(null);
+  const visibilidadeHandlerRef = useRef(null); // handler de 'visibilitychange' ativo, se houver
 
   const [diasAviso,   setDiasAviso]   = useState(null); // null = ainda não sabemos, não decide nada
   const [modalAberto, setModalAberto] = useState(false);
@@ -29,7 +30,7 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
       .then(r => r.ok ? r.json() : null)
       .then(d => setDiasAviso(d?.dias_aviso ?? 5))
       .catch(() => setDiasAviso(5));
-    return () => clearInterval(pollingRef.current);
+    return () => pararPolling();
   }, []);
 
   // Tick a cada 60s só pra manter a contagem regressiva do último dia
@@ -123,25 +124,53 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
     }
   }
 
+  // Para o polling de confirmação de pagamento e remove o listener de
+  // 'visibilitychange' associado, se houver — centralizado aqui pra não
+  // vazar o listener em nenhum dos pontos que interrompem o polling.
+  function pararPolling() {
+    clearInterval(pollingRef.current);
+    if (visibilidadeHandlerRef.current) {
+      document.removeEventListener("visibilitychange", visibilidadeHandlerRef.current);
+      visibilidadeHandlerRef.current = null;
+    }
+  }
+
   // Como o pagamento acontece ANTES de vencer, a licença já está
   // "ativa" — não dá pra usar isso como sinal de sucesso (sempre seria
   // true). O sinal real aqui é a DATA DE VENCIMENTO ter mudado.
+  //
+  // ⚠️ BUG REAL corrigido (26/08, mesma causa do fix aplicado na
+  // TelaBloqueio.jsx): o cartão abre o checkout do Asaas numa aba nova
+  // (`window.open`), deixando essa aba (com o `setInterval` do polling)
+  // em segundo plano — navegadores throttlam/pausam timers em abas em
+  // background, então a confirmação só era percebida bem depois (ou só
+  // com F5). Agora também verifica assim que a aba volta a ficar
+  // visível, sem depender do próximo tick do interval.
   function iniciarPolling() {
-    clearInterval(pollingRef.current);
+    pararPolling();
     const vencimentoAntes = dataVencimento;
-    pollingRef.current = setInterval(async () => {
+
+    const verificar = async () => {
       try {
         const resp = await apiFetch(`/api/estabelecimentos/dados/${merceariaId}`);
         const data = await resp.json();
         if (!resp.ok) return;
         if (data.data_vencimento && data.data_vencimento !== vencimentoAntes) {
-          clearInterval(pollingRef.current);
+          pararPolling();
           setPago(true);
           onRenovado?.(data);
           setTimeout(() => setModalAberto(false), 2500);
         }
       } catch {}
-    }, 5000);
+    };
+
+    const aoVoltarAba = () => {
+      if (document.visibilityState === "visible") verificar();
+    };
+    visibilidadeHandlerRef.current = aoVoltarAba;
+    document.addEventListener("visibilitychange", aoVoltarAba);
+
+    pollingRef.current = setInterval(verificar, 5000);
   }
 
   async function copiarPix() {
@@ -226,7 +255,7 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
                 )}
 
                 <button className="renov-btn renov-btn--ghost" style={{ marginTop: 8 }}
-                  onClick={() => { setCobranca(null); clearInterval(pollingRef.current); }}>
+                  onClick={() => { setCobranca(null); pararPolling(); }}>
                   ← Voltar
                 </button>
               </>
