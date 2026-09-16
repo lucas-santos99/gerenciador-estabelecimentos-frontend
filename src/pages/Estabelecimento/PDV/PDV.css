@@ -2042,6 +2042,24 @@ button:disabled[title*="Sem permissão"] {
   gap: 8px;
 }
 
+/* Numerozinho que identifica cada pessoa de forma estável — mesmo
+   badge reaproveitado nos "chips" da lista de itens (16/09), pra deixar
+   visualmente óbvio qual item foi atribuído a qual pessoa mesmo quando
+   o nome foi apagado/editado (o número não muda, só a posição na lista). */
+.pdv-dividido-fatia-num {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pdv-dividido-fatia-label {
   flex: 1;
   border: none;
@@ -2073,61 +2091,106 @@ button:disabled[title*="Sem permissão"] {
   gap: 8px;
 }
 
+/* Campo de valor com o cifrão como prefixo fixo (16/09) — antes só o
+   modo "por item" mostrava "R$" (embutido no fmt() do valor calculado);
+   agora o modo "por valor", digitável, ganha o mesmo prefixo visual,
+   só que como um <span> fora do <input> (o valor digitado em si continua
+   puro, sem "R$", pra não complicar a máscara de digitação). */
+.pdv-dividido-fatia-valor-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--est-border);
+  border-radius: 8px;
+  background: var(--est-card);
+  box-sizing: border-box;
+  transition: all 0.15s;
+}
+.pdv-dividido-fatia-valor-wrap:focus-within {
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+/* Fase 2 — mesma caixa visual, mas só leitura (o valor vem do cálculo
+   dos itens atribuídos, não é digitado) — borda tracejada, tom mais fraco. */
+.pdv-dividido-fatia-valor-wrap.computado {
+  border-style: dashed;
+  background: var(--est-input);
+}
+.pdv-dividido-fatia-valor-prefixo {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--est-text-muted);
+}
 .pdv-dividido-fatia-valor {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 0;
+  border: none;
+  background: none;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
   font-weight: 700;
   text-align: right;
-  border: 1px solid var(--est-border);
-  border-radius: 8px;
-  background: var(--est-card);
   color: var(--est-text);
-  box-sizing: border-box;
 }
-.pdv-dividido-fatia-valor:focus {
-  outline: none;
-  border-color: var(--est-border-accent);
-  box-shadow: 0 0 0 3px var(--est-accent-dim);
-}
+.pdv-dividido-fatia-valor:focus { outline: none; }
 
-/* Fase 2 — mesma caixa visual do input de valor, mas só leitura
-   (o valor vem do cálculo dos itens atribuídos, não é digitado). */
 .pdv-dividido-fatia-valor-computado {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
   font-weight: 700;
   text-align: right;
-  border: 1px dashed var(--est-border);
-  border-radius: 8px;
-  background: var(--est-input);
   color: var(--est-text-soft);
-  box-sizing: border-box;
 }
 
-.pdv-dividido-fatia-meio {
-  flex: 1.2;
+/* Forma de pagamento de cada fatia como botões lado a lado (16/09) —
+   antes era um <select>, trocado por um "fluxo via botão" navegável com
+   seta esquerda/direita + Enter, no mesmo espírito do restante do modal. */
+.pdv-dividido-fatia-meio-btns {
+  display: flex;
+  gap: 6px;
+}
+.pdv-dividido-fatia-meio-btn {
+  flex: 1;
   min-width: 0;
-  padding: 10px 8px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 2px;
   border: 1px solid var(--est-border);
   border-radius: 8px;
   background: var(--est-card);
-  color: var(--est-text);
-  box-sizing: border-box;
+  color: var(--est-text-soft);
   cursor: pointer;
+  transition: all 0.15s;
 }
-.pdv-dividido-fatia-meio:focus {
+.pdv-dividido-fatia-meio-btn-icone { font-size: 0.95rem; line-height: 1; }
+.pdv-dividido-fatia-meio-btn-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.pdv-dividido-fatia-meio-btn:hover { border-color: var(--est-border-accent); }
+.pdv-dividido-fatia-meio-btn:focus-visible {
   outline: none;
-  border-color: var(--est-border-accent);
   box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+.pdv-dividido-fatia-meio-btn.ativo {
+  background: var(--est-accent-dim);
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
 }
 
 .pdv-dividido-fiado {
@@ -2224,17 +2287,35 @@ button:disabled[title*="Sem permissão"] {
 .pdv-dividido-itens-lista {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 220px;
+  gap: 8px;
+  max-height: 260px;
   overflow-y: auto;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.pdv-dividido-item-linha {
+/* Cada item do carrinho vira um cartãozinho próprio (16/09, reorganizado
+   a pedido — antes o <select> de "de quem é" ficava espremido do lado do
+   nome, numa linha só, confuso com vários itens/pessoas). Nome e valor
+   em cima, e embaixo — numa linha própria, com espaço de sobra — um chip
+   por pessoa (numerado, mesmo número do badge no cartão dela lá em cima)
+   que já mostra visualmente quem está com o item, sem precisar abrir
+   dropdown nenhum: é só tocar no número certo. Tocar de novo no chip já
+   ativo devolve o item pro "sem dono" (resto). */
+.pdv-dividido-item-card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+  background: var(--est-card);
+}
+
+.pdv-dividido-item-info {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
@@ -2243,29 +2324,63 @@ button:disabled[title*="Sem permissão"] {
   flex: 1;
   min-width: 0;
   font-size: 0.8rem;
+  font-weight: 600;
   color: var(--est-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pdv-dividido-item-valor { color: var(--est-text-muted); font-size: 0.75rem; }
-
-.pdv-dividido-item-select {
+.pdv-dividido-item-valor {
   flex-shrink: 0;
-  max-width: 140px;
-  padding: 6px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--est-text-muted);
   font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid var(--est-border);
-  border-radius: 7px;
-  background: var(--est-card);
-  color: var(--est-text);
-  cursor: pointer;
 }
-.pdv-dividido-item-select:focus {
-  outline: none;
+
+.pdv-dividido-item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pdv-dividido-item-chip {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 140px;
+  gap: 5px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--est-border);
+  border-radius: 999px;
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pdv-dividido-item-chip:hover { border-color: var(--est-border-accent); }
+.pdv-dividido-item-chip.ativo {
+  background: var(--est-accent-dim);
   border-color: var(--est-border-accent);
-  box-shadow: 0 0 0 3px var(--est-accent-dim);
+  color: var(--est-accent);
+}
+/* Badge numerado um pouco menor aqui dentro do chip do que no cartão da
+   pessoa (onde tem mais espaço) — mesmo esquema de cor, só o tamanho muda. */
+.pdv-dividido-item-chip .pdv-dividido-fatia-num {
+  width: 16px;
+  height: 16px;
+  font-size: 0.6rem;
+}
+.pdv-dividido-item-chip.ativo .pdv-dividido-fatia-num {
+  background: var(--est-accent);
+  color: var(--est-card);
+}
+.pdv-dividido-item-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pdv-dividido-resto {

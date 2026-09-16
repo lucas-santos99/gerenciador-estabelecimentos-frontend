@@ -5,6 +5,11 @@ import { apiFetch } from '../../../utils/api';
 import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+// Mesmo formato de fmt(), mas sem o "R$" embutido — usado onde o cifrão
+// já é um elemento visual separado (ex: prefixo fixo ao lado do campo),
+// pra não duplicar "R$ R$" nem descasar o alinhamento entre o campo
+// digitável (Fase 1) e o campo calculado (Fase 2) do pagamento dividido.
+const fmtNum = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Ícone de "sem imagem" — SVG em vez de emoji, pra nunca depender da
 // fonte de emoji do sistema
@@ -94,6 +99,13 @@ const MEIOS = [
   { key: 'Dividido', label: 'Dividir entre várias pessoas', icone: '➗' },
 ];
 
+// Rótulo curto pros botões de forma de pagamento de cada fatia, dentro do
+// pagamento dividido (16/09) — o label completo de MEIOS ("Cartão de
+// Débito") não cabe num botão pequeno lado a lado com os outros 4.
+const MEIO_LABEL_CURTO = {
+  Dinheiro: 'Dinheiro', Pix: 'Pix', Debito: 'Débito', Credito: 'Crédito', Fiado: 'Fiado',
+};
+
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
    ════════════════════════════════════════════════════════════ */
@@ -153,6 +165,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [itensFatia,  setItensFatia]  = useState({});
   const [restoModo,   setRestoModo]   = useState(null); // null | 'igual' | 'manual'
   const [restoManual, setRestoManual] = useState({});
+
+  // Fluxo por Enter dentro do pagamento dividido (16/09) — nome da pessoa
+  // → valor (só no modo "por valor") → primeiro botão de forma de
+  // pagamento daquela fatia → (Fiado sem cliente ainda: botão de buscar
+  // cliente) → nome da PRÓXIMA fatia, ou o botão Confirmar geral do modal
+  // se for a última. Um objeto por campo, chaveado pelo id da fatia —
+  // nunca por índice, que muda quando alguém remove uma pessoa do meio.
+  const fatiaNomeRefs           = useRef({});
+  const fatiaValorRefs          = useRef({});
+  const fatiaMeioPrimeiroBtnRefs = useRef({});
+  const fatiaBuscarBtnRefs      = useRef({});
 
   // Confirmação antes de fechar o modal de vez — só aparece quando o
   // Esc é apertado já na primeira tela (escolha de forma de pagamento),
@@ -261,6 +284,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // pagamento (exceto Fiado, que já tem fluxo próprio de cliente)
   useEffect(() => {
     if (metodoConfirmado && meioPagamento !== 'Fiado' && meioPagamento !== 'Dividido') { setIdentHistorico([]); setIdentEtapa('perguntaCliente'); }
+  }, [metodoConfirmado, meioPagamento]);
+
+  // Pagamento dividido: foca o nome da 1ª pessoa assim que entra nesse
+  // sub-fluxo — a partir daí o Enter assume a navegação (ver refs acima).
+  useEffect(() => {
+    if (metodoConfirmado && meioPagamento === 'Dividido') {
+      setTimeout(() => {
+        const primeiraId = fatias[0]?.id;
+        fatiaNomeRefs.current[primeiraId]?.focus();
+        fatiaNomeRefs.current[primeiraId]?.select?.();
+      }, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metodoConfirmado, meioPagamento]);
 
   // Foca o elemento certo em cada passo do assistente — sempre parte
@@ -670,6 +706,65 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   function atualizarMeioFatia(id, key) {
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, meioPagamento: key, ...(key !== 'Fiado' ? { clienteId: null, clienteNome: null } : {}) } : f)));
     if (key !== 'Fiado' && fatiaBuscaAberta === id) setFatiaBuscaAberta(null);
+  }
+
+  // Move o foco pra próxima etapa do fluxo por Enter — nome da PRÓXIMA
+  // fatia (posição i+1 na lista atual), ou o botão Confirmar geral do
+  // modal se essa era a última pessoa.
+  function avancarAposFatia(i) {
+    const proxima = fatias[i + 1];
+    if (proxima) {
+      setTimeout(() => {
+        fatiaNomeRefs.current[proxima.id]?.focus();
+        fatiaNomeRefs.current[proxima.id]?.select?.();
+      }, 0);
+    } else {
+      setTimeout(() => btnConfirmarRef.current?.focus(), 0);
+    }
+  }
+
+  // Botão de forma de pagamento de uma fatia — seleciona e já avança o
+  // foco: pra dentro da busca de cliente se virou Fiado e ainda não tem
+  // cliente vinculado (o `f` aqui é o valor de ANTES do clique, então
+  // `f.clienteId` reflete corretamente se já tinha alguém selecionado de
+  // uma escolha anterior), senão pro próximo campo do fluxo normal.
+  function escolherMeioFatia(f, i, key) {
+    atualizarMeioFatia(f.id, key);
+    if (key === 'Fiado' && !f.clienteId) {
+      setTimeout(() => fatiaBuscarBtnRefs.current[f.id]?.focus(), 0);
+      return;
+    }
+    avancarAposFatia(i);
+  }
+
+  // Enter no nome da pessoa: no modo "por valor" vai pro campo de valor
+  // dela; no modo "por item" não existe campo de valor (é calculado), vai
+  // direto pro primeiro botão de forma de pagamento.
+  function handleFatiaNomeKey(e, i) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const f = fatias[i];
+    if (modoDivisao === 'valor') {
+      fatiaValorRefs.current[f.id]?.focus();
+      fatiaValorRefs.current[f.id]?.select?.();
+    } else {
+      fatiaMeioPrimeiroBtnRefs.current[f.id]?.focus();
+    }
+  }
+
+  // Enter no valor: vai pro primeiro botão de forma de pagamento da fatia.
+  function handleFatiaValorKey(e, i) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    fatiaMeioPrimeiroBtnRefs.current[fatias[i]?.id]?.focus();
+  }
+
+  // Seta esquerda/direita alterna entre os botões de forma de pagamento
+  // da mesma fatia — Enter/clique já dispara o onClick nativamente do
+  // <button>, não precisa de tratamento especial aqui.
+  function handleFatiaMeioBtnKey(e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); e.currentTarget.nextElementSibling?.focus(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); e.currentTarget.previousElementSibling?.focus(); }
   }
 
   function desvincularClienteFatia(id) {
@@ -1191,11 +1286,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   {fatias.map((f, i) => (
                     <div className="pdv-dividido-fatia" key={f.id}>
                       <div className="pdv-dividido-fatia-topo">
+                        <span className="pdv-dividido-fatia-num">{i + 1}</span>
                         <input maxLength={30}
+                          ref={el => { fatiaNomeRefs.current[f.id] = el; }}
                           className="pdv-dividido-fatia-label"
                           type="text"
                           value={f.pessoaLabel}
                           onChange={e => atualizarLabelFatia(f.id, e.target.value)}
+                          onKeyDown={e => handleFatiaNomeKey(e, i)}
                           placeholder={`Pessoa ${i + 1}`}
                         />
                         {fatias.length > 2 && (
@@ -1204,28 +1302,40 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       </div>
                       <div className="pdv-dividido-fatia-linha">
                         {modoDivisao === 'item' ? (
-                          <span className="pdv-dividido-fatia-valor-computado" title="Calculado a partir dos itens atribuídos">
-                            {fmt(valorFatiaAtual(f, i))}
-                          </span>
+                          <div className="pdv-dividido-fatia-valor-wrap computado" title="Calculado a partir dos itens atribuídos">
+                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
+                            <span className="pdv-dividido-fatia-valor-computado">{fmtNum(valorFatiaAtual(f, i))}</span>
+                          </div>
                         ) : (
-                          <input maxLength={15}
-                            className="pdv-dividido-fatia-valor"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0,00"
-                            value={f.valor}
-                            onChange={e => atualizarValorFatia(f.id, e.target.value)}
-                          />
+                          <div className="pdv-dividido-fatia-valor-wrap">
+                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
+                            <input maxLength={15}
+                              ref={el => { fatiaValorRefs.current[f.id] = el; }}
+                              className="pdv-dividido-fatia-valor"
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0,00"
+                              value={f.valor}
+                              onChange={e => atualizarValorFatia(f.id, e.target.value)}
+                              onKeyDown={e => handleFatiaValorKey(e, i)}
+                            />
+                          </div>
                         )}
-                        <select
-                          className="pdv-dividido-fatia-meio"
-                          value={f.meioPagamento}
-                          onChange={e => atualizarMeioFatia(f.id, e.target.value)}
-                        >
-                          {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map(m => (
-                            <option key={m.key} value={m.key}>{m.icone} {m.label}</option>
-                          ))}
-                        </select>
+                      </div>
+                      <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
+                        {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map((m, mi) => (
+                          <button type="button"
+                            key={m.key}
+                            ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
+                            className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
+                            onClick={() => escolherMeioFatia(f, i, m.key)}
+                            onKeyDown={handleFatiaMeioBtnKey}
+                            title={m.label}
+                          >
+                            <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
+                            <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
+                          </button>
+                        ))}
                       </div>
                       {f.meioPagamento === 'Fiado' && (
                         <div className="pdv-dividido-fiado">
@@ -1290,7 +1400,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                               )}
                             </div>
                           ) : (
-                            <button type="button" className="pdv-dividido-fiado-buscar-btn" onClick={() => abrirBuscaFatia(f.id)}>
+                            <button type="button"
+                              ref={el => { fatiaBuscarBtnRefs.current[f.id] = el; }}
+                              className="pdv-dividido-fiado-buscar-btn"
+                              onClick={() => abrirBuscaFatia(f.id)}
+                            >
                               🔍 Selecionar cliente (obrigatório pro fiado)
                             </button>
                           )}
@@ -1303,26 +1417,32 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
                 {modoDivisao === 'item' && (
                   <div className="pdv-dividido-itens">
-                    <span className="pdv-dividido-itens-titulo">📦 Itens do carrinho — de quem é cada um?</span>
+                    <span className="pdv-dividido-itens-titulo">📦 Itens do carrinho — toque no número da pessoa dona de cada item</span>
                     <ul className="pdv-dividido-itens-lista">
-                      {carrinho.map((item, idx) => (
-                        <li className="pdv-dividido-item-linha" key={idx}>
-                          <span className="pdv-dividido-item-nome">
-                            {item.nome}
-                            <span className="pdv-dividido-item-valor"> · {fmt(valorItemCarrinho(item))}</span>
-                          </span>
-                          <select
-                            className="pdv-dividido-item-select"
-                            value={itensFatia[idx] ?? ''}
-                            onChange={e => atribuirItemFatia(idx, e.target.value ? Number(e.target.value) : null)}
-                          >
-                            <option value="">— Sem dono —</option>
-                            {fatias.map((f, i) => (
-                              <option key={f.id} value={f.id}>{f.pessoaLabel || `Pessoa ${i + 1}`}</option>
-                            ))}
-                          </select>
-                        </li>
-                      ))}
+                      {carrinho.map((item, idx) => {
+                        const donoId = itensFatia[idx] ?? null;
+                        return (
+                          <li className="pdv-dividido-item-card" key={idx}>
+                            <div className="pdv-dividido-item-info">
+                              <span className="pdv-dividido-item-nome">{item.nome}</span>
+                              <span className="pdv-dividido-item-valor">{fmt(valorItemCarrinho(item))}</span>
+                            </div>
+                            <div className="pdv-dividido-item-chips">
+                              {fatias.map((f, i) => (
+                                <button type="button"
+                                  key={f.id}
+                                  className={`pdv-dividido-item-chip${donoId === f.id ? ' ativo' : ''}`}
+                                  onClick={() => atribuirItemFatia(idx, donoId === f.id ? null : f.id)}
+                                  title={f.pessoaLabel || `Pessoa ${i + 1}`}
+                                >
+                                  <span className="pdv-dividido-fatia-num">{i + 1}</span>
+                                  <span className="pdv-dividido-item-chip-label">{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
 
                     {valorResto > 0.001 && (
