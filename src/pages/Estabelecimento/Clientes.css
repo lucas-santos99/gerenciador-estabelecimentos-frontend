@@ -510,6 +510,47 @@
   margin: 0;
 }
 
+/* Detalhe das fatias de uma venda 'Dividido' (backlog item 19, passo 6)
+   — mesmo esqueleto visual do bloco equivalente em Relatorios.jsx
+   (.fin-historico-dividido*) e no recibo do PDV (.pdv-posv-dividido*). */
+.cli-venda-dividido {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--est-border);
+  background: var(--est-input);
+}
+.cli-venda-dividido-titulo {
+  font-size: calc(0.75rem * var(--cli-font-scale, 1));
+  font-weight: 700;
+  color: #6366f1;
+  margin-bottom: 2px;
+}
+.cli-venda-dividido-fatia-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cli-venda-dividido-fatia {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(0.79rem * var(--cli-font-scale, 1));
+}
+.cli-venda-dividido-fatia-nome { font-weight: 600; color: var(--est-text-soft); }
+.cli-venda-dividido-fatia-meio { flex: 1; color: var(--est-text-muted); }
+.cli-venda-dividido-fatia-valor { color: var(--est-accent); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+/* Lista dos itens dessa fatia — só aparece em venda dividida por item
+   (Fase 2 do backlog item 19); venda dividida por valor não tem essa
+   linha, porque não existe dono por item nesse modo. */
+.cli-venda-dividido-fatia-itens {
+  font-size: calc(0.7rem * var(--cli-font-scale, 1));
+  color: var(--est-text-muted);
+  font-style: italic;
+  padding-left: 4px;
+}
+
 .cli-venda-item {
   display: flex;
   align-items: center;

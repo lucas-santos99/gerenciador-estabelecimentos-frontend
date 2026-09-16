@@ -5,9 +5,34 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import './Relatorios.css';
+// As classes .fin-badge-meio/.fin-historico-*/.fin-relop-* usadas nessa
+// aba (Histórico de Vendas / Resumo por operador) vivem em Financeiro.css
+// — mesma tela que originou esse recurso antes dele ser movido pra cá.
+// Sem esse import, essa aba só ficava estilizada quando o usuário já
+// tinha visitado a aba Financeiro antes na mesma sessão (mesmo tipo de
+// bug de "CSS por tela" já documentado no roadmap, 11/08 — lightbox do
+// PDV sem estilo). Corrigido junto com o passo 6 (achado ao mexer nessas
+// mesmas classes pra tratar 'Dividido').
+import '../Financeiro.css';
 
 /* ── helpers ─────────────────────────────────────────────── */
 const fmt = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Rótulo curto por forma de pagamento — mesmo dicionário usado no PDV
+// (ModalPosVenda) pra manter consistência visual entre recibo e telas
+// de histórico/relatório.
+const meioLabelCurto = {
+  Dinheiro: '💵 Dinheiro', Pix: '📱 Pix', Debito: '💳 Débito', Credito: '💳 Crédito', Fiado: '📋 Fiado',
+};
+
+// Rótulo do badge de forma de pagamento — 'Dividido (N formas)' no lugar
+// do texto cru quando a venda tem mais de uma fatia (backlog item 19,
+// passo 6). Sem pagamentos carregados ainda, cai pro texto simples.
+function labelMeioPagamento(venda) {
+  if (venda.meio_pagamento !== 'Dividido') return venda.meio_pagamento;
+  const n = venda.pagamentos?.length;
+  return n ? `➗ Dividido (${n} formas)` : '➗ Dividido';
+}
 
 function dataHoje() {
   const d = new Date();
@@ -118,7 +143,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
 
   async function cancelarVenda(venda) {
     const motivo = window.prompt(
-      `Cancelar a venda de ${fmt(venda.valor_total)} (${venda.meio_pagamento})?\n\nIsso vai devolver os itens pro estoque e estornar o pagamento (caixa ou dívida de fiado).\n\nMotivo (opcional):`
+      `Cancelar a venda de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso vai devolver os itens pro estoque e estornar o pagamento (caixa ou dívida de fiado — em venda dividida, de cada fatia).\n\nMotivo (opcional):`
     );
     if (motivo === null) return; // clicou em Cancelar do prompt, desiste
     setCancelandoVendaId(venda.id);
@@ -173,13 +198,46 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       const meio = (v.meio_pagamento || '').toLowerCase();
       r.qtd_vendas += 1;
       r.total_vendas += valor;
-      if (meio === 'dinheiro') r.total_dinheiro += valor;
+      if (meio === 'dividido') {
+        // Abre cada fatia no balde certo em vez de deixar a venda de
+        // fora dos 4 baldes por forma de pagamento — mesmo bug (e
+        // mesmo fix) já aplicado no backend em /relatorio_vendas_operador
+        // (16/09), só que essa é uma agregação separada, feita aqui no
+        // cliente a partir do /historico.
+        (v.pagamentos || []).forEach(f => {
+          const valorFatia = parseFloat(f.valor) || 0;
+          const meioFatia = (f.meio_pagamento || '').toLowerCase();
+          if (meioFatia === 'dinheiro') r.total_dinheiro += valorFatia;
+          else if (meioFatia === 'pix') r.total_pix += valorFatia;
+          else if (meioFatia === 'debito' || meioFatia === 'credito') r.total_cartao += valorFatia;
+          else if (meioFatia === 'fiado') r.total_fiado += valorFatia;
+        });
+      }
+      else if (meio === 'dinheiro') r.total_dinheiro += valor;
       else if (meio === 'pix') r.total_pix += valor;
       else if (meio === 'debito' || meio === 'credito') r.total_cartao += valor;
       else if (meio === 'fiado') r.total_fiado += valor;
     });
     return Object.values(mapa).sort((a, b) => b.total_vendas - a.total_vendas);
   })();
+
+  // Descreve as fatias de uma venda 'Dividido' numa linha só de texto —
+  // usado nos exports (Excel/PDF), que não têm como abrir um detalhe
+  // clicável como a tela tem.
+  function descreverFatias(venda) {
+    if (venda.meio_pagamento !== 'Dividido') return '';
+    return (venda.pagamentos || [])
+      .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
+      .join(' | ');
+  }
+
+  // Nomes dos itens de uma fatia específica — venda dividida por item
+  // (Fase 2 do backlog item 19). itens_venda.pagamento_venda_id linka
+  // cada item ao id da fatia (pagamentos_venda.id). Fatia vazia aqui
+  // significa venda dividida por valor (sem dono por item).
+  function itensDaFatia(venda, fatiaId) {
+    return (venda.itens || []).filter(i => i.pagamento_venda_id === fatiaId).map(i => i.produto_nome);
+  }
 
   /* ── Exportação do Histórico (lista individual, respeita os filtros) ── */
   function exportarHistoricoExcel() {
@@ -188,7 +246,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       'Data':        new Date(v.data_venda).toLocaleString('pt-BR'),
       'Operador':    v.operador_nome,
       'Cliente':     v.cliente_nome || '',
-      'Meio Pagto':  v.meio_pagamento,
+      'Meio Pagto':  labelMeioPagamento(v),
+      'Detalhe do pagamento dividido': descreverFatias(v),
       'Valor (R$)':  parseFloat(v.valor_total),
       'Itens':       (v.itens || []).map(i => `${i.produto_nome} (${i.quantidade})`).join(', '),
     }));
@@ -217,16 +276,20 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           }).join('')
         : '<div class="hp-item"><span>—</span><span></span></div>';
 
+      const fatiasHtml = v.meio_pagamento === 'Dividido' && (v.pagamentos || []).length > 0
+        ? `<div class="hp-item" style="font-style:italic;color:#0f766e;">Dividido: ${descreverFatias(v)}</div>`
+        : '';
+
       return `
         <tr class="hp-venda-row">
           <td>${new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
           <td>${v.operador_nome || ''}</td>
           <td>${v.cliente_nome || '—'}</td>
-          <td>${v.meio_pagamento}</td>
+          <td>${labelMeioPagamento(v)}</td>
           <td>${v.status === 'cancelada' ? 'Cancelada' : 'Ativa'}</td>
           <td class="hp-valor">${fmt(v.valor_total)}</td>
         </tr>
-        <tr class="hp-itens-row"><td colspan="6">${itensHtml}</td></tr>
+        <tr class="hp-itens-row"><td colspan="6">${itensHtml}${fatiasHtml}</td></tr>
       `;
     }).join('');
 
@@ -640,7 +703,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                         <span className="fin-historico-data">
                           {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{venda.meio_pagamento}</span>
+                        <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{labelMeioPagamento(venda)}</span>
                         {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
                         {venda.operador_nome && (
                           <span className="fin-historico-operador">🧑‍💼 {venda.operador_nome}</span>
@@ -654,6 +717,31 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                       </div>
                       <div className="fin-historico-valor">{fmt(venda.valor_total)}</div>
                     </div>
+                    {vendaDetalhes?.id === venda.id && venda.meio_pagamento === 'Dividido' && venda.pagamentos?.length > 0 && (
+                      <div className="fin-historico-dividido">
+                        <span className="fin-historico-dividido-titulo">
+                          ➗ Dividido em {venda.pagamentos?.length || 0} partes
+                        </span>
+                        {(venda.pagamentos || []).map((p, i) => {
+                          const nomesItens = itensDaFatia(venda, p.id);
+                          return (
+                            <div className="fin-historico-dividido-fatia-bloco" key={i}>
+                              <div className="fin-historico-dividido-fatia">
+                                <span className="fin-historico-dividido-fatia-nome">{p.pessoa_label || `Pessoa ${i + 1}`}</span>
+                                <span className="fin-historico-dividido-fatia-meio">
+                                  {meioLabelCurto[p.meio_pagamento] || p.meio_pagamento}
+                                  {p.cliente_nome ? ` · ${p.cliente_nome}` : ''}
+                                </span>
+                                <span className="fin-historico-dividido-fatia-valor">{fmt(p.valor)}</span>
+                              </div>
+                              {nomesItens.length > 0 && (
+                                <div className="fin-historico-dividido-fatia-itens">{nomesItens.join(', ')}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     {vendaDetalhes?.id === venda.id && venda.itens?.length > 0 && (
                       <div className="fin-historico-itens">
                         {venda.itens.map((item, i) => {

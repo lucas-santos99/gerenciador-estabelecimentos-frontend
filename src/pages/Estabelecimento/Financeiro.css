@@ -1175,6 +1175,48 @@
 .fin-badge-meio.debito,
 .fin-badge-meio.credito  { background: rgba(139,92,246,0.1); color: #8b5cf6; border-color: transparent; }
 .fin-badge-meio.fiado    { background: var(--est-warning-dim); color: var(--est-warning); border-color: transparent; }
+.fin-badge-meio.dividido { background: rgba(99,102,241,0.12); color: #6366f1; border-color: transparent; text-transform: none; }
+
+/* Detalhe das fatias de uma venda 'Dividido' (backlog item 19, passo 6)
+   — mesmo esqueleto visual do bloco equivalente no recibo do PDV
+   (.pdv-posv-dividido*), reaproveitando as variáveis de tema --est-*. */
+.fin-historico-dividido {
+  border-top: 1px solid var(--est-border);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--est-input);
+}
+.fin-historico-dividido-titulo {
+  font-size: calc(0.78rem * var(--fin-font-scale, 1));
+  font-weight: 700;
+  color: #6366f1;
+  margin-bottom: 2px;
+}
+.fin-historico-dividido-fatia-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fin-historico-dividido-fatia {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(0.82rem * var(--fin-font-scale, 1));
+}
+.fin-historico-dividido-fatia-nome { font-weight: 600; color: var(--est-text-soft); }
+.fin-historico-dividido-fatia-meio { flex: 1; color: var(--est-text-muted); }
+.fin-historico-dividido-fatia-valor { color: var(--est-accent); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+/* Lista dos itens dessa fatia — só aparece em venda dividida por item
+   (Fase 2 do backlog item 19); venda dividida por valor não tem essa
+   linha, porque não existe dono por item nesse modo. */
+.fin-historico-dividido-fatia-itens {
+  font-size: calc(0.72rem * var(--fin-font-scale, 1));
+  color: var(--est-text-muted);
+  font-style: italic;
+  padding-left: 4px;
+}
 
 .fin-historico-itens {
   border-top: 1px solid var(--est-border);

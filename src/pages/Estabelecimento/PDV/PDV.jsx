@@ -91,12 +91,13 @@ const MEIOS = [
   { key: 'Debito',   label: 'Cartão de Débito',  icone: '💳' },
   { key: 'Credito',  label: 'Cartão de Crédito', icone: '💳' },
   { key: 'Fiado',    label: 'Fiado (Na conta)',   icone: '📋' },
+  { key: 'Dividido', label: 'Dividir entre várias pessoas', icone: '➗' },
 ];
 
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
    ════════════════════════════════════════════════════════════ */
-function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado = true, estabelecimentoId, pixConfig = { modo: 'maquininha', disponivel: false } }) {
+function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado = true, estabelecimentoId, pixConfig = { modo: 'maquininha', disponivel: false }, carrinho = [] }) {
 
   const [selectedIndex,      setSelectedIndex]      = useState(0);
   const [meioPagamento,      setMeioPagamento]      = useState('Dinheiro');
@@ -120,6 +121,38 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [cadFiadoSemLimite, setCadFiadoSemLimite] = useState(true);
   const [cadFiadoLimite,    setCadFiadoLimite]    = useState('');
   const [erro,               setErro]               = useState('');
+
+  // Pagamento dividido entre várias pessoas (backlog item 19, Fase 1 —
+  // divisão por VALOR: cada pessoa digita o quanto está pagando e escolhe
+  // sua própria forma; item por item fica pra Fase 2). Fluxo propositalmente
+  // mais simples/mouse-first que o resto do modal (sem o wizard de
+  // identificação nem atalhos de teclado profundos) — busca/cadastro de
+  // cliente pro fiado de cada fatia é uma versão compacta da de cima.
+  const fatiaIdRef = useRef(0);
+  const [fatias,             setFatias]             = useState([]);
+  const [fatiaBuscaAberta,   setFatiaBuscaAberta]   = useState(null); // id da fatia com a busca aberta
+  const [fatiaBuscaTermo,    setFatiaBuscaTermo]    = useState('');
+  const [fatiaBuscaResultados, setFatiaBuscaResultados] = useState([]);
+  const [fatiaBuscaLoading,  setFatiaBuscaLoading]  = useState(false);
+  const [fatiaCadNovo,       setFatiaCadNovo]       = useState(false);
+  const [fatiaCadNome,       setFatiaCadNome]       = useState('');
+  const [fatiaCadTelefone,   setFatiaCadTelefone]   = useState('');
+  const [fatiaCadSalvando,   setFatiaCadSalvando]   = useState(false);
+  const [fatiaCadErro,       setFatiaCadErro]       = useState('');
+
+  // Pagamento dividido — Fase 2 (backlog item 19): divisão por ITEM, em
+  // cima da mesma base da Fase 1. `modoDivisao` alterna entre digitar o
+  // valor de cada pessoa na mão (Fase 1, comportamento padrão) e
+  // atribuir cada item do carrinho a uma pessoa (o valor de cada fatia
+  // passa a ser calculado, não digitado). `itensFatia` mapeia índice do
+  // item no carrinho → id da fatia dona dele (ou undefined/null se não
+  // atribuído). Itens não atribuídos formam o "resto", que precisa de
+  // uma escolha explícita do operador: dividir igualmente ou digitar o
+  // valor de cada um (nunca um comportamento padrão silencioso).
+  const [modoDivisao, setModoDivisao] = useState('valor'); // 'valor' | 'item'
+  const [itensFatia,  setItensFatia]  = useState({});
+  const [restoModo,   setRestoModo]   = useState(null); // null | 'igual' | 'manual'
+  const [restoManual, setRestoManual] = useState({});
 
   // Confirmação antes de fechar o modal de vez — só aparece quando o
   // Esc é apertado já na primeira tela (escolha de forma de pagamento),
@@ -204,6 +237,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   useEffect(() => {
     if (!metodoConfirmado) return;
+    if (meioPagamento === 'Dividido') return; // fluxo próprio, sem foco automático de campo único
     if (meioPagamento === 'Dinheiro') {
       const val = total.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 });
       setValorRecebido(val);
@@ -226,7 +260,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // Inicia o assistente de identificação assim que confirma a forma de
   // pagamento (exceto Fiado, que já tem fluxo próprio de cliente)
   useEffect(() => {
-    if (metodoConfirmado && meioPagamento !== 'Fiado') { setIdentHistorico([]); setIdentEtapa('perguntaCliente'); }
+    if (metodoConfirmado && meioPagamento !== 'Fiado' && meioPagamento !== 'Dividido') { setIdentHistorico([]); setIdentEtapa('perguntaCliente'); }
   }, [metodoConfirmado, meioPagamento]);
 
   // Foca o elemento certo em cada passo do assistente — sempre parte
@@ -572,16 +606,225 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (mostrarCadFiado) setTimeout(() => cadFiadoNomeRef.current?.focus(), 0);
   }, [mostrarCadFiado]);
 
+  // ── Pagamento dividido — funções da lista de fatias ──
+  function adicionarPessoa() {
+    fatiaIdRef.current += 1;
+    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null }]);
+  }
+
+  function removerPessoa(id) {
+    setFatias(fs => (fs.length <= 2 ? fs : fs.filter(f => f.id !== id)));
+    if (fatiaBuscaAberta === id) setFatiaBuscaAberta(null);
+    // Fase 2 — libera os itens que estavam com essa pessoa (voltam pro
+    // "resto") e descarta o valor manual do resto que ela tinha digitado.
+    setItensFatia(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => { if (next[k] === id) delete next[k]; });
+      return next;
+    });
+    setRestoManual(prev => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  // ── Pagamento dividido, Fase 2 — divisão por item ──
+  function mudarModoDivisao(novo) {
+    if (novo === modoDivisao) return;
+    setModoDivisao(novo);
+    setItensFatia({});
+    setRestoModo(null);
+    setRestoManual({});
+    if (novo === 'valor') setFatias(fs => fs.map(f => ({ ...f, valor: '' })));
+  }
+
+  function atribuirItemFatia(idx, fatiaId) {
+    setItensFatia(prev => ({ ...prev, [idx]: fatiaId }));
+  }
+
+  function valorItemCarrinho(item) {
+    return parseFloat(item.preco_venda || 0) * parseFloat(item.quantidade || 0);
+  }
+
+  // Divide um valor (em reais) em N partes de centavos inteiros, sem
+  // perder nem sobrar centavo — a sobra da divisão vai pras primeiras
+  // pessoas da lista, uma a uma.
+  function dividirValorIgual(valor, n) {
+    if (n <= 0) return [];
+    const centavos = Math.round(valor * 100);
+    const base = Math.floor(centavos / n);
+    const sobra = centavos - base * n;
+    return Array.from({ length: n }, (_, i) => (base + (i < sobra ? 1 : 0)) / 100);
+  }
+
+  function atualizarValorFatia(id, bruto) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, valor: digitarValorMascarado(bruto) } : f)));
+  }
+
+  function atualizarLabelFatia(id, label) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, pessoaLabel: label } : f)));
+  }
+
+  function atualizarMeioFatia(id, key) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, meioPagamento: key, ...(key !== 'Fiado' ? { clienteId: null, clienteNome: null } : {}) } : f)));
+    if (key !== 'Fiado' && fatiaBuscaAberta === id) setFatiaBuscaAberta(null);
+  }
+
+  function desvincularClienteFatia(id) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: null, clienteNome: null } : f)));
+  }
+
+  function abrirBuscaFatia(id) {
+    setFatiaBuscaAberta(id);
+    setFatiaBuscaTermo('');
+    setFatiaBuscaResultados([]);
+    setFatiaCadNovo(false);
+    setFatiaCadNome('');
+    setFatiaCadTelefone('');
+    setFatiaCadErro('');
+  }
+
+  async function buscarClienteFatia(termo) {
+    setFatiaBuscaTermo(termo);
+    if (termo.length < 2) { setFatiaBuscaResultados([]); return; }
+    setFatiaBuscaLoading(true);
+    try {
+      const resp = await apiFetch(`/api/clientes/buscar?termo=${encodeURIComponent(termo)}`);
+      if (!resp.ok) throw new Error();
+      const todos = await resp.json();
+      setFatiaBuscaResultados(todos.filter(c => c.permite_fiado !== false));
+    } catch { /* silencioso — mesma lógica de busca das outras telas */ }
+    finally { setFatiaBuscaLoading(false); }
+  }
+
+  function selecionarClienteFatia(id, cli) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome } : f)));
+    setFatiaBuscaAberta(null);
+  }
+
+  // Cadastro rápido de dentro da fatia — versão compacta (só nome e
+  // telefone) do cadastro rápido de fiado de cima; sempre sem limite.
+  async function salvarClienteRapidoFatia(id) {
+    if (!fatiaCadNome.trim()) { setFatiaCadErro('Nome é obrigatório.'); return; }
+    setFatiaCadSalvando(true); setFatiaCadErro('');
+    try {
+      const resp = await apiFetch('/api/clientes/criar', {
+        method: 'POST',
+        body: JSON.stringify({
+          estabelecimentoId,
+          nome:          fatiaCadNome.trim(),
+          telefone:      fatiaCadTelefone.trim() || null,
+          permiteFiado:  true,
+          limiteCredito: '0',
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Erro ao cadastrar cliente.');
+      selecionarClienteFatia(id, data);
+    } catch (err) { setFatiaCadErro(err.message); }
+    finally { setFatiaCadSalvando(false); }
+  }
+
+  // Fase 2 — quanto de itens já ficou com cada fatia, e o que sobrou
+  // sem dono ("resto"). Só tem efeito quando modoDivisao === 'item';
+  // em modo 'valor' ninguém usa essas variáveis pra calcular o valor.
+  const itensAtribuidosPorFatia = {};
+  fatias.forEach(f => { itensAtribuidosPorFatia[f.id] = 0; });
+  let valorResto = 0;
+  carrinho.forEach((item, idx) => {
+    const fatiaId = itensFatia[idx];
+    if (fatiaId != null && itensAtribuidosPorFatia[fatiaId] !== undefined) {
+      itensAtribuidosPorFatia[fatiaId] += valorItemCarrinho(item);
+    } else {
+      valorResto += valorItemCarrinho(item);
+    }
+  });
+  const partesRestoIgual = dividirValorIgual(valorResto, fatias.length);
+
+  // Valor de cada fatia: digitado à mão (Fase 1) ou calculado a partir
+  // dos itens atribuídos + a parte do resto que coube a ela (Fase 2).
+  function valorFatiaAtual(f, i) {
+    if (modoDivisao !== 'item') return paraFloatBR(f.valor) || 0;
+    const base = itensAtribuidosPorFatia[f.id] || 0;
+    if (valorResto <= 0.001) return base;
+    if (restoModo === 'igual') return base + (partesRestoIgual[i] || 0);
+    if (restoModo === 'manual') return base + (paraFloatBR(restoManual[f.id]) || 0);
+    return base; // resto ainda não resolvido — fatia fica incompleta de propósito
+  }
+
+  // No modo por item, enquanto sobrar item sem dono e o operador não
+  // tiver escolhido como tratar o resto, a divisão fica bloqueada —
+  // nunca assume um comportamento padrão silenciosamente.
+  const restoPendente = modoDivisao === 'item' && valorResto > 0.001 && !restoModo;
+
+  const somaFatias = fatias.reduce((s, f, i) => s + valorFatiaAtual(f, i), 0);
+  const restanteDividir = Math.round((total - somaFatias) * 100) / 100;
+  const fatiasValidas = fatias.length >= 2
+    && !restoPendente
+    && fatias.every((f, i) => valorFatiaAtual(f, i) > 0)
+    && fatias.every(f => f.meioPagamento !== 'Fiado' || f.clienteId)
+    && Math.abs(restanteDividir) <= 0.01;
+
+  function confirmarFinalDividido() {
+    setErro('');
+    if (fatias.length < 2) { setErro('Adicione pelo menos duas pessoas para dividir a venda.'); return; }
+    if (restoPendente) { setErro('Escolha como tratar os itens que ainda não têm dono antes de continuar.'); return; }
+    const valoresFinais = fatias.map((f, i) => valorFatiaAtual(f, i));
+    for (let i = 0; i < fatias.length; i++) {
+      const f = fatias[i];
+      if (!(valoresFinais[i] > 0)) { setErro(`Informe um valor válido para ${f.pessoaLabel || 'a pessoa'}.`); return; }
+      if (f.meioPagamento === 'Fiado' && !f.clienteId) { setErro(`Selecione um cliente para ${f.pessoaLabel || 'a pessoa'} (Fiado).`); return; }
+    }
+    const somaFinal = valoresFinais.reduce((s, v) => s + v, 0);
+    if (Math.abs(total - somaFinal) > 0.01) { setErro('A soma dos valores das pessoas precisa bater com o total da venda.'); return; }
+    const pagamentos = fatias.map((f, i) => ({
+      meioPagamento: f.meioPagamento,
+      valor:         Math.round(valoresFinais[i] * 100) / 100,
+      clienteId:     f.clienteId || null,
+      clienteNome:   f.clienteNome || null, // só pro recibo/tela — o backend ignora e busca o nome de novo pra auditoria
+      pessoaLabel:   f.pessoaLabel || null,
+    }));
+    // Fase 2 — pra cada item do carrinho, qual fatia (índice 0-based)
+    // ficou com ele. Item não atribuído (ou que caiu no resto dividido
+    // igualmente/rateado à mão) fica sem índice — não tem um dono único
+    // pra gravar em itens_venda.pagamento_venda_id, e a RPC já trata
+    // pagamento_index ausente como "sem fatia própria" nesse caso.
+    const itensPagamentoIndex = modoDivisao === 'item'
+      ? carrinho.map((_, idx) => {
+          const fatiaId = itensFatia[idx];
+          if (fatiaId == null) return null;
+          const i = fatias.findIndex(f => f.id === fatiaId);
+          return i >= 0 ? i : null;
+        })
+      : null;
+    onFinalizar('Dividido', null, { pagamentos, itensPagamentoIndex });
+  }
+
   function confirmarMetodo(key, idx) {
     setMeioPagamento(key);
     setSelectedIndex(idx);
     setMetodoConfirmado(true);
     setErro('');
     if (key !== 'Fiado') setClienteSelecionado(null);
+    if (key === 'Dividido') {
+      fatiaIdRef.current = 2;
+      setFatias([
+        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null },
+        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null },
+      ]);
+      setFatiaBuscaAberta(null);
+      setModoDivisao('valor');
+      setItensFatia({});
+      setRestoModo(null);
+      setRestoManual({});
+    }
   }
 
   function confirmarFinal() {
     setErro('');
+    if (meioPagamento === 'Dividido') { confirmarFinalDividido(); return; }
     if (meioPagamento === 'Fiado') {
       if (!clienteSelecionado?.id) { setErro('Selecione um cliente para o fiado.'); return; }
 
@@ -930,10 +1173,201 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
               </div>
             )}
 
+            {meioPagamento === 'Dividido' && (
+              <div className="pdv-dividido-wrap">
+                <div className="pdv-dividido-modo-toggle">
+                  <button type="button" className={modoDivisao === 'valor' ? 'ativo' : ''} onClick={() => mudarModoDivisao('valor')}>
+                    💰 Dividir por valor
+                  </button>
+                  <button type="button" className={modoDivisao === 'item' ? 'ativo' : ''} onClick={() => mudarModoDivisao('item')} disabled={carrinho.length === 0}>
+                    📦 Dividir por item
+                  </button>
+                </div>
+                <div className={`pdv-dividido-restante${Math.abs(restanteDividir) <= 0.01 && !restoPendente ? ' ok' : ''}`}>
+                  <span>Restante a dividir</span>
+                  <strong>{fmt(restoPendente ? valorResto : restanteDividir)}</strong>
+                </div>
+                <div className="pdv-dividido-lista">
+                  {fatias.map((f, i) => (
+                    <div className="pdv-dividido-fatia" key={f.id}>
+                      <div className="pdv-dividido-fatia-topo">
+                        <input maxLength={30}
+                          className="pdv-dividido-fatia-label"
+                          type="text"
+                          value={f.pessoaLabel}
+                          onChange={e => atualizarLabelFatia(f.id, e.target.value)}
+                          placeholder={`Pessoa ${i + 1}`}
+                        />
+                        {fatias.length > 2 && (
+                          <button type="button" className="pdv-dividido-remover" onClick={() => removerPessoa(f.id)} title="Remover pessoa">✕</button>
+                        )}
+                      </div>
+                      <div className="pdv-dividido-fatia-linha">
+                        {modoDivisao === 'item' ? (
+                          <span className="pdv-dividido-fatia-valor-computado" title="Calculado a partir dos itens atribuídos">
+                            {fmt(valorFatiaAtual(f, i))}
+                          </span>
+                        ) : (
+                          <input maxLength={15}
+                            className="pdv-dividido-fatia-valor"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0,00"
+                            value={f.valor}
+                            onChange={e => atualizarValorFatia(f.id, e.target.value)}
+                          />
+                        )}
+                        <select
+                          className="pdv-dividido-fatia-meio"
+                          value={f.meioPagamento}
+                          onChange={e => atualizarMeioFatia(f.id, e.target.value)}
+                        >
+                          {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map(m => (
+                            <option key={m.key} value={m.key}>{m.icone} {m.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {f.meioPagamento === 'Fiado' && (
+                        <div className="pdv-dividido-fiado">
+                          {f.clienteId ? (
+                            <div className="pdv-dividido-fiado-selecionado">
+                              <span>📋 {f.clienteNome}</span>
+                              <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>↩ Trocar</button>
+                            </div>
+                          ) : fatiaBuscaAberta === f.id ? (
+                            <div className="pdv-dividido-fiado-busca">
+                              {!fatiaCadNovo ? (
+                                <>
+                                  <input maxLength={100}
+                                    autoFocus
+                                    className="pdv-cliente-busca-input"
+                                    type="text"
+                                    placeholder="Buscar cliente…"
+                                    value={fatiaBuscaTermo}
+                                    onChange={e => buscarClienteFatia(e.target.value)}
+                                  />
+                                  {fatiaBuscaLoading && <div className="pdv-dividido-fiado-loading">Buscando…</div>}
+                                  {fatiaBuscaResultados.length > 0 && (
+                                    <ul className="pdv-cliente-lista">
+                                      {fatiaBuscaResultados.map(cli => (
+                                        <li key={cli.id} className="pdv-cliente-item" onClick={() => selecionarClienteFatia(f.id, cli)}>
+                                          {cli.nome}
+                                          <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  <div className="pdv-dividido-fiado-acoes">
+                                    <button type="button" className="pdv-ident-pular" onClick={() => setFatiaCadNovo(true)}>➕ Cadastrar novo cliente</button>
+                                    <button type="button" className="pdv-ident-pular" onClick={() => setFatiaBuscaAberta(null)}>Cancelar</button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <input maxLength={100}
+                                    autoFocus
+                                    className="pdv-cliente-busca-input"
+                                    type="text"
+                                    placeholder="Nome do cliente *"
+                                    value={fatiaCadNome}
+                                    onChange={e => setFatiaCadNome(e.target.value)}
+                                  />
+                                  <input maxLength={20}
+                                    className="pdv-cliente-busca-input"
+                                    type="text"
+                                    placeholder="Telefone (opcional)"
+                                    value={fatiaCadTelefone}
+                                    onChange={e => setFatiaCadTelefone(e.target.value)}
+                                  />
+                                  {fatiaCadErro && <div className="pdv-pagamento-erro" style={{ marginTop: 0 }}>⚠️ {fatiaCadErro}</div>}
+                                  <div className="pdv-dividido-fiado-acoes">
+                                    <button type="button" className="pdv-ident-pular" disabled={fatiaCadSalvando} onClick={() => salvarClienteRapidoFatia(f.id)}>
+                                      {fatiaCadSalvando ? '⏳ Cadastrando…' : '✓ Cadastrar e usar'}
+                                    </button>
+                                    <button type="button" className="pdv-ident-pular" onClick={() => setFatiaCadNovo(false)}>← Voltar</button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <button type="button" className="pdv-dividido-fiado-buscar-btn" onClick={() => abrirBuscaFatia(f.id)}>
+                              🔍 Selecionar cliente (obrigatório pro fiado)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="pdv-dividido-add" onClick={adicionarPessoa}>➕ Adicionar pessoa</button>
+
+                {modoDivisao === 'item' && (
+                  <div className="pdv-dividido-itens">
+                    <span className="pdv-dividido-itens-titulo">📦 Itens do carrinho — de quem é cada um?</span>
+                    <ul className="pdv-dividido-itens-lista">
+                      {carrinho.map((item, idx) => (
+                        <li className="pdv-dividido-item-linha" key={idx}>
+                          <span className="pdv-dividido-item-nome">
+                            {item.nome}
+                            <span className="pdv-dividido-item-valor"> · {fmt(valorItemCarrinho(item))}</span>
+                          </span>
+                          <select
+                            className="pdv-dividido-item-select"
+                            value={itensFatia[idx] ?? ''}
+                            onChange={e => atribuirItemFatia(idx, e.target.value ? Number(e.target.value) : null)}
+                          >
+                            <option value="">— Sem dono —</option>
+                            {fatias.map((f, i) => (
+                              <option key={f.id} value={f.id}>{f.pessoaLabel || `Pessoa ${i + 1}`}</option>
+                            ))}
+                          </select>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {valorResto > 0.001 && (
+                      <div className="pdv-dividido-resto">
+                        <span className="pdv-dividido-resto-texto">
+                          ⚠️ {fmt(valorResto)} em itens ainda sem dono.
+                        </span>
+                        {!restoModo ? (
+                          <div className="pdv-ident-pergunta-botoes">
+                            <button type="button" className="pdv-ident-btn-sim" onClick={() => setRestoModo('igual')}>÷ Dividir igual</button>
+                            <button type="button" className="pdv-ident-btn-nao" onClick={() => setRestoModo('manual')}>✏️ Digitar de cada um</button>
+                          </div>
+                        ) : restoModo === 'igual' ? (
+                          <div className="pdv-dividido-resto-info">
+                            <span>Dividido igualmente entre as {fatias.length} pessoas.</span>
+                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
+                          </div>
+                        ) : (
+                          <div className="pdv-dividido-resto-manual">
+                            {fatias.map((f, i) => (
+                              <div className="pdv-dividido-resto-manual-linha" key={f.id}>
+                                <span>{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
+                                <input maxLength={15}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="0,00"
+                                  value={restoManual[f.id] || ''}
+                                  onChange={e => setRestoManual(rm => ({ ...rm, [f.id]: digitarValorMascarado(e.target.value) }))}
+                                />
+                              </div>
+                            ))}
+                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Resumo da identificação (se teve alguma) — com opção de
                 reabrir o assistente pra trocar, sem precisar cancelar
                 a venda inteira */}
-            {meioPagamento !== 'Fiado' && (clienteVinculado || cpfNota) && (
+            {meioPagamento !== 'Fiado' && meioPagamento !== 'Dividido' && (clienteVinculado || cpfNota) && (
               <div className="pdv-ident-recap">
                 <span>
                   🪪
@@ -1074,7 +1508,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
         {erro && <div className="pdv-pagamento-erro">⚠️ {erro}</div>}
         <div className="pdv-pagamento-acoes">
           <button className="pdv-btn-cancelar" onClick={onCancelar} disabled={loading}>Cancelar (Esc)</button>
-          <button ref={btnConfirmarRef} className="pdv-btn-confirmar" onClick={confirmarFinal} disabled={loading || !metodoConfirmado}>
+          <button ref={btnConfirmarRef} className="pdv-btn-confirmar" onClick={confirmarFinal} disabled={loading || !metodoConfirmado || (meioPagamento === 'Dividido' && !fatiasValidas)}>
             {loading ? '⏳ Processando…' : '✓ Confirmar (Enter)'}
           </button>
         </div>
@@ -1119,7 +1553,12 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
     Debito:   '💳 Débito',
     Credito:  '💳 Crédito',
     Fiado:    '📋 Fiado',
+    Dividido: '➗ Dividido',
   }[venda.meioPagamento] || venda.meioPagamento;
+
+  const meioLabelCurto = {
+    Dinheiro: '💵 Dinheiro', Pix: '📱 Pix', Debito: '💳 Débito', Credito: '💳 Crédito', Fiado: '📋 Fiado',
+  };
 
   function imprimir() {
     const conteudo = reciboRef.current?.innerHTML;
@@ -1156,6 +1595,7 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
             .rec-item-val { font-weight: bold; white-space: nowrap; }
             .rec-total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-top: 4px; }
             .rec-pagamento { display: flex; justify-content: space-between; font-size: 11px; margin: 2px 0; }
+            .rec-pagamento-itens { font-size: 9px; color: #555; margin: -2px 0 3px; padding-left: 4px; }
             .rec-footer { text-align: center; font-size: 10px; color: #555; margin-top: 8px; }
             .rec-obrigado { font-size: 13px; font-weight: bold; text-align: center; margin: 6px 0 4px; }
           </style>
@@ -1198,7 +1638,32 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
           </div>
         )}
 
-        {venda.meioPagamento !== 'Fiado' && (venda.clienteNome || venda.cpfNota) && (
+        {venda.meioPagamento === 'Dividido' && venda.pagamentos?.length > 0 && (
+          <div className="pdv-posv-dividido">
+            <span className="pdv-posv-dividido-titulo">➗ Dividido em {venda.pagamentos.length} partes</span>
+            {venda.pagamentos.map((p, i) => {
+              // Fase 2 — se a divisão foi por item, mostra quais itens
+              // ficaram com essa pessoa. Itens sem dono único (não
+              // atribuídos, ou resto dividido/rateado) não entram em
+              // nenhuma lista — não tem uma pessoa só responsável por eles.
+              const itensDaFatia = venda.itensPagamentoIndex
+                ? venda.itens.filter((_, idx) => venda.itensPagamentoIndex[idx] === i)
+                : [];
+              return (
+                <div className="pdv-posv-dividido-fatia" key={i}>
+                  <span className="pdv-posv-dividido-fatia-nome">{p.pessoaLabel || `Pessoa ${i + 1}`}</span>
+                  <span className="pdv-posv-dividido-fatia-meio">{meioLabelCurto[p.meioPagamento] || p.meioPagamento}{p.clienteNome ? ` · ${p.clienteNome}` : ''}</span>
+                  <span className="pdv-posv-dividido-fatia-valor">{fmt(p.valor)}</span>
+                  {itensDaFatia.length > 0 && (
+                    <span className="pdv-posv-dividido-fatia-itens">{itensDaFatia.map(it => it.nome).join(', ')}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {venda.meioPagamento !== 'Fiado' && venda.meioPagamento !== 'Dividido' && (venda.clienteNome || venda.cpfNota) && (
           <div className="pdv-posv-fiado">
             🪪 {venda.clienteNome && <>Cliente: <strong>{venda.clienteNome}</strong></>}
             {venda.clienteNome && venda.cpfNota && ' · '}
@@ -1243,33 +1708,54 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
               <span>TOTAL</span>
               <span>{fmt(venda.total)}</span>
             </div>
-            <div className="rec-pagamento">
-              <span>Pagamento</span>
-              <span>{venda.meioPagamento}</span>
-            </div>
-            {venda.meioPagamento === 'Dinheiro' && venda.valorRecebido && (
+            {venda.meioPagamento === 'Dividido' && venda.pagamentos?.length > 0 ? (
               <>
                 <div className="rec-pagamento">
-                  <span>Recebido</span>
-                  <span>{fmt(venda.valorRecebido)}</span>
+                  <span>Pagamento</span>
+                  <span>Dividido em {venda.pagamentos.length}</span>
                 </div>
-                <div className="rec-pagamento">
-                  <span>Troco</span>
-                  <span>{fmt(venda.troco)}</span>
-                </div>
+                {venda.pagamentos.map((p, i) => {
+                  const itensDaFatia = venda.itensPagamentoIndex
+                    ? venda.itens.filter((_, idx) => venda.itensPagamentoIndex[idx] === i)
+                    : [];
+                  return (
+                    <React.Fragment key={i}>
+                      <div className="rec-pagamento">
+                        <span>{p.pessoaLabel || `Pessoa ${i + 1}`} ({meioLabelCurto[p.meioPagamento]?.replace(/^\S+\s/, '') || p.meioPagamento}{p.clienteNome ? ` · ${p.clienteNome}` : ''})</span>
+                        <span>{fmt(p.valor)}</span>
+                      </div>
+                      {itensDaFatia.length > 0 && (
+                        <div className="rec-pagamento-itens">{itensDaFatia.map(it => it.nome).join(', ')}</div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </>
-            )}
-            {venda.meioPagamento === 'Fiado' && venda.clienteNome && (
-              <div className="rec-pagamento">
-                <span>Cliente</span>
-                <span>{venda.clienteNome}</span>
-              </div>
-            )}
-            {venda.meioPagamento !== 'Fiado' && venda.clienteNome && (
-              <div className="rec-pagamento">
-                <span>Cliente</span>
-                <span>{venda.clienteNome}</span>
-              </div>
+            ) : (
+              <>
+                <div className="rec-pagamento">
+                  <span>Pagamento</span>
+                  <span>{venda.meioPagamento}</span>
+                </div>
+                {venda.meioPagamento === 'Dinheiro' && venda.valorRecebido && (
+                  <>
+                    <div className="rec-pagamento">
+                      <span>Recebido</span>
+                      <span>{fmt(venda.valorRecebido)}</span>
+                    </div>
+                    <div className="rec-pagamento">
+                      <span>Troco</span>
+                      <span>{fmt(venda.troco)}</span>
+                    </div>
+                  </>
+                )}
+                {venda.clienteNome && (
+                  <div className="rec-pagamento">
+                    <span>Cliente</span>
+                    <span>{venda.clienteNome}</span>
+                  </div>
+                )}
+              </>
             )}
             {venda.cpfNota && (
               <div className="rec-pagamento">
@@ -1746,14 +2232,26 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         method: 'POST',
         body: JSON.stringify({
           estabelecimentoId, valor_total: total, meio_pagamento: meioPagamento,
-          carrinho: carrinho.map(i => ({
+          carrinho: carrinho.map((i, idx) => ({
             produto_id: i.id,
             produto_variacao_id: i.produto_variacao_id || null,
             quantidade: parseFloat(i.quantidade),
             valor_unitario: parseFloat(i.preco_venda),
+            // Pagamento dividido, Fase 2 (backlog item 19) — índice
+            // (0-based) da fatia de `pagamentos` que ficou com esse item,
+            // só quando a divisão foi feita por item. Item sem dono único
+            // (não atribuído, ou que caiu no resto dividido/rateado) não
+            // manda essa chave — a RPC trata como "sem fatia própria".
+            ...(dadosPagamento?.itensPagamentoIndex?.[idx] != null
+                  ? { pagamento_index: dadosPagamento.itensPagamentoIndex[idx] }
+                  : {}),
           })),
           clienteId,
           cpfNota: dadosPagamento?.cpfNota || null,
+          // Pagamento dividido entre várias pessoas (backlog item 19) — só
+          // vai quando meioPagamento === 'Dividido'; em qualquer outra forma
+          // fica undefined e o corpo da requisição nem inclui a chave.
+          pagamentos: dadosPagamento?.pagamentos || undefined,
         }),
       });
       const result = await resp.json();
@@ -1768,6 +2266,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         cpfNota:       dadosPagamento?.cpfNota || null,
         valorRecebido: dadosPagamento?.valorRecebido || null,
         troco:         dadosPagamento?.troco || 0,
+        pagamentos:    dadosPagamento?.pagamentos || null,
+        // Fase 2 — mesmo array de índices usado no payload, guardado
+        // aqui pro ModalPosVenda mostrar quais itens foram de cada
+        // pessoa sem precisar de nenhuma requisição extra.
+        itensPagamentoIndex: dadosPagamento?.itensPagamentoIndex || null,
         horario:       new Date(),
       });
 
@@ -1944,7 +2447,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         </div>
       )}
 
-      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} podeUsarFiado={pode('pdv_fiado')} estabelecimentoId={estabelecimentoId} pixConfig={pixConfig} />}
+      {showPagamento && <PagamentoModal total={total} onCancelar={() => setShowPagamento(false)} onFinalizar={finalizarVenda} loading={loadingVenda} podeUsarFiado={pode('pdv_fiado')} estabelecimentoId={estabelecimentoId} pixConfig={pixConfig} carrinho={carrinho} />}
 
       {vendaFinalizada && (
         <ModalPosVenda

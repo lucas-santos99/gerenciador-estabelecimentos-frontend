@@ -11,6 +11,39 @@ import { TIMEZONE_PADRAO, hojeStrTZ, paraDataStrTZ, subtrairDias } from '../../.
 /* ── Helpers ───────────────────────────────────────────────── */
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+// Rótulo curto por forma de pagamento — mesmo dicionário usado no PDV
+// (ModalPosVenda) e em Relatorios.jsx, pra manter consistência visual
+// entre recibo e telas de histórico/relatório.
+const meioLabelCurto = {
+  Dinheiro: '💵 Dinheiro', Pix: '📱 Pix', Debito: '💳 Débito', Credito: '💳 Crédito', Fiado: '📋 Fiado',
+};
+
+// 'Dividido (N formas)' no lugar do texto cru quando a venda tem mais de
+// uma fatia (backlog item 19, passo 6).
+function labelMeioPagamento(venda) {
+  if (venda.meio_pagamento !== 'Dividido') return venda.meio_pagamento;
+  const n = venda.pagamentos?.length;
+  return n ? `➗ Dividido (${n} formas)` : '➗ Dividido';
+}
+
+// Descreve as fatias de uma venda 'Dividido' numa linha só de texto —
+// usado nos exports (Excel/PDF), que não têm como abrir um detalhe
+// clicável como a tela tem.
+function descreverFatias(venda) {
+  if (venda.meio_pagamento !== 'Dividido') return '';
+  return (venda.pagamentos || [])
+    .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
+    .join(' | ');
+}
+
+// Nomes dos itens de uma fatia específica — venda dividida por item
+// (Fase 2 do backlog item 19). itens_venda.pagamento_venda_id linka cada
+// item ao id da fatia (pagamentos_venda.id). Fatia vazia aqui significa
+// venda dividida por valor (sem dono por item). Mesmo helper de Relatorios.jsx.
+function itensDaFatia(venda, fatiaId) {
+  return (venda.itens || []).filter(i => i.pagamento_venda_id === fatiaId).map(i => i.produto_nome);
+}
+
 // CPF tem 11 dígitos, CNPJ tem 14 — rotula certinho na exibição sem
 // precisar de um campo separado marcando o tipo.
 function labelDocumento(valor) {
@@ -889,7 +922,8 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
         linhas.push({
           'Data':      new Date(v.data_venda).toLocaleString('pt-BR'),
           'Vendedor':  v.operador_nome,
-          'Pagamento': v.meio_pagamento,
+          'Pagamento': labelMeioPagamento(v),
+          'Detalhe do pagamento dividido': descreverFatias(v),
           'Status':    v.status === 'cancelada' ? 'Cancelada' : 'Ativa',
           'Produto':   item ? item.produto_nome + (item.produto_marca ? ` · ${item.produto_marca}` : '') : '—',
           'Quantidade': item ? parseFloat(item.quantidade) || 0 : '',
@@ -925,15 +959,19 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           }).join('')
         : '<div class="hp-item"><span>—</span><span></span></div>';
 
+      const fatiasHtml = v.meio_pagamento === 'Dividido' && (v.pagamentos || []).length > 0
+        ? `<div class="hp-item" style="font-style:italic;color:#0f766e;">Dividido: ${descreverFatias(v)}</div>`
+        : '';
+
       return `
         <tr class="hp-venda-row">
           <td>${new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
           <td>${v.operador_nome || ''}</td>
-          <td>${v.meio_pagamento}</td>
+          <td>${labelMeioPagamento(v)}</td>
           <td>${v.status === 'cancelada' ? 'Cancelada' : 'Ativa'}</td>
           <td class="hp-valor">${fmt(v.valor_total)}</td>
         </tr>
-        <tr class="hp-itens-row"><td colspan="5">${itensHtml}</td></tr>
+        <tr class="hp-itens-row"><td colspan="5">${itensHtml}${fatiasHtml}</td></tr>
       `;
     }).join('');
 
@@ -983,7 +1021,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
 
   async function cancelarVenda(venda) {
     const motivo = window.prompt(
-      `Cancelar a compra de ${fmt(venda.valor_total)} (${venda.meio_pagamento})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado).\n\nMotivo (opcional):`
+      `Cancelar a compra de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado — em venda dividida, de cada fatia).\n\nMotivo (opcional):`
     );
     if (motivo === null) return; // desistiu no prompt
     setCancelandoId(venda.id);
@@ -1048,7 +1086,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
                 <div className="cli-venda-info">
                   <span className="cli-venda-info-data">
                     📅 {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    {' · '}{venda.meio_pagamento}
+                    {' · '}{labelMeioPagamento(venda)}
                     {venda.operador_nome && <>{' · '}🧑‍💼 {venda.operador_nome}</>}
                     {venda.status === 'cancelada' && <span className="cli-venda-cancelada-badge">✕ Cancelada</span>}
                   </span>
@@ -1056,6 +1094,29 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
                 </div>
                 {venda.status === 'cancelada' && venda.motivo_cancelamento && (
                   <div className="cli-venda-motivo">Motivo: {venda.motivo_cancelamento}</div>
+                )}
+                {venda.meio_pagamento === 'Dividido' && (venda.pagamentos || []).length > 0 && (
+                  <div className="cli-venda-dividido">
+                    <span className="cli-venda-dividido-titulo">➗ Dividido em {venda.pagamentos.length} partes</span>
+                    {venda.pagamentos.map((p, i) => {
+                      const nomesItens = itensDaFatia(venda, p.id);
+                      return (
+                        <div className="cli-venda-dividido-fatia-bloco" key={i}>
+                          <div className="cli-venda-dividido-fatia">
+                            <span className="cli-venda-dividido-fatia-nome">{p.pessoa_label || `Pessoa ${i + 1}`}</span>
+                            <span className="cli-venda-dividido-fatia-meio">
+                              {meioLabelCurto[p.meio_pagamento] || p.meio_pagamento}
+                              {p.cliente_nome ? ` · ${p.cliente_nome}` : ''}
+                            </span>
+                            <span className="cli-venda-dividido-fatia-valor">{fmt(p.valor)}</span>
+                          </div>
+                          {nomesItens.length > 0 && (
+                            <div className="cli-venda-dividido-fatia-itens">{nomesItens.join(', ')}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
                 {venda.itens.length > 0 && (
                   <ul className="cli-venda-itens">
