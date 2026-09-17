@@ -1634,14 +1634,6 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                     📦 Dividir por item
                   </button>
                 </div>
-                {/* 17/09 — a pedido do usuário: legenda visível explicando os
-                    atalhos de teclado da tela inteira do Dividido — trocar de
-                    modo, escolher forma de pagamento e navegar entre campos. */}
-                <div className="pdv-dividido-legenda">
-                  <span><kbd>1</kbd>/<kbd>2</kbd> trocam o modo de divisão acima</span>
-                  <span><kbd>1</kbd>–<kbd>{podeUsarFiado ? '5' : '4'}</kbd> escolhem a forma de pagamento de cada pessoa</span>
-                  <span><kbd>← →</kbd> navega entre opções · <kbd>↩ Enter</kbd> confirma o campo</span>
-                </div>
                 <div className={`pdv-dividido-restante${Math.abs(restanteDividir) <= 0.001 && !restoPendente ? ' ok' : ''}`}>
                   <span>Restante a dividir</span>
                   <strong>{fmt(restoPendente ? valorResto : restanteDividir)}</strong>
@@ -1882,7 +1874,6 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       {(() => {
                         const meiosDisponiveis = MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado));
                         return (
-                        <>
                         <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
                           {meiosDisponiveis.map((m, mi) => (
                             <button type="button"
@@ -1899,16 +1890,6 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                             </button>
                           ))}
                         </div>
-                        {/* 17/09 — a pedido do usuário: os numerozinhos em cima de cada
-                            botão (badge `.pdv-dividido-fatia-meio-btn-tecla`, removida)
-                            ficaram pequenos, com contraste baixo e colando nos botões
-                            vizinhos, difícil de ler e de acertar o clique. Substituído por
-                            uma linha só, bem abaixo do grupo de botões inteiro, com o texto
-                            grande o bastante pra ler de relance. */}
-                        <div className="pdv-dividido-fatia-meio-legenda">
-                          Atalho: {meiosDisponiveis.map((m, mi) => `${mi + 1} ${MEIO_LABEL_CURTO[m.key]}`).join(' · ')}
-                        </div>
-                        </>
                         );
                       })()}
                       {f.meioPagamento === 'Dinheiro' && (

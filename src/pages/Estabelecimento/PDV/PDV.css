@@ -2045,28 +2045,6 @@ button:disabled[title*="Sem permissão"] {
   box-shadow: 0 0 0 3px var(--est-accent-dim);
 }
 
-/* 17/09 — a pedido do usuário: legenda dos atalhos de teclado da tela do
-   Dividido inteira (trocar modo, escolher forma de pagamento, navegar) —
-   os badges `kbd` reaproveitam a cara do `.pdv-meio-enter` do fluxo
-   principal (mono, cor de destaque), só compactos pra caber em linha. */
-.pdv-dividido-legenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: calc(0.7rem * var(--pdv-pag-zoom, 1));
-  color: var(--est-text-muted);
-}
-.pdv-dividido-legenda kbd {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: calc(0.68rem * var(--pdv-pag-zoom, 1));
-  color: var(--est-accent);
-  background: var(--est-accent-dim);
-  border: 1px solid var(--est-border-accent);
-  padding: 1px 5px;
-  border-radius: 4px;
-  margin: 0 1px;
-}
-
 .pdv-dividido-restante {
   display: flex;
   align-items: center;
@@ -2325,19 +2303,11 @@ button:disabled[title*="Sem permissão"] {
   box-shadow: 0 0 0 2px var(--est-card);
 }
 /* 17/09 — a indicação da tecla de atalho de cada forma de pagamento
-   tentou primeiro um numerozinho em cima de cada botão — o usuário
-   testou e reportou que ficou pequeno demais, com letra quase
-   transparente (baixo contraste) e colando visualmente nos botões
-   vizinhos. Substituída por uma linha de texto só, bem abaixo do grupo
-   de botões inteiro (`.pdv-dividido-fatia-meio-legenda` abaixo), grande
-   e com contraste alto o bastante pra ler de relance. */
-.pdv-dividido-fatia-meio-legenda {
-  margin-top: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--est-text-soft);
-  line-height: 1.4;
-}
+   passou por duas tentativas visuais (numerozinho em cima do botão, depois
+   uma linha de texto abaixo do grupo) e o usuário pediu pra tirar os dois —
+   os atalhos de teclado (setas, dígitos, Enter — ver `handleFatiaMeioBtnKey`/
+   `handleModoDivisaoKey`) continuam funcionando normalmente, só sem
+   indicação nenhuma na tela. */
 
 /* 17/09 — valor recebido/troco por fatia, só quando a forma da fatia é
    Dinheiro. Mesma ideia do troco do fluxo principal (`.pdv-troco-*`),
