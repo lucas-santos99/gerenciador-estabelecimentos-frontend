@@ -2249,6 +2249,22 @@ button:disabled[title*="Sem permissão"] {
 }
 .pdv-dividido-fiado-buscar-btn:hover { opacity: 0.85; }
 
+/* 17/09: vínculo de cliente virou opcional pras formas de pagamento que
+   não são Fiado (antes esse bloco inteiro só existia pro Fiado). Visual
+   mais discreto que o obrigatório — não é uma pendência, é um extra. */
+.pdv-dividido-fiado-buscar-btn.opcional {
+  background: transparent;
+  border-style: solid;
+  border-color: var(--est-border);
+  color: var(--est-text-soft);
+  font-weight: 600;
+}
+.pdv-dividido-fiado-buscar-btn.opcional:hover {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  opacity: 1;
+}
+
 .pdv-dividido-fiado-selecionado {
   display: flex;
   align-items: center;
@@ -2257,6 +2273,13 @@ button:disabled[title*="Sem permissão"] {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--est-accent);
+}
+
+.pdv-dividido-fiado-selecionado-acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .pdv-dividido-fiado-busca {

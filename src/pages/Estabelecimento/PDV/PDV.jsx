@@ -161,6 +161,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const [fatiaBuscaAberta,   setFatiaBuscaAberta]   = useState(null); // id da fatia com a busca aberta
   const [fatiaBuscaTermo,    setFatiaBuscaTermo]    = useState('');
   const [fatiaBuscaResultados, setFatiaBuscaResultados] = useState([]);
+  const [fatiaBuscaIndex,    setFatiaBuscaIndex]    = useState(-1); // índice ativo na lista (navegação por seta)
   const [fatiaBuscaLoading,  setFatiaBuscaLoading]  = useState(false);
   const [fatiaCadNovo,       setFatiaCadNovo]       = useState(false);
   const [fatiaCadNome,       setFatiaCadNome]       = useState('');
@@ -808,21 +809,31 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setFatiaBuscaAberta(id);
     setFatiaBuscaTermo('');
     setFatiaBuscaResultados([]);
+    setFatiaBuscaIndex(-1);
     setFatiaCadNovo(false);
     setFatiaCadNome('');
     setFatiaCadTelefone('');
     setFatiaCadErro('');
   }
 
+  // 17/09: até então essa busca era exclusiva do Fiado, então sempre
+  // filtrava só quem `permite_fiado`. Agora ela também atende o vínculo
+  // OPCIONAL de cliente nas fatias de qualquer forma de pagamento — nesse
+  // caso não faz sentido esconder cliente nenhum (não é sobre crédito,
+  // é só rastrear quem comprou), então o filtro de fiado só entra quando
+  // a fatia em questão for realmente Fiado.
   async function buscarClienteFatia(termo) {
     setFatiaBuscaTermo(termo);
-    if (termo.length < 2) { setFatiaBuscaResultados([]); return; }
+    if (termo.length < 2) { setFatiaBuscaResultados([]); setFatiaBuscaIndex(-1); return; }
     setFatiaBuscaLoading(true);
     try {
       const resp = await apiFetch(`/api/clientes/buscar?termo=${encodeURIComponent(termo)}`);
       if (!resp.ok) throw new Error();
       const todos = await resp.json();
-      setFatiaBuscaResultados(todos.filter(c => c.permite_fiado !== false));
+      const fatiaAtual = fatias.find(f => f.id === fatiaBuscaAberta);
+      const filtrados = fatiaAtual?.meioPagamento === 'Fiado' ? todos.filter(c => c.permite_fiado !== false) : todos;
+      setFatiaBuscaResultados(filtrados);
+      setFatiaBuscaIndex(filtrados.length > 0 ? 0 : -1);
     } catch { /* silencioso — mesma lógica de busca das outras telas */ }
     finally { setFatiaBuscaLoading(false); }
   }
@@ -830,6 +841,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   function selecionarClienteFatia(id, cli) {
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome } : f)));
     setFatiaBuscaAberta(null);
+  }
+
+  // Navegação por seta/Enter na lista de resultados da busca de cliente
+  // dentro da fatia — mesmo padrão do `handleIdentBuscaKey` da
+  // identificação opcional do fluxo principal (não-dividido).
+  function handleFatiaBuscaKey(e, id) {
+    if (e.key === 'Escape') { e.preventDefault(); setFatiaBuscaAberta(null); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setFatiaBuscaIndex(p => Math.min(p + 1, fatiaBuscaResultados.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setFatiaBuscaIndex(p => Math.max(p - 1, 0)); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (fatiaBuscaIndex > -1 && fatiaBuscaResultados[fatiaBuscaIndex]) selecionarClienteFatia(id, fatiaBuscaResultados[fatiaBuscaIndex]);
+    }
   }
 
   // Cadastro rápido de dentro da fatia — versão compacta (só nome e
@@ -1446,12 +1470,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           </button>
                         ))}
                       </div>
-                      {f.meioPagamento === 'Fiado' && (
+                      {(() => {
+                        const fiado = f.meioPagamento === 'Fiado';
+                        return (
                         <div className="pdv-dividido-fiado">
                           {f.clienteId ? (
                             <div className="pdv-dividido-fiado-selecionado">
                               <span>📋 {f.clienteNome}</span>
-                              <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>↩ Trocar</button>
+                              <div className="pdv-dividido-fiado-selecionado-acoes">
+                                <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>↩ Trocar</button>
+                                {!fiado && (
+                                  <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>✕ Remover vínculo</button>
+                                )}
+                              </div>
                             </div>
                           ) : fatiaBuscaAberta === f.id ? (
                             <div className="pdv-dividido-fiado-busca">
@@ -1464,12 +1495,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                                     placeholder="Buscar cliente…"
                                     value={fatiaBuscaTermo}
                                     onChange={e => buscarClienteFatia(e.target.value)}
+                                    onKeyDown={e => handleFatiaBuscaKey(e, f.id)}
                                   />
                                   {fatiaBuscaLoading && <div className="pdv-dividido-fiado-loading">Buscando…</div>}
                                   {fatiaBuscaResultados.length > 0 && (
                                     <ul className="pdv-cliente-lista">
-                                      {fatiaBuscaResultados.map(cli => (
-                                        <li key={cli.id} className="pdv-cliente-item" onClick={() => selecionarClienteFatia(f.id, cli)}>
+                                      {fatiaBuscaResultados.map((cli, ci) => (
+                                        <li key={cli.id}
+                                          className={`pdv-cliente-item${fatiaBuscaIndex === ci ? ' ativo' : ''}`}
+                                          onClick={() => selecionarClienteFatia(f.id, cli)}
+                                          onMouseEnter={() => setFatiaBuscaIndex(ci)}
+                                        >
                                           {cli.nome}
                                           <span className="pdv-cliente-item-tel">{cli.telefone || '—'}</span>
                                         </li>
@@ -1511,14 +1547,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           ) : (
                             <button type="button"
                               ref={el => { fatiaBuscarBtnRefs.current[f.id] = el; }}
-                              className="pdv-dividido-fiado-buscar-btn"
+                              className={`pdv-dividido-fiado-buscar-btn${fiado ? '' : ' opcional'}`}
                               onClick={() => abrirBuscaFatia(f.id)}
                             >
-                              🔍 Selecionar cliente (obrigatório pro fiado)
+                              {fiado ? '🔍 Selecionar cliente (obrigatório pro fiado)' : '🔗 Vincular a cliente cadastrado (opcional)'}
                             </button>
                           )}
                         </div>
-                      )}
+                        );
+                      })()}
                     </div>
                     );
                   })}
