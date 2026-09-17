@@ -195,6 +195,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   const fatiaMeioPrimeiroBtnRefs = useRef({});
   const fatiaBuscarBtnRefs      = useRef({});
   const fatiaRecebidoRefs       = useRef({});
+  // 17/09 — botão "Confirmar Pessoa N" de cada fatia (organização da tela,
+  // ver `confirmarFatia`/`editarFatia` mais abaixo).
+  const fatiaConfirmarBtnRefs   = useRef({});
+  // 17/09 — checkbox "Confirmo que o Pix caiu na conta" de cada fatia,
+  // quando o Pix é gerado pelo sistema (ver `gerarPixFatia` mais abaixo).
+  const fatiaPixCheckboxRefs    = useRef({});
 
   // Confirmação antes de fechar o modal de vez — só aparece quando o
   // Esc é apertado já na primeira tela (escolha de forma de pagamento),
@@ -664,7 +670,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // ── Pagamento dividido — funções da lista de fatias ──
   function adicionarPessoa() {
     fatiaIdRef.current += 1;
-    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' }]);
+    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null }]);
   }
 
   function removerPessoa(id) {
@@ -696,7 +702,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setItensFatia({});
     setRestoModo(null);
     setRestoManual({});
-    if (novo === 'valor') setFatias(fs => fs.map(f => ({ ...f, valor: '' })));
+    // Troca de modo muda como o valor de cada fatia é calculado — qualquer
+    // pessoa já "confirmada" (cartão colapsado, ver `confirmarFatia`) volta
+    // a ficar editável, pra não mostrar um resumo com valor desatualizado.
+    setFatias(fs => fs.map(f => (novo === 'valor' ? { ...f, valor: '', confirmada: false } : { ...f, confirmada: false })));
   }
 
   function atribuirItemFatia(idx, fatiaId) {
@@ -747,10 +756,13 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   }
 
   // Move o foco pra próxima etapa do fluxo por Enter — nome da PRÓXIMA
-  // fatia (posição i+1 na lista atual), ou o botão Confirmar geral do
-  // modal se essa era a última pessoa.
+  // fatia ainda não confirmada (pula fatias já confirmadas/colapsadas, ver
+  // `confirmarFatia`, já que o cartão delas não tem mais campo de nome pra
+  // focar), ou o botão Confirmar geral do modal se não sobrar nenhuma.
   function avancarAposFatia(i) {
-    const proxima = fatias[i + 1];
+    let idx = i + 1;
+    while (idx < fatias.length && fatias[idx].confirmada) idx++;
+    const proxima = fatias[idx];
     if (proxima) {
       setTimeout(() => {
         fatiaNomeRefs.current[proxima.id]?.focus();
@@ -759,6 +771,110 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     } else {
       setTimeout(() => btnConfirmarRef.current?.focus(), 0);
     }
+  }
+
+  // 17/09 — "finalizar a parte da Pessoa N": cada fatia tem um botão
+  // próprio (`fatiaConfirmarBtnRefs`) que colapsa o cartão dela num resumo
+  // compacto e avança o foco pra próxima pessoa — só organização da tela,
+  // a venda continua sendo UMA só, fechada de vez pelo botão "Confirmar"
+  // geral do modal (`fatiasValidas`/`confirmarFinalDividido`, inalterados).
+  // Esta função checa se aquela fatia já tem tudo que precisa pra ser
+  // confirmada — mesmas regras que `confirmarFinalDividido` já valida no
+  // fechamento geral, só que por pessoa.
+  function fatiaIndividualValida(f, i) {
+    const valor = valorFatiaAtual(f, i);
+    if (!(valor > 0)) return false;
+    if (f.meioPagamento === 'Fiado' && !f.clienteId) return false;
+    if (f.meioPagamento === 'Dinheiro') {
+      const recebido = paraFloatBR(f.valorRecebido) || 0;
+      if (recebido < valor - 0.001) return false;
+    }
+    // 17/09 — Pix pelo sistema (mesma integração do fluxo principal, ver
+    // `gerarPixFatia` abaixo): só considera a fatia pronta depois que o
+    // operador marcar "Confirmo que o Pix caiu na conta" pra ESSE QR, e só
+    // se o valor não tiver mudado desde que ele foi gerado (senão o QR
+    // ficou desatualizado — `pixDesatualizadoFatia`).
+    if (f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+      if (!f.pixRecebido) return false;
+      if (pixDesatualizadoFatia(f, i)) return false;
+    }
+    return true;
+  }
+
+  // O QR de uma fatia em Pix fica "desatualizado" se o valor dela mudou
+  // depois que o QR foi gerado (ex.: reatribuiu itens no modo "por item",
+  // ou editou o valor digitado e voltou). Comparado a cada render — mais
+  // simples e mais confiável do que tentar interceptar toda fonte possível
+  // de mudança de valor (digitação, atribuição de item, resto dividido).
+  function pixDesatualizadoFatia(f, i) {
+    return f.meioPagamento === 'Pix' && !!f.pixDados && Math.abs(valorFatiaAtual(f, i) - (f.pixValorGerado ?? 0)) > 0.001;
+  }
+
+  // 17/09 — "abrir a tela de Pix igual abre no PDV normal" pra cada fatia:
+  // gera um QR Code (mesma rota `/pix/gerar` do fluxo principal, só que
+  // com o valor DESSA fatia) e mostra dentro do próprio cartão da pessoa.
+  // Não manda nada novo pro backend/RPC — o fluxo principal também não
+  // amarra o `pixDados` gerado à venda finalizada (é só uma conferência
+  // visual do operador, "confirmo que caiu"), então cada fatia funciona
+  // exatamente do mesmo jeito, só que N vezes (uma por pessoa em Pix).
+  async function gerarPixFatia(id) {
+    const i = fatias.findIndex(f => f.id === id);
+    if (i < 0) return;
+    const fatiaAtual = fatias[i];
+    const valor = valorFatiaAtual(fatiaAtual, i);
+    setFatias(fs => fs.map(f => (f.id === id
+      ? { ...f, pixGerando: true, pixErro: '', pixDados: null, pixRecebido: false, pixValorGerado: null }
+      : f)));
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/pix/gerar`, {
+        method: 'POST',
+        body: JSON.stringify({ valor, descricao: `Venda PDV (Dividido)${fatiaAtual.pessoaLabel ? ' - ' + fatiaAtual.pessoaLabel : ''}` }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'Erro ao gerar Pix.');
+      setFatias(fs => fs.map(f => (f.id === id ? { ...f, pixDados: json, pixValorGerado: valor } : f)));
+      setTimeout(() => fatiaPixCheckboxRefs.current[id]?.focus(), 0);
+    } catch (e) {
+      setFatias(fs => fs.map(f => (f.id === id ? { ...f, pixErro: e.message } : f)));
+    } finally {
+      setFatias(fs => fs.map(f => (f.id === id ? { ...f, pixGerando: false } : f)));
+    }
+  }
+
+  function copiarPixCopiaEColaFatia(id) {
+    const f = fatias.find(x => x.id === id);
+    if (!f?.pixDados?.payload) return;
+    navigator.clipboard?.writeText(f.pixDados.payload);
+    setFatias(fs => fs.map(x => (x.id === id ? { ...x, pixCopiado: true } : x)));
+    setTimeout(() => setFatias(fs => fs.map(x => (x.id === id ? { ...x, pixCopiado: false } : x))), 2000);
+  }
+
+  // Foca o botão "Confirmar Pessoa N" da própria fatia (chamado ao terminar
+  // de escolher a forma de pagamento/recebido/cliente) — se o botão não
+  // estiver disponível pra focar (fatia ainda incompleta por algum outro
+  // motivo), o foco simplesmente fica onde está; o operador completa o que
+  // falta e clica/tecla Enter no botão manualmente.
+  function focarConfirmarFatia(i) {
+    const f = fatias[i];
+    if (!f) return;
+    setTimeout(() => { fatiaConfirmarBtnRefs.current[f.id]?.focus(); }, 0);
+  }
+
+  // Confirma a fatia (colapsa o cartão) e avança pra próxima pessoa ainda
+  // não confirmada, ou pro botão "Confirmar" geral se essa era a última.
+  function confirmarFatia(id) {
+    const i = fatias.findIndex(f => f.id === id);
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, confirmada: true } : f)));
+    if (i > -1) avancarAposFatia(i);
+  }
+
+  // Reabre o cartão de uma pessoa já confirmada pra editar.
+  function editarFatia(id) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, confirmada: false } : f)));
+    setTimeout(() => {
+      fatiaNomeRefs.current[id]?.focus();
+      fatiaNomeRefs.current[id]?.select?.();
+    }, 0);
   }
 
   // Botão de forma de pagamento de uma fatia — seleciona e já avança o
@@ -778,15 +894,33 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       setTimeout(() => { fatiaRecebidoRefs.current[f.id]?.focus(); fatiaRecebidoRefs.current[f.id]?.select?.(); }, 0);
       return;
     }
-    avancarAposFatia(i);
+    // 17/09 — Pix pelo sistema: abre a mesma "tela de Pix" do fluxo
+    // principal (QR Code + copia-e-cola + confirmação), só que dentro do
+    // cartão dessa fatia, com o valor dela. Só gera um QR novo se ainda
+    // não tinha um pra essa fatia (reescolher "Pix" de novo sem ter mudado
+    // nada só refoca o checkbox, não desperdiça uma cobrança nova). Se o
+    // estabelecimento usa Pix por maquininha (sem integração), cai no
+    // mesmo fluxo de sempre — nem tem "tela" nenhuma a mostrar aqui,
+    // igual já acontece no PDV normal.
+    if (key === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+      if (!f.pixDados) gerarPixFatia(f.id);
+      else setTimeout(() => fatiaPixCheckboxRefs.current[f.id]?.focus(), 0);
+      return;
+    }
+    // Em vez de já pular pra próxima pessoa, o Enter/clique aqui (fim do
+    // preenchimento pra Débito/Crédito/Pix-maquininha) leva o foco pro
+    // botão "Confirmar Pessoa N" desta mesma fatia — é ele quem de fato
+    // avança (ver `confirmarFatia`), deixando explícita a etapa de
+    // "fechar a parte dessa pessoa" pedida pelo usuário.
+    focarConfirmarFatia(i);
   }
 
-  // Enter no campo de valor recebido (Dinheiro) — avança igual ao resto
-  // do fluxo da fatia.
+  // Enter no campo de valor recebido (Dinheiro) — igual ao resto do fluxo
+  // da fatia, leva pro botão "Confirmar Pessoa N" em vez de já avançar.
   function handleFatiaRecebidoKey(e, i) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    avancarAposFatia(i);
+    focarConfirmarFatia(i);
   }
 
   // Enter no nome da pessoa: no modo "por valor" vai pro campo de valor
@@ -872,6 +1006,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   function selecionarClienteFatia(id, cli) {
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome } : f)));
     setFatiaBuscaAberta(null);
+    // 17/09 — Fiado: selecionar o cliente é o último passo obrigatório da
+    // fatia, então já leva o foco pro botão "Confirmar Pessoa N" dela.
+    const i = fatias.findIndex(f => f.id === id);
+    if (i > -1) focarConfirmarFatia(i);
   }
 
   // Navegação por seta/Enter na lista de resultados da busca de cliente
@@ -978,6 +1116,18 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
           return;
         }
       }
+      // 17/09 — mesma exigência que já existe pro Pix do fluxo principal
+      // (checkbox "Confirmo que o Pix caiu na conta"), aqui por fatia.
+      if (f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+        if (pixDesatualizadoFatia(f, i)) {
+          setErro(`O QR Code de ${f.pessoaLabel || 'a pessoa'} ficou desatualizado (o valor mudou) — gere um novo antes de continuar.`);
+          return;
+        }
+        if (!f.pixRecebido) {
+          setErro(`Confirme que o Pix de ${f.pessoaLabel || 'a pessoa'} caiu na conta antes de finalizar.`);
+          return;
+        }
+      }
     }
     const somaFinal = valoresFinais.reduce((s, v) => s + v, 0);
     if (Math.abs(total - somaFinal) > 0.001) { setErro('A soma dos valores das pessoas precisa bater com o total da venda.'); return; }
@@ -1015,8 +1165,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (key === 'Dividido') {
       fatiaIdRef.current = 2;
       setFatias([
-        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' },
-        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' },
+        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null },
+        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null },
       ]);
       setFatiaBuscaAberta(null);
       setModoDivisao('valor');
@@ -1306,7 +1456,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <>
                     <span className="pdv-pagamento-digital-icone">📱</span>
                     <span className="pdv-pagamento-digital-nome">Pix (maquininha)</span>
-                    <span className="pdv-pagamento-digital-hint">Pressione Enter para confirmar</span>
+                    {/* 17/09 — aviso mais destacado, a pedido do usuário: antes era só
+                        um texto pequeno e discreto ("Pressione Enter para confirmar"),
+                        fácil de passar batido. Agora fica claro o passo a passo. */}
+                    <div className="pdv-pagamento-digital-aviso">
+                      <span className="pdv-pagamento-digital-aviso-icone">⚠️</span>
+                      Insira o valor na maquininha e finalize o pagamento por lá.<br />
+                      Depois, clique em <strong>Confirmar</strong> aqui (ou pressione Enter).
+                    </div>
                   </>
                 )}
                 {pixModo === 'sistema' && (
@@ -1373,7 +1530,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
               <div className="pdv-pagamento-digital">
                 <span className="pdv-pagamento-digital-icone">{MEIOS.find(m => m.key === meioPagamento)?.icone}</span>
                 <span className="pdv-pagamento-digital-nome">{MEIOS.find(m => m.key === meioPagamento)?.label}</span>
-                <span className="pdv-pagamento-digital-hint">Pressione Enter para confirmar</span>
+                <div className="pdv-pagamento-digital-aviso">
+                  <span className="pdv-pagamento-digital-aviso-icone">⚠️</span>
+                  Insira o valor na maquininha e finalize o pagamento por lá.<br />
+                  Depois, clique em <strong>Confirmar</strong> aqui (ou pressione Enter).
+                </div>
               </div>
             )}
 
@@ -1467,6 +1628,38 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 <div className="pdv-dividido-lista">
                   {fatias.map((f, i) => {
                     const cp = corPessoa(i);
+                    // 17/09 — pessoa já confirmada (ver `confirmarFatia`):
+                    // cartão colapsado num resumo compacto, só com um botão
+                    // "Editar" pra reabrir. A venda em si (payload, RPC,
+                    // recibo) não muda nada por causa disso — é só
+                    // organização da tela enquanto o operador preenche as
+                    // pessoas uma a uma.
+                    if (f.confirmada) {
+                      const meioInfo = MEIOS.find(m => m.key === f.meioPagamento);
+                      const nomeExibido = f.clienteId ? f.clienteNome : (f.pessoaLabel || `Pessoa ${i + 1}`);
+                      return (
+                        <div className="pdv-dividido-fatia pdv-dividido-fatia-confirmada" key={f.id} style={{ borderTopColor: cp.cor }}>
+                          <div className="pdv-dividido-fatia-topo">
+                            <span className="pdv-dividido-fatia-num" style={{ background: cp.bg, color: cp.cor }}>{i + 1}</span>
+                            <span className="pdv-dividido-fatia-confirmada-nome">
+                              {f.clienteId && '📋 '}{nomeExibido}
+                            </span>
+                            <span className="pdv-dividido-fatia-confirmada-check" title="Pessoa confirmada">✓</span>
+                          </div>
+                          <div className="pdv-dividido-fatia-confirmada-resumo">
+                            <span>{meioInfo?.icone} {MEIO_LABEL_CURTO[f.meioPagamento]}</span>
+                            <strong>{fmt(valorFatiaAtual(f, i))}</strong>
+                            {f.meioPagamento === 'Dinheiro' && (
+                              <span className="pdv-dividido-fatia-confirmada-troco">Troco {fmt(trocoFatia(f, i))}</span>
+                            )}
+                            {f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel && f.pixRecebido && (
+                              <span className="pdv-dividido-fatia-confirmada-troco">✓ Pix confirmado</span>
+                            )}
+                          </div>
+                          <button type="button" className="pdv-dividido-fatia-editar" onClick={() => editarFatia(f.id)}>✏️ Editar</button>
+                        </div>
+                      );
+                    }
                     return (
                     <div className="pdv-dividido-fatia" key={f.id} style={{ borderTopColor: cp.cor }}>
                       <div className="pdv-dividido-fatia-topo">
@@ -1629,6 +1822,75 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           </div>
                         </div>
                       )}
+                      {/* 17/09 — aviso "insira na maquininha", mesmo texto destacado do
+                          fluxo principal (`.pdv-pagamento-digital-aviso`) — Débito/Crédito
+                          sempre, e Pix quando o estabelecimento NÃO usa Pix pelo sistema
+                          (senão cai no bloco de QR Code logo abaixo). Mostra o valor
+                          específico DESSA fatia, já que cada pessoa pode dever um valor
+                          diferente — não dá pra só olhar o total do carrinho aqui. */}
+                      {(['Debito', 'Credito'].includes(f.meioPagamento) || (f.meioPagamento === 'Pix' && !(pixModo === 'sistema' && pixConfig.disponivel))) && (
+                        <div className="pdv-dividido-fatia-maquininha-aviso">
+                          ⚠️ Insira <strong>{fmt(valorFatiaAtual(f, i))}</strong> na maquininha e finalize o pagamento por lá. Depois, confirme aqui embaixo.
+                        </div>
+                      )}
+                      {/* "Abrir a tela de Pix igual abre no PDV normal", dentro do cartão
+                          dessa fatia: QR Code + copia-e-cola + checkbox de confirmação,
+                          com o valor DESSA pessoa. Só aparece quando o estabelecimento
+                          tem Pix pelo sistema configurado. */}
+                      {f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel && (
+                        <div className="pdv-dividido-fatia-pix">
+                          {f.pixGerando && <div className="pdv-dividido-fatia-pix-status">⏳ Gerando QR Code…</div>}
+                          {f.pixErro && !f.pixGerando && (
+                            <div className="pdv-dividido-fatia-pix-erro">
+                              ⚠️ {f.pixErro}
+                              <button type="button" onClick={() => gerarPixFatia(f.id)}>Tentar de novo</button>
+                            </div>
+                          )}
+                          {f.pixDados && !f.pixGerando && !f.pixErro && (
+                            pixDesatualizadoFatia(f, i) ? (
+                              <div className="pdv-dividido-fatia-pix-aviso">
+                                ⚠️ O valor mudou desde que esse QR foi gerado.
+                                <button type="button" onClick={() => gerarPixFatia(f.id)}>🔄 Gerar novo QR Code</button>
+                              </div>
+                            ) : (
+                              <>
+                                <img src={f.pixDados.qrcode_base64} alt="QR Code Pix" className="pdv-dividido-fatia-pix-qr" />
+                                <button type="button" className="pdv-dividido-fatia-pix-copiar" onClick={() => copiarPixCopiaEColaFatia(f.id)}>
+                                  {f.pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
+                                </button>
+                                <label className="pdv-dividido-fatia-pix-check">
+                                  <input
+                                    ref={el => { fatiaPixCheckboxRefs.current[f.id] = el; }}
+                                    type="checkbox"
+                                    checked={f.pixRecebido}
+                                    onChange={e => setFatias(fs => fs.map(x => (x.id === f.id ? { ...x, pixRecebido: e.target.checked } : x)))}
+                                    onKeyDown={e => {
+                                      if (e.key !== 'Enter') return;
+                                      e.preventDefault();
+                                      if (!f.pixRecebido) {
+                                        setFatias(fs => fs.map(x => (x.id === f.id ? { ...x, pixRecebido: true } : x)));
+                                        setTimeout(() => fatiaConfirmarBtnRefs.current[f.id]?.focus(), 0);
+                                      } else {
+                                        confirmarFatia(f.id);
+                                      }
+                                    }}
+                                  />
+                                  Confirmo que o Pix caiu na conta
+                                </label>
+                              </>
+                            )
+                          )}
+                        </div>
+                      )}
+                      <button type="button"
+                        ref={el => { fatiaConfirmarBtnRefs.current[f.id] = el; }}
+                        className="pdv-dividido-fatia-confirmar"
+                        disabled={!fatiaIndividualValida(f, i)}
+                        onClick={() => confirmarFatia(f.id)}
+                        title={fatiaIndividualValida(f, i) ? undefined : 'Preencha valor, forma de pagamento (e cliente/recebido/Pix confirmado, se for o caso) antes de confirmar'}
+                      >
+                        ✓ Confirmar {f.clienteId ? f.clienteNome : (f.pessoaLabel || `Pessoa ${i + 1}`)}
+                      </button>
                     </div>
                     );
                   })}
