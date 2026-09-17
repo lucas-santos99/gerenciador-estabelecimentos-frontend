@@ -898,8 +898,23 @@
    mais importante da venda, o comerciante precisa ler tudo de longe/rápido.
    Todo tamanho aqui usa --pdv-pag-zoom, controlado pelos botões A-/A+
    dentro do próprio modal (independente do zoom geral do PDV). */
+/* 17/09: o modal de pagamento (base/desktop) nunca teve max-height nem
+   scroll próprio — só o `.pdv-modal` do mobile (media query) já limitava
+   a 92vh. Isso passou despercebido enquanto o conteúdo sempre coube na
+   viewport, mas o sub-fluxo "Dividido → por item" (lista de itens do
+   carrinho + aviso de resto + botões de resto + cartão por pessoa, esse
+   último agora um pouco mais alto com o vínculo de cliente) pode facilmente
+   passar da altura da tela — e como `.pdv-modal-overlay` centraliza com
+   flexbox sem overflow próprio, o conteúdo que passava da viewport
+   simplesmente ficava cortado (topo E rodapé), sem nenhum jeito de rolar
+   até ele — a ÚNICA área com scroll de verdade era o `.pdv-dividido-lista`
+   interno (320px), dando a sensação de modal quebrado/cortado. Corrigido
+   dando ao modal de pagamento sua própria altura máxima e scroll — agora
+   ele sempre cabe na tela (com margem) e rola inteiro de uma vez só. */
 .pdv-modal-pagamento {
   max-width: calc(560px * var(--pdv-pag-zoom, 1));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   padding: calc(40px * var(--pdv-pag-zoom, 1));
 }
 
@@ -2021,12 +2036,16 @@ button:disabled[title*="Sem permissão"] {
   box-shadow: 0 2px 8px rgba(34,197,94,0.1);
 }
 
+/* 17/09: tinha um scroll próprio (max-height: 320px) que, somado ao
+   scroll do modal de pagamento inteiro (corrigido acima) e ao scroll da
+   lista de itens do carrinho (`.pdv-dividido-itens-lista`, 260px), criava
+   até 3 áreas de scroll aninhadas dentro do mesmo modal — confuso mesmo
+   depois do fix do modal. Removido: agora essa lista cresce livre, o
+   modal (já com sua própria altura máxima/scroll) é quem rola tudo. */
 .pdv-dividido-lista {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 320px;
-  overflow-y: auto;
 }
 
 .pdv-dividido-fatia {
