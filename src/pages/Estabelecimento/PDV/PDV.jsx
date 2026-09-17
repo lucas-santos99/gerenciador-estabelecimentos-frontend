@@ -724,9 +724,16 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, pessoaLabel: label } : f)));
   }
 
+  // 17/09: antes, trocar pra qualquer forma diferente de Fiado limpava o
+  // cliente vinculado da fatia — fazia sentido quando só o Fiado podia ter
+  // cliente (o vínculo "pertencia" à forma de pagamento). Agora que o
+  // vínculo é opcional pra qualquer forma, ele passou a ser uma
+  // característica da PESSOA/fatia, não da forma escolhida — então não se
+  // limpa mais sozinho ao trocar de botão (ex: linkar um cliente com
+  // Dinheiro selecionado e depois mudar pra Pix não deveria perder o
+  // vínculo que acabou de ser feito).
   function atualizarMeioFatia(id, key) {
-    setFatias(fs => fs.map(f => (f.id === id ? { ...f, meioPagamento: key, ...(key !== 'Fiado' ? { clienteId: null, clienteNome: null } : {}) } : f)));
-    if (key !== 'Fiado' && fatiaBuscaAberta === id) setFatiaBuscaAberta(null);
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, meioPagamento: key } : f)));
   }
 
   // Move o foco pra próxima etapa do fluxo por Enter — nome da PRÓXIMA
@@ -1419,72 +1426,34 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                     <div className="pdv-dividido-fatia" key={f.id} style={{ borderTopColor: cp.cor }}>
                       <div className="pdv-dividido-fatia-topo">
                         <span className="pdv-dividido-fatia-num" style={{ background: cp.bg, color: cp.cor }}>{i + 1}</span>
-                        <input maxLength={30}
-                          ref={el => { fatiaNomeRefs.current[f.id] = el; }}
-                          className="pdv-dividido-fatia-label"
-                          type="text"
-                          value={f.pessoaLabel}
-                          onChange={e => atualizarLabelFatia(f.id, e.target.value)}
-                          onKeyDown={e => handleFatiaNomeKey(e, i)}
-                          placeholder={`Pessoa ${i + 1}`}
-                        />
+                        {f.clienteId ? (
+                          <div className="pdv-dividido-fatia-cliente-chip">
+                            <span className="pdv-dividido-fatia-cliente-chip-nome">📋 {f.clienteNome}</span>
+                            <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>↩ Trocar</button>
+                            {f.meioPagamento !== 'Fiado' && (
+                              <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>✕ Remover</button>
+                            )}
+                          </div>
+                        ) : (
+                          <input maxLength={30}
+                            ref={el => { fatiaNomeRefs.current[f.id] = el; }}
+                            className="pdv-dividido-fatia-label"
+                            type="text"
+                            value={f.pessoaLabel}
+                            onChange={e => atualizarLabelFatia(f.id, e.target.value)}
+                            onKeyDown={e => handleFatiaNomeKey(e, i)}
+                            placeholder={`Pessoa ${i + 1}`}
+                          />
+                        )}
                         {fatias.length > 2 && (
                           <button type="button" className="pdv-dividido-remover" onClick={() => removerPessoa(f.id)} title="Remover pessoa">✕</button>
                         )}
                       </div>
-                      <div className="pdv-dividido-fatia-linha">
-                        {modoDivisao === 'item' ? (
-                          <div className="pdv-dividido-fatia-valor-wrap computado" title="Calculado a partir dos itens atribuídos">
-                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
-                            <span className="pdv-dividido-fatia-valor-computado">{fmtNum(valorFatiaAtual(f, i))}</span>
-                          </div>
-                        ) : (
-                          <div className="pdv-dividido-fatia-valor-wrap">
-                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
-                            <input maxLength={15}
-                              ref={el => { fatiaValorRefs.current[f.id] = el; }}
-                              className="pdv-dividido-fatia-valor"
-                              type="text"
-                              inputMode="numeric"
-                              placeholder="0,00"
-                              value={f.valor}
-                              onChange={e => atualizarValorFatia(f.id, e.target.value)}
-                              onKeyDown={e => handleFatiaValorKey(e, i)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
-                        {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map((m, mi) => (
-                          <button type="button"
-                            key={m.key}
-                            data-meio={m.key}
-                            ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
-                            className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
-                            onClick={() => escolherMeioFatia(f, i, m.key)}
-                            onKeyDown={e => handleFatiaMeioBtnKey(e, f)}
-                            title={m.label}
-                          >
-                            <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
-                            <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
-                          </button>
-                        ))}
-                      </div>
-                      {(() => {
+                      {!f.clienteId && (() => {
                         const fiado = f.meioPagamento === 'Fiado';
                         return (
                         <div className="pdv-dividido-fiado">
-                          {f.clienteId ? (
-                            <div className="pdv-dividido-fiado-selecionado">
-                              <span>📋 {f.clienteNome}</span>
-                              <div className="pdv-dividido-fiado-selecionado-acoes">
-                                <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>↩ Trocar</button>
-                                {!fiado && (
-                                  <button type="button" className="pdv-btn-trocar-cliente" onClick={() => desvincularClienteFatia(f.id)}>✕ Remover vínculo</button>
-                                )}
-                              </div>
-                            </div>
-                          ) : fatiaBuscaAberta === f.id ? (
+                          {fatiaBuscaAberta === f.id ? (
                             <div className="pdv-dividido-fiado-busca">
                               {!fatiaCadNovo ? (
                                 <>
@@ -1556,6 +1525,44 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                         </div>
                         );
                       })()}
+                      <div className="pdv-dividido-fatia-linha">
+                        {modoDivisao === 'item' ? (
+                          <div className="pdv-dividido-fatia-valor-wrap computado" title="Calculado a partir dos itens atribuídos">
+                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
+                            <span className="pdv-dividido-fatia-valor-computado">{fmtNum(valorFatiaAtual(f, i))}</span>
+                          </div>
+                        ) : (
+                          <div className="pdv-dividido-fatia-valor-wrap">
+                            <span className="pdv-dividido-fatia-valor-prefixo">R$</span>
+                            <input maxLength={15}
+                              ref={el => { fatiaValorRefs.current[f.id] = el; }}
+                              className="pdv-dividido-fatia-valor"
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0,00"
+                              value={f.valor}
+                              onChange={e => atualizarValorFatia(f.id, e.target.value)}
+                              onKeyDown={e => handleFatiaValorKey(e, i)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
+                        {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map((m, mi) => (
+                          <button type="button"
+                            key={m.key}
+                            data-meio={m.key}
+                            ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
+                            className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
+                            onClick={() => escolherMeioFatia(f, i, m.key)}
+                            onKeyDown={e => handleFatiaMeioBtnKey(e, f)}
+                            title={m.label}
+                          >
+                            <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
+                            <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     );
                   })}

@@ -2083,6 +2083,28 @@ button:disabled[title*="Sem permissão"] {
 .pdv-dividido-fatia-label:focus { outline: none; border-bottom: 1px dashed var(--est-border-accent); }
 .pdv-dividido-fatia-label::placeholder { color: var(--est-text-muted); }
 
+/* 17/09: quando a fatia já tem cliente vinculado, o campo de nome livre
+   (`.pdv-dividido-fatia-label`) some e esse chip toma o lugar dele em
+   cima, na mesma linha do numerozinho — o cliente PASSA A SER o nome da
+   pessoa, em vez de aparecer como uma linha extra separada mais embaixo. */
+.pdv-dividido-fatia-cliente-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pdv-dividido-fatia-cliente-chip-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--est-accent);
+}
+
 .pdv-dividido-remover {
   background: none;
   border: 1px solid var(--est-border);
@@ -2263,23 +2285,6 @@ button:disabled[title*="Sem permissão"] {
   border-color: var(--est-border-accent);
   color: var(--est-accent);
   opacity: 1;
-}
-
-.pdv-dividido-fiado-selecionado {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--est-accent);
-}
-
-.pdv-dividido-fiado-selecionado-acoes {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
 }
 
 .pdv-dividido-fiado-busca {
