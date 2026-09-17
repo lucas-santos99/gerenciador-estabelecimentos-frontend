@@ -106,6 +106,22 @@ const MEIO_LABEL_CURTO = {
   Dinheiro: 'Dinheiro', Pix: 'Pix', Debito: 'Débito', Credito: 'Crédito', Fiado: 'Fiado',
 };
 
+// Uma cor por pessoa no pagamento dividido (17/09) — o mesmo par
+// (fundo suave + cor sólida) identifica o numerozinho da pessoa (①②③…),
+// a borda superior do cartão dela e, no modo "por item", o chip já
+// atribuído a ela na lista de itens. É só decoração/organização visual
+// (não guarda nada no backend) — gira em ciclo de 6 cores, então com
+// mais de 6 pessoas a cor se repete, mas o número continua único.
+const PESSOA_CORES = [
+  { bg: 'rgba(20,184,166,0.16)', cor: '#0d9488' },
+  { bg: 'rgba(99,102,241,0.16)', cor: '#6366f1' },
+  { bg: 'rgba(217,119,6,0.16)',  cor: '#d97706' },
+  { bg: 'rgba(219,39,119,0.16)', cor: '#db2777' },
+  { bg: 'rgba(2,132,199,0.16)',  cor: '#0284c7' },
+  { bg: 'rgba(5,150,105,0.16)',  cor: '#059669' },
+];
+const corPessoa = (i) => PESSOA_CORES[i % PESSOA_CORES.length];
+
 /* ════════════════════════════════════════════════════════════
    MODAL DE PAGAMENTO
    ════════════════════════════════════════════════════════════ */
@@ -669,6 +685,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // ── Pagamento dividido, Fase 2 — divisão por item ──
   function mudarModoDivisao(novo) {
     if (novo === modoDivisao) return;
+    // Dividir por item só faz sentido com 2+ itens no carrinho pra
+    // distribuir entre pessoas (17/09) — com 1 item só, o dono seria
+    // sempre a mesma pessoa e a tela não ajudaria em nada.
+    if (novo === 'item' && carrinho.length < 2) return;
     setModoDivisao(novo);
     setItensFatia({});
     setRestoModo(null);
@@ -1274,7 +1294,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <button type="button" className={modoDivisao === 'valor' ? 'ativo' : ''} onClick={() => mudarModoDivisao('valor')}>
                     💰 Dividir por valor
                   </button>
-                  <button type="button" className={modoDivisao === 'item' ? 'ativo' : ''} onClick={() => mudarModoDivisao('item')} disabled={carrinho.length === 0}>
+                  <button type="button" className={modoDivisao === 'item' ? 'ativo' : ''} onClick={() => mudarModoDivisao('item')} disabled={carrinho.length < 2} title={carrinho.length < 2 ? 'Precisa de 2 ou mais itens no carrinho' : undefined}>
                     📦 Dividir por item
                   </button>
                 </div>
@@ -1282,11 +1302,86 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <span>Restante a dividir</span>
                   <strong>{fmt(restoPendente ? valorResto : restanteDividir)}</strong>
                 </div>
+
+                {modoDivisao === 'item' && (
+                  <div className="pdv-dividido-itens">
+                    <span className="pdv-dividido-itens-titulo">📦 Itens do carrinho — toque no número da pessoa dona de cada item</span>
+                    <ul className="pdv-dividido-itens-lista">
+                      {carrinho.map((item, idx) => {
+                        const donoId = itensFatia[idx] ?? null;
+                        return (
+                          <li className="pdv-dividido-item-card" key={idx}>
+                            <div className="pdv-dividido-item-info">
+                              <span className="pdv-dividido-item-nome">{item.nome}</span>
+                              <span className="pdv-dividido-item-valor">{fmt(valorItemCarrinho(item))}</span>
+                            </div>
+                            <div className="pdv-dividido-item-chips">
+                              {fatias.map((f, i) => {
+                                const ativo = donoId === f.id;
+                                const cp = corPessoa(i);
+                                return (
+                                  <button type="button"
+                                    key={f.id}
+                                    className={`pdv-dividido-item-chip${ativo ? ' ativo' : ''}`}
+                                    style={ativo ? { background: cp.bg, borderColor: cp.cor, color: cp.cor } : undefined}
+                                    onClick={() => atribuirItemFatia(idx, ativo ? null : f.id)}
+                                    title={f.pessoaLabel || `Pessoa ${i + 1}`}
+                                  >
+                                    <span className="pdv-dividido-fatia-num" style={{ background: ativo ? cp.cor : cp.bg, color: ativo ? '#fff' : cp.cor }}>{i + 1}</span>
+                                    <span className="pdv-dividido-item-chip-label">{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {valorResto > 0.001 && (
+                      <div className="pdv-dividido-resto">
+                        <span className="pdv-dividido-resto-texto">
+                          ⚠️ {fmt(valorResto)} em itens ainda sem dono.
+                        </span>
+                        {!restoModo ? (
+                          <div className="pdv-ident-pergunta-botoes">
+                            <button type="button" className="pdv-ident-btn-sim" onClick={() => setRestoModo('igual')}>÷ Dividir igual</button>
+                            <button type="button" className="pdv-ident-btn-nao" onClick={() => setRestoModo('manual')}>✏️ Digitar de cada um</button>
+                          </div>
+                        ) : restoModo === 'igual' ? (
+                          <div className="pdv-dividido-resto-info">
+                            <span>Dividido igualmente entre as {fatias.length} pessoas.</span>
+                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
+                          </div>
+                        ) : (
+                          <div className="pdv-dividido-resto-manual">
+                            {fatias.map((f, i) => (
+                              <div className="pdv-dividido-resto-manual-linha" key={f.id}>
+                                <span>{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
+                                <input maxLength={15}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="0,00"
+                                  value={restoManual[f.id] || ''}
+                                  onChange={e => setRestoManual(rm => ({ ...rm, [f.id]: digitarValorMascarado(e.target.value) }))}
+                                />
+                              </div>
+                            ))}
+                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="pdv-dividido-lista">
-                  {fatias.map((f, i) => (
-                    <div className="pdv-dividido-fatia" key={f.id}>
+                  {fatias.map((f, i) => {
+                    const cp = corPessoa(i);
+                    return (
+                    <div className="pdv-dividido-fatia" key={f.id} style={{ borderTopColor: cp.cor }}>
                       <div className="pdv-dividido-fatia-topo">
-                        <span className="pdv-dividido-fatia-num">{i + 1}</span>
+                        <span className="pdv-dividido-fatia-num" style={{ background: cp.bg, color: cp.cor }}>{i + 1}</span>
                         <input maxLength={30}
                           ref={el => { fatiaNomeRefs.current[f.id] = el; }}
                           className="pdv-dividido-fatia-label"
@@ -1411,76 +1506,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <button type="button" className="pdv-dividido-add" onClick={adicionarPessoa}>➕ Adicionar pessoa</button>
-
-                {modoDivisao === 'item' && (
-                  <div className="pdv-dividido-itens">
-                    <span className="pdv-dividido-itens-titulo">📦 Itens do carrinho — toque no número da pessoa dona de cada item</span>
-                    <ul className="pdv-dividido-itens-lista">
-                      {carrinho.map((item, idx) => {
-                        const donoId = itensFatia[idx] ?? null;
-                        return (
-                          <li className="pdv-dividido-item-card" key={idx}>
-                            <div className="pdv-dividido-item-info">
-                              <span className="pdv-dividido-item-nome">{item.nome}</span>
-                              <span className="pdv-dividido-item-valor">{fmt(valorItemCarrinho(item))}</span>
-                            </div>
-                            <div className="pdv-dividido-item-chips">
-                              {fatias.map((f, i) => (
-                                <button type="button"
-                                  key={f.id}
-                                  className={`pdv-dividido-item-chip${donoId === f.id ? ' ativo' : ''}`}
-                                  onClick={() => atribuirItemFatia(idx, donoId === f.id ? null : f.id)}
-                                  title={f.pessoaLabel || `Pessoa ${i + 1}`}
-                                >
-                                  <span className="pdv-dividido-fatia-num">{i + 1}</span>
-                                  <span className="pdv-dividido-item-chip-label">{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    {valorResto > 0.001 && (
-                      <div className="pdv-dividido-resto">
-                        <span className="pdv-dividido-resto-texto">
-                          ⚠️ {fmt(valorResto)} em itens ainda sem dono.
-                        </span>
-                        {!restoModo ? (
-                          <div className="pdv-ident-pergunta-botoes">
-                            <button type="button" className="pdv-ident-btn-sim" onClick={() => setRestoModo('igual')}>÷ Dividir igual</button>
-                            <button type="button" className="pdv-ident-btn-nao" onClick={() => setRestoModo('manual')}>✏️ Digitar de cada um</button>
-                          </div>
-                        ) : restoModo === 'igual' ? (
-                          <div className="pdv-dividido-resto-info">
-                            <span>Dividido igualmente entre as {fatias.length} pessoas.</span>
-                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
-                          </div>
-                        ) : (
-                          <div className="pdv-dividido-resto-manual">
-                            {fatias.map((f, i) => (
-                              <div className="pdv-dividido-resto-manual-linha" key={f.id}>
-                                <span>{f.pessoaLabel || `Pessoa ${i + 1}`}</span>
-                                <input maxLength={15}
-                                  type="text"
-                                  inputMode="numeric"
-                                  placeholder="0,00"
-                                  value={restoManual[f.id] || ''}
-                                  onChange={e => setRestoManual(rm => ({ ...rm, [f.id]: digitarValorMascarado(e.target.value) }))}
-                                />
-                              </div>
-                            ))}
-                            <button type="button" className="pdv-ident-recap-editar" onClick={() => setRestoModo(null)}>✏️ Mudar</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             )}
 
