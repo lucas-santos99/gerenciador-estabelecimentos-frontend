@@ -779,12 +779,25 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     fatiaMeioPrimeiroBtnRefs.current[fatias[i]?.id]?.focus();
   }
 
-  // Seta esquerda/direita alterna entre os botões de forma de pagamento
-  // da mesma fatia — Enter/clique já dispara o onClick nativamente do
-  // <button>, não precisa de tratamento especial aqui.
-  function handleFatiaMeioBtnKey(e) {
-    if (e.key === 'ArrowRight') { e.preventDefault(); e.currentTarget.nextElementSibling?.focus(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); e.currentTarget.previousElementSibling?.focus(); }
+  // Seta esquerda/direita alterna entre os botões de forma de pagamento da
+  // mesma fatia — Enter/clique já dispara o onClick nativamente do
+  // <button>, não precisa de tratamento especial aqui. 17/09: a seta só
+  // movia o foco do DOM (nextElementSibling/previousElementSibling), sem
+  // atualizar `f.meioPagamento` — como o estado "ativo" (visual) depende
+  // desse state, navegar só pelo teclado nunca mostrava nada selecionado,
+  // só o clique. Agora a seta também já seleciona visualmente o botão pra
+  // onde o foco foi (via `atualizarMeioFatia`, sem os efeitos colaterais de
+  // avançar o fluxo/abrir busca de fiado — isso fica só pra Enter/clique,
+  // que passam por `escolherMeioFatia`), lendo o meio do `data-meio` do
+  // botão vizinho.
+  function handleFatiaMeioBtnKey(e, f) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const alvo = e.key === 'ArrowRight' ? e.currentTarget.nextElementSibling : e.currentTarget.previousElementSibling;
+    if (!alvo) return;
+    const meioKey = alvo.dataset.meio;
+    if (meioKey) atualizarMeioFatia(f.id, meioKey);
+    alvo.focus();
   }
 
   function desvincularClienteFatia(id) {
@@ -1421,10 +1434,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                         {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map((m, mi) => (
                           <button type="button"
                             key={m.key}
+                            data-meio={m.key}
                             ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
                             className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
                             onClick={() => escolherMeioFatia(f, i, m.key)}
-                            onKeyDown={handleFatiaMeioBtnKey}
+                            onKeyDown={e => handleFatiaMeioBtnKey(e, f)}
                             title={m.label}
                           >
                             <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
