@@ -186,13 +186,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // Fluxo por Enter dentro do pagamento dividido (16/09) — nome da pessoa
   // → valor (só no modo "por valor") → primeiro botão de forma de
   // pagamento daquela fatia → (Fiado sem cliente ainda: botão de buscar
-  // cliente) → nome da PRÓXIMA fatia, ou o botão Confirmar geral do modal
-  // se for a última. Um objeto por campo, chaveado pelo id da fatia —
-  // nunca por índice, que muda quando alguém remove uma pessoa do meio.
+  // cliente; Dinheiro: campo de valor recebido) → nome da PRÓXIMA fatia,
+  // ou o botão Confirmar geral do modal se for a última. Um objeto por
+  // campo, chaveado pelo id da fatia — nunca por índice, que muda quando
+  // alguém remove uma pessoa do meio.
   const fatiaNomeRefs           = useRef({});
   const fatiaValorRefs          = useRef({});
   const fatiaMeioPrimeiroBtnRefs = useRef({});
   const fatiaBuscarBtnRefs      = useRef({});
+  const fatiaRecebidoRefs       = useRef({});
 
   // Confirmação antes de fechar o modal de vez — só aparece quando o
   // Esc é apertado já na primeira tela (escolha de forma de pagamento),
@@ -662,7 +664,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // ── Pagamento dividido — funções da lista de fatias ──
   function adicionarPessoa() {
     fatiaIdRef.current += 1;
-    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null }]);
+    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' }]);
   }
 
   function removerPessoa(id) {
@@ -720,6 +722,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, valor: digitarValorMascarado(bruto) } : f)));
   }
 
+  // 17/09 — troco por fatia em Dinheiro, mesma lógica do fluxo principal
+  // (useEffect de `troco`/`valorRecebido` lá em cima), só que calculado
+  // sob demanda por fatia em vez de um `useEffect` próprio — mais simples
+  // já que cada fatia já recalcula o próprio valor via `valorFatiaAtual`.
+  function atualizarValorRecebidoFatia(id, bruto) {
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, valorRecebido: digitarValorMascarado(bruto) } : f)));
+  }
+
   function atualizarLabelFatia(id, label) {
     setFatias(fs => fs.map(f => (f.id === id ? { ...f, pessoaLabel: label } : f)));
   }
@@ -755,13 +765,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // foco: pra dentro da busca de cliente se virou Fiado e ainda não tem
   // cliente vinculado (o `f` aqui é o valor de ANTES do clique, então
   // `f.clienteId` reflete corretamente se já tinha alguém selecionado de
-  // uma escolha anterior), senão pro próximo campo do fluxo normal.
+  // uma escolha anterior), pro campo de valor recebido se virou Dinheiro
+  // (17/09 — mesmo espírito do troco do fluxo principal, só que por
+  // fatia), senão pro próximo campo do fluxo normal.
   function escolherMeioFatia(f, i, key) {
     atualizarMeioFatia(f.id, key);
     if (key === 'Fiado' && !f.clienteId) {
       setTimeout(() => fatiaBuscarBtnRefs.current[f.id]?.focus(), 0);
       return;
     }
+    if (key === 'Dinheiro') {
+      setTimeout(() => { fatiaRecebidoRefs.current[f.id]?.focus(); fatiaRecebidoRefs.current[f.id]?.select?.(); }, 0);
+      return;
+    }
+    avancarAposFatia(i);
+  }
+
+  // Enter no campo de valor recebido (Dinheiro) — avança igual ao resto
+  // do fluxo da fatia.
+  function handleFatiaRecebidoKey(e, i) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
     avancarAposFatia(i);
   }
 
@@ -913,6 +937,15 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     return base; // resto ainda não resolvido — fatia fica incompleta de propósito
   }
 
+  // Troco de uma fatia em Dinheiro — mesma regra do fluxo principal
+  // (recebido - valor da fatia, nunca negativo enquanto o recebido não
+  // cobre o valor ainda).
+  function trocoFatia(f, i) {
+    const recebido = paraFloatBR(f.valorRecebido) || 0;
+    const valorF = valorFatiaAtual(f, i);
+    return recebido >= valorF ? recebido - valorF : 0;
+  }
+
   // No modo por item, enquanto sobrar item sem dono e o operador não
   // tiver escolhido como tratar o resto, a divisão fica bloqueada —
   // nunca assume um comportamento padrão silenciosamente.
@@ -924,7 +957,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     && !restoPendente
     && fatias.every((f, i) => valorFatiaAtual(f, i) > 0)
     && fatias.every(f => f.meioPagamento !== 'Fiado' || f.clienteId)
-    && Math.abs(restanteDividir) <= 0.01;
+    && Math.abs(restanteDividir) <= 0.001;
 
   function confirmarFinalDividido() {
     setErro('');
@@ -935,15 +968,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       const f = fatias[i];
       if (!(valoresFinais[i] > 0)) { setErro(`Informe um valor válido para ${f.pessoaLabel || 'a pessoa'}.`); return; }
       if (f.meioPagamento === 'Fiado' && !f.clienteId) { setErro(`Selecione um cliente para ${f.pessoaLabel || 'a pessoa'} (Fiado).`); return; }
+      // 17/09 — mesma exigência que já existe no Dinheiro do fluxo
+      // principal (valor recebido não pode ser menor que o total): aqui,
+      // por fatia.
+      if (f.meioPagamento === 'Dinheiro') {
+        const recebido = paraFloatBR(f.valorRecebido) || 0;
+        if (recebido < valoresFinais[i] - 0.001) {
+          setErro(`Informe o valor recebido em dinheiro de ${f.pessoaLabel || 'a pessoa'} (mínimo ${fmt(valoresFinais[i])}).`);
+          return;
+        }
+      }
     }
     const somaFinal = valoresFinais.reduce((s, v) => s + v, 0);
-    if (Math.abs(total - somaFinal) > 0.01) { setErro('A soma dos valores das pessoas precisa bater com o total da venda.'); return; }
+    if (Math.abs(total - somaFinal) > 0.001) { setErro('A soma dos valores das pessoas precisa bater com o total da venda.'); return; }
     const pagamentos = fatias.map((f, i) => ({
       meioPagamento: f.meioPagamento,
       valor:         Math.round(valoresFinais[i] * 100) / 100,
       clienteId:     f.clienteId || null,
       clienteNome:   f.clienteNome || null, // só pro recibo/tela — o backend ignora e busca o nome de novo pra auditoria
       pessoaLabel:   f.pessoaLabel || null,
+      valorRecebido: f.meioPagamento === 'Dinheiro' ? Math.round((paraFloatBR(f.valorRecebido) || 0) * 100) / 100 : null,
+      troco:         f.meioPagamento === 'Dinheiro' ? Math.round(trocoFatia(f, i) * 100) / 100 : null,
     }));
     // Fase 2 — pra cada item do carrinho, qual fatia (índice 0-based)
     // ficou com ele. Item não atribuído (ou que caiu no resto dividido
@@ -970,8 +1015,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (key === 'Dividido') {
       fatiaIdRef.current = 2;
       setFatias([
-        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null },
-        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null },
+        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' },
+        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '' },
       ]);
       setFatiaBuscaAberta(null);
       setModoDivisao('valor');
@@ -1342,7 +1387,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                     📦 Dividir por item
                   </button>
                 </div>
-                <div className={`pdv-dividido-restante${Math.abs(restanteDividir) <= 0.01 && !restoPendente ? ' ok' : ''}`}>
+                <div className={`pdv-dividido-restante${Math.abs(restanteDividir) <= 0.001 && !restoPendente ? ' ok' : ''}`}>
                   <span>Restante a dividir</span>
                   <strong>{fmt(restoPendente ? valorResto : restanteDividir)}</strong>
                 </div>
@@ -1563,6 +1608,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           </button>
                         ))}
                       </div>
+                      {f.meioPagamento === 'Dinheiro' && (
+                        <div className="pdv-dividido-fatia-troco">
+                          <div className="pdv-dividido-fatia-troco-campo">
+                            <span className="pdv-dividido-fatia-troco-label">Recebeu (R$)</span>
+                            <input maxLength={15}
+                              ref={el => { fatiaRecebidoRefs.current[f.id] = el; }}
+                              className="pdv-dividido-fatia-troco-input"
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0,00"
+                              value={f.valorRecebido}
+                              onChange={e => atualizarValorRecebidoFatia(f.id, e.target.value)}
+                              onKeyDown={e => handleFatiaRecebidoKey(e, i)}
+                            />
+                          </div>
+                          <div className="pdv-dividido-fatia-troco-display">
+                            <span>Troco</span>
+                            <strong>{fmt(trocoFatia(f, i))}</strong>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     );
                   })}
@@ -1861,6 +1927,9 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
                   <span className="pdv-posv-dividido-fatia-nome">{p.pessoaLabel || `Pessoa ${i + 1}`}</span>
                   <span className="pdv-posv-dividido-fatia-meio">{meioLabelCurto[p.meioPagamento] || p.meioPagamento}{p.clienteNome ? ` · ${p.clienteNome}` : ''}</span>
                   <span className="pdv-posv-dividido-fatia-valor">{fmt(p.valor)}</span>
+                  {p.meioPagamento === 'Dinheiro' && p.valorRecebido != null && (
+                    <span className="pdv-posv-dividido-fatia-troco">Recebeu {fmt(p.valorRecebido)} · Troco {fmt(p.troco)}</span>
+                  )}
                   {itensDaFatia.length > 0 && (
                     <span className="pdv-posv-dividido-fatia-itens">{itensDaFatia.map(it => it.nome).join(', ')}</span>
                   )}
@@ -1931,6 +2000,9 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
                         <span>{p.pessoaLabel || `Pessoa ${i + 1}`} ({meioLabelCurto[p.meioPagamento]?.replace(/^\S+\s/, '') || p.meioPagamento}{p.clienteNome ? ` · ${p.clienteNome}` : ''})</span>
                         <span>{fmt(p.valor)}</span>
                       </div>
+                      {p.meioPagamento === 'Dinheiro' && p.valorRecebido != null && (
+                        <div className="rec-pagamento-itens">Recebeu {fmt(p.valorRecebido)} · Troco {fmt(p.troco)}</div>
+                      )}
                       {itensDaFatia.length > 0 && (
                         <div className="rec-pagamento-itens">{itensDaFatia.map(it => it.nome).join(', ')}</div>
                       )}
@@ -2325,8 +2397,14 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         setModalPeso({ produto });
         return;
       }
-      // kg normal (granel sem balança) — comportamento original
-      setInputQtd('1.000');
+      // kg normal (granel sem balança). 17/09: vinha pré-preenchido com
+      // "1.000" (1kg de verdade, não só um placeholder) — mesmo com o
+      // texto selecionado ao abrir o modal (então digitar por cima
+      // funciona), bastava um Enter/clique apressado no "Adicionar" pra
+      // vender 1kg de queijo/frios em vez do peso real da peça. Mesma
+      // regra já usada nos formulários de cadastro: nunca pré-preencher
+      // campo numérico com valor real, só com placeholder.
+      setInputQtd('');
       setItemQuantificar(produto);
       setEditIndex(null);
       return;
@@ -2338,7 +2416,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       mostrarStatus('erro', `Estoque máximo de "${produto.nome}" (${estoque} un.) atingido.`);
       limparBusca(); return;
     }
-    setInputQtd(produto.unidade_medida === 'kg' ? '1,000' : '1');
+    setInputQtd(produto.unidade_medida === 'kg' ? '' : '1');
     setItemQuantificar(produto);
     setEditIndex(null);
     limparBusca();
@@ -2365,7 +2443,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       nome: nomeComVariacao,
     };
     setItemEscolherVariacao(null);
-    setInputQtd(produtoComVariacao.unidade_medida === 'kg' ? '1,000' : '1');
+    setInputQtd(produtoComVariacao.unidade_medida === 'kg' ? '' : '1');
     setItemQuantificar(produtoComVariacao);
     setEditIndex(null);
   }
@@ -2391,7 +2469,15 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     e?.preventDefault();
     const produto = itemQuantificar;
     const qtd     = paraFloatBR(inputQtd) || 0;
-    if (qtd <= 0) { fecharModalQtd(); return; }
+    // 17/09: fechava o modal em silêncio quando o campo estava vazio/zerado
+    // (sem feedback nenhum) — inofensivo enquanto o campo vinha pré-preenchido
+    // com "1", mas depois do fix acima (peso em kg some sem pré-preencher, de
+    // propósito) um Enter sem digitar nada precisa avisar, não só desistir
+    // calado — senão parece que o item "sumiu" sem explicação nenhuma.
+    if (qtd <= 0) {
+      mostrarStatus('erro', itemQuantificar.unidade_medida === 'kg' ? 'Informe o peso antes de adicionar.' : 'Informe a quantidade antes de adicionar.');
+      return;
+    }
     const estoque = parseFloat(produto.estoque_atual);
     if (editIndex !== null) {
       const outrasQtds = carrinho.filter((item, idx) => item.id === produto.id && item.produto_variacao_id === produto.produto_variacao_id && idx !== editIndex).reduce((acc, i) => acc + i.quantidade, 0);
@@ -2641,6 +2727,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                 inputMode={itemQuantificar.unidade_medida === 'kg' ? 'decimal' : undefined}
                 step={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'}
                 min={itemQuantificar.unidade_medida === 'kg' ? '0.001' : '1'}
+                placeholder={itemQuantificar.unidade_medida === 'kg' ? '0,000' : undefined}
                 value={inputQtd}
                 onChange={e => setInputQtd(itemQuantificar.unidade_medida === 'kg' ? digitarPesoMascarado(e.target.value) : e.target.value)}
                 onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); fecharModalQtd(); } }}

@@ -2271,6 +2271,70 @@ button:disabled[title*="Sem permissão"] {
   box-shadow: 0 0 0 2px var(--est-card);
 }
 
+/* 17/09 — valor recebido/troco por fatia, só quando a forma da fatia é
+   Dinheiro. Mesma ideia do troco do fluxo principal (`.pdv-troco-*`),
+   só que numa versão compacta pra caber dentro do cartão da fatia. */
+.pdv-dividido-fatia-troco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--est-border);
+  padding-top: 8px;
+}
+.pdv-dividido-fatia-troco-campo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pdv-dividido-fatia-troco-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--est-text-soft);
+}
+.pdv-dividido-fatia-troco-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--est-border);
+  border-radius: 7px;
+  background: var(--est-card);
+  color: var(--est-text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: right;
+  box-sizing: border-box;
+  transition: all 0.15s;
+}
+.pdv-dividido-fatia-troco-input:focus {
+  outline: none;
+  border-color: var(--est-border-accent);
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+.pdv-dividido-fatia-troco-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--est-success-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 7px;
+}
+.pdv-dividido-fatia-troco-display span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--est-success);
+}
+.pdv-dividido-fatia-troco-display strong {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--est-success);
+}
+
 .pdv-dividido-fiado {
   border-top: 1px dashed var(--est-border);
   padding-top: 8px;
@@ -2579,6 +2643,15 @@ button:disabled[title*="Sem permissão"] {
   font-size: 0.7rem;
   color: var(--est-text-muted);
   font-style: italic;
+}
+
+/* 17/09 — recebido/troco de uma fatia em Dinheiro, mesmo espírito da
+   linha de itens acima (quebra pra linha própria, tom discreto). */
+.pdv-posv-dividido-fatia-troco {
+  flex-basis: 100%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--est-success);
 }
 
 /* ════════════════════════════════════════════════════════════
