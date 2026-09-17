@@ -2324,32 +2324,19 @@ button:disabled[title*="Sem permissão"] {
   justify-content: center;
   box-shadow: 0 0 0 2px var(--est-card);
 }
-/* 17/09 — a pedido do usuário: numerozinho no canto oposto ao ✓ de
-   selecionado, indicando a tecla de atalho (1..N, ver
-   `handleFatiaMeioBtnKey`) de cada forma de pagamento — discreto o
-   suficiente pra não competir com o ícone/label, mas visível de relance. */
-.pdv-dividido-fatia-meio-btn-tecla {
-  position: absolute;
-  top: -6px;
-  left: -6px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--est-card);
-  border: 1px solid var(--est-border);
-  color: var(--est-text-muted);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-.pdv-dividido-fatia-meio-btn.ativo .pdv-dividido-fatia-meio-btn-tecla {
-  background: rgba(255,255,255,0.25);
-  border-color: rgba(255,255,255,0.5);
-  color: #fff;
+/* 17/09 — a indicação da tecla de atalho de cada forma de pagamento
+   tentou primeiro um numerozinho em cima de cada botão — o usuário
+   testou e reportou que ficou pequeno demais, com letra quase
+   transparente (baixo contraste) e colando visualmente nos botões
+   vizinhos. Substituída por uma linha de texto só, bem abaixo do grupo
+   de botões inteiro (`.pdv-dividido-fatia-meio-legenda` abaixo), grande
+   e com contraste alto o bastante pra ler de relance. */
+.pdv-dividido-fatia-meio-legenda {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+  line-height: 1.4;
 }
 
 /* 17/09 — valor recebido/troco por fatia, só quando a forma da fatia é

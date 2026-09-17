@@ -1882,6 +1882,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       {(() => {
                         const meiosDisponiveis = MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado));
                         return (
+                        <>
                         <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
                           {meiosDisponiveis.map((m, mi) => (
                             <button type="button"
@@ -1895,10 +1896,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                             >
                               <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
                               <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
-                              <span className="pdv-dividido-fatia-meio-btn-tecla">{mi + 1}</span>
                             </button>
                           ))}
                         </div>
+                        {/* 17/09 — a pedido do usuário: os numerozinhos em cima de cada
+                            botão (badge `.pdv-dividido-fatia-meio-btn-tecla`, removida)
+                            ficaram pequenos, com contraste baixo e colando nos botões
+                            vizinhos, difícil de ler e de acertar o clique. Substituído por
+                            uma linha só, bem abaixo do grupo de botões inteiro, com o texto
+                            grande o bastante pra ler de relance. */}
+                        <div className="pdv-dividido-fatia-meio-legenda">
+                          Atalho: {meiosDisponiveis.map((m, mi) => `${mi + 1} ${MEIO_LABEL_CURTO[m.key]}`).join(' · ')}
+                        </div>
+                        </>
                         );
                       })()}
                       {f.meioPagamento === 'Dinheiro' && (
