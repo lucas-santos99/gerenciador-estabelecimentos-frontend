@@ -201,6 +201,10 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // 17/09 — checkbox "Confirmo que o Pix caiu na conta" de cada fatia,
   // quando o Pix é gerado pelo sistema (ver `gerarPixFatia` mais abaixo).
   const fatiaPixCheckboxRefs    = useRef({});
+  // 17/09 — botões "💰 Dividir por valor" / "📦 Dividir por item", pra
+  // navegação por seta entre os dois (ver `handleModoDivisaoKey`).
+  const modoValorBtnRef = useRef(null);
+  const modoItemBtnRef  = useRef(null);
 
   // Confirmação antes de fechar o modal de vez — só aparece quando o
   // Esc é apertado já na primeira tela (escolha de forma de pagamento),
@@ -670,7 +674,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // ── Pagamento dividido — funções da lista de fatias ──
   function adicionarPessoa() {
     fatiaIdRef.current += 1;
-    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null }]);
+    setFatias(fs => [...fs, { id: fatiaIdRef.current, pessoaLabel: `Pessoa ${fs.length + 1}`, valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null, pixSubModo: (pixConfig.modo === 'sistema' && pixConfig.disponivel) ? 'sistema' : 'maquininha' }]);
   }
 
   function removerPessoa(id) {
@@ -706,6 +710,35 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     // pessoa já "confirmada" (cartão colapsado, ver `confirmarFatia`) volta
     // a ficar editável, pra não mostrar um resumo com valor desatualizado.
     setFatias(fs => fs.map(f => (novo === 'valor' ? { ...f, valor: '', confirmada: false } : { ...f, confirmada: false })));
+  }
+
+  // 17/09 — a pedido do usuário: navegação 100% por teclado no toggle de
+  // modo (antes só dava pra trocar com o mouse). Seta esquerda/direita
+  // move o foco entre os dois botões (e já troca de modo, igual o padrão
+  // dos botões de forma de pagamento da fatia); as teclas 1/2 trocam de
+  // modo direto, de qualquer um dos dois botões, sem precisar navegar até
+  // o outro primeiro.
+  function handleModoDivisaoKey(e) {
+    if (e.key === '1') {
+      e.preventDefault();
+      mudarModoDivisao('valor');
+      modoValorBtnRef.current?.focus();
+      return;
+    }
+    if (e.key === '2') {
+      if (carrinho.length < 2) return;
+      e.preventDefault();
+      mudarModoDivisao('item');
+      modoItemBtnRef.current?.focus();
+      return;
+    }
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const alvoRef = e.key === 'ArrowRight' ? modoItemBtnRef : modoValorBtnRef;
+    const alvoModo = e.key === 'ArrowRight' ? 'item' : 'valor';
+    if (alvoModo === 'item' && carrinho.length < 2) return;
+    mudarModoDivisao(alvoModo);
+    alvoRef.current?.focus();
   }
 
   function atribuirItemFatia(idx, fatiaId) {
@@ -793,8 +826,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     // `gerarPixFatia` abaixo): só considera a fatia pronta depois que o
     // operador marcar "Confirmo que o Pix caiu na conta" pra ESSE QR, e só
     // se o valor não tiver mudado desde que ele foi gerado (senão o QR
-    // ficou desatualizado — `pixDesatualizadoFatia`).
-    if (f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+    // ficou desatualizado — `pixDesatualizadoFatia`). `f.pixSubModo` é a
+    // escolha sistema/maquininha DESSA fatia — cada pessoa pode escolher a
+    // própria (ver `alternarPixSubModoFatia`), não é o `pixModo` global do
+    // resto do modal.
+    if (f.meioPagamento === 'Pix' && f.pixSubModo === 'sistema' && pixConfig.disponivel) {
       if (!f.pixRecebido) return false;
       if (pixDesatualizadoFatia(f, i)) return false;
     }
@@ -847,6 +883,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     navigator.clipboard?.writeText(f.pixDados.payload);
     setFatias(fs => fs.map(x => (x.id === id ? { ...x, pixCopiado: true } : x)));
     setTimeout(() => setFatias(fs => fs.map(x => (x.id === id ? { ...x, pixCopiado: false } : x))), 2000);
+  }
+
+  // 17/09 — a pedido do usuário: "faltou a opção de gerar Pix pelo QR
+  // Code igual no PDV normal" — o fluxo principal deixa trocar entre
+  // "Pix pelo sistema" e "Pix na maquininha" por transação (link "Gerar QR
+  // Code pelo sistema em vez disso"/"Usar a maquininha em vez disso"); no
+  // Dividido esse link não existia, então uma fatia ficava travada no modo
+  // padrão do estabelecimento pra sempre. Cada fatia guarda a própria
+  // escolha (`pixSubModo`) — diferente do `pixModo` do fluxo principal,
+  // que é uma única variável pro modal inteiro — porque aqui pode fazer
+  // sentido uma pessoa pagar por QR e outra na maquininha na MESMA venda.
+  function alternarPixSubModoFatia(id) {
+    const i = fatias.findIndex(f => f.id === id);
+    if (i < 0) return;
+    const atual = fatias[i];
+    const novo = atual.pixSubModo === 'sistema' ? 'maquininha' : 'sistema';
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, pixSubModo: novo } : f)));
+    if (novo === 'sistema') {
+      if (!atual.pixDados) gerarPixFatia(id);
+      else setTimeout(() => fatiaPixCheckboxRefs.current[id]?.focus(), 0);
+    }
   }
 
   // Foca o botão "Confirmar Pessoa N" da própria fatia (chamado ao terminar
@@ -902,7 +959,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     // estabelecimento usa Pix por maquininha (sem integração), cai no
     // mesmo fluxo de sempre — nem tem "tela" nenhuma a mostrar aqui,
     // igual já acontece no PDV normal.
-    if (key === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+    if (key === 'Pix' && f.pixSubModo === 'sistema' && pixConfig.disponivel) {
       if (!f.pixDados) gerarPixFatia(f.id);
       else setTimeout(() => fatiaPixCheckboxRefs.current[f.id]?.focus(), 0);
       return;
@@ -956,7 +1013,19 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   // avançar o fluxo/abrir busca de fiado — isso fica só pra Enter/clique,
   // que passam por `escolherMeioFatia`), lendo o meio do `data-meio` do
   // botão vizinho.
-  function handleFatiaMeioBtnKey(e, f) {
+  // 17/09 — a pedido do usuário: teclas 1..N (uma pra cada forma de
+  // pagamento disponível, na mesma ordem em que aparecem os botões) além
+  // da seta — digitar o número já ESCOLHE aquela forma (passa por
+  // `escolherMeioFatia`, com os mesmos efeitos colaterais de clicar: abrir
+  // busca de fiado, focar valor recebido, etc.), diferente da seta, que só
+  // move o destaque visual sem confirmar nada.
+  function handleFatiaMeioBtnKey(e, f, i, meiosDisponiveis) {
+    const n = Number(e.key);
+    if (Number.isInteger(n) && n >= 1 && n <= meiosDisponiveis.length) {
+      e.preventDefault();
+      escolherMeioFatia(f, i, meiosDisponiveis[n - 1].key);
+      return;
+    }
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     e.preventDefault();
     const alvo = e.key === 'ArrowRight' ? e.currentTarget.nextElementSibling : e.currentTarget.previousElementSibling;
@@ -1118,7 +1187,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       }
       // 17/09 — mesma exigência que já existe pro Pix do fluxo principal
       // (checkbox "Confirmo que o Pix caiu na conta"), aqui por fatia.
-      if (f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel) {
+      if (f.meioPagamento === 'Pix' && f.pixSubModo === 'sistema' && pixConfig.disponivel) {
         if (pixDesatualizadoFatia(f, i)) {
           setErro(`O QR Code de ${f.pessoaLabel || 'a pessoa'} ficou desatualizado (o valor mudou) — gere um novo antes de continuar.`);
           return;
@@ -1165,8 +1234,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (key === 'Dividido') {
       fatiaIdRef.current = 2;
       setFatias([
-        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null },
-        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null },
+        { id: 1, pessoaLabel: 'Pessoa 1', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null, pixSubModo: (pixConfig.modo === 'sistema' && pixConfig.disponivel) ? 'sistema' : 'maquininha' },
+        { id: 2, pessoaLabel: 'Pessoa 2', valor: '', meioPagamento: 'Dinheiro', clienteId: null, clienteNome: null, valorRecebido: '', confirmada: false, pixDados: null, pixGerando: false, pixErro: '', pixRecebido: false, pixCopiado: false, pixValorGerado: null, pixSubModo: (pixConfig.modo === 'sistema' && pixConfig.disponivel) ? 'sistema' : 'maquininha' },
       ]);
       setFatiaBuscaAberta(null);
       setModoDivisao('valor');
@@ -1267,7 +1336,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   return (
     <div className="pdv-modal-overlay" ref={overlayRef} tabIndex={-1} onKeyDown={handleOverlayKey}>
-      <div className="pdv-modal pdv-modal-pagamento" style={{ '--pdv-pag-zoom': pagZoom }} onClick={e => e.stopPropagation()}>
+      {/* 17/09 — a pedido do usuário: modal mais largo especificamente no
+          Dividido, que tem bem mais conteúdo por pessoa (forma de
+          pagamento, troco/Pix, legenda de atalhos) do que os outros meios
+          de pagamento — os demais continuam com a largura de sempre. */}
+      <div className={`pdv-modal pdv-modal-pagamento${meioPagamento === 'Dividido' ? ' pdv-modal-pagamento-dividido' : ''}`} style={{ '--pdv-pag-zoom': pagZoom }} onClick={e => e.stopPropagation()}>
         <div className="pdv-modal-pagamento-header">
           <div className="pdv-modal-titulo" style={{ marginBottom: 0 }}>💳 Finalizar Venda</div>
           <div className="pdv-modal-pagamento-zoom">
@@ -1541,12 +1614,33 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
             {meioPagamento === 'Dividido' && (
               <div className="pdv-dividido-wrap">
                 <div className="pdv-dividido-modo-toggle">
-                  <button type="button" className={modoDivisao === 'valor' ? 'ativo' : ''} onClick={() => mudarModoDivisao('valor')}>
+                  <button type="button"
+                    ref={modoValorBtnRef}
+                    className={modoDivisao === 'valor' ? 'ativo' : ''}
+                    onClick={() => mudarModoDivisao('valor')}
+                    onKeyDown={handleModoDivisaoKey}
+                    title="Dividir por valor (tecla 1)"
+                  >
                     💰 Dividir por valor
                   </button>
-                  <button type="button" className={modoDivisao === 'item' ? 'ativo' : ''} onClick={() => mudarModoDivisao('item')} disabled={carrinho.length < 2} title={carrinho.length < 2 ? 'Precisa de 2 ou mais itens no carrinho' : undefined}>
+                  <button type="button"
+                    ref={modoItemBtnRef}
+                    className={modoDivisao === 'item' ? 'ativo' : ''}
+                    onClick={() => mudarModoDivisao('item')}
+                    onKeyDown={handleModoDivisaoKey}
+                    disabled={carrinho.length < 2}
+                    title={carrinho.length < 2 ? 'Precisa de 2 ou mais itens no carrinho' : 'Dividir por item (tecla 2)'}
+                  >
                     📦 Dividir por item
                   </button>
+                </div>
+                {/* 17/09 — a pedido do usuário: legenda visível explicando os
+                    atalhos de teclado da tela inteira do Dividido — trocar de
+                    modo, escolher forma de pagamento e navegar entre campos. */}
+                <div className="pdv-dividido-legenda">
+                  <span><kbd>1</kbd>/<kbd>2</kbd> trocam o modo de divisão acima</span>
+                  <span><kbd>1</kbd>–<kbd>{podeUsarFiado ? '5' : '4'}</kbd> escolhem a forma de pagamento de cada pessoa</span>
+                  <span><kbd>← →</kbd> navega entre opções · <kbd>↩ Enter</kbd> confirma o campo</span>
                 </div>
                 <div className={`pdv-dividido-restante${Math.abs(restanteDividir) <= 0.001 && !restoPendente ? ' ok' : ''}`}>
                   <span>Restante a dividir</span>
@@ -1652,7 +1746,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                             {f.meioPagamento === 'Dinheiro' && (
                               <span className="pdv-dividido-fatia-confirmada-troco">Troco {fmt(trocoFatia(f, i))}</span>
                             )}
-                            {f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel && f.pixRecebido && (
+                            {f.meioPagamento === 'Pix' && f.pixSubModo === 'sistema' && pixConfig.disponivel && f.pixRecebido && (
                               <span className="pdv-dividido-fatia-confirmada-troco">✓ Pix confirmado</span>
                             )}
                           </div>
@@ -1785,22 +1879,28 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           </div>
                         )}
                       </div>
-                      <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
-                        {MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado)).map((m, mi) => (
-                          <button type="button"
-                            key={m.key}
-                            data-meio={m.key}
-                            ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
-                            className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
-                            onClick={() => escolherMeioFatia(f, i, m.key)}
-                            onKeyDown={e => handleFatiaMeioBtnKey(e, f)}
-                            title={m.label}
-                          >
-                            <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
-                            <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
-                          </button>
-                        ))}
-                      </div>
+                      {(() => {
+                        const meiosDisponiveis = MEIOS.filter(m => m.key !== 'Dividido' && (m.key !== 'Fiado' || podeUsarFiado));
+                        return (
+                        <div className="pdv-dividido-fatia-meio-btns" role="group" aria-label="Forma de pagamento">
+                          {meiosDisponiveis.map((m, mi) => (
+                            <button type="button"
+                              key={m.key}
+                              data-meio={m.key}
+                              ref={mi === 0 ? el => { fatiaMeioPrimeiroBtnRefs.current[f.id] = el; } : undefined}
+                              className={`pdv-dividido-fatia-meio-btn${f.meioPagamento === m.key ? ' ativo' : ''}`}
+                              onClick={() => escolherMeioFatia(f, i, m.key)}
+                              onKeyDown={e => handleFatiaMeioBtnKey(e, f, i, meiosDisponiveis)}
+                              title={`${m.label} (tecla ${mi + 1})`}
+                            >
+                              <span className="pdv-dividido-fatia-meio-btn-icone">{m.icone}</span>
+                              <span className="pdv-dividido-fatia-meio-btn-label">{MEIO_LABEL_CURTO[m.key]}</span>
+                              <span className="pdv-dividido-fatia-meio-btn-tecla">{mi + 1}</span>
+                            </button>
+                          ))}
+                        </div>
+                        );
+                      })()}
                       {f.meioPagamento === 'Dinheiro' && (
                         <div className="pdv-dividido-fatia-troco">
                           <div className="pdv-dividido-fatia-troco-campo">
@@ -1828,16 +1928,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           (senão cai no bloco de QR Code logo abaixo). Mostra o valor
                           específico DESSA fatia, já que cada pessoa pode dever um valor
                           diferente — não dá pra só olhar o total do carrinho aqui. */}
-                      {(['Debito', 'Credito'].includes(f.meioPagamento) || (f.meioPagamento === 'Pix' && !(pixModo === 'sistema' && pixConfig.disponivel))) && (
+                      {(['Debito', 'Credito'].includes(f.meioPagamento) || (f.meioPagamento === 'Pix' && !(f.pixSubModo === 'sistema' && pixConfig.disponivel))) && (
                         <div className="pdv-dividido-fatia-maquininha-aviso">
                           ⚠️ Insira <strong>{fmt(valorFatiaAtual(f, i))}</strong> na maquininha e finalize o pagamento por lá. Depois, confirme aqui embaixo.
+                          {/* 17/09 — link pra trocar pro Pix pelo sistema, igual o fluxo
+                              principal já tem ("Gerar QR Code pelo sistema em vez disso") —
+                              faltava aqui; cada fatia guarda a própria escolha
+                              (`f.pixSubModo`), independente das outras pessoas. */}
+                          {f.meioPagamento === 'Pix' && pixConfig.disponivel && (
+                            <button type="button" className="pdv-dividido-fatia-pix-trocar-modo" onClick={() => alternarPixSubModoFatia(f.id)}>
+                              Gerar QR Code pelo sistema em vez disso
+                            </button>
+                          )}
                         </div>
                       )}
                       {/* "Abrir a tela de Pix igual abre no PDV normal", dentro do cartão
                           dessa fatia: QR Code + copia-e-cola + checkbox de confirmação,
-                          com o valor DESSA pessoa. Só aparece quando o estabelecimento
-                          tem Pix pelo sistema configurado. */}
-                      {f.meioPagamento === 'Pix' && pixModo === 'sistema' && pixConfig.disponivel && (
+                          com o valor DESSA pessoa. Só aparece quando essa fatia está
+                          usando Pix pelo sistema (`f.pixSubModo`, alternável por
+                          `alternarPixSubModoFatia`) e o estabelecimento tem essa
+                          integração disponível. */}
+                      {f.meioPagamento === 'Pix' && f.pixSubModo === 'sistema' && pixConfig.disponivel && (
                         <div className="pdv-dividido-fatia-pix">
                           {f.pixGerando && <div className="pdv-dividido-fatia-pix-status">⏳ Gerando QR Code…</div>}
                           {f.pixErro && !f.pixGerando && (

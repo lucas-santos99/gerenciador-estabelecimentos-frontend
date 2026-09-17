@@ -918,6 +918,14 @@
   padding: calc(40px * var(--pdv-pag-zoom, 1));
 }
 
+/* 17/09 — a pedido do usuário: modal mais largo especificamente no
+   Dividido (bem mais conteúdo por pessoa que os outros meios de
+   pagamento — forma de pagamento, troco/Pix, legenda de atalhos). Os
+   outros meios continuam com os 560px de sempre. */
+.pdv-modal-pagamento-dividido {
+  max-width: calc(760px * var(--pdv-pag-zoom, 1));
+}
+
 .pdv-modal-pagamento-header {
   display: flex;
   align-items: center;
@@ -2032,6 +2040,32 @@ button:disabled[title*="Sem permissão"] {
 }
 .pdv-dividido-modo-toggle button:hover:not(:disabled) { transform: translateY(-1px); }
 .pdv-dividido-modo-toggle button:disabled { opacity: 0.5; cursor: default; transform: none; }
+.pdv-dividido-modo-toggle button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--est-accent-dim);
+}
+
+/* 17/09 — a pedido do usuário: legenda dos atalhos de teclado da tela do
+   Dividido inteira (trocar modo, escolher forma de pagamento, navegar) —
+   os badges `kbd` reaproveitam a cara do `.pdv-meio-enter` do fluxo
+   principal (mono, cor de destaque), só compactos pra caber em linha. */
+.pdv-dividido-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: calc(0.7rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-text-muted);
+}
+.pdv-dividido-legenda kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: calc(0.68rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin: 0 1px;
+}
 
 .pdv-dividido-restante {
   display: flex;
@@ -2290,6 +2324,33 @@ button:disabled[title*="Sem permissão"] {
   justify-content: center;
   box-shadow: 0 0 0 2px var(--est-card);
 }
+/* 17/09 — a pedido do usuário: numerozinho no canto oposto ao ✓ de
+   selecionado, indicando a tecla de atalho (1..N, ver
+   `handleFatiaMeioBtnKey`) de cada forma de pagamento — discreto o
+   suficiente pra não competir com o ícone/label, mas visível de relance. */
+.pdv-dividido-fatia-meio-btn-tecla {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  color: var(--est-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.pdv-dividido-fatia-meio-btn.ativo .pdv-dividido-fatia-meio-btn-tecla {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.5);
+  color: #fff;
+}
 
 /* 17/09 — valor recebido/troco por fatia, só quando a forma da fatia é
    Dinheiro. Mesma ideia do troco do fluxo principal (`.pdv-troco-*`),
@@ -2369,6 +2430,24 @@ button:disabled[title*="Sem permissão"] {
   line-height: 1.45;
 }
 .pdv-dividido-fatia-maquininha-aviso strong { color: #92400e; }
+/* 17/09 — link "Gerar QR Code pelo sistema em vez disso" / "Usar a
+   maquininha em vez disso", pra trocar o `pixSubModo` de UMA fatia
+   (mesma cor/estilo do link equivalente no fluxo principal, só que como
+   classe reutilizável em vez de inline, já que aparece em dois lugares
+   dentro do cartão da fatia). */
+.pdv-dividido-fatia-pix-trocar-modo {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0f766e;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.pdv-dividido-fatia-pix-trocar-modo:hover { color: #0d5f59; }
 
 /* 17/09 — "tela de Pix" dentro do cartão de cada fatia (mesma integração
    do fluxo principal, `.pdv-pagamento-digital`, só que compacta pra caber
