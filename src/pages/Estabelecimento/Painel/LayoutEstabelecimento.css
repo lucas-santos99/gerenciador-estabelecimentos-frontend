@@ -569,7 +569,7 @@ body.light {
      com max-height, sem object-fit, quando width e height brigam). */
   width: 100%;
   height: auto;
-  max-height: 320px;
+  max-height: 460px; /* modal ficou bem maior — a imagem acompanha */
   object-fit: contain;
   border-radius: 12px;
   margin-bottom: 16px;
@@ -613,6 +613,85 @@ body.light {
 .est-modal-confirm:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(239,68,68,0.45);
+}
+
+/* ── Modal de COMUNICADO — bem maior e destacado (pedido do usuário:
+   "pode ser quase a tela toda") ──────────────────────────────────────
+   Não altera `.est-modal` base (usado também no logout e outros
+   confirms) — só este modificador, aplicado junto na mesma div. O
+   corpo (ícone/título/imagem/mensagem) vira uma área rolável própria
+   com o zoom aplicado só nela; ícone e botão "Ok, entendi" ficam de
+   fora do zoom, sempre visíveis e do tamanho normal — mesmo padrão já
+   usado no modal de criar/editar do SuperAdmin. */
+.est-modal.est-modal-comunicado {
+  max-width: min(1000px, 92vw);
+  max-height: 90vh;
+  padding: 40px 44px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.est-modal-comunicado .est-modal-corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.est-modal-comunicado .est-modal-title {
+  font-size: 1.5rem;
+}
+
+.est-modal-comunicado .est-modal-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.est-modal-comunicado .est-modal-actions {
+  flex-shrink: 0;
+  padding-top: 18px;
+}
+
+.est-zoom-controle {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+}
+
+.est-zoom-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.est-zoom-btn:hover { background: var(--est-card); border-color: var(--est-accent); }
+
+.est-zoom-valor {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+  min-width: 38px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .est-modal.est-modal-comunicado { padding: 28px 20px; max-width: 96vw; }
+  .est-modal-comunicado .est-modal-title { font-size: 1.2rem; }
 }
 
 /* ========================= */

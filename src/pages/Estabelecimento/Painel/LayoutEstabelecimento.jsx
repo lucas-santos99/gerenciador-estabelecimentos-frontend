@@ -296,6 +296,14 @@ export default function LayoutEstabelecimento({
   // independente do modal).
   const [comunicadosModal, setComunicadosModal] = useState([]);
   const [comunicadosFixos, setComunicadosFixos] = useState([]);
+  // Zoom do modal bloqueante de comunicado — mesma ideia já usada no
+  // modal de criar/editar do SuperAdmin ("conforme nosso sistema todo").
+  // Reseta pra 100% sempre que troca o comunicado exibido (não persiste
+  // de um aviso pro próximo).
+  const [zoomComunicado, setZoomComunicado] = useState(1);
+  useEffect(() => {
+    setZoomComunicado(1);
+  }, [comunicadosModal[0]?.id]);
 
   useEffect(() => {
     if (!estabelecimentoId) return;
@@ -690,29 +698,42 @@ export default function LayoutEstabelecimento({
           é a natureza desse formato (item 20 do backlog). */}
       {comunicadosModal[0] && (
         <div className="est-modal-overlay">
-          <div className="est-modal" onClick={e => e.stopPropagation()}>
-            <span className="est-modal-icon">📣</span>
-            {comunicadosModal[0].titulo_html ? (
-              <div
-                className="est-modal-title"
-                dangerouslySetInnerHTML={{ __html: comunicadosModal[0].titulo_html }}
-              />
-            ) : (
-              <div className="est-modal-title">{comunicadosModal[0].titulo}</div>
-            )}
-            {comunicadosModal[0].imagem_url && (
-              <img className="est-comunicado-imagem" src={comunicadosModal[0].imagem_url} alt="" />
-            )}
-            {comunicadosModal[0].mensagem_html ? (
-              <div
-                className="est-modal-desc"
-                dangerouslySetInnerHTML={{ __html: comunicadosModal[0].mensagem_html }}
-              />
-            ) : (
-              <div className="est-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
-                {comunicadosModal[0].mensagem}
-              </div>
-            )}
+          <div className="est-modal est-modal-comunicado" onClick={e => e.stopPropagation()}>
+            <div className="est-zoom-controle">
+              <button
+                type="button" className="est-zoom-btn" title="Diminuir zoom"
+                onClick={() => setZoomComunicado(z => Math.max(0.8, +(z - 0.1).toFixed(1)))}
+              >−</button>
+              <span className="est-zoom-valor">{Math.round(zoomComunicado * 100)}%</span>
+              <button
+                type="button" className="est-zoom-btn" title="Aumentar zoom"
+                onClick={() => setZoomComunicado(z => Math.min(1.6, +(z + 0.1).toFixed(1)))}
+              >+</button>
+            </div>
+            <div className="est-modal-corpo" style={{ zoom: zoomComunicado }}>
+              <span className="est-modal-icon">📣</span>
+              {comunicadosModal[0].titulo_html ? (
+                <div
+                  className="est-modal-title"
+                  dangerouslySetInnerHTML={{ __html: comunicadosModal[0].titulo_html }}
+                />
+              ) : (
+                <div className="est-modal-title">{comunicadosModal[0].titulo}</div>
+              )}
+              {comunicadosModal[0].imagem_url && (
+                <img className="est-comunicado-imagem" src={comunicadosModal[0].imagem_url} alt="" />
+              )}
+              {comunicadosModal[0].mensagem_html ? (
+                <div
+                  className="est-modal-desc"
+                  dangerouslySetInnerHTML={{ __html: comunicadosModal[0].mensagem_html }}
+                />
+              ) : (
+                <div className="est-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                  {comunicadosModal[0].mensagem}
+                </div>
+              )}
+            </div>
             <div className="est-modal-actions">
               <button className="est-modal-confirm est-modal-confirm--info" onClick={confirmarComunicadoModal}>
                 Ok, entendi
