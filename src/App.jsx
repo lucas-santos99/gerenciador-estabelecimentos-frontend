@@ -18,6 +18,7 @@ import AuditoriaAdmin from "./pages/Administrador/SuperAdmins/AuditoriaAdmin";
 import ConfiguracoesGlobais from "./pages/Administrador/SuperAdmins/ConfiguracoesGlobais";
 import Cobrancas from "./pages/Administrador/Cobrancas/Cobrancas";
 import SolicitacoesAdmin from "./pages/Administrador/Solicitacoes/SolicitacoesAdmin";
+import Comunicados from "./pages/Administrador/Comunicados/Comunicados";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
@@ -132,6 +133,12 @@ function App() {
       <Route path="/admin/configuracoes-globais" element={
         <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
           <ConfiguracoesGlobais />
+        </RoleRoute></ProtectedRoute>
+      }/>
+
+      <Route path="/admin/comunicados" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <Comunicados />
         </RoleRoute></ProtectedRoute>
       }/>
 

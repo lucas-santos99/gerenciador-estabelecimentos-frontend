@@ -283,6 +283,55 @@ export default function LayoutEstabelecimento({
     } catch { /* se falhar, só volta a aparecer no próximo carregamento — sem problema */ }
   }
 
+  // ── Central de Comunicados (backlog item 20) — avisos globais
+  // cadastrados pelo SuperAdmin (mudança de valor, instabilidade,
+  // manutenção, etc.), buscados uma vez ao carregar o painel. Vale tanto
+  // pra merchant quanto pra operator — quem dispensar primeiro dispensa
+  // pra todo mundo daquele estabelecimento (rastreado por mercearia_id
+  // no backend, não por usuário individual).
+  //
+  // Cada comunicado escolhe seus formatos no cadastro; um mesmo
+  // comunicado pode aparecer nos dois: modal (bloqueante, fila — um de
+  // cada vez) e fixo (card no canto, todos empilhados, dispensa
+  // independente do modal).
+  const [comunicadosModal, setComunicadosModal] = useState([]);
+  const [comunicadosFixos, setComunicadosFixos] = useState([]);
+
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/comunicados/ativos');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        setComunicadosModal(data.filter(c => c.formatos.some(f => f.tipo === 'modal')));
+        setComunicadosFixos(data.filter(c => c.formatos.some(f => f.tipo === 'fixo')));
+      } catch { /* aviso não é crítico pro painel carregar */ }
+    })();
+  }, [estabelecimentoId]);
+
+  async function confirmarComunicadoModal() {
+    const atual = comunicadosModal[0];
+    if (!atual) return;
+    setComunicadosModal(prev => prev.slice(1));
+    try {
+      await apiFetch(`/api/comunicados/${atual.id}/marcar-visto`, {
+        method: 'POST',
+        body: JSON.stringify({ formato: 'modal' }),
+      });
+    } catch { /* se falhar, só volta a aparecer no próximo carregamento — sem problema */ }
+  }
+
+  async function fecharComunicadoFixo(id) {
+    setComunicadosFixos(prev => prev.filter(c => c.id !== id));
+    try {
+      await apiFetch(`/api/comunicados/${id}/marcar-visto`, {
+        method: 'POST',
+        body: JSON.stringify({ formato: 'fixo' }),
+      });
+    } catch { /* se falhar, só volta a aparecer no próximo carregamento — sem problema */ }
+  }
+
   const ABAS = (() => {
     const base = isMerchant
       ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG]
@@ -633,6 +682,46 @@ export default function LayoutEstabelecimento({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── COMUNICADO — MODAL BLOQUEANTE ──────────────────── */}
+      {/* Sem onClick no overlay de propósito — só fecha confirmando,
+          é a natureza desse formato (item 20 do backlog). */}
+      {comunicadosModal[0] && (
+        <div className="est-modal-overlay">
+          <div className="est-modal" onClick={e => e.stopPropagation()}>
+            <span className="est-modal-icon">📣</span>
+            <div className="est-modal-title">{comunicadosModal[0].titulo}</div>
+            <div className="est-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+              {comunicadosModal[0].mensagem}
+            </div>
+            <div className="est-modal-actions">
+              <button className="est-modal-confirm est-modal-confirm--info" onClick={confirmarComunicadoModal}>
+                Ok, entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── COMUNICADOS — CARDS FIXOS (canto da tela) ──────── */}
+      {comunicadosFixos.length > 0 && (
+        <div className="est-comunicados-fixos">
+          {comunicadosFixos.map(c => (
+            <div key={c.id} className="est-comunicado-fixo-card">
+              <button
+                className="est-comunicado-fixo-fechar"
+                onClick={() => fecharComunicadoFixo(c.id)}
+                aria-label="Fechar aviso"
+                title="Fechar"
+              >
+                ✕
+              </button>
+              <div className="est-comunicado-fixo-titulo">📣 {c.titulo}</div>
+              <div className="est-comunicado-fixo-mensagem">{c.mensagem}</div>
+            </div>
+          ))}
         </div>
       )}
 

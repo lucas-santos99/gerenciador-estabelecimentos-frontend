@@ -40,6 +40,12 @@ const Icons = {
       <path d="m22 6-10 7L2 6"/>
     </svg>
   ),
+  Megaphone: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 11 18-5v12L3 14v-3z"/>
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+    </svg>
+  ),
   Logout: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -160,6 +166,7 @@ export default function Sidebar() {
       items: [
         { label: "Painel",               path: "/admin",                     icon: Icons.Dashboard },
         { label: "Solicitações",         path: "/admin/solicitacoes",        icon: Icons.Mail, badge: solicitacoesPendentes },
+        { label: "Comunicados",          path: "/admin/comunicados",         icon: Icons.Megaphone },
         { label: "Cobranças",            path: "/admin/cobrancas",           icon: Icons.Cobranca  },
         { label: "Auditoria",            path: "/admin/auditoria",           icon: Icons.Audit     },
         { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings  },

@@ -910,3 +910,88 @@ body.light select {
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
+
+/* ========================= */
+/*  CENTRAL DE COMUNICADOS    */
+/*  (backlog item 20)         */
+/* ========================= */
+
+/* Modal bloqueante — mesma base do .est-modal-confirm (usado no logout),
+   só troca o gradiente vermelho por um teal/accent — "Ok, entendi" não é
+   uma ação destrutiva. */
+.est-modal-confirm.est-modal-confirm--info {
+  background: linear-gradient(135deg, var(--est-accent), #0d9488);
+  box-shadow: 0 4px 14px var(--est-accent-dim);
+}
+.est-modal-confirm.est-modal-confirm--info:hover {
+  box-shadow: 0 6px 20px var(--est-accent-dim);
+}
+
+/* Cards fixos — empilhados no canto inferior direito, acima de tudo
+   (menos o modal bloqueante), sem travar o uso do resto da tela. */
+.est-comunicados-fixos {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  width: min(320px, calc(100vw - 32px));
+}
+
+.est-comunicado-fixo-card {
+  position: relative;
+  background: var(--est-card);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 14px;
+  padding: 14px 34px 14px 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+  backdrop-filter: blur(16px);
+  animation: estComunicadoFixoIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes estComunicadoFixoIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.est-comunicado-fixo-titulo {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--est-text);
+  margin-bottom: 4px;
+}
+
+.est-comunicado-fixo-mensagem {
+  font-size: 0.78rem;
+  color: var(--est-text-soft);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.est-comunicado-fixo-fechar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--est-text-soft);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.est-comunicado-fixo-fechar:hover {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+}
+
+@media (max-width: 768px) {
+  .est-comunicados-fixos { right: 10px; bottom: 10px; left: 10px; width: auto; }
+}
