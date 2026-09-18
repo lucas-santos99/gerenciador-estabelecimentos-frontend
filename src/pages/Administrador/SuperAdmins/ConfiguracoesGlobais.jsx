@@ -60,6 +60,12 @@ export default function ConfiguracoesGlobais() {
   const [salvandoEdicao,  setSalvandoEdicao]  = useState(false);
   const [msgEdicao,       setMsgEdicao]       = useState("");
 
+  // Navegação por teclado (item 22) — setas navegam a lista de contatos,
+  // Enter abre edição inline, Delete remove. Ignorado quando o foco está
+  // num campo de formulário (edição em andamento ou "novo contato"), pra
+  // não atrapalhar a digitação/navegação normal dos inputs.
+  const [contatoNavId, setContatoNavId] = useState(null);
+
   async function carregar() {
     setCarregando(true);
     try {
@@ -187,6 +193,34 @@ export default function ConfiguracoesGlobais() {
   function cancelarEdicao() {
     setEditandoId(null);
     setMsgEdicao("");
+  }
+
+  function handleContatosKeyDown(e) {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (contatos.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idxAtual = contatoNavId ? contatos.findIndex(c => c.id === contatoNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, contatos.length - 1))
+        : (idxAtual === -1 ? contatos.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = contatos[novoIdx];
+      setContatoNavId(alvo.id);
+      document.getElementById(`sa-contato-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && contatoNavId) {
+      const alvo = contatos.find(c => c.id === contatoNavId);
+      if (alvo) { e.preventDefault(); iniciarEdicao(alvo); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && contatoNavId) {
+      const alvo = contatos.find(c => c.id === contatoNavId);
+      if (alvo) { e.preventDefault(); removerContato(alvo.id); }
+      return;
+    }
+    if (e.key === 'Escape' && contatoNavId) { setContatoNavId(null); return; }
   }
 
   async function salvarEdicao(id) {
@@ -359,6 +393,11 @@ export default function ConfiguracoesGlobais() {
               </div>
               <div className="sa-config-body">
 
+                <div
+                  className="sa-contatos-lista"
+                  tabIndex={0}
+                  onKeyDown={handleContatosKeyDown}
+                >
                 {contatos.length === 0 ? (
                   <div className="sa-empty" style={{ padding: 20 }}>Nenhum contato cadastrado ainda.</div>
                 ) : (
@@ -382,7 +421,12 @@ export default function ConfiguracoesGlobais() {
                         {msgEdicao && <div className="sa-config-msg erro" style={{ width: "100%" }}>{msgEdicao}</div>}
                       </div>
                     ) : (
-                      <div key={c.id} className="sa-config-item">
+                      <div
+                        key={c.id}
+                        id={`sa-contato-${c.id}`}
+                        className={`sa-config-item${c.id === contatoNavId ? ' foco-teclado' : ''}`}
+                        onClick={() => setContatoNavId(c.id)}
+                      >
                         <div className="sa-config-item-info">
                           <span className="sa-config-item-label">
                             {c.tipo === "whatsapp" ? "🟢" : "✉️"} {c.label || (c.tipo === "whatsapp" ? "WhatsApp" : "E-mail")}
@@ -397,6 +441,7 @@ export default function ConfiguracoesGlobais() {
                     )
                   ))
                 )}
+                </div>
 
                 <div className="sa-config-item" style={{ flexWrap: "wrap", gap: 10 }}>
                   <select className="sa-config-input" value={novoTipo} onChange={e => setNovoTipo(e.target.value)} style={{ width: 120 }}>

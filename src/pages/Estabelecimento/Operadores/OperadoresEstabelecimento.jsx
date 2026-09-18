@@ -106,6 +106,11 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
   const [permModal,     setPermModal]     = useState(null); // operador selecionado
   const [resetModal,    setResetModal]    = useState(null); // operador selecionado para reset
 
+  // Navegação por teclado (item 22) — setas navegam os cards, Delete exclui,
+  // Enter edita. Mesmo espírito de ProdutoList.jsx/DividasList.jsx.
+  const [operadorFoco, setOperadorFoco] = useState(null);
+  const operadorCardRefs = useRef({});
+
   useEffect(() => {
     if (estabelecimentoId) {
       carregarTudo();
@@ -158,6 +163,37 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
     } catch (err) {
       setErro(err.message);
     }
+  }
+
+  function handleOperadoresListaKeyDown(e) {
+    if (operadores.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const idx = operadorFoco ? operadores.findIndex(o => o.id === operadorFoco) : -1;
+      const alvo = operadores[idx === -1 ? 0 : Math.min(idx + 1, operadores.length - 1)];
+      setOperadorFoco(alvo.id);
+      operadorCardRefs.current[alvo.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idx = operadorFoco ? operadores.findIndex(o => o.id === operadorFoco) : -1;
+      const alvo = operadores[idx === -1 ? operadores.length - 1 : Math.max(idx - 1, 0)];
+      setOperadorFoco(alvo.id);
+      operadorCardRefs.current[alvo.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && operadorFoco) {
+      const alvo = operadores.find(o => o.id === operadorFoco);
+      if (alvo) { e.preventDefault(); setOperadorEdit(alvo); setModalAberto(true); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && operadorFoco) {
+      const alvo = operadores.find(o => o.id === operadorFoco);
+      if (alvo) { e.preventDefault(); excluir(alvo); }
+      return;
+    }
+    if (e.key === 'Escape') { setOperadorFoco(null); return; }
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -243,9 +279,14 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
           </button>
         </div>
       ) : (
-        <div className="opest-lista">
+        <div className="opest-lista" tabIndex={0} onKeyDown={handleOperadoresListaKeyDown}>
           {operadores.map(op => (
-            <div key={op.id} className={`opest-card ${op.status}`}>
+            <div
+              key={op.id}
+              ref={el => operadorCardRefs.current[op.id] = el}
+              className={`opest-card ${op.status}${op.id === operadorFoco ? ' foco-teclado' : ''}`}
+              onClick={() => setOperadorFoco(op.id)}
+            >
 
               {/* Avatar */}
               <div className="opest-avatar">

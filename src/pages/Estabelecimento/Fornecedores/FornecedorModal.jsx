@@ -60,6 +60,28 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
   const [erro,     setErro]     = useState('');
   const [diasPersonalizado, setDiasPersonalizado] = useState(() => extrairDiasPersonalizado(fornecedor?.condicao_pagamento));
 
+  // Categoria de produto que o fornecedor atende (item 21) — reaproveita as
+  // categorias PRINCIPAIS já cadastradas no Estoque (sem subcategoria),
+  // multi-seleção via chips. Pré-marca com o que o fornecedor já tinha.
+  const [categorias,          setCategorias]          = useState([]);
+  const [categoriasCarregando, setCategoriasCarregando] = useState(true);
+  const [categoriaIds,        setCategoriaIds]        = useState(() => (fornecedor?.categorias || []).map(c => c.id));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/categorias');
+        const data = await resp.json();
+        setCategorias(Array.isArray(data) ? data.filter(c => !c.categoria_pai_id) : []);
+      } catch { setCategorias([]); }
+      setCategoriasCarregando(false);
+    })();
+  }, []);
+
+  function alternarCategoria(id) {
+    setCategoriaIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  }
+
   // O <select> mostra "personalizado" sempre que o valor salvo não bate
   // com nenhum preset fixo (ex: veio "12_dias" de um cadastro anterior)
   const condicaoSelect = PRESETS_VALORES.includes(form.condicao_pagamento) ? form.condicao_pagamento : 'personalizado';
@@ -116,7 +138,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
       const resp = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, categoria_ids: categoriaIds }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Erro ao salvar');
@@ -203,6 +225,34 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
               <label className="cli-form-label">Prazo médio de entrega (dias)</label>
               <input className="cli-form-input" type="number" min="0" name="prazo_entrega_dias"
                 value={form.prazo_entrega_dias} onChange={atualizar} placeholder="Ex: 3" />
+            </div>
+
+            <div className="cli-form-group forn-full">
+              <label className="cli-form-label">
+                Categorias de produto que fornece
+                <span className="forn-label-hint"> (opcional — usa as categorias já cadastradas no Estoque)</span>
+              </label>
+              {categoriasCarregando ? (
+                <div className="forn-categorias-carregando">Carregando categorias…</div>
+              ) : categorias.length === 0 ? (
+                <div className="forn-categorias-vazio">
+                  Nenhuma categoria cadastrada no Estoque ainda. Cadastre categorias de produto (ex: Frios, Bebidas, Grãos) lá pra poder marcar aqui.
+                </div>
+              ) : (
+                <div className="forn-categorias-chips">
+                  {categorias.map(c => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      className={`forn-categoria-chip${categoriaIds.includes(c.id) ? ' selecionada' : ''}`}
+                      onClick={() => alternarCategoria(c.id)}
+                      aria-pressed={categoriaIds.includes(c.id)}
+                    >
+                      {categoriaIds.includes(c.id) ? '✓ ' : ''}{c.nome}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="cli-form-group forn-full">

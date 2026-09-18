@@ -2463,6 +2463,15 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const [modalPeso,       setModalPeso]       = useState(null);   // { produto } — peso manual de pesável
   const [pixConfig,       setPixConfig]       = useState({ modo: 'maquininha', disponivel: false });
 
+  // Navegação por teclado no carrinho (item 22): -1 = nenhum item em foco.
+  // Segue o mesmo padrão "roving highlight" já usado nas listas de busca
+  // do PDV (buscaIndex/clienteIndex) — o foco de verdade do DOM continua
+  // no campo de busca, só o destaque visual muda de item.
+  const [carrinhoFoco, setCarrinhoFoco] = useState(-1);
+  const carrinhoItemRefs = useRef([]);
+  const btnRemoverConfirmarRef = useRef(null);
+  const btnRemoverCancelarRef  = useRef(null);
+
   useEffect(() => {
     if (!estabelecimentoId) return;
     (async () => {
@@ -2505,15 +2514,43 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     buscarProdutosPorCodigo(codigo.trim());
   }, [estabelecimentoId, itemQuantificar, modalPeso, showPagamento]);
 
+  // Leva o "foco" (destaque visual, roving highlight — o foco de verdade do
+  // DOM continua no campo de busca) pra um item do carrinho, e garante que
+  // ele fique visível na lista mesmo com o carrinho cheio (scroll).
+  function focarItemCarrinho(idx) {
+    setCarrinhoFoco(idx);
+    setTimeout(() => carrinhoItemRefs.current[idx]?.scrollIntoView({ block: 'nearest' }), 0);
+  }
+
   function handleBuscaKeyDown(e) {
     const agora = Date.now();
     const intervalo = agora - barcodeLastTimeRef.current;
     barcodeLastTimeRef.current = agora;
 
-    // Teclas de navegação da lista — passa direto para o handler normal
-    if (e.key === 'ArrowDown') { e.preventDefault(); setBuscaIndex(p => Math.min(p + 1, resultados.length - 1)); return; }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); setBuscaIndex(p => Math.max(p - 1, 0)); return; }
-    if (e.key === 'Escape')    { setTermoBusca(''); setResultados([]); setBuscaIndex(-1); barcodeBufferRef.current = ''; return; }
+    // Teclas de navegação da lista — passa direto para o handler normal.
+    // Se a lista de resultados da busca estiver vazia, as setas navegam
+    // pelo carrinho em vez disso (item 22 — operar o PDV todo por teclado).
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (resultados.length > 0) { setCarrinhoFoco(-1); setBuscaIndex(p => Math.min(p + 1, resultados.length - 1)); }
+      else if (!termoBusca.trim() && carrinho.length > 0) focarItemCarrinho(carrinhoFoco === -1 ? 0 : Math.min(carrinhoFoco + 1, carrinho.length - 1));
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (resultados.length > 0) { setCarrinhoFoco(-1); setBuscaIndex(p => Math.max(p - 1, 0)); }
+      else if (!termoBusca.trim() && carrinho.length > 0) focarItemCarrinho(carrinhoFoco === -1 ? carrinho.length - 1 : Math.max(carrinhoFoco - 1, 0));
+      return;
+    }
+    if (e.key === 'Escape')    { setTermoBusca(''); setResultados([]); setBuscaIndex(-1); setCarrinhoFoco(-1); barcodeBufferRef.current = ''; return; }
+
+    // Delete/Backspace com um item do carrinho em foco → abre a confirmação
+    // de remoção já existente (mesma que o botão "×" abre).
+    if ((e.key === 'Delete' || e.key === 'Backspace') && carrinhoFoco !== -1 && !termoBusca.trim()) {
+      e.preventDefault();
+      removerItem(carrinhoFoco);
+      return;
+    }
 
     // Enter: pode vir do bipador (finaliza sequência) ou do usuário
     if (e.key === 'Enter') {
@@ -2530,13 +2567,20 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         // Enter normal do usuário
         barcodeBufferRef.current = '';
         if (buscaIndex > -1 && resultados[buscaIndex]) selecionarProduto(resultados[buscaIndex]);
-        else if (!termoBusca.trim() && carrinho.length > 0) btnFinalizarRef.current?.focus();
+        // Busca vazia com carrinho cheio: em vez de pular pro botão
+        // Finalizar, o foco avança pro carrinho (último item — o que
+        // acabou de ser adicionado), pra continuar 100% por teclado
+        // (setas navegam, Delete abre a exclusão). F10/F2 continua sendo
+        // o atalho pra ir direto pro pagamento.
+        else if (!termoBusca.trim() && carrinho.length > 0) focarItemCarrinho(carrinho.length - 1);
       }
       return;
     }
 
     // Caracteres imprimíveis — verificar se é sequência de bipador
     if (e.key.length === 1) {
+      // Voltou a digitar uma busca — sai do modo "foco no carrinho"
+      if (carrinhoFoco !== -1) setCarrinhoFoco(-1);
       if (intervalo < BARCODE_MAX_INTERVAL) {
         // Rápido demais para digitação humana → acumular no buffer do bipador
         barcodeBufferRef.current += e.key;
@@ -2875,6 +2919,32 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     mostrarStatus('sucesso', `✓ ${produto.nome} — ${fmtPeso(pesoKg)} adicionado`);
   }
 
+  // Teclado do modal de confirmação de remoção — seta alterna entre
+  // Cancelar/Remover (botão nativo só responde a Tab por padrão); Enter
+  // no botão focado confirma sozinho, é comportamento nativo do <button>.
+  function handleRemoverConfirmKey(e, outroRef) {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      outroRef.current?.focus();
+    }
+  }
+
+  // Abre com foco já no botão "Remover" — o modal só é alcançado de
+  // propósito (tecla Delete com item focado, ou clique no ×), então um
+  // Enter a mais já confirma a exclusão, sem precisar navegar até lá.
+  useEffect(() => {
+    if (confirmRemover !== null) setTimeout(() => btnRemoverConfirmarRef.current?.focus(), 0);
+  }, [confirmRemover]);
+
+  // Ao fechar o modal (cancelar, confirmar ou Esc), devolve o foco pro
+  // campo de busca — esse modal não está na lista de condições do efeito
+  // de auto-foco principal (ele reage só à mudança de confirmRemover).
+  useEffect(() => {
+    if (confirmRemover === null && !showPagamento && !itemQuantificar && !itemEscolherVariacao && editIndex === null && !showCamera && !modalPeso) {
+      setTimeout(() => inputBuscaRef.current?.focus(), 0);
+    }
+  }, [confirmRemover]);
+
   function editarItem(item, idx) {
     setInputQtd(item.unidade_medida === 'kg' ? parseFloat(item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : String(parseFloat(item.quantidade)));
     setItemQuantificar(item); setEditIndex(idx);
@@ -3013,16 +3083,23 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             </div>
             <div className="pdv-modal-acoes">
               <button
+                ref={btnRemoverCancelarRef}
                 className="pdv-modal-btn-cancelar"
                 onClick={() => setConfirmRemover(null)}
+                onKeyDown={e => handleRemoverConfirmKey(e, btnRemoverConfirmarRef)}
               >
                 Cancelar (Esc)
               </button>
               <button
+                ref={btnRemoverConfirmarRef}
                 className="pdv-modal-btn-confirmar pdv-modal-btn-danger"
+                onKeyDown={e => handleRemoverConfirmKey(e, btnRemoverCancelarRef)}
                 onClick={() => {
-                  setCarrinho(prev => prev.filter((_, i) => i !== confirmRemover));
+                  const idxRemovido = confirmRemover;
+                  const novoTamanho = carrinho.length - 1;
+                  setCarrinho(prev => prev.filter((_, i) => i !== idxRemovido));
                   setConfirmRemover(null);
+                  setCarrinhoFoco(novoTamanho <= 0 ? -1 : Math.min(idxRemovido, novoTamanho - 1));
                 }}
               >
                 ✕ Remover
@@ -3211,7 +3288,11 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             <li className="pdv-carrinho-vazio"><span className="pdv-carrinho-vazio-icon">🛒</span><p>Carrinho vazio</p><small>Busque e selecione produtos ao lado</small></li>
           ) : (
             carrinho.map((item, idx) => (
-              <li key={`${item.id}-${idx}`} className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}`}>
+              <li
+                key={`${item.id}-${idx}`}
+                ref={el => carrinhoItemRefs.current[idx] = el}
+                className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}${idx === carrinhoFoco ? ' pdv-item-focado' : ''}`}
+              >
                 <div className="pdv-item-imagem">
                   <ImagemProduto url={item.imagem_url} iconeClassName="pdv-item-imagem-placeholder" onExpandir={setImagemExpandida} />
                 </div>
@@ -3234,7 +3315,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                   </span>
                 </div>
                 <span className="pdv-item-total">{fmt(item.preco_venda * item.quantidade)}</span>
-                <button className="pdv-item-remover" onClick={() => removerItem(idx)}>×</button>
+                <button className="pdv-item-remover" onClick={() => { setCarrinhoFoco(idx); removerItem(idx); }} title="Remover (Delete)">×</button>
               </li>
             ))
           )}

@@ -846,3 +846,73 @@
 .forn-contapag-card-btn.pagar { color: var(--est-accent); border-color: var(--est-border-accent); background: var(--est-accent-dim); }
 .forn-contapag-card-btn.pagar:hover:not(:disabled) { background: var(--est-accent); color: #fff; }
 .forn-contapag-card-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Categoria de produto do fornecedor (item 21) ────────────
+   Reaproveita as categorias principais do Estoque — chips de multi-seleção
+   no cadastro (FornecedorModal), select de filtro na listagem, e selos
+   compactos no card/detalhes. */
+.forn-label-hint {
+  font-weight: 400;
+  color: var(--est-text-muted);
+  font-size: 0.78rem;
+}
+
+.forn-categorias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.forn-categoria-chip {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.forn-categoria-chip:hover { border-color: var(--est-border-accent); }
+.forn-categoria-chip.selecionada {
+  background: var(--est-accent);
+  border-color: var(--est-accent);
+  color: #fff;
+}
+.forn-categorias-carregando,
+.forn-categorias-vazio {
+  font-size: 0.82rem;
+  color: var(--est-text-muted);
+  padding: 6px 0;
+}
+
+.forn-filtro-categoria {
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-size: 0.85rem;
+  min-width: 170px;
+  cursor: pointer;
+}
+.forn-filtro-categoria:focus { border-color: var(--est-border-accent); outline: none; }
+
+.forn-card-categorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  cursor: pointer;
+}
+.forn-card-categoria-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--est-hover);
+  color: var(--est-text-soft);
+  border: 1px solid var(--est-border);
+  white-space: nowrap;
+}

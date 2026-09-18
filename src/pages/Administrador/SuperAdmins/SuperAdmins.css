@@ -217,6 +217,8 @@
 
 .sa-user-item:last-child { border-bottom: none; }
 .sa-user-item:hover { background: var(--bg-hover); }
+.sa-list-box:focus { outline: none; }
+.sa-user-item.foco-teclado { box-shadow: inset 3px 0 0 var(--border-accent); background: var(--bg-hover); }
 
 /* Avatar */
 .sa-avatar {
@@ -570,6 +572,14 @@
   border-radius: 12px;
   flex-wrap: wrap;
 }
+
+.sa-contatos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sa-contatos-lista:focus { outline: none; }
+.sa-config-item.foco-teclado { border-color: var(--border-accent); box-shadow: 0 0 0 2px var(--border-accent); }
 
 .sa-config-item-info {
   display: flex;

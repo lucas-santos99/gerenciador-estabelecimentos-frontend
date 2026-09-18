@@ -235,6 +235,12 @@
   background: rgba(239,68,68,0.04);
 }
 
+/* Card em foco via teclado (setas, item 22) — anel de acento, não se
+   confunde com os estados de dívida/limite acima (que usam vermelho). */
+.cli-card.foco-teclado {
+  box-shadow: 0 0 0 2px var(--est-accent);
+}
+
 /* Header do card */
 .cli-card-header {
   padding: 14px 14px 10px;

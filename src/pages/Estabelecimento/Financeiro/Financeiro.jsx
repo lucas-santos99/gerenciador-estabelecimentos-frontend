@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -78,6 +78,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [formData,     setFormData]     = useState({ descricao: '', valor: '', data_vencimento: '' });
   const [contaEditId,  setContaEditId]  = useState(null);
   const [salvandoConta,setSalvandoConta] = useState(false);
+  // Navegação por teclado (item 22) — setas navegam os cards, Delete exclui,
+  // Enter edita. Mesmo espírito de ProdutoList.jsx/DividasList.jsx: um id em
+  // destaque, sem tabIndex real por card.
+  const [contaFoco, setContaFoco] = useState(null);
+  const contaCardRefs = useRef({});
 
   /* ── Estado Relatório Produtos ───────────────────────────── */
   const [categorias,     setCategorias]     = useState([]);
@@ -384,6 +389,49 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       setContas(prev => prev.filter(c => c.id !== contaId));
     } catch (err) { setErroContas(err.message); }
     finally { setSalvandoConta(false); }
+  }
+
+  const contasFiltradas = contas.filter(c => {
+    if (filtroContaDe && c.data_vencimento < filtroContaDe) return false;
+    if (filtroContaAte && c.data_vencimento > filtroContaAte) return false;
+    return true;
+  });
+
+  function handleContasGridKeyDown(e) {
+    if (contasFiltradas.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const idx = contaFoco ? contasFiltradas.findIndex(c => c.id === contaFoco) : -1;
+      const alvo = contasFiltradas[idx === -1 ? 0 : Math.min(idx + 1, contasFiltradas.length - 1)];
+      setContaFoco(alvo.id);
+      contaCardRefs.current[alvo.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const idx = contaFoco ? contasFiltradas.findIndex(c => c.id === contaFoco) : -1;
+      const alvo = contasFiltradas[idx === -1 ? contasFiltradas.length - 1 : Math.max(idx - 1, 0)];
+      setContaFoco(alvo.id);
+      contaCardRefs.current[alvo.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && contaFoco) {
+      const alvo = contasFiltradas.find(c => c.id === contaFoco);
+      if (alvo && (alvo.status === 'pendente' || alvo.status === 'atrasada')) {
+        e.preventDefault();
+        abrirFormEditar(alvo);
+      }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && contaFoco) {
+      const alvo = contasFiltradas.find(c => c.id === contaFoco);
+      if (alvo && (alvo.status === 'pendente' || alvo.status === 'atrasada')) {
+        e.preventDefault();
+        excluirConta(alvo.id);
+      }
+      return;
+    }
+    if (e.key === 'Escape') { setContaFoco(null); return; }
   }
 
   /* ════════════════════════════════════════════════════════
@@ -985,14 +1033,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             {loadingContas ? (
               <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
-            ) : (() => {
-              const contasFiltradas = contas.filter(c => {
-                if (filtroContaDe && c.data_vencimento < filtroContaDe) return false;
-                if (filtroContaAte && c.data_vencimento > filtroContaAte) return false;
-                return true;
-              });
-              return (
-              <div className="fin-contas-grid">
+            ) : (
+              <div
+                className="fin-contas-grid"
+                tabIndex={0}
+                onKeyDown={handleContasGridKeyDown}
+              >
                 {contasFiltradas.length === 0 ? (
                   <div className="fin-vazio">
                     <span className="fin-vazio-icon">📋</span>
@@ -1001,7 +1047,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   </div>
                 ) : (
                   contasFiltradas.map(conta => (
-                    <div key={conta.id} className={`fin-conta-card ${conta.status}`}>
+                    <div
+                      key={conta.id}
+                      ref={el => contaCardRefs.current[conta.id] = el}
+                      className={`fin-conta-card ${conta.status}${conta.id === contaFoco ? ' foco-teclado' : ''}`}
+                      onClick={() => setContaFoco(conta.id)}
+                    >
                       <div className="fin-conta-card-header">
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <span className="fin-conta-descricao">{conta.descricao}</span>
@@ -1020,9 +1071,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                       </div>
                       {(conta.status === 'pendente' || conta.status === 'atrasada') && (
                         <div className="fin-conta-acoes">
-                          <button className="fin-conta-btn editar" onClick={() => abrirFormEditar(conta)}>✏️ Editar</button>
-                          <button className="fin-conta-btn excluir" onClick={() => excluirConta(conta.id)}>🗑</button>
-                          <button className="fin-conta-btn pagar" onClick={() => marcarPaga(conta.id)} disabled={salvandoConta}>
+                          <button className="fin-conta-btn editar" onClick={e => { e.stopPropagation(); abrirFormEditar(conta); }}>✏️ Editar</button>
+                          <button className="fin-conta-btn excluir" onClick={e => { e.stopPropagation(); excluirConta(conta.id); }}>🗑</button>
+                          <button className="fin-conta-btn pagar" onClick={e => { e.stopPropagation(); marcarPaga(conta.id); }} disabled={salvandoConta}>
                             ✅ Pagar
                           </button>
                         </div>
@@ -1031,8 +1082,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   ))
                 )}
               </div>
-              );
-            })()}
+            )}
           </>
         )}
 

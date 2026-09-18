@@ -1417,6 +1417,10 @@ body.dark .dash-card-btn--green { color: #4ade80; }
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   border-color: var(--border-accent);
 }
+.dash-row.foco-teclado {
+  box-shadow: 0 0 0 2px var(--border-accent);
+  border-color: var(--border-accent);
+}
 
 /* Bolinha de status de vencimento — mesma paleta de .venc-* */
 .dash-row-dot {

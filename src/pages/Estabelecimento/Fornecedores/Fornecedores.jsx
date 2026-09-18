@@ -46,6 +46,21 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
     return saved ? parseFloat(saved) : 1;
   });
 
+  // Filtro por categoria de produto (item 21) — mesma lista de categorias
+  // PRINCIPAIS do Estoque usada no cadastro (FornecedorModal)
+  const [categoriasFiltro, setCategoriasFiltro] = useState([]);
+  const [filtroCategoria,  setFiltroCategoria]  = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/categorias');
+        const data = await resp.json();
+        setCategoriasFiltro(Array.isArray(data) ? data.filter(c => !c.categoria_pai_id) : []);
+      } catch { setCategoriasFiltro([]); }
+    })();
+  }, []);
+
   const [modalForm,      setModalForm]      = useState(null); // null | 'novo' | fornecedor (editar)
   const [modalCompra,    setModalCompra]    = useState(false);
   const [fornecedorParaCompra, setFornecedorParaCompra] = useState(null);
@@ -64,14 +79,18 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   async function carregar() {
     setLoading(true);
     try {
-      const resp = await apiFetch(`/api/fornecedores${busca ? `?busca=${encodeURIComponent(busca)}` : ''}`);
+      const params = new URLSearchParams();
+      if (busca) params.set('busca', busca);
+      if (filtroCategoria) params.set('categoria_id', filtroCategoria);
+      const qs = params.toString();
+      const resp = await apiFetch(`/api/fornecedores${qs ? `?${qs}` : ''}`);
       const data = await resp.json();
       setLista(Array.isArray(data) ? data : []);
     } catch { setLista([]); }
     setLoading(false);
   }
 
-  useEffect(() => { carregar(); }, [estabelecimentoId]);
+  useEffect(() => { carregar(); }, [estabelecimentoId, filtroCategoria]);
 
   useEffect(() => {
     const t = setTimeout(() => carregar(), 350);
@@ -114,6 +133,19 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           value={busca}
           onChange={e => setBusca(e.target.value)}
         />
+        {categoriasFiltro.length > 0 && (
+          <select
+            className="forn-filtro-categoria"
+            value={filtroCategoria}
+            onChange={e => setFiltroCategoria(e.target.value)}
+            title="Filtrar por categoria de produto"
+          >
+            <option value="">Todas as categorias</option>
+            {categoriasFiltro.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        )}
         <div className="cli-header-btns">
           {pode('fornecedores') && (
             <button className="cli-btn verde" onClick={() => setModalCompra(true)}>🧾 Lançar Compra</button>
@@ -130,8 +162,14 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
       ) : lista.length === 0 ? (
         <div className="cli-vazio">
           <span className="cli-vazio-icon">🚚</span>
-          <p>Nenhum fornecedor cadastrado ainda.</p>
-          {pode('fornecedores') && <button className="cli-btn azul" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
+          {busca || filtroCategoria ? (
+            <p>Nenhum fornecedor encontrado com esse filtro.</p>
+          ) : (
+            <>
+              <p>Nenhum fornecedor cadastrado ainda.</p>
+              {pode('fornecedores') && <button className="cli-btn azul" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
+            </>
+          )}
         </div>
       ) : (
         <div className="forn-grid">
@@ -161,6 +199,13 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
               <div className="forn-card-contato" onClick={() => setDetalhesId(f.id)}>
                 {f.whatsapp ? `📱 ${f.whatsapp}` : f.telefone ? `📞 ${f.telefone}` : '— sem contato —'}
               </div>
+              {f.categorias && f.categorias.length > 0 && (
+                <div className="forn-card-categorias" onClick={() => setDetalhesId(f.id)}>
+                  {f.categorias.map(c => (
+                    <span key={c.id} className="forn-card-categoria-chip">{c.nome}</span>
+                  ))}
+                </div>
+              )}
               <div className="forn-card-stats" onClick={() => setDetalhesId(f.id)}>
                 <div className="forn-card-stat">
                   <span className="forn-card-stat-label">Gasto este mês</span>
@@ -578,6 +623,9 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
               {dados.whatsapp && <span>📱 {dados.whatsapp}</span>}
               {dados.contato_nome && <span>👤 {dados.contato_nome}</span>}
               {dados.condicao_pagamento && <span>💳 {formatarCondicao(dados.condicao_pagamento)}</span>}
+              {dados.categorias && dados.categorias.length > 0 && (
+                <span>🏷️ {dados.categorias.map(c => c.nome).join(', ')}</span>
+              )}
             </div>
 
             <div className="forn-detalhes-resumo">

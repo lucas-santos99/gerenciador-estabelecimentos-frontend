@@ -123,6 +123,8 @@
 .sol-card--pendente  { border-left-color: #eab308; }
 .sol-card--atendida  { border-left-color: #22c55e; }
 .sol-card--recusada  { border-left-color: #ef4444; opacity: 0.85; }
+.sol-lista:focus { outline: none; }
+.sol-card.foco-teclado { box-shadow: 0 0 0 2px var(--border-accent, var(--text-accent)); }
 
 .sol-card-topo {
   display: flex;

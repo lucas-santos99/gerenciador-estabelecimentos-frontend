@@ -34,6 +34,11 @@ export default function SolicitacoesAdmin() {
   const [processando,  setProcessando]  = useState(null); // id da solicitação em ação
   const [respostaAberta, setRespostaAberta] = useState(null); // { id, status }
   const [respostaTexto,  setRespostaTexto]  = useState("");
+  // Navegação por teclado (item 22) — setas navegam os cards, Enter abre
+  // "Atender" e Delete abre "Recusar" (ambos só preparam a caixa de
+  // resposta, sem confirmar nada sozinho — a confirmação continua exigindo
+  // clique). Ignorado quando o foco está num campo de formulário.
+  const [solNavId, setSolNavId] = useState(null);
 
   const [fontScale, setFontScale] = useState(() => {
     const s = localStorage.getItem("sol-font-scale");
@@ -98,6 +103,34 @@ export default function SolicitacoesAdmin() {
   function abrirResposta(id, status) {
     setRespostaAberta({ id, status });
     setRespostaTexto("");
+  }
+
+  function handleListaKeyDown(e) {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (lista.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idxAtual = solNavId ? lista.findIndex(s => s.id === solNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, lista.length - 1))
+        : (idxAtual === -1 ? lista.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = lista[novoIdx];
+      setSolNavId(alvo.id);
+      document.getElementById(`sol-card-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && solNavId) {
+      const alvo = lista.find(s => s.id === solNavId);
+      if (alvo && alvo.status === 'pendente') { e.preventDefault(); abrirResposta(alvo.id, 'atendida'); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && solNavId) {
+      const alvo = lista.find(s => s.id === solNavId);
+      if (alvo && alvo.status === 'pendente') { e.preventDefault(); abrirResposta(alvo.id, 'recusada'); }
+      return;
+    }
+    if (e.key === 'Escape' && solNavId) { setSolNavId(null); return; }
   }
 
   async function confirmarResolucao() {
@@ -181,9 +214,18 @@ export default function SolicitacoesAdmin() {
             <p>Nenhuma solicitação {aba === "pendente" ? "pendente" : aba ? `"${aba}"` : ""} no momento.</p>
           </div>
         ) : (
-          <div className="sol-lista">
+          <div
+            className="sol-lista"
+            tabIndex={0}
+            onKeyDown={handleListaKeyDown}
+          >
             {lista.map(s => (
-              <div key={s.id} className={`sol-card sol-card--${s.status}`}>
+              <div
+                key={s.id}
+                id={`sol-card-${s.id}`}
+                className={`sol-card sol-card--${s.status}${s.id === solNavId ? ' foco-teclado' : ''}`}
+                onClick={() => setSolNavId(s.id)}
+              >
                 <div className="sol-card-topo">
                   <div>
                     <span className="sol-card-estabelecimento">{s.nome_estabelecimento || "Estabelecimento"}</span>

@@ -222,6 +222,13 @@
   opacity: 0.6;
 }
 
+/* Navegação por teclado (item 22) — setas navegam os cards, Delete exclui,
+   Enter edita. */
+.opest-lista:focus { outline: none; }
+.opest-card.foco-teclado {
+  box-shadow: 0 0 0 2px var(--est-accent);
+}
+
 /* Avatar */
 .opest-avatar {
   width: 44px;

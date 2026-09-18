@@ -21,6 +21,10 @@ export default function ListaOperadores() {
   const [limiteEdit,      setLimiteEdit]      = useState(false);
   const [limiteVal,       setLimiteVal]       = useState(3);
   const [limiteSaving,    setLimiteSaving]    = useState(false);
+  // Navegação por teclado (item 22) — setas navegam a tabela, Delete exclui,
+  // Enter abre Detalhes. Sem busca nesta tela: a própria tabela recebe o
+  // foco/onKeyDown (mesmo padrão de Financeiro.jsx).
+  const [operadorNavId, setOperadorNavId] = useState(null);
 
   async function carregar() {
     setLoading(true);
@@ -69,6 +73,32 @@ export default function ListaOperadores() {
       if (resp.ok) carregar();
       else alert("Erro ao excluir operador.");
     } catch { alert("Erro interno."); }
+  }
+
+  function handleTabelaKeyDown(e) {
+    if (operadores.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idxAtual = operadorNavId ? operadores.findIndex(op => op.id === operadorNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, operadores.length - 1))
+        : (idxAtual === -1 ? operadores.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = operadores[novoIdx];
+      setOperadorNavId(alvo.id);
+      document.getElementById(`op-row-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && operadorNavId) {
+      const alvo = operadores.find(op => op.id === operadorNavId);
+      if (alvo) { e.preventDefault(); navigate(`/admin/operadores/${alvo.id}`); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && operadorNavId) {
+      const alvo = operadores.find(op => op.id === operadorNavId);
+      if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.nome); }
+      return;
+    }
+    if (e.key === 'Escape' && operadorNavId) { setOperadorNavId(null); return; }
   }
 
   return (
@@ -162,7 +192,7 @@ export default function ListaOperadores() {
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="op-table">
+              <table className="op-table" tabIndex={0} onKeyDown={handleTabelaKeyDown}>
                 <thead>
                   <tr>
                     <th></th>
@@ -175,7 +205,12 @@ export default function ListaOperadores() {
                 </thead>
                 <tbody>
                   {operadores.map(op => (
-                    <tr key={op.id}>
+                    <tr
+                      key={op.id}
+                      id={`op-row-${op.id}`}
+                      className={op.id === operadorNavId ? 'foco-teclado' : undefined}
+                      onClick={() => setOperadorNavId(op.id)}
+                    >
                       <td>
                         <div className="op-avatar">{iniciais(op.nome)}</div>
                       </td>

@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Clientes/DividasList.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
@@ -324,6 +324,16 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
     return saved ? parseFloat(saved) : 1;
   });
 
+  // Navegação por teclado na lista (item 22) — mesmo padrão do PDV e do
+  // Estoque: campo de busca sempre com foco, setas navegam entre os
+  // clientes filtrados, Delete abre a exclusão do selecionado.
+  const buscaRef = useRef(null);
+  const [clienteNavId, setClienteNavId] = useState(null);
+
+  useEffect(() => {
+    if (!loading) setTimeout(() => buscaRef.current?.focus(), 100);
+  }, [loading]);
+
   function changeFontScale(delta) {
     setFontScale(prev => {
       const next = Math.min(1.6, Math.max(0.8, parseFloat((prev + delta).toFixed(1))));
@@ -424,6 +434,33 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
     } catch (err) {
       setErro(err.message);
     }
+  }
+
+  /* ── Navegação por teclado na lista (item 22) ────────────────
+     Setas navegam entre os clientes filtrados; Delete abre a exclusão do
+     cliente selecionado — window.confirm() já responde nativamente a
+     Enter (OK) / Esc (cancelar), sem precisar de mais nada aqui. */
+  function handleBuscaKeyDown(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (listaFiltrada.length === 0) return;
+      e.preventDefault();
+      const idxAtual = clienteNavId ? listaFiltrada.findIndex(c => c.id === clienteNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, listaFiltrada.length - 1))
+        : (idxAtual === -1 ? listaFiltrada.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = listaFiltrada[novoIdx];
+      setClienteNavId(alvo.id);
+      setTimeout(() => document.getElementById(`cli-card-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && clienteNavId) {
+      e.preventDefault();
+      const alvo = listaFiltrada.find(c => c.id === clienteNavId);
+      if (alvo && pode('clientes_excluir')) excluirCliente(alvo);
+      return;
+    }
+    if (e.key === 'Escape' && clienteNavId) { setClienteNavId(null); return; }
+    if (e.key.length === 1 && clienteNavId) setClienteNavId(null);
   }
 
   /* ── WhatsApp cobrança ──────────────────────────────────── */
@@ -549,11 +586,13 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
       {/* ── HEADER ──────────────────────────────────────── */}
       <div className="cli-header">
         <input maxLength={100}
+          ref={buscaRef}
           className="cli-header-busca"
           type="text"
           placeholder="🔍  Buscar por nome ou telefone…"
           value={termoBusca}
           onChange={e => setTermoBusca(e.target.value)}
+          onKeyDown={handleBuscaKeyDown}
         />
         <div className="cli-toggle">
           <button
@@ -699,6 +738,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
                 <ClienteCard
                   key={cliente.id}
                   cliente={cliente}
+                  emFoco={cliente.id === clienteNavId}
                   modo={viewMode === 'devedores' ? 'fiado' : 'clientes'}
                   onEditar={() => { setClienteModal(cliente); setModalAberto(true); }}
                   onDetalhesFiado={() => setClienteDetalhes(
@@ -746,7 +786,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 }
 
 /* ── Card de cliente ─────────────────────────────────────────*/
-function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDetalhesFiado, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
+function ClienteCard({ cliente, modo = 'clientes', emFoco = false, onEditar, onHistorico, onDetalhesFiado, onReceber, onExcluir, onWhatsApp, podeEditar = true, podeExcluir = true, podeReceber = true, semPermMsg = '' }) {
   const ehFiado         = modo === 'fiado';
   const temDivida       = ehFiado && parseFloat(cliente.saldo_devedor) > 0.01;
   const limiteExcedido  = temDivida
@@ -787,7 +827,7 @@ function ClienteCard({ cliente, modo = 'clientes', onEditar, onHistorico, onDeta
   const abrirDetalhe = ehFiado ? onDetalhesFiado : onHistorico;
 
   return (
-    <div className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}`}>
+    <div id={`cli-card-${cliente.id}`} className={`cli-card${temDivida ? ' devedor' : ''}${limiteExcedido ? ' limite-excedido' : ''}${emFoco ? ' foco-teclado' : ''}`}>
 
       <div className="cli-card-header" onClick={abrirDetalhe} style={{ cursor: "pointer" }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

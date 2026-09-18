@@ -72,6 +72,10 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const [termoBusca,       setTermoBusca]       = useState('');
   const [visualizacao,     setVisualizacao]     = useState(() => localStorage.getItem('estoque-visualizacao') || 'lista');
   const [produtoFocadoId,  setProdutoFocadoId]  = useState(null);
+  // Item 22 — navegação por teclado na lista: id do produto "selecionado"
+  // via seta (diferente de produtoFocadoId, que é só o flash de 3s ao
+  // chegar por um link — esse aqui fica até o usuário mover ou digitar).
+  const [produtoNavId,     setProdutoNavId]     = useState(null);
   const [modalAberto,      setModalAberto]      = useState(false);
   const [produtoEditar,    setProdutoEditar]    = useState(null);
 
@@ -193,6 +197,34 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [imagemExpandida]);
+
+  /* ── Navegação por teclado na lista (item 22) ────────────────
+     Reaproveita o campo de busca (já fica com foco o tempo todo, mesmo
+     padrão do PDV): setas navegam entre os produtos filtrados, Delete
+     abre a confirmação de exclusão do item selecionado. */
+  function handleBuscaKeyDown(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (produtosFiltrados.length === 0) return;
+      e.preventDefault();
+      const idxAtual = produtoNavId ? produtosFiltrados.findIndex(p => p.id === produtoNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, produtosFiltrados.length - 1))
+        : (idxAtual === -1 ? produtosFiltrados.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = produtosFiltrados[novoIdx];
+      setProdutoNavId(alvo.id);
+      setTimeout(() => document.getElementById(`prod-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && produtoNavId) {
+      e.preventDefault();
+      const alvo = produtosFiltrados.find(p => p.id === produtoNavId);
+      // window.confirm() já responde nativamente a Enter (OK)/Esc (cancelar)
+      if (alvo && podeExcluir) deletarProduto(alvo);
+      return;
+    }
+    if (e.key === 'Escape' && produtoNavId) { setProdutoNavId(null); return; }
+    if (e.key.length === 1 && produtoNavId) setProdutoNavId(null);
+  }
 
   /* ── Deletar produto ─────────────────────────────────────── */
   async function deletarProduto(produto) {
@@ -850,6 +882,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               placeholder="🔍  Buscar por nome, marca, código ou PLU…"
               value={termoBusca}
               onChange={e => setTermoBusca(e.target.value)}
+              onKeyDown={handleBuscaKeyDown}
             />
           </div>
           <div className="estoque-header-btns">
@@ -921,7 +954,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               <ProdutoCard
                 key={produto.id}
                 produto={produto}
-                focado={produto.id === produtoFocadoId}
+                focado={produto.id === produtoFocadoId || produto.id === produtoNavId}
                 onEditar={() => abrirEditar(produto)}
                 onDeletar={() => deletarProduto(produto)}
                 podeEditar={podeEditar}

@@ -34,6 +34,11 @@ export default function SuperAdmins() {
   const [novaSenha,      setNovaSenha]      = useState("");
   const [erroSenha,      setErroSenha]      = useState("");
   const [userPersonif,   setUserPersonif]   = useState(null);
+  // Navegação por teclado (item 22) — setas navegam a lista, Enter abre
+  // "Alterar Senha" (ação sempre disponível, mesmo papel de "editar" nas
+  // outras telas), Delete exclui (quando permitido). Sem busca nesta tela:
+  // o próprio container da lista recebe o foco/onKeyDown.
+  const [saNavId, setSaNavId] = useState(null);
 
   useEffect(() => {
     if (profile?.is_master) carregarLista();
@@ -142,6 +147,33 @@ export default function SuperAdmins() {
     setErroCriar("");
   }
 
+  function handleListaKeyDown(e) {
+    if (modalCriar || modalSenha || userPersonif) return;
+    if (lista.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const idxAtual = saNavId ? lista.findIndex(u => u.id === saNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, lista.length - 1))
+        : (idxAtual === -1 ? lista.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = lista[novoIdx];
+      setSaNavId(alvo.id);
+      document.getElementById(`sa-user-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && saNavId) {
+      const alvo = lista.find(u => u.id === saNavId);
+      if (alvo) { e.preventDefault(); abrirModalSenha(alvo); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && saNavId) {
+      const alvo = lista.find(u => u.id === saNavId);
+      if (alvo && alvo.id !== profile.id) { e.preventDefault(); excluir(alvo.id, alvo.nome); }
+      return;
+    }
+    if (e.key === 'Escape' && saNavId) { setSaNavId(null); return; }
+  }
+
   /* ── render ──────────────────────────────────────────────── */
   return (
     <LayoutAdmin>
@@ -162,7 +194,11 @@ export default function SuperAdmins() {
           </div>
         </div>
 
-        <div className="sa-list-box">
+        <div
+          className="sa-list-box"
+          tabIndex={0}
+          onKeyDown={handleListaKeyDown}
+        >
           <div className="sa-list-header">
             <span className="sa-list-title">Usuários com acesso administrativo</span>
             <span className="sa-count-badge">{lista.length}</span>
@@ -177,7 +213,13 @@ export default function SuperAdmins() {
               const isMe    = user.id === profile.id;
               const isAtivo = user.is_active !== false;
               return (
-                <div key={user.id} className="sa-user-item" style={{ animationDelay: `${i * 0.05}s` }}>
+                <div
+                  key={user.id}
+                  id={`sa-user-${user.id}`}
+                  className={`sa-user-item${user.id === saNavId ? ' foco-teclado' : ''}`}
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                  onClick={() => setSaNavId(user.id)}
+                >
                   <div className={`sa-avatar ${user.is_master ? "is-master" : isMe ? "is-me" : ""}`}>
                     {iniciais(user.nome)}
                   </div>

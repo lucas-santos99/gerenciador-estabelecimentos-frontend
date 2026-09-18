@@ -1,5 +1,5 @@
 // src/pages/Administrador/Estabelecimentos/ListaEstabelecimentos.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
@@ -16,6 +16,10 @@ export default function ListaEstabelecimentos() {
   const [lista,   setLista]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca,   setBusca]   = useState("");
+  // Navegação por teclado (item 22) — setas navegam a lista, Delete exclui,
+  // Enter abre Detalhes. Mesmo padrão de ProdutoList.jsx/DividasList.jsx.
+  const buscaRef = useRef(null);
+  const [estabNavId, setEstabNavId] = useState(null);
 
   async function carregarEstabelecimentos() {
     setLoading(true);
@@ -32,6 +36,7 @@ export default function ListaEstabelecimentos() {
   }
 
   useEffect(() => { carregarEstabelecimentos(); }, []);
+  useEffect(() => { if (!loading) setTimeout(() => buscaRef.current?.focus(), 100); }, [loading]);
 
   async function excluirEstabelecimento(id, nome) {
     if (!window.confirm(`Excluir "${nome}"?`)) return;
@@ -53,6 +58,33 @@ export default function ListaEstabelecimentos() {
         (m.cnpj || "").toLowerCase().includes(busca.toLowerCase())
       )
     : lista;
+
+  function handleBuscaKeyDown(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (listaFiltrada.length === 0) return;
+      e.preventDefault();
+      const idxAtual = estabNavId ? listaFiltrada.findIndex(m => m.id === estabNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, listaFiltrada.length - 1))
+        : (idxAtual === -1 ? listaFiltrada.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = listaFiltrada[novoIdx];
+      setEstabNavId(alvo.id);
+      setTimeout(() => document.getElementById(`est-row-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
+      return;
+    }
+    if (e.key === 'Enter' && estabNavId) {
+      const alvo = listaFiltrada.find(m => m.id === estabNavId);
+      if (alvo) { e.preventDefault(); navigate(`/admin/estabelecimentos/${alvo.id}?view=details`); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && estabNavId) {
+      const alvo = listaFiltrada.find(m => m.id === estabNavId);
+      if (alvo) { e.preventDefault(); excluirEstabelecimento(alvo.id, alvo.nome_fantasia); }
+      return;
+    }
+    if (e.key === 'Escape' && estabNavId) { setEstabNavId(null); return; }
+    if (e.key.length === 1 && estabNavId) setEstabNavId(null);
+  }
 
   /* ════════════════════════════════════════════════════════ */
   return (
@@ -86,10 +118,12 @@ export default function ListaEstabelecimentos() {
           <div className="search-wrap" style={{ maxWidth: "100%" }}>
             <span className="search-icon">🔍</span>
             <input maxLength={100}
+              ref={buscaRef}
               className="dash-input"
               placeholder="Buscar por nome ou CNPJ…"
               value={busca}
               onChange={e => setBusca(e.target.value)}
+              onKeyDown={handleBuscaKeyDown}
             />
           </div>
         </div>
@@ -128,7 +162,7 @@ export default function ListaEstabelecimentos() {
                 </thead>
                 <tbody>
                   {listaFiltrada.map(m => (
-                    <tr key={m.id}>
+                    <tr key={m.id} id={`est-row-${m.id}`} className={m.id === estabNavId ? 'foco-teclado' : undefined}>
                       <td>
                         {m.logo_url
                           ? <img src={m.logo_url} alt="Logo" className="est-logo-mini" />

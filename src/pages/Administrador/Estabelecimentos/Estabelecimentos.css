@@ -649,6 +649,10 @@
 .est-table tbody tr { transition: background 0.15s; }
 .est-table tbody tr:hover { background: var(--bg-hover); }
 
+/* Navegação por teclado (item 22) — setas navegam a lista, Delete exclui,
+   Enter abre Detalhes. */
+.est-table tbody tr.foco-teclado { box-shadow: inset 3px 0 0 var(--border-accent); background: var(--bg-hover); }
+
 .est-logo-mini {
   width: 38px;
   height: 38px;
@@ -1111,6 +1115,11 @@
   box-shadow: 0 6px 20px rgba(239,68,68,0.1);
   border-color: rgba(239,68,68,0.4);
   border-left-color: var(--text-danger);
+}
+.est-excl-lista:focus { outline: none; }
+.est-excl-row.foco-teclado {
+  box-shadow: 0 0 0 2px var(--border-accent);
+  border-color: var(--border-accent);
 }
 
 .est-excl-row-avatar {

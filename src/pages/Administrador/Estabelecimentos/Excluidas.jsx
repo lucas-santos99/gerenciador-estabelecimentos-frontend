@@ -1,5 +1,5 @@
 // src/pages/Administrador/Estabelecimentos/Excluidas.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
@@ -19,6 +19,12 @@ export default function Excluidas() {
   const [modalAtivo,    setModalAtivo]    = useState(false);
   const [idSelecionado, setIdSelecionado] = useState(null);
   const [nomeSel,       setNomeSel]       = useState("");
+  // Navegação por teclado (item 22) — setas navegam a lista, Enter restaura,
+  // Delete abre o modal de exclusão definitiva. Sem busca nesta tela, o
+  // próprio container da lista recebe o foco/onKeyDown (mesmo padrão de
+  // Financeiro.jsx / OperadoresEstabelecimento.jsx).
+  const [rowFoco, setRowFoco] = useState(null);
+  const rowRefs = useRef({});
 
   async function carregar() {
     setLoading(true);
@@ -47,6 +53,33 @@ export default function Excluidas() {
     setIdSelecionado(id);
     setNomeSel(nome);
     setModalAtivo(true);
+  }
+
+  function handleListaKeyDown(e) {
+    if (modalAtivo) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (lista.length === 0) return;
+      e.preventDefault();
+      const idxAtual = rowFoco ? lista.findIndex(m => m.id === rowFoco) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, lista.length - 1))
+        : (idxAtual === -1 ? lista.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = lista[novoIdx];
+      setRowFoco(alvo.id);
+      rowRefs.current[alvo.id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && rowFoco) {
+      const alvo = lista.find(m => m.id === rowFoco);
+      if (alvo) { e.preventDefault(); restaurar(alvo.id, alvo.nome_fantasia); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && rowFoco) {
+      const alvo = lista.find(m => m.id === rowFoco);
+      if (alvo) { e.preventDefault(); abrirModal(alvo.id, alvo.nome_fantasia); }
+      return;
+    }
+    if (e.key === 'Escape' && rowFoco) { setRowFoco(null); return; }
   }
 
   async function excluirDefinitivo() {
@@ -96,12 +129,18 @@ export default function Excluidas() {
             Nenhum estabelecimento excluído. Tudo limpo!
           </div>
         ) : (
-          <div className="est-excl-lista">
+          <div
+            className="est-excl-lista"
+            tabIndex={0}
+            onKeyDown={handleListaKeyDown}
+          >
             {lista.map((m, i) => (
               <div
                 key={m.id}
-                className="est-excl-row"
+                ref={el => { rowRefs.current[m.id] = el; }}
+                className={`est-excl-row${m.id === rowFoco ? ' foco-teclado' : ''}`}
                 style={{ animationDelay: `${i * 0.05}s` }}
+                onClick={() => setRowFoco(m.id)}
               >
                 <div className="est-excl-row-avatar">{iniciais(m.nome_fantasia)}</div>
 

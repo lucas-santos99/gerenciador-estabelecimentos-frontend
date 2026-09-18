@@ -373,6 +373,17 @@
   background: var(--est-hover);
 }
 
+/* Item em foco via teclado (setas, item 22) — mesmo espírito visual do
+   destaque "ativo" já usado no resto do PDV: borda de acento + fundo
+   sutil, sem depender só de cor pra não ficar confundível com o :hover. */
+.pdv-item-focado {
+  background: var(--est-accent-dim);
+  box-shadow: inset 3px 0 0 var(--est-accent);
+}
+.pdv-item-focado:hover {
+  background: var(--est-accent-dim);
+}
+
 .pdv-item-info {
   flex: 1;
   cursor: pointer;

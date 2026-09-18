@@ -247,6 +247,8 @@
 .op-table tbody tr:last-child td { border-bottom: none; }
 .op-table tbody tr { transition: background 0.15s; }
 .op-table tbody tr:hover { background: var(--bg-hover); }
+.op-table:focus { outline: none; }
+.op-table tbody tr.foco-teclado { box-shadow: inset 3px 0 0 var(--border-accent); background: var(--bg-hover); }
 
 .op-nome-clickable {
   font-weight: 600;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import LayoutAdmin from "./Painel/LayoutAdmin";
 import "./DashboardAdmin.css";
 import { useNavigate } from "react-router-dom";
@@ -56,6 +56,10 @@ export default function DashboardAdmin() {
   const [qtdExcluidas,     setQtdExcluidas]      = useState(0);
   const [filtro,           setFiltro]            = useState("");
   const [busca,            setBusca]             = useState("");
+  // Navegação por teclado (item 22) — setas navegam a lista, Delete exclui,
+  // Enter abre Detalhes. Mesmo padrão de ListaEstabelecimentos.jsx.
+  const buscaRef = useRef(null);
+  const [dashNavId, setDashNavId] = useState(null);
   const [filtroTipo,       setFiltroTipo]        = useState("");
   const [mostrarAlertas,   setMostrarAlertas]    = useState(true);
   const [ordenacao,        setOrdenacao]         = useState({ campo: "", direcao: "asc" });
@@ -108,6 +112,7 @@ export default function DashboardAdmin() {
   }
 
   useEffect(() => { carregarDados(); }, []);
+  useEffect(() => { if (!loading) setTimeout(() => buscaRef.current?.focus(), 100); }, [loading]);
 
   // Solicitações pendentes — busca ao carregar e decide se mostra o
   // popup. sessionStorage guarda quantas já foram "vistas" nessa sessão
@@ -229,6 +234,33 @@ export default function DashboardAdmin() {
     if (!window.confirm(`Excluir "${nome}"?`)) return;
     await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     carregarDados();
+  }
+
+  function handleBuscaKeyDown(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (listaFiltrada.length === 0) return;
+      e.preventDefault();
+      const idxAtual = dashNavId ? listaFiltrada.findIndex(m => m.id === dashNavId) : -1;
+      const novoIdx = e.key === 'ArrowDown'
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, listaFiltrada.length - 1))
+        : (idxAtual === -1 ? listaFiltrada.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = listaFiltrada[novoIdx];
+      setDashNavId(alvo.id);
+      setTimeout(() => document.getElementById(`dash-row-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
+      return;
+    }
+    if (e.key === 'Enter' && dashNavId) {
+      const alvo = listaFiltrada.find(m => m.id === dashNavId);
+      if (alvo) { e.preventDefault(); navigate(`/admin/estabelecimentos/${alvo.id}?view=details`); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && dashNavId) {
+      const alvo = listaFiltrada.find(m => m.id === dashNavId);
+      if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.nome_fantasia); }
+      return;
+    }
+    if (e.key === 'Escape' && dashNavId) { setDashNavId(null); return; }
+    if (e.key.length === 1 && dashNavId) setDashNavId(null);
   }
 
   async function confirmarBloquear() {
@@ -492,10 +524,12 @@ export default function DashboardAdmin() {
           <div className="search-wrap">
             <span className="search-icon"><Icon.Search /></span>
             <input maxLength={100}
+              ref={buscaRef}
               className="dash-input"
               placeholder="Buscar por nome ou CPF/CNPJ..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
+              onKeyDown={handleBuscaKeyDown}
             />
           </div>
 
@@ -561,7 +595,12 @@ export default function DashboardAdmin() {
                 {listaFiltrada.map(m => {
                   const vencClasse = classVenc(m.data_vencimento).replace('venc-', '');
                   return (
-                    <div key={m.id} className={`dash-row dash-row--${m.status_assinatura}`}>
+                    <div
+                      key={m.id}
+                      id={`dash-row-${m.id}`}
+                      className={`dash-row dash-row--${m.status_assinatura}${m.id === dashNavId ? ' foco-teclado' : ''}`}
+                      onClick={() => setDashNavId(m.id)}
+                    >
 
                       <div className={`dash-row-dot dash-row-dot--${vencClasse}`} />
 
