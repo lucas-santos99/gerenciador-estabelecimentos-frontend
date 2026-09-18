@@ -561,9 +561,16 @@ body.light {
 }
 
 .est-comunicado-imagem {
+  /* width fixo + height:auto = exibe a imagem na proporção original dela
+     (sem cortar nem esticar), ocupando a largura do modal. object-fit:
+     contain só entra em ação no caso raro de uma imagem MUITO alta que
+     estoure o max-height — aí ela é reduzida inteira (com uma leve
+     margem, sem cortar) em vez de ser espremida (o que aconteceria só
+     com max-height, sem object-fit, quando width e height brigam). */
   width: 100%;
-  max-height: 220px;
-  object-fit: cover;
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
   border-radius: 12px;
   margin-bottom: 16px;
   display: block;
@@ -980,9 +987,13 @@ body.light select {
 }
 
 .est-comunicado-fixo-imagem {
+  /* Mesmo raciocínio do .est-comunicado-imagem acima — proporção
+     original preservada, sem cortar; max-height mais baixo porque o
+     card fixo é bem menor que o modal. */
   width: 100%;
-  max-height: 120px;
-  object-fit: cover;
+  height: auto;
+  max-height: 160px;
+  object-fit: contain;
   border-radius: 10px;
   margin-bottom: 8px;
   display: block;
