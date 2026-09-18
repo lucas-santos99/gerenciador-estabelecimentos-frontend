@@ -132,6 +132,43 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  position: relative; /* ancora o controle de zoom no canto */
+}
+
+/* ── Zoom do modal (só exibição — não altera o que é salvo) ───────── */
+.com-zoom-controle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.com-zoom-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.com-zoom-btn:hover { background: var(--bg-card); border-color: var(--border-accent); }
+
+.com-zoom-valor {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: center;
 }
 
 .com-modal-largo .sa-modal-form {
@@ -401,6 +438,15 @@
   color: var(--text-primary);
   background: var(--bg-input, transparent);
   line-height: 1.5;
+}
+
+/* Depois da regra base de propósito — precisa vencer o min-height/
+   max-height/font-size dela pro editor do título ficar mais baixo. */
+.com-editor-conteudo-titulo {
+  min-height: 40px;
+  max-height: 90px;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .com-editor-conteudo:empty::before {

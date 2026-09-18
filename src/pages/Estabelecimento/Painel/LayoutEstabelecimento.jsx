@@ -692,7 +692,14 @@ export default function LayoutEstabelecimento({
         <div className="est-modal-overlay">
           <div className="est-modal" onClick={e => e.stopPropagation()}>
             <span className="est-modal-icon">📣</span>
-            <div className="est-modal-title">{comunicadosModal[0].titulo}</div>
+            {comunicadosModal[0].titulo_html ? (
+              <div
+                className="est-modal-title"
+                dangerouslySetInnerHTML={{ __html: comunicadosModal[0].titulo_html }}
+              />
+            ) : (
+              <div className="est-modal-title">{comunicadosModal[0].titulo}</div>
+            )}
             {comunicadosModal[0].imagem_url && (
               <img className="est-comunicado-imagem" src={comunicadosModal[0].imagem_url} alt="" />
             )}
@@ -728,7 +735,13 @@ export default function LayoutEstabelecimento({
               >
                 ✕
               </button>
-              <div className="est-comunicado-fixo-titulo">📣 {c.titulo}</div>
+              {c.titulo_html ? (
+                <div className="est-comunicado-fixo-titulo">
+                  📣 <span dangerouslySetInnerHTML={{ __html: c.titulo_html }} />
+                </div>
+              ) : (
+                <div className="est-comunicado-fixo-titulo">📣 {c.titulo}</div>
+              )}
               {c.imagem_url && (
                 <img className="est-comunicado-fixo-imagem" src={c.imagem_url} alt="" />
               )}

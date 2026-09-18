@@ -63,8 +63,20 @@ const FONTES_DISPONIVEIS = [
   { valor: "Verdana, sans-serif",  label: "Verdana" },
 ];
 
+// Tamanhos de fonte oferecidos pro título e pra mensagem — aplicados via
+// execCommand('fontSize') truncado em <font size="7"> e depois convertido
+// pra <span style="font-size:Npx"> (ver `aplicarTamanhoFonte`), porque o
+// execCommand só aceita os 7 tamanhos relativos do HTML antigo, não px.
+const TAMANHOS_FONTE = [12, 14, 16, 18, 20, 24, 28, 32, 40];
+
+// Faixa de zoom do modal (não altera o que é salvo — só a exibição
+// enquanto o SuperAdmin está digitando/revisando).
+const ZOOM_MIN = 0.8;
+const ZOOM_MAX = 1.6;
+const ZOOM_PASSO = 0.1;
+
 const FORM_VAZIO = {
-  titulo: "", mensagem: "", mensagem_html: "", formatos: [], ativo: true,
+  titulo: "", titulo_html: "", mensagem: "", mensagem_html: "", formatos: [], ativo: true,
   alvo_tipo: "todos", alvo_tipos_estabelecimento: [], estabelecimento_ids: [],
   imagem_url: null, data_inicio: "", data_fim: "",
   criadoPorNome: null, criadoEm: null,
@@ -109,6 +121,7 @@ export default function Comunicados() {
   const [salvando,    setSalvando]    = useState(false);
   const [erroModal,   setErroModal]   = useState("");
   const [mostrarPreview, setMostrarPreview] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   // Imagem: enquanto o comunicado ainda não existe (criação), o arquivo
   // fica pendente em memória e só sobe depois que o Salvar devolve o id.
@@ -123,6 +136,10 @@ export default function Comunicados() {
   // do editor antes do onChange disparar.
   const editorRef   = useRef(null);
   const selecaoRef  = useRef(null);
+  // Mesma mecânica, só que pro campo Título (agora um editor rico igual
+  // ao da Mensagem, com a mesma barra de formatação).
+  const editorTituloRef  = useRef(null);
+  const selecaoTituloRef = useRef(null);
 
   // Navegação por teclado (mesmo padrão do resto do painel SuperAdmin) —
   // setas navegam a lista, Enter abre edição, Delete exclui, Escape limpa.
@@ -153,15 +170,34 @@ export default function Comunicados() {
 
   useEffect(() => { carregarLista(); carregarOpcoesAlvo(); }, []);
 
-  // Sincroniza o conteúdo do editor rico sempre que o modal abre — só
-  // nessa hora, pra não brigar com o próprio usuário digitando (o editor
-  // vira a fonte da verdade do próprio conteúdo depois de aberto).
+  // Sincroniza o conteúdo dos editores ricos (título e mensagem) e
+  // reseta o zoom sempre que o modal abre — só nessa hora, pra não
+  // brigar com o próprio usuário digitando (o editor vira a fonte da
+  // verdade do próprio conteúdo depois de aberto).
   useEffect(() => {
-    if (modalAberto && editorRef.current) {
+    if (!modalAberto) return;
+    if (editorTituloRef.current) {
+      if (form.titulo_html) editorTituloRef.current.innerHTML = form.titulo_html;
+      else editorTituloRef.current.textContent = form.titulo || "";
+    }
+    if (editorRef.current) {
       editorRef.current.innerHTML = form.mensagem_html
         || (form.mensagem ? form.mensagem.replace(/\n/g, "<br>") : "");
     }
+    setZoom(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalAberto]);
+
+  // Esc fecha o modal — clicar fora dele (no overlay) NÃO fecha mais,
+  // só o botão Cancelar ou o Esc (pedido do usuário, pra não perder o
+  // que já foi digitado com um clique acidental fora do card).
+  useEffect(() => {
+    if (!modalAberto) return;
+    function aoTeclarGlobal(e) {
+      if (e.key === "Escape") fecharModal();
+    }
+    window.addEventListener("keydown", aoTeclarGlobal);
+    return () => window.removeEventListener("keydown", aoTeclarGlobal);
   }, [modalAberto]);
 
   function abrirCriar() {
@@ -179,6 +215,7 @@ export default function Comunicados() {
     setEditandoId(c.id);
     setForm({
       titulo: c.titulo,
+      titulo_html: c.titulo_html || "",
       mensagem: c.mensagem,
       mensagem_html: c.mensagem_html || "",
       formatos: (c.formatos || []).map(f => f.tipo),
@@ -274,6 +311,68 @@ export default function Comunicados() {
     aoDigitarMensagem();
   }
 
+  // ── Editor de texto rico do TÍTULO (mesma mecânica, campo separado) ──
+  function salvarSelecaoTitulo() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorTituloRef.current?.contains(sel.anchorNode)) {
+      selecaoTituloRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function restaurarSelecaoTitulo() {
+    editorTituloRef.current?.focus();
+    const range = selecaoTituloRef.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function aoDigitarTitulo() {
+    if (!editorTituloRef.current) return;
+    setForm(p => ({
+      ...p,
+      titulo_html: editorTituloRef.current.innerHTML,
+      titulo: editorTituloRef.current.innerText,
+    }));
+    setErroModal("");
+  }
+
+  function aoColarTitulo(e) {
+    e.preventDefault();
+    const texto = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, texto);
+    aoDigitarTitulo();
+  }
+
+  // Título é uma linha só — Enter não deve quebrar linha dentro dele.
+  function aoTeclarTitulo(e) {
+    if (e.key === "Enter") e.preventDefault();
+  }
+
+  function aplicarFormatoTitulo(comando, valor) {
+    restaurarSelecaoTitulo();
+    document.execCommand(comando, false, valor);
+    aoDigitarTitulo();
+  }
+
+  // Tamanho de fonte (título ou mensagem): execCommand('fontSize') só
+  // aceita os 7 tamanhos relativos antigos do HTML — o truque é aplicar
+  // o tamanho "7" como marcador e depois trocar cada <font size="7">
+  // resultante por um <span style="font-size:Npx">, que é o que
+  // realmente fica salvo no HTML.
+  function aplicarTamanhoFonte(px, opcoes = {}) {
+    const doTitulo = !!opcoes.titulo;
+    const ref = doTitulo ? editorTituloRef : editorRef;
+    if (doTitulo) restaurarSelecaoTitulo(); else restaurarSelecao();
+    document.execCommand("fontSize", false, "7");
+    ref.current?.querySelectorAll('font[size="7"]').forEach(f => {
+      f.removeAttribute("size");
+      f.style.fontSize = `${px}px`;
+    });
+    if (doTitulo) aoDigitarTitulo(); else aoDigitarMensagem();
+  }
+
   // ── Imagem ───────────────────────────────────────────────────────────
   async function enviarImagem(id, arquivo) {
     setEnviandoImagem(true);
@@ -344,6 +443,7 @@ export default function Comunicados() {
     try {
       const payload = {
         titulo: form.titulo,
+        titulo_html: form.titulo_html,
         mensagem: form.mensagem,
         mensagem_html: form.mensagem_html,
         formatos: form.formatos.map(tipo => ({ tipo })),
@@ -566,7 +666,11 @@ export default function Comunicados() {
                       <span className={`sa-badge ${c.ativo ? "sa-badge-ativo" : "sa-badge-inativo"}`}>
                         {c.ativo ? "Ativo" : "Inativo"}
                       </span>
-                      <span className="com-item-titulo">{c.titulo}</span>
+                      {c.titulo_html ? (
+                        <span className="com-item-titulo" dangerouslySetInnerHTML={{ __html: c.titulo_html }} />
+                      ) : (
+                        <span className="com-item-titulo">{c.titulo}</span>
+                      )}
                       <span className="com-alvo-chip" title={alvoTitle(c)}>{alvoResumo(c)}</span>
                       {agenda && <span className={`com-agenda-chip ${agenda.classe}`}>{agenda.texto}</span>}
                     </div>
@@ -601,12 +705,24 @@ export default function Comunicados() {
 
         {/* MODAL: CRIAR/EDITAR */}
         {modalAberto && (
-          <div className="sa-modal-overlay" onClick={fecharModal}>
-            <div className="sa-modal com-modal-largo" onClick={e => e.stopPropagation()}>
+          <div className="sa-modal-overlay">
+            <div className="sa-modal com-modal-largo">
+              <div className="com-zoom-controle">
+                <button
+                  type="button" className="com-zoom-btn" title="Diminuir zoom"
+                  onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_PASSO).toFixed(1)))}
+                >−</button>
+                <span className="com-zoom-valor">{Math.round(zoom * 100)}%</span>
+                <button
+                  type="button" className="com-zoom-btn" title="Aumentar zoom"
+                  onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_PASSO).toFixed(1)))}
+                >+</button>
+              </div>
               <div className="sa-modal-icon">📣</div>
               <div className="sa-modal-title">{editandoId ? "Editar Comunicado" : "Novo Comunicado"}</div>
               <div className="sa-modal-subtitle">
                 Escolha pelo menos um formato de exibição pra este comunicado — pode combinar mais de um.
+                Clique fora não fecha mais o modal — use "Cancelar" ou Esc.
               </div>
               {editandoId && (
                 <div className="com-meta-modal">
@@ -618,14 +734,66 @@ export default function Comunicados() {
                   ⚠️ {erroModal}
                 </div>
               )}
-              <div className="sa-modal-form">
+              <div className="sa-modal-form" style={{ zoom }}>
                 <div className="sa-form-group">
                   <label className="sa-label">Título</label>
-                  <input
-                    maxLength={200} className="sa-input"
-                    placeholder="Ex: Manutenção programada"
-                    value={form.titulo}
-                    onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
+                  <div className="com-editor-toolbar">
+                    <button
+                      type="button" className="com-editor-btn"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => aplicarFormatoTitulo("bold")}
+                      title="Negrito"
+                    ><b>B</b></button>
+                    <button
+                      type="button" className="com-editor-btn"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => aplicarFormatoTitulo("italic")}
+                      title="Itálico"
+                    ><i>I</i></button>
+                    <span className="com-editor-separador" />
+                    <input
+                      type="color" className="com-editor-cor" title="Cor do texto"
+                      defaultValue="#1a1a1a"
+                      onMouseDown={salvarSelecaoTitulo}
+                      onChange={e => aplicarFormatoTitulo("foreColor", e.target.value)}
+                    />
+                    <select
+                      className="com-editor-fonte" title="Fonte" defaultValue=""
+                      onMouseDown={salvarSelecaoTitulo}
+                      onChange={e => {
+                        if (e.target.value) aplicarFormatoTitulo("fontName", e.target.value);
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">Fonte…</option>
+                      {FONTES_DISPONIVEIS.map(f => (
+                        <option key={f.valor} value={f.valor}>{f.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="com-editor-fonte" title="Tamanho" defaultValue=""
+                      onMouseDown={salvarSelecaoTitulo}
+                      onChange={e => {
+                        if (e.target.value) aplicarTamanhoFonte(Number(e.target.value), { titulo: true });
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">Tamanho…</option>
+                      {TAMANHOS_FONTE.map(t => (
+                        <option key={t} value={t}>{t}px</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    ref={editorTituloRef}
+                    className="com-editor-conteudo com-editor-conteudo-titulo"
+                    contentEditable
+                    data-placeholder="Ex: Manutenção programada"
+                    onInput={aoDigitarTitulo}
+                    onPaste={aoColarTitulo}
+                    onKeyDown={aoTeclarTitulo}
+                    onMouseUp={salvarSelecaoTitulo}
+                    onKeyUp={salvarSelecaoTitulo}
                   />
                 </div>
 
@@ -662,6 +830,19 @@ export default function Comunicados() {
                       <option value="">Fonte…</option>
                       {FONTES_DISPONIVEIS.map(f => (
                         <option key={f.valor} value={f.valor}>{f.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="com-editor-fonte" title="Tamanho" defaultValue=""
+                      onMouseDown={salvarSelecao}
+                      onChange={e => {
+                        if (e.target.value) aplicarTamanhoFonte(Number(e.target.value));
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">Tamanho…</option>
+                      {TAMANHOS_FONTE.map(t => (
+                        <option key={t} value={t}>{t}px</option>
                       ))}
                     </select>
                   </div>
@@ -845,7 +1026,11 @@ export default function Comunicados() {
                         {(imagemPreviewLocal || form.imagem_url) && (
                           <img src={imagemPreviewLocal || form.imagem_url} alt="" />
                         )}
-                        <div className="com-preview-titulo">{form.titulo || "Título do comunicado"}</div>
+                        {form.titulo_html ? (
+                          <div className="com-preview-titulo" dangerouslySetInnerHTML={{ __html: form.titulo_html }} />
+                        ) : (
+                          <div className="com-preview-titulo">{form.titulo || "Título do comunicado"}</div>
+                        )}
                         <div
                           className="com-preview-mensagem"
                           dangerouslySetInnerHTML={{
