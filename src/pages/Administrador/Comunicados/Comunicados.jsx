@@ -11,10 +11,28 @@
 // estabelecimentos, um ou mais tipos de estabelecimento (mercearias.
 // tipo_estabelecimento), ou um ou mais estabelecimentos específicos. Ver
 // ALVO_OPCOES abaixo e a validação equivalente em comunicadosRoutes.js.
-import React, { useState, useEffect } from "react";
+//
+// Agendamento, autoria, imagem e texto rico (adicionados em 18/09):
+// - data_inicio/data_fim (opcionais): janela em que o comunicado aparece
+//   pro comerciante — fora dela, o registro existe e pode estar "ativo",
+//   mas o backend (GET /ativos) não devolve. Ver `agendaChip`/`estaVigente`.
+// - criado_por_nome/criado_em: gravados só na criação (o PUT não altera o
+//   autor original), exibidos na listagem e num aviso no topo do modal.
+// - imagem_url: upload dedicado (multipart) pro bucket "logos", mesmo
+//   padrão do logo de estabelecimento — precisa do id, então numa criação
+//   nova o arquivo fica pendente até o Salvar devolver o id (ver
+//   `imagemArquivoPendente` e `enviarImagem`).
+// - mensagem_html: editor de texto rico simples (negrito/itálico/cor/
+//   fonte) via contentEditable + document.execCommand — `mensagem` (texto
+//   puro, sem tags) continua sendo salva em paralelo como fallback e pra
+//   validação de tamanho. Colar sempre entra como texto puro (sem manter
+//   formatação de origem), pra não abrir brecha de HTML arbitrário vindo
+//   da área de transferência.
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
+import { supabase } from "../../../utils/supabaseClient";
 import "../SuperAdmins/SuperAdmins.css";
 import "./Comunicados.css";
 
@@ -35,16 +53,51 @@ const ALVO_OPCOES = [
   { tipo: "especificos",         icone: "🎯", label: "Estabelecimentos específicos", desc: "Escolha um ou vários estabelecimentos, individualmente." },
 ];
 
+// Fontes disponíveis no editor de texto rico. "inherit" volta pra fonte
+// padrão do sistema (não fixa nenhuma família específica no HTML salvo).
+const FONTES_DISPONIVEIS = [
+  { valor: "inherit",              label: "Padrão" },
+  { valor: "Arial, sans-serif",    label: "Arial" },
+  { valor: "Georgia, serif",       label: "Georgia (serifa)" },
+  { valor: "'Courier New', monospace", label: "Monoespaçada" },
+  { valor: "Verdana, sans-serif",  label: "Verdana" },
+];
+
 const FORM_VAZIO = {
-  titulo: "", mensagem: "", formatos: [], ativo: true,
+  titulo: "", mensagem: "", mensagem_html: "", formatos: [], ativo: true,
   alvo_tipo: "todos", alvo_tipos_estabelecimento: [], estabelecimento_ids: [],
+  imagem_url: null, data_inicio: "", data_fim: "",
+  criadoPorNome: null, criadoEm: null,
 };
+
+// ── Helpers de data ──────────────────────────────────────────────────
+// Converte um ISO (do backend) pro formato que <input type="datetime-local">
+// entende (YYYY-MM-DDTHH:mm, em horário LOCAL do navegador).
+function isoParaInputLocal(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// Converte o valor do <input type="datetime-local"> (horário local) pra
+// ISO (UTC) pra mandar pro backend. String vazia vira null (sem limite).
+function inputLocalParaIso(valor) {
+  if (!valor) return null;
+  const d = new Date(valor);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+function formatarDataHora(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
 
 export default function Comunicados() {
   const navigate = useNavigate();
 
   const [lista,        setLista]        = useState([]);
   const [loadingLista, setLoadingLista]  = useState(true);
+  const [abaAtiva,     setAbaAtiva]      = useState("ativos"); // 'ativos' | 'historico'
 
   const [tiposDisponiveis,          setTiposDisponiveis]          = useState([]);
   const [estabelecimentosDisponiveis, setEstabelecimentosDisponiveis] = useState([]);
@@ -55,6 +108,21 @@ export default function Comunicados() {
   const [form,        setForm]        = useState(FORM_VAZIO);
   const [salvando,    setSalvando]    = useState(false);
   const [erroModal,   setErroModal]   = useState("");
+  const [mostrarPreview, setMostrarPreview] = useState(false);
+
+  // Imagem: enquanto o comunicado ainda não existe (criação), o arquivo
+  // fica pendente em memória e só sobe depois que o Salvar devolve o id.
+  // Editando um comunicado já existente, o upload acontece na hora.
+  const [imagemArquivoPendente, setImagemArquivoPendente] = useState(null);
+  const [imagemPreviewLocal,    setImagemPreviewLocal]    = useState(null);
+  const [enviandoImagem,        setEnviandoImagem]        = useState(false);
+  const inputImagemRef = useRef(null);
+
+  // Editor de texto rico (contentEditable) — guarda a seleção de texto
+  // pra sobreviver ao clique nos controles de cor/fonte, que tiram o foco
+  // do editor antes do onChange disparar.
+  const editorRef   = useRef(null);
+  const selecaoRef  = useRef(null);
 
   // Navegação por teclado (mesmo padrão do resto do painel SuperAdmin) —
   // setas navegam a lista, Enter abre edição, Delete exclui, Escape limpa.
@@ -85,11 +153,25 @@ export default function Comunicados() {
 
   useEffect(() => { carregarLista(); carregarOpcoesAlvo(); }, []);
 
+  // Sincroniza o conteúdo do editor rico sempre que o modal abre — só
+  // nessa hora, pra não brigar com o próprio usuário digitando (o editor
+  // vira a fonte da verdade do próprio conteúdo depois de aberto).
+  useEffect(() => {
+    if (modalAberto && editorRef.current) {
+      editorRef.current.innerHTML = form.mensagem_html
+        || (form.mensagem ? form.mensagem.replace(/\n/g, "<br>") : "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalAberto]);
+
   function abrirCriar() {
     setEditandoId(null);
     setForm(FORM_VAZIO);
     setBuscaEstab("");
     setErroModal("");
+    setImagemArquivoPendente(null);
+    setImagemPreviewLocal(null);
+    setMostrarPreview(false);
     setModalAberto(true);
   }
 
@@ -98,14 +180,23 @@ export default function Comunicados() {
     setForm({
       titulo: c.titulo,
       mensagem: c.mensagem,
+      mensagem_html: c.mensagem_html || "",
       formatos: (c.formatos || []).map(f => f.tipo),
       ativo: c.ativo,
       alvo_tipo: c.alvo_tipo || "todos",
       alvo_tipos_estabelecimento: c.alvo_tipos_estabelecimento || [],
       estabelecimento_ids: (c.estabelecimentos_alvo || []).map(e => e.id),
+      imagem_url: c.imagem_url || null,
+      data_inicio: isoParaInputLocal(c.data_inicio),
+      data_fim: isoParaInputLocal(c.data_fim),
+      criadoPorNome: c.criado_por_nome || null,
+      criadoEm: c.criado_em || null,
     });
     setBuscaEstab("");
     setErroModal("");
+    setImagemArquivoPendente(null);
+    setImagemPreviewLocal(null);
+    setMostrarPreview(false);
     setModalAberto(true);
   }
 
@@ -141,6 +232,96 @@ export default function Comunicados() {
     }));
   }
 
+  // ── Editor de texto rico ────────────────────────────────────────────
+  function salvarSelecao() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+      selecaoRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function restaurarSelecao() {
+    editorRef.current?.focus();
+    const range = selecaoRef.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function aoDigitarMensagem() {
+    if (!editorRef.current) return;
+    setForm(p => ({
+      ...p,
+      mensagem_html: editorRef.current.innerHTML,
+      mensagem: editorRef.current.innerText,
+    }));
+    setErroModal("");
+  }
+
+  // Cola sempre como texto puro — evita que HTML/scripts colados da área
+  // de transferência entrem no conteúdo salvo.
+  function aoColarMensagem(e) {
+    e.preventDefault();
+    const texto = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, texto);
+    aoDigitarMensagem();
+  }
+
+  function aplicarFormato(comando, valor) {
+    restaurarSelecao();
+    document.execCommand(comando, false, valor);
+    aoDigitarMensagem();
+  }
+
+  // ── Imagem ───────────────────────────────────────────────────────────
+  async function enviarImagem(id, arquivo) {
+    setEnviandoImagem(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      const fd = new FormData();
+      fd.append("imagem", arquivo);
+      const API_URL = import.meta.env.VITE_API_URL;
+      const resp = await fetch(`${API_URL}/api/comunicados/admin/${id}/upload-imagem`, {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || "Erro ao enviar imagem.");
+      setForm(p => ({ ...p, imagem_url: json.imagem_url }));
+      setImagemArquivoPendente(null);
+      setImagemPreviewLocal(null);
+      setEnviandoImagem(false);
+      return true;
+    } catch (e) {
+      setEnviandoImagem(false);
+      setErroModal(e.message);
+      return false;
+    }
+  }
+
+  async function aoSelecionarImagem(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!arquivo) return;
+
+    setImagemPreviewLocal(URL.createObjectURL(arquivo));
+
+    if (editandoId) {
+      await enviarImagem(editandoId, arquivo);
+    } else {
+      setImagemArquivoPendente(arquivo);
+    }
+  }
+
+  function removerImagem() {
+    setImagemPreviewLocal(null);
+    setImagemArquivoPendente(null);
+    setForm(p => ({ ...p, imagem_url: null }));
+  }
+
   async function salvar() {
     if (!form.titulo.trim())   { setErroModal("Informe o título."); return; }
     if (!form.mensagem.trim()) { setErroModal("Informe a mensagem."); return; }
@@ -153,6 +334,10 @@ export default function Comunicados() {
       setErroModal("Selecione ao menos um estabelecimento.");
       return;
     }
+    if (form.data_inicio && form.data_fim && new Date(form.data_fim) <= new Date(form.data_inicio)) {
+      setErroModal("A data de término deve ser depois da data de início.");
+      return;
+    }
 
     setSalvando(true);
     setErroModal("");
@@ -160,11 +345,15 @@ export default function Comunicados() {
       const payload = {
         titulo: form.titulo,
         mensagem: form.mensagem,
+        mensagem_html: form.mensagem_html,
         formatos: form.formatos.map(tipo => ({ tipo })),
         ativo: form.ativo,
         alvo_tipo: form.alvo_tipo,
         alvo_tipos_estabelecimento: form.alvo_tipos_estabelecimento,
         estabelecimento_ids: form.estabelecimento_ids,
+        data_inicio: inputLocalParaIso(form.data_inicio),
+        data_fim: inputLocalParaIso(form.data_fim),
+        ...(editandoId ? { imagem_url: form.imagem_url } : {}),
       };
       const resp = await apiFetch(
         editandoId ? `/api/comunicados/admin/${editandoId}` : "/api/comunicados/admin",
@@ -173,12 +362,27 @@ export default function Comunicados() {
       const json = await resp.json();
       if (!resp.ok) throw new Error(json.error || "Erro ao salvar.");
 
+      // Imagem que ficou pendente (criação nova) só sobe agora que já
+      // existe um id. Se falhar, o comunicado já foi salvo — mantém o
+      // modal aberto (agora em modo edição) mostrando o erro, pra dar
+      // pra tentar de novo sem duplicar o cadastro.
+      let imagemOk = true;
+      const idAlvo = editandoId || json.id;
+      if (imagemArquivoPendente) {
+        imagemOk = await enviarImagem(idAlvo, imagemArquivoPendente);
+      }
+
       // A resposta do backend não traz `estabelecimentos_alvo` populado —
       // recarrega a lista inteira pra já vir com os vínculos corretos em
       // vez de fazer o merge manual e arriscar ficar com a exibição
       // dessincronizada até a próxima F5.
       await carregarLista();
-      setModalAberto(false);
+
+      if (imagemOk) {
+        setModalAberto(false);
+      } else {
+        setEditandoId(idAlvo);
+      }
     } catch (e) {
       setErroModal(e.message);
     }
@@ -207,27 +411,53 @@ export default function Comunicados() {
     } catch { alert("Erro ao excluir o comunicado."); }
   }
 
+  // Vigente = ativo E dentro da janela de agendamento (se houver). É
+  // exatamente o mesmo critério que o backend usa em GET /ativos.
+  function estaVigente(c) {
+    if (!c.ativo) return false;
+    const agora = Date.now();
+    if (c.data_inicio && new Date(c.data_inicio).getTime() > agora) return false;
+    if (c.data_fim && new Date(c.data_fim).getTime() < agora) return false;
+    return true;
+  }
+
+  function agendaChip(c) {
+    const agora = Date.now();
+    if (c.data_fim && new Date(c.data_fim).getTime() < agora) {
+      return { texto: `⌛ Expirado em ${formatarDataHora(c.data_fim)}`, classe: "expirado" };
+    }
+    if (c.data_inicio && new Date(c.data_inicio).getTime() > agora) {
+      return { texto: `🕒 Agendado para ${formatarDataHora(c.data_inicio)}`, classe: "agendado" };
+    }
+    if (c.data_fim) {
+      return { texto: `⏳ Até ${formatarDataHora(c.data_fim)}`, classe: "" };
+    }
+    return null;
+  }
+
+  const listaExibida = abaAtiva === "ativos" ? lista.filter(estaVigente) : lista;
+
   function handleListaKeyDown(e) {
     if (modalAberto) return;
-    if (lista.length === 0) return;
+    if (listaExibida.length === 0) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      const idxAtual = comNavId ? lista.findIndex(c => c.id === comNavId) : -1;
+      const idxAtual = comNavId ? listaExibida.findIndex(c => c.id === comNavId) : -1;
       const novoIdx = e.key === "ArrowDown"
-        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, lista.length - 1))
-        : (idxAtual === -1 ? lista.length - 1 : Math.max(idxAtual - 1, 0));
-      const alvo = lista[novoIdx];
+        ? (idxAtual === -1 ? 0 : Math.min(idxAtual + 1, listaExibida.length - 1))
+        : (idxAtual === -1 ? listaExibida.length - 1 : Math.max(idxAtual - 1, 0));
+      const alvo = listaExibida[novoIdx];
       setComNavId(alvo.id);
       document.getElementById(`com-item-${alvo.id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       return;
     }
     if (e.key === "Enter" && comNavId) {
-      const alvo = lista.find(c => c.id === comNavId);
+      const alvo = listaExibida.find(c => c.id === comNavId);
       if (alvo) { e.preventDefault(); abrirEditar(alvo); }
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && comNavId) {
-      const alvo = lista.find(c => c.id === comNavId);
+      const alvo = listaExibida.find(c => c.id === comNavId);
       if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.titulo); }
       return;
     }
@@ -285,58 +515,87 @@ export default function Comunicados() {
           </div>
         </div>
 
+        <div className="com-tabs">
+          <button
+            className={`com-tab${abaAtiva === "ativos" ? " ativa" : ""}`}
+            onClick={() => setAbaAtiva("ativos")}
+          >
+            📣 Ativos agora
+          </button>
+          <button
+            className={`com-tab${abaAtiva === "historico" ? " ativa" : ""}`}
+            onClick={() => setAbaAtiva("historico")}
+          >
+            🕒 Histórico completo
+          </button>
+        </div>
+
         <div
           className="sa-list-box"
           tabIndex={0}
           onKeyDown={handleListaKeyDown}
         >
           <div className="sa-list-header">
-            <span className="sa-list-title">Comunicados cadastrados</span>
-            <span className="sa-count-badge">{lista.length}</span>
+            <span className="sa-list-title">
+              {abaAtiva === "ativos" ? "Comunicados vigentes" : "Todos os comunicados já criados"}
+            </span>
+            <span className="sa-count-badge">{listaExibida.length}</span>
           </div>
 
           {loadingLista ? (
             <div className="sa-loading"><div className="sa-spinner" /> Carregando...</div>
-          ) : lista.length === 0 ? (
-            <div className="sa-empty">Nenhum comunicado cadastrado ainda.</div>
+          ) : listaExibida.length === 0 ? (
+            <div className="sa-empty">
+              {abaAtiva === "ativos" ? "Nenhum comunicado vigente agora." : "Nenhum comunicado cadastrado ainda."}
+            </div>
           ) : (
-            lista.map(c => (
-              <div
-                key={c.id}
-                id={`com-item-${c.id}`}
-                className={`sa-user-item${c.id === comNavId ? " foco-teclado" : ""}`}
-                onClick={() => setComNavId(c.id)}
-              >
-                <div className="com-item-info">
-                  <div className="com-item-topo">
-                    <span className={`sa-badge ${c.ativo ? "sa-badge-ativo" : "sa-badge-inativo"}`}>
-                      {c.ativo ? "Ativo" : "Inativo"}
-                    </span>
-                    <span className="com-item-titulo">{c.titulo}</span>
-                    <span className="com-alvo-chip" title={alvoTitle(c)}>{alvoResumo(c)}</span>
-                  </div>
-                  <div className="com-item-mensagem">{c.mensagem}</div>
-                  <div className="com-item-formatos">
-                    {(c.formatos || []).map(f => (
-                      <span key={f.tipo} className="com-formato-chip">
-                        {formatoIcone(f.tipo)} {formatoLabel(f.tipo)}
+            listaExibida.map(c => {
+              const agenda = agendaChip(c);
+              return (
+                <div
+                  key={c.id}
+                  id={`com-item-${c.id}`}
+                  className={`sa-user-item${c.id === comNavId ? " foco-teclado" : ""}`}
+                  onClick={() => setComNavId(c.id)}
+                >
+                  <div className="com-item-info">
+                    <div className="com-item-topo">
+                      {c.imagem_url && (
+                        <img className="com-item-thumb" src={c.imagem_url} alt="" />
+                      )}
+                      <span className={`sa-badge ${c.ativo ? "sa-badge-ativo" : "sa-badge-inativo"}`}>
+                        {c.ativo ? "Ativo" : "Inativo"}
                       </span>
-                    ))}
+                      <span className="com-item-titulo">{c.titulo}</span>
+                      <span className="com-alvo-chip" title={alvoTitle(c)}>{alvoResumo(c)}</span>
+                      {agenda && <span className={`com-agenda-chip ${agenda.classe}`}>{agenda.texto}</span>}
+                    </div>
+                    <div className="com-item-mensagem">{c.mensagem}</div>
+                    <div className="com-item-formatos">
+                      {(c.formatos || []).map(f => (
+                        <span key={f.tipo} className="com-formato-chip">
+                          {formatoIcone(f.tipo)} {formatoLabel(f.tipo)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="com-item-meta">
+                      Criado por {c.criado_por_nome || "—"} em {formatarDataHora(c.criado_em)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirEditar(c)}>
+                      ✏️ Editar
+                    </button>
+                    <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => alternarAtivo(c)}>
+                      {c.ativo ? "⏸ Desativar" : "▶️ Ativar"}
+                    </button>
+                    <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => excluir(c.id, c.titulo)}>
+                      🗑 Excluir
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirEditar(c)}>
-                    ✏️ Editar
-                  </button>
-                  <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => alternarAtivo(c)}>
-                    {c.ativo ? "⏸ Desativar" : "▶️ Ativar"}
-                  </button>
-                  <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => excluir(c.id, c.titulo)}>
-                    🗑 Excluir
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -349,6 +608,11 @@ export default function Comunicados() {
               <div className="sa-modal-subtitle">
                 Escolha pelo menos um formato de exibição pra este comunicado — pode combinar mais de um.
               </div>
+              {editandoId && (
+                <div className="com-meta-modal">
+                  Criado por <strong>{form.criadoPorNome || "—"}</strong> em {formatarDataHora(form.criadoEm)}
+                </div>
+              )}
               {erroModal && (
                 <div style={{ background: "var(--bg-danger)", color: "var(--text-danger)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: "0.85rem", fontWeight: 500, marginBottom: 16 }}>
                   ⚠️ {erroModal}
@@ -364,15 +628,89 @@ export default function Comunicados() {
                     onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
                   />
                 </div>
+
                 <div className="sa-form-group">
                   <label className="sa-label">Mensagem</label>
-                  <textarea
-                    maxLength={3000} rows={4} className="sa-input"
-                    placeholder="Ex: No dia 20/09, das 2h às 4h, o sistema ficará indisponível para manutenção."
-                    value={form.mensagem}
-                    onChange={e => setForm(p => ({ ...p, mensagem: e.target.value }))}
+                  <div className="com-editor-toolbar">
+                    <button
+                      type="button" className="com-editor-btn"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => aplicarFormato("bold")}
+                      title="Negrito"
+                    ><b>B</b></button>
+                    <button
+                      type="button" className="com-editor-btn"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => aplicarFormato("italic")}
+                      title="Itálico"
+                    ><i>I</i></button>
+                    <span className="com-editor-separador" />
+                    <input
+                      type="color" className="com-editor-cor" title="Cor do texto"
+                      defaultValue="#1a1a1a"
+                      onMouseDown={salvarSelecao}
+                      onChange={e => aplicarFormato("foreColor", e.target.value)}
+                    />
+                    <select
+                      className="com-editor-fonte" title="Fonte" defaultValue=""
+                      onMouseDown={salvarSelecao}
+                      onChange={e => {
+                        if (e.target.value) aplicarFormato("fontName", e.target.value);
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">Fonte…</option>
+                      {FONTES_DISPONIVEIS.map(f => (
+                        <option key={f.valor} value={f.valor}>{f.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    ref={editorRef}
+                    className="com-editor-conteudo"
+                    contentEditable
+                    data-placeholder="Ex: No dia 20/09, das 2h às 4h, o sistema ficará indisponível para manutenção."
+                    onInput={aoDigitarMensagem}
+                    onPaste={aoColarMensagem}
+                    onMouseUp={salvarSelecao}
+                    onKeyUp={salvarSelecao}
                   />
                 </div>
+
+                <div className="sa-form-group">
+                  <label className="sa-label">Imagem (opcional)</label>
+                  <div className="com-imagem-area">
+                    {(imagemPreviewLocal || form.imagem_url) ? (
+                      <img className="com-imagem-preview" src={imagemPreviewLocal || form.imagem_url} alt="Prévia" />
+                    ) : (
+                      <div className="com-imagem-vazio">🖼️</div>
+                    )}
+                    <div className="com-imagem-botoes">
+                      <button
+                        type="button" className="sa-btn sa-btn-ghost sa-btn-sm"
+                        onClick={() => inputImagemRef.current?.click()}
+                        disabled={enviandoImagem}
+                      >
+                        {enviandoImagem ? "⏳ Enviando…" : (form.imagem_url || imagemPreviewLocal ? "🔁 Trocar imagem" : "📎 Escolher imagem")}
+                      </button>
+                      {(form.imagem_url || imagemPreviewLocal) && (
+                        <button
+                          type="button" className="sa-btn sa-btn-ghost sa-btn-sm"
+                          onClick={removerImagem}
+                          disabled={enviandoImagem}
+                        >
+                          🗑 Remover imagem
+                        </button>
+                      )}
+                      <input
+                        ref={inputImagemRef} type="file" accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={aoSelecionarImagem}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="sa-form-group">
                   <label className="sa-label">Formatos de exibição</label>
                   <div className="com-formatos-opcoes">
@@ -389,6 +727,31 @@ export default function Comunicados() {
                         </span>
                       </label>
                     ))}
+                  </div>
+                </div>
+
+                <div className="sa-form-group">
+                  <label className="sa-label">Agendamento automático (opcional)</label>
+                  <div className="com-datas-linha">
+                    <div className="sa-form-group">
+                      <label className="sa-label" style={{ fontWeight: 400, fontSize: "0.78rem" }}>Aparece a partir de</label>
+                      <input
+                        type="datetime-local" className="sa-input"
+                        value={form.data_inicio}
+                        onChange={e => setForm(p => ({ ...p, data_inicio: e.target.value }))}
+                      />
+                    </div>
+                    <div className="sa-form-group">
+                      <label className="sa-label" style={{ fontWeight: 400, fontSize: "0.78rem" }}>Some automaticamente em</label>
+                      <input
+                        type="datetime-local" className="sa-input"
+                        value={form.data_fim}
+                        onChange={e => setForm(p => ({ ...p, data_fim: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="com-datas-dica">
+                    Deixe em branco pra valer desde já e não expirar sozinho — ative/desative manualmente quando quiser.
                   </div>
                 </div>
 
@@ -464,6 +827,32 @@ export default function Comunicados() {
                           {form.estabelecimento_ids.length} selecionado{form.estabelecimento_ids.length === 1 ? "" : "s"}
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="sa-form-group">
+                  <button
+                    type="button" className="sa-btn sa-btn-ghost sa-btn-sm"
+                    onClick={() => setMostrarPreview(v => !v)}
+                  >
+                    {mostrarPreview ? "🙈 Esconder prévia" : "👁️ Ver como vai aparecer pro comerciante"}
+                  </button>
+                  {mostrarPreview && (
+                    <div className="com-preview-caixa" style={{ marginTop: 10 }}>
+                      <div className="com-preview-legenda">Prévia</div>
+                      <div className="com-preview-card">
+                        {(imagemPreviewLocal || form.imagem_url) && (
+                          <img src={imagemPreviewLocal || form.imagem_url} alt="" />
+                        )}
+                        <div className="com-preview-titulo">{form.titulo || "Título do comunicado"}</div>
+                        <div
+                          className="com-preview-mensagem"
+                          dangerouslySetInnerHTML={{
+                            __html: form.mensagem_html || (form.mensagem || "Mensagem do comunicado...").replace(/\n/g, "<br>"),
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

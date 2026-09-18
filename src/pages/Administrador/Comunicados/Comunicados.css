@@ -24,6 +24,15 @@
   color: var(--text-primary);
 }
 
+.com-item-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
 .com-item-mensagem {
   font-size: 0.82rem;
   color: var(--text-secondary);
@@ -113,9 +122,28 @@
   border: 1px solid var(--border);
 }
 
-/* ── Modal de criar/editar um pouco mais largo (tem seletor de alvo) ── */
+/* ── Modal de criar/editar um pouco mais largo (tem seletor de alvo) ──
+   Também limita a altura e rola o conteúdo: com a sub-seleção de tipos
+   ou a lista de estabelecimentos abertas, o card facilmente passa da
+   altura da viewport — sem isso os botões Criar/Cancelar ficavam fora
+   da tela (bug reportado em 18/09). */
 .com-modal-largo {
   max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.com-modal-largo .sa-modal-form {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.com-modal-largo .sa-modal-actions {
+  flex-shrink: 0;
+  padding-top: 14px;
 }
 
 /* ── Sub-seleção que aparece dentro da opção de alvo escolhida ───── */
@@ -216,6 +244,260 @@
   white-space: nowrap;
 }
 
+/* ── Abas (Ativos / Histórico) ────────────────────────────────────── */
+.com-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.com-tab {
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.com-tab:hover { color: var(--text-primary); }
+
+.com-tab.ativa {
+  color: var(--text-accent);
+  border-bottom-color: var(--text-accent);
+}
+
+/* ── Meta de criação (autor / data) na listagem e no modal ────────── */
+.com-item-meta {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.com-meta-modal {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+/* ── Chip de agendamento / expirado na listagem ───────────────────── */
+.com-agenda-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.com-agenda-chip.expirado {
+  background: var(--bg-danger);
+  color: var(--text-danger);
+  border-color: rgba(239,68,68,0.2);
+}
+
+.com-agenda-chip.agendado {
+  background: var(--bg-purple, rgba(139,92,246,0.12));
+  color: var(--text-accent);
+  border-color: var(--border-accent);
+}
+
+/* ── Linha de datas (agendamento automático) ──────────────────────── */
+.com-datas-linha {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.com-datas-linha .sa-form-group { flex: 1; min-width: 180px; }
+
+.com-datas-dica {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ── Editor de texto rico (toolbar simples) ───────────────────────── */
+.com-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: var(--bg-hover);
+}
+
+.com-editor-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.com-editor-btn:hover { background: var(--bg-card); border-color: var(--border); }
+
+.com-editor-btn.ativo {
+  background: var(--bg-card);
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+}
+
+.com-editor-cor {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  background: none;
+}
+
+.com-editor-fonte {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  padding: 0 6px;
+}
+
+.com-editor-separador {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.com-editor-conteudo {
+  min-height: 100px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  background: var(--bg-input, transparent);
+  line-height: 1.5;
+}
+
+.com-editor-conteudo:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.com-editor-conteudo:focus {
+  outline: none;
+  border-color: var(--border-accent);
+}
+
+/* ── Upload de imagem ─────────────────────────────────────────────── */
+.com-imagem-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.com-imagem-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+}
+
+.com-imagem-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.com-imagem-vazio {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  flex-shrink: 0;
+}
+
+/* ── Botão "ver prévia" e o preview em si (imita o card do comerciante) ── */
+.com-preview-caixa {
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--bg-hover);
+}
+
+.com-preview-legenda {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 10px;
+}
+
+.com-preview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow-modal);
+  max-width: 360px;
+}
+
+.com-preview-card img {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.com-preview-titulo {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.com-preview-mensagem {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 @media (max-width: 700px) {
   .sa-user-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .com-datas-linha { flex-direction: column; }
 }
