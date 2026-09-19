@@ -390,8 +390,7 @@
 .com-data-limpar:hover { background: var(--bg-danger); color: var(--text-danger); border-color: rgba(239,68,68,0.3); }
 
 /* ── Resumo do agendamento — confirmação visual ao vivo de que a data/
-   hora escolhida realmente "pegou", sem precisar de um botão de
-   confirmar separado (que duplicaria o Salvar geral do modal) ────── */
+   hora escolhida realmente "pegou" ────────────────────────────────── */
 .com-datas-resumo {
   margin-top: 8px;
   font-size: 0.8rem;
@@ -400,7 +399,67 @@
   background: var(--bg-purple, rgba(139,92,246,0.1));
   border-radius: 8px;
   padding: 6px 10px;
+  transition: background 0.2s, color 0.2s;
 }
+
+/* Pulso rápido no resumo quando o usuário clica em "Confirmar data e
+   hora" logo abaixo — os campos já são estado vivo (não precisam de um
+   botão pra "salvar" de fato), mas o usuário pediu uma confirmação mais
+   explícita, então o botão tira o foco do campo (fecha o seletor nativo
+   de data/hora) e pisca essa cor por um instante. */
+.com-datas-resumo-pulse {
+  background: var(--bg-success, rgba(34,197,94,0.16));
+  color: var(--text-success, #22c55e);
+}
+
+.com-data-confirmar {
+  margin-top: 8px;
+  width: 100%;
+  padding: 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border-accent);
+  background: var(--bg-purple, rgba(139,92,246,0.1));
+  color: var(--text-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.com-data-confirmar:hover { background: var(--bg-purple-hover, rgba(139,92,246,0.2)); }
+.com-data-confirmar:active { transform: scale(0.98); }
+
+/* ── Filtro por período na aba Histórico ──────────────────────────── */
+.com-historico-filtro {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: -6px 0 14px;
+}
+
+.com-historico-filtro-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.com-historico-filtro-campo .sa-input { padding: 7px 10px; font-size: 0.85rem; }
+
+.com-historico-filtro-limpar {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.com-historico-filtro-limpar:hover { background: var(--bg-danger); color: var(--text-danger); border-color: rgba(239,68,68,0.3); }
 
 /* ── Editor de texto rico (toolbar simples) ───────────────────────── */
 .com-editor-toolbar {

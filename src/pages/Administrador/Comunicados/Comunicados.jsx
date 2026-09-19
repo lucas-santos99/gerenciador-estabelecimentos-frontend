@@ -148,6 +148,18 @@ export default function Comunicados() {
   const [erroModal,   setErroModal]   = useState("");
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [zoom, setZoom] = useState(1);
+  // Feedback visual do botão "Confirmar data e hora" — os campos já são
+  // estado vivo (salvos de verdade só quando o modal inteiro é salvo),
+  // então esse botão não muda dado nenhum: só tira o foco do campo
+  // (fecha o seletor nativo de data/hora do navegador) e pisca um "✓
+  // Confirmado" por um instante, dando a confirmação visual pedida.
+  const [dataConfirmadaPulse, setDataConfirmadaPulse] = useState(false);
+
+  // Filtro por período na aba Histórico — "de" / "até", comparando com
+  // `criado_em` (data de cadastro do comunicado). Vazio = sem filtro
+  // (mostra tudo, comportamento de antes).
+  const [historicoFiltroDe,  setHistoricoFiltroDe]  = useState("");
+  const [historicoFiltroAte, setHistoricoFiltroAte] = useState("");
 
   // Imagem: enquanto o comunicado ainda não existe (criação), o arquivo
   // fica pendente em memória e só sobe depois que o Salvar devolve o id.
@@ -572,7 +584,27 @@ export default function Comunicados() {
     return null;
   }
 
-  const listaExibida = abaAtiva === "ativos" ? lista.filter(estaVigente) : lista;
+  // Data de criação em "YYYY-MM-DD" no fuso do próprio dispositivo — é só
+  // um filtro de navegação pro SuperAdmin folhear o histórico, não uma
+  // decisão de negócio que precise do fuso oficial de um estabelecimento
+  // (mesma exceção já registrada na convenção de fuso horário do projeto).
+  function paraDataLocal(iso) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const listaExibida = (() => {
+    let base = abaAtiva === "ativos" ? lista.filter(estaVigente) : lista;
+    if (abaAtiva === "historico" && (historicoFiltroDe || historicoFiltroAte)) {
+      base = base.filter(c => {
+        const dataCriacao = paraDataLocal(c.criado_em);
+        if (historicoFiltroDe && dataCriacao < historicoFiltroDe) return false;
+        if (historicoFiltroAte && dataCriacao > historicoFiltroAte) return false;
+        return true;
+      });
+    }
+    return base;
+  })();
 
   function handleListaKeyDown(e) {
     if (modalAberto) return;
@@ -666,6 +698,35 @@ export default function Comunicados() {
             🕒 Histórico completo
           </button>
         </div>
+
+        {abaAtiva === "historico" && (
+          <div className="com-historico-filtro">
+            <label className="com-historico-filtro-campo">
+              <span>De</span>
+              <input
+                type="date" className="sa-input"
+                value={historicoFiltroDe}
+                onChange={e => setHistoricoFiltroDe(e.target.value)}
+              />
+            </label>
+            <label className="com-historico-filtro-campo">
+              <span>Até</span>
+              <input
+                type="date" className="sa-input"
+                value={historicoFiltroAte}
+                onChange={e => setHistoricoFiltroAte(e.target.value)}
+              />
+            </label>
+            {(historicoFiltroDe || historicoFiltroAte) && (
+              <button
+                type="button" className="com-historico-filtro-limpar"
+                onClick={() => { setHistoricoFiltroDe(""); setHistoricoFiltroAte(""); }}
+              >
+                ✕ Limpar filtro
+              </button>
+            )}
+          </div>
+        )}
 
         <div
           className="sa-list-box"
@@ -996,9 +1057,21 @@ export default function Comunicados() {
                       </div>
                     </div>
                   </div>
-                  <div className="com-datas-resumo">
+                  <div className={`com-datas-resumo${dataConfirmadaPulse ? " com-datas-resumo-pulse" : ""}`}>
                     ✓ {resumoAgendamento(form.data_inicio, form.data_fim)}
                   </div>
+                  <button
+                    type="button"
+                    className="com-data-confirmar"
+                    title="A data já fica salva no formulário assim que você digita — este botão só fecha o seletor e confirma visualmente"
+                    onClick={() => {
+                      document.activeElement?.blur();
+                      setDataConfirmadaPulse(true);
+                      setTimeout(() => setDataConfirmadaPulse(false), 1200);
+                    }}
+                  >
+                    ✓ Confirmar data e hora
+                  </button>
                 </div>
 
                 <div className="sa-form-group">
