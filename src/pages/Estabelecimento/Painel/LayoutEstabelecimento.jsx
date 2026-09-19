@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Painel/LayoutEstabelecimento.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
@@ -305,22 +305,88 @@ export default function LayoutEstabelecimento({
     setZoomComunicado(1);
   }, [comunicadosModal[0]?.id]);
 
+  // Comunicado "fixo" expandido pra tela grande — clicar num card do
+  // canto abre a mesma versão ampliada do modal bloqueante, só que sob
+  // demanda (o usuário decide ver, não é forçado) — fecha por X, Esc ou
+  // clicando fora, sem exigir "Ok, entendi" de novo (o comunicado já
+  // estava marcado como visto quando apareceu o card fixo).
+  const [comunicadoExpandido, setComunicadoExpandido] = useState(null);
+  const [zoomExpandido, setZoomExpandido] = useState(1);
+  useEffect(() => {
+    setZoomExpandido(1);
+  }, [comunicadoExpandido?.id]);
+  useEffect(() => {
+    if (!comunicadoExpandido) return;
+    function onKey(e) { if (e.key === 'Escape') setComunicadoExpandido(null); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [comunicadoExpandido]);
+
+  // Marcados como vistos NESTA sessão do painel (id:formato) — evita que
+  // o polling abaixo faça um comunicado "sempre"/"quantidade" reaparecer
+  // segundos depois de dispensado só porque o backend ainda concorda que
+  // ele "deve aparecer de novo" (frequência conta por LOGIN, não por
+  // poll). Só some de vez quando o próprio backend para de devolvê-lo
+  // (desativado, expirou, ou "uma_vez" já visto).
+  const comunicadosVistosSessaoRef = useRef(new Set());
+
+  // Busca os comunicados ativos e sincroniza os dois formatos. Chamada
+  // ao montar e em polling (abaixo) — assim um comunicado novo cadastrado
+  // pelo SuperAdmin aparece sozinho pro comerciante/operador que já está
+  // com o painel aberto, sem precisar dar F5. Também remove da tela um
+  // comunicado que o backend parou de devolver (desativado/expirado).
+  const buscarComunicados = useCallback(async () => {
+    if (!estabelecimentoId) return;
+    try {
+      const resp = await apiFetch('/api/comunicados/ativos');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const idsValidos = new Set(data.map(c => c.id));
+      const vistos = comunicadosVistosSessaoRef.current;
+
+      setComunicadosModal(prev => {
+        const restantes = prev.filter(c => idsValidos.has(c.id));
+        const idsRestantes = new Set(restantes.map(c => c.id));
+        const novos = data.filter(c =>
+          c.formatos.some(f => f.tipo === 'modal') &&
+          !idsRestantes.has(c.id) &&
+          !vistos.has(`${c.id}:modal`)
+        );
+        return novos.length ? [...restantes, ...novos] : restantes;
+      });
+
+      setComunicadosFixos(prev => {
+        const restantes = prev.filter(c => idsValidos.has(c.id));
+        const idsRestantes = new Set(restantes.map(c => c.id));
+        const novos = data.filter(c =>
+          c.formatos.some(f => f.tipo === 'fixo') &&
+          !idsRestantes.has(c.id) &&
+          !vistos.has(`${c.id}:fixo`)
+        );
+        return novos.length ? [...restantes, ...novos] : restantes;
+      });
+
+      // Se o comunicado expandido na hora sumiu do backend (desativado
+      // enquanto estava aberto), fecha a visão ampliada sozinho.
+      setComunicadoExpandido(atual => (atual && !idsValidos.has(atual.id)) ? null : atual);
+    } catch { /* silencioso — o próximo polling tenta de novo */ }
+  }, [estabelecimentoId]);
+
+  useEffect(() => { buscarComunicados(); }, [buscarComunicados]);
+
+  // Polling a cada 20s — mesma ideia já usada acima pras notificações de
+  // solicitação (30s): sem isso, um comunicado só apareceria no próximo
+  // F5/login, o que o usuário pediu explicitamente pra não precisar fazer.
   useEffect(() => {
     if (!estabelecimentoId) return;
-    (async () => {
-      try {
-        const resp = await apiFetch('/api/comunicados/ativos');
-        if (!resp.ok) return;
-        const data = await resp.json();
-        setComunicadosModal(data.filter(c => c.formatos.some(f => f.tipo === 'modal')));
-        setComunicadosFixos(data.filter(c => c.formatos.some(f => f.tipo === 'fixo')));
-      } catch { /* aviso não é crítico pro painel carregar */ }
-    })();
-  }, [estabelecimentoId]);
+    const id = setInterval(buscarComunicados, 20000);
+    return () => clearInterval(id);
+  }, [estabelecimentoId, buscarComunicados]);
 
   async function confirmarComunicadoModal() {
     const atual = comunicadosModal[0];
     if (!atual) return;
+    comunicadosVistosSessaoRef.current.add(`${atual.id}:modal`);
     setComunicadosModal(prev => prev.slice(1));
     try {
       await apiFetch(`/api/comunicados/${atual.id}/marcar-visto`, {
@@ -331,6 +397,7 @@ export default function LayoutEstabelecimento({
   }
 
   async function fecharComunicadoFixo(id) {
+    comunicadosVistosSessaoRef.current.add(`${id}:fixo`);
     setComunicadosFixos(prev => prev.filter(c => c.id !== id));
     try {
       await apiFetch(`/api/comunicados/${id}/marcar-visto`, {
@@ -744,13 +811,24 @@ export default function LayoutEstabelecimento({
       )}
 
       {/* ── COMUNICADOS — CARDS FIXOS (canto da tela) ──────── */}
+      {/* Clicar no corpo do card (fora do X) abre a versão ampliada —
+          `stopPropagation` no botão de fechar pra um clique nele não
+          disparar também a expansão. */}
       {comunicadosFixos.length > 0 && (
         <div className="est-comunicados-fixos">
           {comunicadosFixos.map(c => (
-            <div key={c.id} className="est-comunicado-fixo-card">
+            <div
+              key={c.id}
+              className="est-comunicado-fixo-card"
+              onClick={() => setComunicadoExpandido(c)}
+              role="button"
+              tabIndex={0}
+              title="Clique para ver ampliado"
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setComunicadoExpandido(c); } }}
+            >
               <button
                 className="est-comunicado-fixo-fechar"
-                onClick={() => fecharComunicadoFixo(c.id)}
+                onClick={e => { e.stopPropagation(); fecharComunicadoFixo(c.id); }}
                 aria-label="Fechar aviso"
                 title="Fechar"
               >
@@ -774,8 +852,65 @@ export default function LayoutEstabelecimento({
               ) : (
                 <div className="est-comunicado-fixo-mensagem">{c.mensagem}</div>
               )}
+              <div className="est-comunicado-fixo-ampliar-dica">🔍 Toque para ampliar</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── COMUNICADO FIXO — VERSÃO AMPLIADA (sob demanda) ── */}
+      {/* Mesma cara do modal bloqueante (reaproveita .est-modal-comunicado
+          e o controle de zoom), mas aqui fecha fácil — clique fora, Esc
+          ou X — porque foi o próprio usuário quem pediu pra ampliar, não
+          é um aviso que precisa ser confirmado. */}
+      {comunicadoExpandido && (
+        <div className="est-modal-overlay" onClick={() => setComunicadoExpandido(null)}>
+          <div className="est-modal est-modal-comunicado" onClick={e => e.stopPropagation()}>
+            <div className="est-zoom-controle">
+              <button
+                type="button" className="est-zoom-btn" title="Diminuir zoom"
+                onClick={() => setZoomExpandido(z => Math.max(0.8, +(z - 0.1).toFixed(1)))}
+              >−</button>
+              <span className="est-zoom-valor">{Math.round(zoomExpandido * 100)}%</span>
+              <button
+                type="button" className="est-zoom-btn" title="Aumentar zoom"
+                onClick={() => setZoomExpandido(z => Math.min(1.6, +(z + 0.1).toFixed(1)))}
+              >+</button>
+              <button
+                type="button" className="est-zoom-btn est-comunicado-expandido-x" title="Fechar"
+                onClick={() => setComunicadoExpandido(null)}
+              >✕</button>
+            </div>
+            <div className="est-modal-corpo" style={{ zoom: zoomExpandido }}>
+              <span className="est-modal-icon">📣</span>
+              {comunicadoExpandido.titulo_html ? (
+                <div
+                  className="est-modal-title"
+                  dangerouslySetInnerHTML={{ __html: comunicadoExpandido.titulo_html }}
+                />
+              ) : (
+                <div className="est-modal-title">{comunicadoExpandido.titulo}</div>
+              )}
+              {comunicadoExpandido.imagem_url && (
+                <img className="est-comunicado-imagem" src={comunicadoExpandido.imagem_url} alt="" />
+              )}
+              {comunicadoExpandido.mensagem_html ? (
+                <div
+                  className="est-modal-desc"
+                  dangerouslySetInnerHTML={{ __html: comunicadoExpandido.mensagem_html }}
+                />
+              ) : (
+                <div className="est-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                  {comunicadoExpandido.mensagem}
+                </div>
+              )}
+            </div>
+            <div className="est-modal-actions">
+              <button className="est-modal-confirm est-modal-confirm--info" onClick={() => setComunicadoExpandido(null)}>
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
