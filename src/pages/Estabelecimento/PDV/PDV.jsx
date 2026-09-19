@@ -2567,12 +2567,20 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         // Enter normal do usuário
         barcodeBufferRef.current = '';
         if (buscaIndex > -1 && resultados[buscaIndex]) selecionarProduto(resultados[buscaIndex]);
-        // Busca vazia com carrinho cheio: em vez de pular pro botão
-        // Finalizar, o foco avança pro carrinho (último item — o que
-        // acabou de ser adicionado), pra continuar 100% por teclado
-        // (setas navegam, Delete abre a exclusão). F10/F2 continua sendo
-        // o atalho pra ir direto pro pagamento.
-        else if (!termoBusca.trim() && carrinho.length > 0) focarItemCarrinho(carrinho.length - 1);
+        // Busca vazia com carrinho cheio: o primeiro Enter leva o foco pro
+        // carrinho (último item — o que acabou de ser adicionado), pra
+        // continuar 100% por teclado (setas navegam, Delete abre a
+        // exclusão). Um SEGUNDO Enter, já com o foco no carrinho, finaliza
+        // a venda — mesmo comportamento de antes da navegação por teclado
+        // no carrinho existir, só que agora dando um passo a mais quando
+        // faz sentido revisar o carrinho primeiro. `btnFinalizarRef.click()`
+        // (em vez de chamar `setShowPagamento` direto) respeita sozinho o
+        // `disabled` do botão (sem permissão/carrinho vazio/venda em
+        // andamento) — um botão desabilitado não dispara clique.
+        else if (!termoBusca.trim() && carrinho.length > 0) {
+          if (carrinhoFoco !== -1) btnFinalizarRef.current?.click();
+          else focarItemCarrinho(carrinho.length - 1);
+        }
       }
       return;
     }
