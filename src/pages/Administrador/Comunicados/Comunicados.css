@@ -364,6 +364,44 @@
   margin-top: 4px;
 }
 
+/* ── Campo de data com botão de limpar ao lado (fora do input, de
+   propósito — sobrepor um "x" customizado em cima do datetime-local
+   colidiria com o ícone nativo de limpar/calendário do navegador) ── */
+.com-data-com-limpar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.com-data-com-limpar .sa-input { flex: 1; min-width: 0; }
+
+.com-data-limpar {
+  flex-shrink: 0;
+  width: 30px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.com-data-limpar:hover { background: var(--bg-danger); color: var(--text-danger); border-color: rgba(239,68,68,0.3); }
+
+/* ── Resumo do agendamento — confirmação visual ao vivo de que a data/
+   hora escolhida realmente "pegou", sem precisar de um botão de
+   confirmar separado (que duplicaria o Salvar geral do modal) ────── */
+.com-datas-resumo {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-accent);
+  background: var(--bg-purple, rgba(139,92,246,0.1));
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
 /* ── Editor de texto rico (toolbar simples) ───────────────────────── */
 .com-editor-toolbar {
   display: flex;
@@ -468,10 +506,14 @@
 }
 
 .com-imagem-preview {
-  width: 84px;
-  height: 84px;
+  /* Maior que antes (era 84x84) e object-fit:contain (era cover) — o
+     admin precisa ver a imagem INTEIRA como ela realmente é, sem um
+     corte que não vai acontecer de verdade na tela do comerciante
+     (lá ela também não é cortada, ver .est-comunicado-imagem). */
+  width: 140px;
+  height: 140px;
   border-radius: 10px;
-  object-fit: cover;
+  object-fit: contain;
   border: 1px solid var(--border);
   background: var(--bg-hover);
 }
@@ -483,8 +525,8 @@
 }
 
 .com-imagem-vazio {
-  width: 84px;
-  height: 84px;
+  width: 140px;
+  height: 140px;
   border-radius: 10px;
   border: 1px dashed var(--border);
   display: flex;
@@ -514,12 +556,16 @@
 }
 
 .com-preview-card {
+  /* Sem max-width fixo (era 360px, bem menor que o modal real do
+     comerciante — que hoje chega a ~1000px) — agora ocupa toda a
+     largura disponível dentro deste modal de criar/editar, que é o
+     limite físico real de quanto dá pra mostrar aqui. */
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
   box-shadow: var(--shadow-modal);
-  max-width: 360px;
+  width: 100%;
 }
 
 .com-preview-card img {

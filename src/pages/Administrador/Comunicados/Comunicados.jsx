@@ -75,10 +75,19 @@ const ZOOM_MIN = 0.8;
 const ZOOM_MAX = 1.6;
 const ZOOM_PASSO = 0.1;
 
+// Frequência de exibição pro comerciante/operador — controla quantas
+// vezes o mesmo aviso reaparece antes de parar (ou se nunca para).
+const FREQUENCIA_OPCOES = [
+  { tipo: "uma_vez",    icone: "1️⃣", label: "Mostrar 1 vez", desc: "Depois que o comerciante/operador fechar (ou confirmar o modal), não aparece de novo." },
+  { tipo: "quantidade", icone: "🔁", label: "Mostrar algumas vezes", desc: "Aparece de novo a cada login até bater a quantidade escolhida — aí some sozinho." },
+  { tipo: "sempre",     icone: "♾️", label: "Mostrar sempre que logar", desc: "Aparece em todo login, mesmo depois de fechado — só some desativando ou pela data de término." },
+];
+
 const FORM_VAZIO = {
   titulo: "", titulo_html: "", mensagem: "", mensagem_html: "", formatos: [], ativo: true,
   alvo_tipo: "todos", alvo_tipos_estabelecimento: [], estabelecimento_ids: [],
   imagem_url: null, data_inicio: "", data_fim: "",
+  frequencia_tipo: "uma_vez", frequencia_quantidade: "",
   criadoPorNome: null, criadoEm: null,
 };
 
@@ -102,6 +111,23 @@ function formatarDataHora(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
   return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
+// Resumo em texto do agendamento configurado — atualiza ao vivo enquanto
+// o SuperAdmin mexe nos campos, servindo de confirmação visual de que a
+// data/hora escolhida realmente "pegou" (sem precisar de um botão de
+// confirmar separado, que ficaria redundante com o Salvar geral do modal).
+function resumoAgendamento(dataInicioLocal, dataFimLocal) {
+  const fmt = v => {
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  };
+  const inicio = fmt(dataInicioLocal);
+  const fim = fmt(dataFimLocal);
+  if (!inicio && !fim) return "Sem agendamento — vale a partir de agora e não desaparece sozinho.";
+  if (inicio && fim)   return `Vai aparecer de ${inicio} até ${fim}.`;
+  if (inicio)          return `Vai aparecer a partir de ${inicio}, sem data pra sumir sozinho.`;
+  return `Vai aparecer desde já, até ${fim}.`;
 }
 
 export default function Comunicados() {
@@ -226,6 +252,8 @@ export default function Comunicados() {
       imagem_url: c.imagem_url || null,
       data_inicio: isoParaInputLocal(c.data_inicio),
       data_fim: isoParaInputLocal(c.data_fim),
+      frequencia_tipo: c.frequencia_tipo || "uma_vez",
+      frequencia_quantidade: c.frequencia_quantidade != null ? String(c.frequencia_quantidade) : "",
       criadoPorNome: c.criado_por_nome || null,
       criadoEm: c.criado_em || null,
     });
@@ -437,6 +465,13 @@ export default function Comunicados() {
       setErroModal("A data de término deve ser depois da data de início.");
       return;
     }
+    if (form.frequencia_tipo === "quantidade") {
+      const n = Number(form.frequencia_quantidade);
+      if (!Number.isInteger(n) || n < 1) {
+        setErroModal("Informe quantas vezes o comunicado deve aparecer (mínimo 1).");
+        return;
+      }
+    }
 
     setSalvando(true);
     setErroModal("");
@@ -453,6 +488,8 @@ export default function Comunicados() {
         estabelecimento_ids: form.estabelecimento_ids,
         data_inicio: inputLocalParaIso(form.data_inicio),
         data_fim: inputLocalParaIso(form.data_fim),
+        frequencia_tipo: form.frequencia_tipo,
+        frequencia_quantidade: form.frequencia_tipo === "quantidade" ? Number(form.frequencia_quantidade) : null,
         ...(editandoId ? { imagem_url: form.imagem_url } : {}),
       };
       const resp = await apiFetch(
@@ -651,6 +688,7 @@ export default function Comunicados() {
           ) : (
             listaExibida.map(c => {
               const agenda = agendaChip(c);
+              const expirado = agenda?.classe === "expirado";
               return (
                 <div
                   key={c.id}
@@ -673,6 +711,12 @@ export default function Comunicados() {
                       )}
                       <span className="com-alvo-chip" title={alvoTitle(c)}>{alvoResumo(c)}</span>
                       {agenda && <span className={`com-agenda-chip ${agenda.classe}`}>{agenda.texto}</span>}
+                      {c.frequencia_tipo === "sempre" && (
+                        <span className="com-agenda-chip">♾️ Sempre que logar</span>
+                      )}
+                      {c.frequencia_tipo === "quantidade" && (
+                        <span className="com-agenda-chip">🔁 Até {c.frequencia_quantidade}x</span>
+                      )}
                     </div>
                     <div className="com-item-mensagem">{c.mensagem}</div>
                     <div className="com-item-formatos">
@@ -690,7 +734,12 @@ export default function Comunicados() {
                     <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirEditar(c)}>
                       ✏️ Editar
                     </button>
-                    <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => alternarAtivo(c)}>
+                    <button
+                      className="sa-btn sa-btn-ghost sa-btn-sm"
+                      onClick={() => alternarAtivo(c)}
+                      disabled={expirado}
+                      title={expirado ? "Esse comunicado já passou da data de término — ajuste a data em Editar se quiser que ele volte a aparecer." : undefined}
+                    >
                       {c.ativo ? "⏸ Desativar" : "▶️ Ativar"}
                     </button>
                     <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => excluir(c.id, c.titulo)}>
@@ -916,24 +965,70 @@ export default function Comunicados() {
                   <div className="com-datas-linha">
                     <div className="sa-form-group">
                       <label className="sa-label" style={{ fontWeight: 400, fontSize: "0.78rem" }}>Aparece a partir de</label>
-                      <input
-                        type="datetime-local" className="sa-input"
-                        value={form.data_inicio}
-                        onChange={e => setForm(p => ({ ...p, data_inicio: e.target.value }))}
-                      />
+                      <div className="com-data-com-limpar">
+                        <input
+                          type="datetime-local" className="sa-input"
+                          value={form.data_inicio}
+                          onChange={e => setForm(p => ({ ...p, data_inicio: e.target.value }))}
+                        />
+                        {form.data_inicio && (
+                          <button
+                            type="button" className="com-data-limpar" title="Limpar esta data"
+                            onClick={() => setForm(p => ({ ...p, data_inicio: "" }))}
+                          >✕</button>
+                        )}
+                      </div>
                     </div>
                     <div className="sa-form-group">
                       <label className="sa-label" style={{ fontWeight: 400, fontSize: "0.78rem" }}>Some automaticamente em</label>
-                      <input
-                        type="datetime-local" className="sa-input"
-                        value={form.data_fim}
-                        onChange={e => setForm(p => ({ ...p, data_fim: e.target.value }))}
-                      />
+                      <div className="com-data-com-limpar">
+                        <input
+                          type="datetime-local" className="sa-input"
+                          value={form.data_fim}
+                          onChange={e => setForm(p => ({ ...p, data_fim: e.target.value }))}
+                        />
+                        {form.data_fim && (
+                          <button
+                            type="button" className="com-data-limpar" title="Limpar esta data"
+                            onClick={() => setForm(p => ({ ...p, data_fim: "" }))}
+                          >✕</button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="com-datas-dica">
-                    Deixe em branco pra valer desde já e não expirar sozinho — ative/desative manualmente quando quiser.
+                  <div className="com-datas-resumo">
+                    ✓ {resumoAgendamento(form.data_inicio, form.data_fim)}
                   </div>
+                </div>
+
+                <div className="sa-form-group">
+                  <label className="sa-label">Com que frequência aparece pro mesmo comerciante/operador</label>
+                  <div className="com-formatos-opcoes">
+                    {FREQUENCIA_OPCOES.map(f => (
+                      <label key={f.tipo} className={`com-formato-opcao${form.frequencia_tipo === f.tipo ? " selecionado" : ""}`}>
+                        <input
+                          type="radio"
+                          name="frequencia_tipo"
+                          checked={form.frequencia_tipo === f.tipo}
+                          onChange={() => setForm(p => ({ ...p, frequencia_tipo: f.tipo }))}
+                        />
+                        <span className="com-formato-opcao-texto">
+                          <span className="com-formato-opcao-label">{f.icone} {f.label}</span>
+                          <span className="com-formato-opcao-desc">{f.desc}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {form.frequencia_tipo === "quantidade" && (
+                    <div className="com-alvo-subselecao">
+                      <label className="sa-label" style={{ fontWeight: 400, fontSize: "0.78rem" }}>Quantas vezes</label>
+                      <input
+                        type="number" min={1} max={99} className="sa-input" style={{ maxWidth: 120 }}
+                        value={form.frequencia_quantidade}
+                        onChange={e => setForm(p => ({ ...p, frequencia_quantidade: e.target.value }))}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="sa-form-group">
