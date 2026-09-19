@@ -148,12 +148,6 @@ export default function Comunicados() {
   const [erroModal,   setErroModal]   = useState("");
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [zoom, setZoom] = useState(1);
-  // Feedback visual do botão "Confirmar data e hora" — os campos já são
-  // estado vivo (salvos de verdade só quando o modal inteiro é salvo),
-  // então esse botão não muda dado nenhum: só tira o foco do campo
-  // (fecha o seletor nativo de data/hora do navegador) e pisca um "✓
-  // Confirmado" por um instante, dando a confirmação visual pedida.
-  const [dataConfirmadaPulse, setDataConfirmadaPulse] = useState(false);
 
   // Filtro por período na aba Histórico — "de" / "até", comparando com
   // `criado_em` (data de cadastro do comunicado). Vazio = sem filtro
@@ -1057,21 +1051,9 @@ export default function Comunicados() {
                       </div>
                     </div>
                   </div>
-                  <div className={`com-datas-resumo${dataConfirmadaPulse ? " com-datas-resumo-pulse" : ""}`}>
+                  <div className="com-datas-resumo">
                     ✓ {resumoAgendamento(form.data_inicio, form.data_fim)}
                   </div>
-                  <button
-                    type="button"
-                    className="com-data-confirmar"
-                    title="A data já fica salva no formulário assim que você digita — este botão só fecha o seletor e confirma visualmente"
-                    onClick={() => {
-                      document.activeElement?.blur();
-                      setDataConfirmadaPulse(true);
-                      setTimeout(() => setDataConfirmadaPulse(false), 1200);
-                    }}
-                  >
-                    ✓ Confirmar data e hora
-                  </button>
                 </div>
 
                 <div className="sa-form-group">
