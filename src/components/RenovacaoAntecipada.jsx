@@ -1,5 +1,5 @@
 // src/components/RenovacaoAntecipada.jsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../utils/api';
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from '../utils/fusoHorario';
 import './RenovacaoAntecipada.css';
@@ -24,6 +24,51 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
   const [erro,        setErro]        = useState("");
   const [pago,        setPago]        = useState(false);
   const [copiado,     setCopiado]     = useState(false);
+
+  // ── Notificação de canto de tela (junto com o banner acima) ─────────
+  // Igual em espírito ao card fixo de Comunicados: aparece sem precisar
+  // recarregar a página (poll de 20s) e, uma vez dispensada, não volta
+  // nessa mesma sessão mesmo que a frequência configurada seja "sempre"
+  // (isso significa "sempre que logar", não "sempre que o poll rodar").
+  const [notifEstado, setNotifEstado] = useState(null);
+  const notifDispensadaSessaoRef = useRef(false);
+  const [, forcarRenderNotif] = useState(0);
+
+  const buscarNotifEstado = useCallback(async () => {
+    try {
+      const resp = await apiFetch('/api/cobranca-notif/estado');
+      if (!resp.ok) { setNotifEstado(null); return; }
+      const data = await resp.json();
+      setNotifEstado(data?.deve_mostrar ? data : null);
+    } catch {
+      // silencioso — se der erro, simplesmente não mostra a notificação
+      // (o banner de renovação continua funcionando independente disso).
+    }
+  }, []);
+
+  useEffect(() => {
+    buscarNotifEstado();
+    const id = setInterval(buscarNotifEstado, 20000);
+    return () => clearInterval(id);
+  }, [buscarNotifEstado]);
+
+  async function marcarNotifVista() {
+    try { await apiFetch('/api/cobranca-notif/marcar-visto', { method: 'POST' }); } catch {}
+  }
+
+  function dispensarNotif(e) {
+    e?.stopPropagation();
+    notifDispensadaSessaoRef.current = true;
+    forcarRenderNotif(n => n + 1);
+    marcarNotifVista();
+  }
+
+  function abrirModalDaNotif() {
+    notifDispensadaSessaoRef.current = true;
+    forcarRenderNotif(n => n + 1);
+    marcarNotifVista();
+    abrirModal();
+  }
 
   useEffect(() => {
     apiFetch('/superadmin/config-cobranca')
@@ -200,6 +245,27 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
           💳 Renovar agora
         </button>
       </div>
+
+      {notifEstado && !notifDispensadaSessaoRef.current && (
+        <div className="renov-notif-canto" onClick={abrirModalDaNotif}>
+          <button
+            className="renov-notif-fechar"
+            onClick={dispensarNotif}
+            title="Dispensar"
+          >✕</button>
+          {notifEstado.imagem_url && (
+            <img src={notifEstado.imagem_url} alt="" className="renov-notif-imagem" />
+          )}
+          <div className="renov-notif-texto">
+            <strong>{notifEstado.titulo}</strong>
+            {notifEstado.mensagem_html ? (
+              <div className="renov-notif-mensagem" dangerouslySetInnerHTML={{ __html: notifEstado.mensagem_html }} />
+            ) : notifEstado.mensagem ? (
+              <p className="renov-notif-mensagem">{notifEstado.mensagem}</p>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {modalAberto && (
         <div className="renov-modal-overlay" onClick={() => !cobranca && setModalAberto(false)}>

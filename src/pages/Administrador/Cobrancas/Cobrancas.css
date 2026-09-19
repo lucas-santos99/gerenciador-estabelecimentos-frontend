@@ -391,3 +391,100 @@
   .cob-item { flex-wrap: wrap; }
   .cob-item-acoes { width: 100%; }
 }
+
+/* ── Notificação de cobrança no canto de tela (config) ───────── */
+.cob-config-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: calc(0.87rem * var(--cob-font-scale, 1));
+  color: var(--text-primary);
+  padding: 4px 0;
+}
+.cob-config-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--text-accent);
+}
+
+/* Editor de texto rico da mensagem — mesma mecânica visual do editor
+   de Comunicados.jsx, com classes próprias (cob-editor-*) porque CSS
+   não é compartilhado entre páginas neste projeto. */
+.cob-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: var(--bg-hover);
+}
+
+.cob-editor-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  transition: background 0.15s, border-color 0.15s;
+}
+.cob-editor-btn:hover { background: var(--bg-card); border-color: var(--border); }
+
+.cob-editor-cor {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  background: none;
+}
+
+.cob-editor-fonte {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  padding: 0 6px;
+}
+
+.cob-editor-separador {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.cob-editor-conteudo {
+  min-height: 100px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  background: var(--bg-input, transparent);
+  line-height: 1.5;
+}
+.cob-editor-conteudo:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+.cob-editor-conteudo:focus {
+  outline: none;
+  border-color: var(--border-accent);
+}

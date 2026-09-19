@@ -233,3 +233,87 @@
 .renov-sucesso-icone { font-size: 2.6rem; }
 .renov-modal-sucesso h3 { margin: 4px 0 0; color: var(--est-text); }
 .renov-modal-sucesso p { margin: 0; color: var(--est-text-soft); font-size: 0.85rem; }
+
+/* ── Notificação de cobrança no canto de tela ────────────────────────
+   Fica no canto INFERIOR ESQUERDO de propósito: o card fixo de
+   Comunicados (LayoutEstabelecimento.css: .est-comunicados-fixos) já
+   ocupa o canto inferior direito, então os dois nunca competem pelo
+   mesmo espaço quando aparecem juntos. */
+.renov-notif-canto {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 149;
+  width: min(340px, calc(100vw - 32px));
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border-accent);
+  border-radius: 14px;
+  padding: 14px 34px 14px 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  animation: renovNotifIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.renov-notif-canto:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+  border-color: var(--est-accent);
+}
+
+@keyframes renovNotifIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.renov-notif-fechar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--est-input);
+  color: var(--est-text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: background 0.15s, color 0.15s;
+}
+.renov-notif-fechar:hover { background: rgba(239,68,68,0.18); color: #ef4444; }
+
+.renov-notif-imagem {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.renov-notif-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.renov-notif-texto strong {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--est-text);
+}
+.renov-notif-mensagem {
+  font-size: 0.78rem;
+  color: var(--est-text-soft);
+  line-height: 1.45;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .renov-notif-canto { left: 10px; right: 10px; bottom: 10px; width: auto; }
+}

@@ -1,5 +1,5 @@
 // src/pages/Administrador/Cobrancas/Cobrancas.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
@@ -72,6 +72,19 @@ function interpolar(template, m, diff, pagamento) {
     .replaceAll("{link_pagamento}", blocoPagamento(pagamento));
 }
 
+// Fontes/tamanhos oferecidos no editor da mensagem da notificação de
+// canto de tela — mesmo mecanismo de Comunicados.jsx (execCommand),
+// reimplementado aqui em vez de importado, porque CSS/handlers desse
+// editor não são compartilhados entre páginas neste projeto.
+const NOTIF_FONTES_DISPONIVEIS = [
+  { valor: "inherit",              label: "Padrão" },
+  { valor: "Arial, sans-serif",    label: "Arial" },
+  { valor: "Georgia, serif",       label: "Georgia (serifa)" },
+  { valor: "'Courier New', monospace", label: "Monoespaçada" },
+  { valor: "Verdana, sans-serif",  label: "Verdana" },
+];
+const NOTIF_TAMANHOS_FONTE = [12, 14, 16, 18, 20, 24, 28, 32, 40];
+
 /* ═══════════════════════════════════════════════════════════ */
 export default function Cobrancas() {
   const navigate = useNavigate();
@@ -107,6 +120,54 @@ export default function Cobrancas() {
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [msgConfig,      setMsgConfig]      = useState("");
 
+  // ── Editor de texto rico da notificação de cobrança (canto de tela) ──
+  const notifEditorRef = useRef(null);
+  const notifSelecaoRef = useRef(null);
+  function notifSalvarSelecao() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && notifEditorRef.current?.contains(sel.anchorNode)) {
+      notifSelecaoRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+  function notifRestaurarSelecao() {
+    notifEditorRef.current?.focus();
+    const range = notifSelecaoRef.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  function notifAoDigitar() {
+    if (!notifEditorRef.current) return;
+    setConfig(prev => ({
+      ...prev,
+      notif_mensagem_html: notifEditorRef.current.innerHTML,
+      notif_mensagem:       notifEditorRef.current.innerText,
+    }));
+  }
+  // Cola sempre como texto puro — evita HTML/scripts colados entrando
+  // no conteúdo salvo (mesma regra do editor de Comunicados).
+  function notifAoColar(e) {
+    e.preventDefault();
+    const texto = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, texto);
+    notifAoDigitar();
+  }
+  function notifAplicarFormato(comando, valor) {
+    notifRestaurarSelecao();
+    document.execCommand(comando, false, valor);
+    notifAoDigitar();
+  }
+  function notifAplicarTamanhoFonte(px) {
+    notifRestaurarSelecao();
+    document.execCommand("fontSize", false, "7");
+    notifEditorRef.current?.querySelectorAll('font[size="7"]').forEach(f => {
+      f.removeAttribute("size");
+      f.style.fontSize = `${px}px`;
+    });
+    notifAoDigitar();
+  }
+
   function mostrarToast(tipo, texto, duracao = 6000) {
     setToast({ tipo, texto });
     setTimeout(() => setToast(null), duracao);
@@ -140,6 +201,16 @@ export default function Cobrancas() {
       .then(setImagemBlob)
       .catch(() => setImagemBlob(null));
   }, [config?.imagem_url]);
+
+  // Sincroniza o conteúdo do editor rico da notificação sempre que a
+  // tela de config abre — só nessa hora, mesmo motivo de Comunicados.jsx
+  // (o editor vira a fonte da verdade do próprio conteúdo depois de aberto).
+  useEffect(() => {
+    if (tela !== "config" || !config || !notifEditorRef.current) return;
+    notifEditorRef.current.innerHTML = config.notif_mensagem_html
+      || (config.notif_mensagem ? config.notif_mensagem.replace(/\n/g, "<br>") : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tela, !!config]);
 
   const tiposDisponiveis = useMemo(() => {
     return [...new Set(lista.map(m => m.tipo_estabelecimento).filter(Boolean))].sort();
@@ -278,6 +349,12 @@ export default function Cobrancas() {
           msg_whatsapp:  config.msg_whatsapp,
           email_assunto: config.email_assunto,
           email_corpo:   config.email_corpo,
+          notif_ativo:                 !!config.notif_ativo,
+          notif_titulo:                config.notif_titulo,
+          notif_mensagem:              config.notif_mensagem,
+          notif_mensagem_html:         config.notif_mensagem_html,
+          notif_frequencia_tipo:       config.notif_frequencia_tipo,
+          notif_frequencia_quantidade: parseInt(config.notif_frequencia_quantidade) || 1,
         }),
       });
       const json = await resp.json();
@@ -420,6 +497,98 @@ export default function Cobrancas() {
                 <label className="cob-config-sublabel">Corpo</label>
                 <textarea maxLength={3000} className="cob-config-input cob-config-textarea" rows={7}
                   value={config.email_corpo} onChange={e => setConfig(prev => ({ ...prev, email_corpo: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="cob-config-col">
+              <div className="cob-config-card">
+                <div className="cob-config-card-titulo">🔔 Notificação no canto de tela</div>
+                <p className="cob-config-card-desc">
+                  Igual em Comunicados: um card pequeno aparece no canto da tela do
+                  comerciante (junto com o banner "Renovar Antecipado" já existente),
+                  avisando que o vencimento está próximo. Ao clicar, abre a tela de
+                  pagamento (Pix/cartão) — a mesma já usada na renovação antecipada.
+                  Usa a mesma imagem padrão configurada aqui em cima.
+                </p>
+
+                <label className="cob-config-toggle">
+                  <input type="checkbox" checked={!!config.notif_ativo}
+                    onChange={e => setConfig(prev => ({ ...prev, notif_ativo: e.target.checked }))} />
+                  <span>Ativar notificação no canto de tela</span>
+                </label>
+
+                {config.notif_ativo && (
+                  <>
+                    <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Título</label>
+                    <input maxLength={200} className="cob-config-input" style={{ marginBottom: 12 }}
+                      placeholder="Ex: Sua assinatura está vencendo"
+                      value={config.notif_titulo || ""}
+                      onChange={e => setConfig(prev => ({ ...prev, notif_titulo: e.target.value }))} />
+
+                    <label className="cob-config-sublabel">Mensagem</label>
+                    <div className="cob-editor-toolbar">
+                      <button type="button" className="cob-editor-btn"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => notifAplicarFormato("bold")} title="Negrito"
+                      ><b>B</b></button>
+                      <button type="button" className="cob-editor-btn"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => notifAplicarFormato("italic")} title="Itálico"
+                      ><i>I</i></button>
+                      <span className="cob-editor-separador" />
+                      <input type="color" className="cob-editor-cor" title="Cor do texto"
+                        defaultValue="#1a1a1a"
+                        onMouseDown={notifSalvarSelecao}
+                        onChange={e => notifAplicarFormato("foreColor", e.target.value)} />
+                      <select className="cob-editor-fonte" title="Fonte" defaultValue=""
+                        onMouseDown={notifSalvarSelecao}
+                        onChange={e => { if (e.target.value) notifAplicarFormato("fontName", e.target.value); e.target.value = ""; }}
+                      >
+                        <option value="">Fonte…</option>
+                        {NOTIF_FONTES_DISPONIVEIS.map(f => (
+                          <option key={f.valor} value={f.valor}>{f.label}</option>
+                        ))}
+                      </select>
+                      <select className="cob-editor-fonte" title="Tamanho" defaultValue=""
+                        onMouseDown={notifSalvarSelecao}
+                        onChange={e => { if (e.target.value) notifAplicarTamanhoFonte(Number(e.target.value)); e.target.value = ""; }}
+                      >
+                        <option value="">Tamanho…</option>
+                        {NOTIF_TAMANHOS_FONTE.map(t => (
+                          <option key={t} value={t}>{t}px</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div
+                      ref={notifEditorRef}
+                      className="cob-editor-conteudo"
+                      contentEditable
+                      data-placeholder="Ex: Sua assinatura vence em breve. Renove agora pra continuar sem interrupção."
+                      onInput={notifAoDigitar}
+                      onPaste={notifAoColar}
+                      onMouseUp={notifSalvarSelecao}
+                      onKeyUp={notifSalvarSelecao}
+                    />
+
+                    <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Frequência de exibição</label>
+                    <select className="cob-config-input"
+                      value={config.notif_frequencia_tipo || "sempre"}
+                      onChange={e => setConfig(prev => ({ ...prev, notif_frequencia_tipo: e.target.value }))}
+                    >
+                      <option value="uma_vez">Mostrar só uma vez</option>
+                      <option value="quantidade">Mostrar algumas vezes</option>
+                      <option value="sempre">Mostrar sempre (todo login, enquanto durar o aviso)</option>
+                    </select>
+                    {config.notif_frequencia_tipo === "quantidade" && (
+                      <div className="cob-config-dias-control" style={{ marginTop: 8 }}>
+                        <input className="cob-config-input cob-config-input--dias" type="number" min={1} max={99}
+                          value={config.notif_frequencia_quantidade || 1}
+                          onChange={e => setConfig(prev => ({ ...prev, notif_frequencia_quantidade: e.target.value }))} />
+                        <span>vezes</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
