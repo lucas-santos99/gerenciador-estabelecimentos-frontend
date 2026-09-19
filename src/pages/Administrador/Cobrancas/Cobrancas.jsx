@@ -121,6 +121,48 @@ export default function Cobrancas() {
   const [msgConfig,      setMsgConfig]      = useState("");
 
   // ── Editor de texto rico da notificação de cobrança (canto de tela) ──
+  // Título e mensagem têm cada um seu próprio contentEditable/toolbar —
+  // mesma mecânica dos dois em Comunicados.jsx (editorTituloRef/editorRef).
+  const notifEditorTituloRef = useRef(null);
+  const notifSelecaoTituloRef = useRef(null);
+  function notifSalvarSelecaoTitulo() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && notifEditorTituloRef.current?.contains(sel.anchorNode)) {
+      notifSelecaoTituloRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+  function notifRestaurarSelecaoTitulo() {
+    notifEditorTituloRef.current?.focus();
+    const range = notifSelecaoTituloRef.current;
+    if (!range) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  function notifAoDigitarTitulo() {
+    if (!notifEditorTituloRef.current) return;
+    setConfig(prev => ({
+      ...prev,
+      notif_titulo_html: notifEditorTituloRef.current.innerHTML,
+      notif_titulo:       notifEditorTituloRef.current.innerText,
+    }));
+  }
+  function notifAoColarTitulo(e) {
+    e.preventDefault();
+    const texto = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, texto);
+    notifAoDigitarTitulo();
+  }
+  // Título é uma linha só — Enter não deve quebrar linha dentro dele.
+  function notifAoTeclarTitulo(e) {
+    if (e.key === "Enter") e.preventDefault();
+  }
+  function notifAplicarFormatoTitulo(comando, valor) {
+    notifRestaurarSelecaoTitulo();
+    document.execCommand(comando, false, valor);
+    notifAoDigitarTitulo();
+  }
+
   const notifEditorRef = useRef(null);
   const notifSelecaoRef = useRef(null);
   function notifSalvarSelecao() {
@@ -158,14 +200,20 @@ export default function Cobrancas() {
     document.execCommand(comando, false, valor);
     notifAoDigitar();
   }
-  function notifAplicarTamanhoFonte(px) {
-    notifRestaurarSelecao();
+  // Tamanho de fonte (título ou mensagem) — mesmo truque de sempre:
+  // execCommand('fontSize') só aceita os 7 tamanhos relativos antigos,
+  // então aplica "7" como marcador e troca cada <font size="7"> por um
+  // <span style="font-size:Npx"> de verdade.
+  function notifAplicarTamanhoFonte(px, opcoes = {}) {
+    const doTitulo = !!opcoes.titulo;
+    const ref = doTitulo ? notifEditorTituloRef : notifEditorRef;
+    if (doTitulo) notifRestaurarSelecaoTitulo(); else notifRestaurarSelecao();
     document.execCommand("fontSize", false, "7");
-    notifEditorRef.current?.querySelectorAll('font[size="7"]').forEach(f => {
+    ref.current?.querySelectorAll('font[size="7"]').forEach(f => {
       f.removeAttribute("size");
       f.style.fontSize = `${px}px`;
     });
-    notifAoDigitar();
+    if (doTitulo) notifAoDigitarTitulo(); else notifAoDigitar();
   }
 
   function mostrarToast(tipo, texto, duracao = 6000) {
@@ -209,6 +257,10 @@ export default function Cobrancas() {
     if (tela !== "config" || !config || !notifEditorRef.current) return;
     notifEditorRef.current.innerHTML = config.notif_mensagem_html
       || (config.notif_mensagem ? config.notif_mensagem.replace(/\n/g, "<br>") : "");
+    if (notifEditorTituloRef.current) {
+      if (config.notif_titulo_html) notifEditorTituloRef.current.innerHTML = config.notif_titulo_html;
+      else notifEditorTituloRef.current.textContent = config.notif_titulo || "";
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tela, !!config]);
 
@@ -351,6 +403,7 @@ export default function Cobrancas() {
           email_corpo:   config.email_corpo,
           notif_ativo:                 !!config.notif_ativo,
           notif_titulo:                config.notif_titulo,
+          notif_titulo_html:           config.notif_titulo_html,
           notif_mensagem:              config.notif_mensagem,
           notif_mensagem_html:         config.notif_mensagem_html,
           notif_frequencia_tipo:       config.notif_frequencia_tipo,
@@ -520,12 +573,52 @@ export default function Cobrancas() {
                 {config.notif_ativo && (
                   <>
                     <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Título</label>
-                    <input maxLength={200} className="cob-config-input" style={{ marginBottom: 12 }}
-                      placeholder="Ex: Sua assinatura está vencendo"
-                      value={config.notif_titulo || ""}
-                      onChange={e => setConfig(prev => ({ ...prev, notif_titulo: e.target.value }))} />
+                    <div className="cob-editor-toolbar">
+                      <button type="button" className="cob-editor-btn"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => notifAplicarFormatoTitulo("bold")} title="Negrito"
+                      ><b>B</b></button>
+                      <button type="button" className="cob-editor-btn"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => notifAplicarFormatoTitulo("italic")} title="Itálico"
+                      ><i>I</i></button>
+                      <span className="cob-editor-separador" />
+                      <input type="color" className="cob-editor-cor" title="Cor do texto"
+                        defaultValue="#1a1a1a"
+                        onMouseDown={notifSalvarSelecaoTitulo}
+                        onChange={e => notifAplicarFormatoTitulo("foreColor", e.target.value)} />
+                      <select className="cob-editor-fonte" title="Fonte" defaultValue=""
+                        onMouseDown={notifSalvarSelecaoTitulo}
+                        onChange={e => { if (e.target.value) notifAplicarFormatoTitulo("fontName", e.target.value); e.target.value = ""; }}
+                      >
+                        <option value="">Fonte…</option>
+                        {NOTIF_FONTES_DISPONIVEIS.map(f => (
+                          <option key={f.valor} value={f.valor}>{f.label}</option>
+                        ))}
+                      </select>
+                      <select className="cob-editor-fonte" title="Tamanho" defaultValue=""
+                        onMouseDown={notifSalvarSelecaoTitulo}
+                        onChange={e => { if (e.target.value) notifAplicarTamanhoFonte(Number(e.target.value), { titulo: true }); e.target.value = ""; }}
+                      >
+                        <option value="">Tamanho…</option>
+                        {NOTIF_TAMANHOS_FONTE.map(t => (
+                          <option key={t} value={t}>{t}px</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div
+                      ref={notifEditorTituloRef}
+                      className="cob-editor-conteudo cob-editor-conteudo-titulo"
+                      contentEditable
+                      data-placeholder="Ex: Sua assinatura está vencendo"
+                      onInput={notifAoDigitarTitulo}
+                      onPaste={notifAoColarTitulo}
+                      onKeyDown={notifAoTeclarTitulo}
+                      onMouseUp={notifSalvarSelecaoTitulo}
+                      onKeyUp={notifSalvarSelecaoTitulo}
+                    />
 
-                    <label className="cob-config-sublabel">Mensagem</label>
+                    <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Mensagem</label>
                     <div className="cob-editor-toolbar">
                       <button type="button" className="cob-editor-btn"
                         onMouseDown={e => e.preventDefault()}

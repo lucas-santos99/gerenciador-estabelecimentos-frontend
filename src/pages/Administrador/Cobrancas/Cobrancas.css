@@ -479,6 +479,12 @@
   background: var(--bg-input, transparent);
   line-height: 1.5;
 }
+.cob-editor-conteudo-titulo {
+  min-height: 40px;
+  max-height: 90px;
+  font-size: 1rem;
+  font-weight: 600;
+}
 .cob-editor-conteudo:empty::before {
   content: attr(data-placeholder);
   color: var(--text-secondary);

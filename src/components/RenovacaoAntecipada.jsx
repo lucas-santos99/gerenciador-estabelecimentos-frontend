@@ -257,7 +257,11 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
             <img src={notifEstado.imagem_url} alt="" className="renov-notif-imagem" />
           )}
           <div className="renov-notif-texto">
-            <strong>{notifEstado.titulo}</strong>
+            {notifEstado.titulo_html ? (
+              <strong dangerouslySetInnerHTML={{ __html: notifEstado.titulo_html }} />
+            ) : (
+              <strong>{notifEstado.titulo}</strong>
+            )}
             {notifEstado.mensagem_html ? (
               <div className="renov-notif-mensagem" dangerouslySetInnerHTML={{ __html: notifEstado.mensagem_html }} />
             ) : notifEstado.mensagem ? (
