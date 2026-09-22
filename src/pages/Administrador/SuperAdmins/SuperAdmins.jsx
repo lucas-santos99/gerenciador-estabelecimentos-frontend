@@ -6,6 +6,7 @@ import { supabase } from "../../../utils/supabaseClient";
 import { useAuth } from "../../../contexts/AuthProvider";
 import PersonificarModal from "../../../components/PersonificarModal";
 import "./SuperAdmins.css";
+import { erroSenhaFraca } from '../../../utils/senha';
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -66,6 +67,8 @@ export default function SuperAdmins() {
       setErroCriar("Preencha todos os campos.");
       return;
     }
+    const erroSenhaCriar = erroSenhaFraca(form.senha);
+    if (erroSenhaCriar) { setErroCriar(erroSenhaCriar); return; }
     setSalvando(true);
     try {
       const token = await getToken();
@@ -120,6 +123,7 @@ export default function SuperAdmins() {
   async function alterarSenha() {
     setErroSenha("");
     if (!novaSenha) { setErroSenha("Informe a nova senha."); return; }
+    { const erroFraca = erroSenhaFraca(novaSenha); if (erroFraca) { setErroSenha(erroFraca); return; } }
     try {
       const token = await getToken();
       const resp  = await fetch(`${API_URL}/superadmin/${userSel.id}/senha`, {

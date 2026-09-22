@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
+import { erroSenhaFraca } from '../../../utils/senha';
 
 /* ── Módulos disponíveis com ações granulares ────────────── */
 // ⚠️ FONTE DA VERDADE: ao adicionar módulos ou ações no sistema,
@@ -385,9 +386,9 @@ function ModalOperador({ operador, onClose, onSalvo }) {
   async function salvar(e) {
     e.preventDefault();
     setErro('');
-    if (!isEdit && (!form.senha || form.senha.length < 6)) {
-      setErro('Senha deve ter pelo menos 6 caracteres.');
-      return;
+    if (!isEdit) {
+      const erroSenha = erroSenhaFraca(form.senha);
+      if (erroSenha) { setErro(erroSenha); return; }
     }
     setSalvando(true);
     try {
@@ -447,7 +448,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
             <div className="opest-form-group">
               <label className="opest-form-label">Senha inicial *</label>
               <input maxLength={72} className="opest-form-input" name="senha" type="password"
-                placeholder="Mínimo 6 caracteres" value={form.senha}
+                placeholder="Mínimo 8, com letras e números" value={form.senha}
                 onChange={atualizar} required disabled={salvando} />
               <span className="opest-form-hint">
                 O operador pode alterar a senha depois pelo login.
@@ -674,7 +675,7 @@ function ModalResetSenha({ operador, onClose }) {
   async function salvar(e) {
     e.preventDefault();
     setErro('');
-    if (senha.length < 6) { setErro('Senha deve ter pelo menos 6 caracteres.'); return; }
+    { const erroSenha = erroSenhaFraca(senha); if (erroSenha) { setErro(erroSenha); return; } }
     if (senha !== confirmar) { setErro('As senhas não coincidem.'); return; }
     setSalvando(true);
     try {
@@ -714,7 +715,7 @@ function ModalResetSenha({ operador, onClose }) {
                 ref={senhaRef}
                 className="opest-form-input"
                 type="password"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8, com letras e números"
                 value={senha}
                 onChange={e => setSenha(e.target.value)}
                 required

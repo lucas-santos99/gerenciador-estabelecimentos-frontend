@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../utils/supabaseClient";
 import "./NovaSenha.css";
+import { erroSenhaFraca } from '../../utils/senha';
 
 export default function NovaSenha() {
   const navigate = useNavigate();
@@ -31,6 +32,12 @@ export default function NovaSenha() {
 
     if (newPassword !== confirm) {
       setErrorMsg("As senhas não coincidem.");
+      return;
+    }
+
+    const erroSenha = erroSenhaFraca(newPassword);
+    if (erroSenha) {
+      setErrorMsg(erroSenha);
       return;
     }
 

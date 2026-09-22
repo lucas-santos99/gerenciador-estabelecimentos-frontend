@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import { erroSenhaFraca } from '../../../utils/senha';
 
 export default function NovoOperador() {
   const navigate  = useNavigate();
@@ -42,10 +43,8 @@ export default function NovoOperador() {
   async function salvar(e) {
     e.preventDefault();
     setErro("");
-    if (!form.senha || form.senha.length < 6) {
-      setErro("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    const erroSenha = erroSenhaFraca(form.senha);
+    if (erroSenha) { setErro(erroSenha); return; }
     setSalvando(true);
     try {
       const resp = await apiFetch("/admin/operadores/criar", {
@@ -149,7 +148,7 @@ export default function NovoOperador() {
                 className="op-input"
                 name="senha"
                 type="password"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8, com letras e números"
                 value={form.senha}
                 onChange={atualizar}
                 required

@@ -5,6 +5,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
+import { erroSenhaFraca } from '../../../utils/senha';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -185,6 +186,8 @@ export default function NovoEstabelecimento() {
       setErro("A senha inicial é obrigatória.");
       return;
     }
+    const erroSenha = erroSenhaFraca(form.senha);
+    if (erroSenha) { setErro(erroSenha); return; }
 
     // Calcular data_vencimento a partir do período de teste
     let dataVencimentoFinal = form.data_vencimento;

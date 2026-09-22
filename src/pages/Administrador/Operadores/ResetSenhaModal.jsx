@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import { erroSenhaFraca } from '../../../utils/senha';
 
 export default function ResetSenhaModal({ id, onClose }) {
   const [senha,    setSenha]    = useState("");
@@ -11,10 +12,8 @@ export default function ResetSenhaModal({ id, onClose }) {
 
   async function enviar() {
     setErro("");
-    if (!senha || senha.length < 6) {
-      setErro("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
+    const erroSenha = erroSenhaFraca(senha);
+    if (erroSenha) { setErro(erroSenha); return; }
     if (senha !== confirmar) {
       setErro("As senhas não conferem.");
       return;
@@ -54,7 +53,7 @@ export default function ResetSenhaModal({ id, onClose }) {
             <input maxLength={72}
               className="op-input"
               type="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8, com letras e números"
               value={senha}
               onChange={e => setSenha(e.target.value)}
               disabled={salvando}
