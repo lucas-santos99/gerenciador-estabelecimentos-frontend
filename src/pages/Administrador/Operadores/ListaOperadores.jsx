@@ -30,8 +30,8 @@ export default function ListaOperadores() {
     setLoading(true);
     try {
       const [respM, respOp] = await Promise.all([
-        fetch(`${API_URL}/admin/estabelecimentos/${estabelecimentoId}`, { credentials: "include" }),
-        fetch(`${API_URL}/admin/operadores/${estabelecimentoId}`,       { credentials: "include" }),
+        apiFetch(`/admin/estabelecimentos/${estabelecimentoId}`),
+        apiFetch(`/admin/operadores/${estabelecimentoId}`),
       ]);
       const [dataM, dataOp] = await Promise.all([respM.json(), respOp.json()]);
       if (respM.ok) {

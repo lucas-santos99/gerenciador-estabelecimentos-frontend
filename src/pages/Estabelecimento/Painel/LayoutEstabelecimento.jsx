@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
+import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from "../../../utils/realtimeEstab";
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import "./LayoutEstabelecimento.css";
@@ -267,14 +268,11 @@ export default function LayoutEstabelecimento({
 
   useEffect(() => { buscarNotificacoes(); }, [buscarNotificacoes]);
 
-  // Confere de novo a cada 30s — assim, se o admin atender ou recusar
-  // enquanto o comerciante já está com o painel aberto, o aviso aparece
-  // sozinho, sem precisar recarregar a página.
-  useEffect(() => {
-    if (!estabelecimentoId || !isMerchant) return;
-    const id = setInterval(buscarNotificacoes, 30000);
-    return () => clearInterval(id);
-  }, [estabelecimentoId, isMerchant, buscarNotificacoes]);
+  // Tempo real (22/09/2026) — quando o admin atende ou recusa, o aviso
+  // aparece na hora (antes: polling de 30s). O polling continua só como
+  // reserva, a cada 5 min e só com a aba visível.
+  useAvisosEstabelecimento(estabelecimentoId, ['solicitacoes'], buscarNotificacoes, { ativo: isMerchant });
+  usePollingReserva(buscarNotificacoes, 5 * 60 * 1000, !!estabelecimentoId && isMerchant);
 
   async function dispensarNotificacao(id) {
     setNotificacoesResolucao(prev => prev.filter(n => n.id !== id));
@@ -374,14 +372,18 @@ export default function LayoutEstabelecimento({
 
   useEffect(() => { buscarComunicados(); }, [buscarComunicados]);
 
-  // Polling a cada 20s — mesma ideia já usada acima pras notificações de
-  // solicitação (30s): sem isso, um comunicado só apareceria no próximo
-  // F5/login, o que o usuário pediu explicitamente pra não precisar fazer.
-  useEffect(() => {
-    if (!estabelecimentoId) return;
-    const id = setInterval(buscarComunicados, 20000);
-    return () => clearInterval(id);
-  }, [estabelecimentoId, buscarComunicados]);
+  // Tempo real (22/09/2026, antes polling de 20s):
+  //  - canal global: SuperAdmin criou/editou/ativou/desativou/excluiu um
+  //    comunicado ou mudou a lista de estabelecimentos-alvo;
+  //  - canal do estabelecimento: alguém daqui dispensou um comunicado
+  //    (a dispensa vale pro estabelecimento inteiro — some das outras
+  //    telas abertas também).
+  // Polling de reserva de 1 min: cobre o agendamento ("aparece a partir
+  // de" / "some em"), que é por horário e não gera nenhuma gravação no
+  // banco pra avisar — e também o caso raro de o tempo real cair.
+  useAvisosGlobais(['comunicados'], buscarComunicados, { ativo: !!estabelecimentoId });
+  useAvisosEstabelecimento(estabelecimentoId, ['comunicados'], buscarComunicados);
+  usePollingReserva(buscarComunicados, 60 * 1000, !!estabelecimentoId);
 
   async function confirmarComunicadoModal() {
     const atual = comunicadosModal[0];

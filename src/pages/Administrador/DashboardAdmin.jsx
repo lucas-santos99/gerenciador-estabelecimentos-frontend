@@ -97,8 +97,8 @@ export default function DashboardAdmin() {
     try {
       setLoading(true);
       const [r1, r2] = await Promise.all([
-        fetch(`${API_URL}/admin/estabelecimentos/listar`),
-        fetch(`${API_URL}/admin/estabelecimentos/excluidas`),
+        apiFetch(`/admin/estabelecimentos/listar`),
+        apiFetch(`/admin/estabelecimentos/excluidas`),
       ]);
       const lista    = (await r1.json()) || [];
       const excluidas = (await r2.json()) || [];

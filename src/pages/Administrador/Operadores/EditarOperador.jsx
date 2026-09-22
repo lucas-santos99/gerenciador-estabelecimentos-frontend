@@ -20,9 +20,7 @@ export default function EditarOperador() {
   async function carregar() {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/operadores/detalhes/${id}`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/operadores/detalhes/${id}`);
       const data = await resp.json();
       if (resp.ok && data) {
         setForm({

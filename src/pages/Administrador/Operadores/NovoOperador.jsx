@@ -28,9 +28,7 @@ export default function NovoOperador() {
 
   async function carregarEstabelecimentos() {
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/listar`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/listar`);
       setEstabelecimentos((await resp.json()) || []);
     } catch { setErro("Erro ao carregar estabelecimentos."); }
   }

@@ -2994,3 +2994,50 @@ button:disabled[title*="Sem permissão"] {
   justify-content: center;
 }
 .pdv-lightbox-fechar:hover { background: rgba(255,255,255,0.22); }
+/* ════════════════════════════════════════════════════════════
+   Tempo real (22/09/2026) — avisos no carrinho quando preço/estoque
+   de um item muda enquanto a venda está aberta.
+   ════════════════════════════════════════════════════════════ */
+.pdv-aviso-precos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--est-text, inherit);
+  font-size: calc(0.82rem * var(--pdv-font-scale, 1));
+  line-height: 1.35;
+}
+.pdv-aviso-precos-btn,
+.pdv-item-aviso-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: #1f1300;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pdv-aviso-precos-btn { padding: 6px 12px; font-size: calc(0.8rem * var(--pdv-font-scale, 1)); }
+.pdv-aviso-precos-btn:hover,
+.pdv-item-aviso-btn:hover { filter: brightness(1.08); }
+
+.pdv-item.pdv-item-alerta { box-shadow: inset 3px 0 0 #f59e0b; }
+
+.pdv-item-aviso {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: calc(0.74rem * var(--pdv-font-scale, 1));
+  line-height: 1.3;
+}
+.pdv-item-aviso--preco { color: #d97706; }
+.pdv-item-aviso--erro  { color: #ef4444; font-weight: 600; }
+.pdv-item-aviso-btn { padding: 2px 8px; font-size: calc(0.72rem * var(--pdv-font-scale, 1)); }

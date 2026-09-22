@@ -1,5 +1,6 @@
 // src/pages/Estabelecimento/Estoque/ProdutoList.jsx
 import { apiFetch } from '../../../utils/api';
+import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx-js-style';
 import ProdutoModal from './ProdutoModal';
@@ -127,10 +128,17 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   const catNovaRef  = useRef(null);
 
   /* ── Carregar dados ─────────────────────────────────────── */
-  async function carregarDados(focarId = null) {
+  // `silencioso` (22/09/2026, tempo real): recarrega sem mostrar o
+  // "carregando" da tela inteira e sem apagar a lista se der erro — é o
+  // modo usado quando chega um aviso de que outra pessoa mudou o estoque
+  // (venda no PDV, edição, ajuste). Modal de produto aberto não é afetado:
+  // ele guarda o próprio produto em edição, não relê da lista.
+  async function carregarDados(focarId = null, { silencioso = false } = {}) {
     if (!estabelecimentoId) return;
-    setLoading(true);
-    setErro('');
+    if (!silencioso) {
+      setLoading(true);
+      setErro('');
+    }
     try {
       const [rProd, rCat] = await Promise.all([
         apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos`),
@@ -147,13 +155,20 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         if (p) setCategoriaAtiva(p.categoria_id || 'sem_categoria');
       }
     } catch (err) {
-      setErro(err.message);
+      if (!silencioso) setErro(err.message);
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
   }
 
   useEffect(() => { carregarDados(); }, [estabelecimentoId]);
+
+  // Tempo real: estoque, preço, produto novo/excluído ou categoria mudou
+  // em qualquer tela/aparelho deste estabelecimento → a lista atualiza
+  // sozinha, em silêncio (sem F5, sem sair e voltar do módulo).
+  useAvisosEstabelecimento(estabelecimentoId, ['produtos', 'categorias'], () => {
+    carregarDados(null, { silencioso: true });
+  });
   useEffect(() => { localStorage.setItem('estoque-visualizacao', visualizacao); }, [visualizacao]);
 
   // Recarrega só as categorias — usado ao criar uma categoria nova de

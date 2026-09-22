@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { apiFetch } from "../../utils/api";
+import { useAvisosEstabelecimento } from "../../utils/realtimeEstab";
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
 
 import PDV           from "./PDV/PDV";
@@ -110,6 +111,32 @@ export default function PainelEstabelecimento() {
     }
     carregarDados();
   }, [estabelecimentoId, isMerchant]);
+
+  /* ── Licença em tempo real (22/09/2026) ──────────────────────
+     Quando a licença muda no banco (renovação confirmada pelo webhook,
+     liberação/bloqueio pelo SuperAdmin, auto-bloqueio por vencimento), o
+     badge do topo atualiza sozinho — e, se virou "bloqueada", o
+     comerciante vai pra tela de bloqueio na hora, igual já acontecia ao
+     recarregar a página. Também confere de novo quando a aba volta a
+     ficar visível. */
+  const atualizarLicenca = useCallback(async () => {
+    if (!estabelecimentoId) return;
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data.status_assinatura === "bloqueada" && profile?.role === "merchant") {
+        navigate("/bloqueado", { replace: true });
+        return;
+      }
+      setLicencaInfo({
+        status_assinatura: data.status_assinatura || null,
+        data_vencimento:   data.data_vencimento   || null,
+      });
+    } catch { /* silencioso — o próximo aviso tenta de novo */ }
+  }, [estabelecimentoId, profile?.role, navigate]);
+
+  useAvisosEstabelecimento(estabelecimentoId, ["licenca"], atualizarLicenca);
 
   /* ── Callback quando logo é atualizada nas configurações ─── */
   function handleLogoAtualizada(novaUrl) {

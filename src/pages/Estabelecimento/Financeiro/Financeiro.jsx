@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -124,6 +125,26 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   useEffect(() => {
     if (abaAtiva === 'contas' && estabelecimentoId) carregarContas(filtroStatus);
   }, [abaAtiva, filtroStatus, estabelecimentoId]);
+
+  /* ── Tempo real (22/09/2026) ─────────────────────────────────
+     - Contas a Pagar: lista atualiza sozinha, em silêncio, quando alguém
+       cria/edita/paga/exclui uma conta em outra tela ou aparelho.
+     - Fluxo de Caixa / DRE: os números NÃO mudam sozinhos enquanto a
+       pessoa está lendo (decisão do usuário) — aparece um aviso "há
+       movimentações novas" com um botão pra atualizar. */
+  const [dadosNovos, setDadosNovos] = useState(false);
+  useAvisosEstabelecimento(estabelecimentoId, ['financeiro', 'vendas'], (resumoAviso) => {
+    if (abaAtiva === 'contas') carregarContas(filtroStatus, { silencioso: true });
+    const soReconexao = resumoAviso?.tipos && resumoAviso.tipos.size === 1 && resumoAviso.tipos.has('*');
+    if (!soReconexao) setDadosNovos(true);
+  });
+
+  function atualizarDadosNovos() {
+    setDadosNovos(false);
+    carregarResumo();
+    if (dreData) gerarDRE({ preventDefault() {} });
+    if (abaAtiva === 'contas') carregarContas(filtroStatus, { silencioso: true });
+  }
 
   /* ════════════════════════════════════════════════════════
      FLUXO DE CAIXA
@@ -290,15 +311,17 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   /* ════════════════════════════════════════════════════════
      CONTAS A PAGAR
   ════════════════════════════════════════════════════════ */
-  async function carregarContas(status) {
-    setLoadingContas(true);
-    setErroContas('');
+  async function carregarContas(status, { silencioso = false } = {}) {
+    if (!silencioso) {
+      setLoadingContas(true);
+      setErroContas('');
+    }
     try {
       const resp = await apiFetch(`/api/financeiro?status=${encodeURIComponent(status)}`);
       if (!resp.ok) throw new Error(`Erro ${resp.status}`);
       setContas(await resp.json());
-    } catch (err) { setErroContas(err.message); }
-    finally { setLoadingContas(false); }
+    } catch (err) { if (!silencioso) setErroContas(err.message); }
+    finally { if (!silencioso) setLoadingContas(false); }
   }
 
   function abrirFormNovaConta() {
@@ -729,6 +752,16 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           </button>
         </div>
       </div>
+
+      {dadosNovos && (
+        <div className="fin-aviso-dados-novos" role="status">
+          <span>🔄 Há movimentações novas (venda, pagamento ou conta) desde que esta tela foi carregada.</span>
+          <button type="button" className="fin-aviso-dados-novos-btn" onClick={atualizarDadosNovos}>
+            Atualizar agora
+          </button>
+          <button type="button" className="fin-aviso-dados-novos-x" onClick={() => setDadosNovos(false)} title="Dispensar">✕</button>
+        </div>
+      )}
 
       {/* ── CONTEÚDO ─────────────────────────────────────── */}
       <div className="fin-content">

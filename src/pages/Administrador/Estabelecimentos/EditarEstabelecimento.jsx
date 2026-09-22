@@ -58,9 +58,7 @@ export default function EditarEstabelecimento() {
   async function carregarDados() {
     setCarregando(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}`);
       const data = await resp.json();
       if (resp.ok) {
         // Detectar se é CPF ou CNPJ pelo número de dígitos

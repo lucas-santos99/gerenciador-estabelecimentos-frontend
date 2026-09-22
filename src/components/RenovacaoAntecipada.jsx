@@ -1,6 +1,7 @@
 // src/components/RenovacaoAntecipada.jsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../utils/api';
+import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from '../utils/realtimeEstab';
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from '../utils/fusoHorario';
 import './RenovacaoAntecipada.css';
 
@@ -46,11 +47,22 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { buscarNotifEstado(); }, [buscarNotifEstado]);
+
+  // Tempo real (22/09/2026, antes polling de 20s):
+  //  - global 'cobranca_notif': SuperAdmin mudou a config da notificação;
+  //  - estabelecimento 'licenca': licença renovada/alterada — reavalia a
+  //    notificação E, se houver um pagamento em andamento neste modal,
+  //    confirma na hora (sem esperar o próximo tick de 5s).
+  // Polling de reserva de 5 min — a janela "faltam X dias" vira por
+  // horário, sem gravação no banco pra avisar.
+  const verificarPagamentoRef = useRef(null);
+  useAvisosGlobais(['cobranca_notif'], buscarNotifEstado);
+  useAvisosEstabelecimento(merceariaId, ['licenca'], () => {
     buscarNotifEstado();
-    const id = setInterval(buscarNotifEstado, 20000);
-    return () => clearInterval(id);
-  }, [buscarNotifEstado]);
+    verificarPagamentoRef.current?.();
+  });
+  usePollingReserva(buscarNotifEstado, 5 * 60 * 1000);
 
   async function marcarNotifVista() {
     try { await apiFetch('/api/cobranca-notif/marcar-visto', { method: 'POST' }); } catch {}
@@ -174,6 +186,7 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
   // vazar o listener em nenhum dos pontos que interrompem o polling.
   function pararPolling() {
     clearInterval(pollingRef.current);
+    verificarPagamentoRef.current = null;
     if (visibilidadeHandlerRef.current) {
       document.removeEventListener("visibilitychange", visibilidadeHandlerRef.current);
       visibilidadeHandlerRef.current = null;
@@ -214,6 +227,11 @@ export default function RenovacaoAntecipada({ merceariaId, nomeEstabelecimento, 
     };
     visibilidadeHandlerRef.current = aoVoltarAba;
     document.addEventListener("visibilitychange", aoVoltarAba);
+
+    // Tempo real (22/09/2026): o aviso 'licenca' chama isso na hora em
+    // que o webhook confirma o pagamento — o intervalo de 5s fica só de
+    // reserva.
+    verificarPagamentoRef.current = verificar;
 
     pollingRef.current = setInterval(verificar, 5000);
   }

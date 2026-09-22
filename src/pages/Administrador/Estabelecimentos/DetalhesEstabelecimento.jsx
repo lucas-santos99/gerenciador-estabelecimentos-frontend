@@ -46,9 +46,7 @@ export default function DetalhesEstabelecimento() {
   async function carregar() {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}`);
       const data = await resp.json();
       setDados(resp.ok ? data : null);
       if (resp.ok) setLimiteVal(data.limite_operadores ?? 3);
@@ -61,9 +59,7 @@ export default function DetalhesEstabelecimento() {
   async function carregarHistorico() {
     setLoadHistorico(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}/liberacoes`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}/liberacoes`);
       if (resp.ok) setHistorico(await resp.json());
     } catch {}
     setLoadHistorico(false);

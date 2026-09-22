@@ -132,7 +132,7 @@ export default function NovoEstabelecimento() {
 
   async function carregarTipos() {
     try {
-      const resp  = await fetch(`${API_URL}/admin/estabelecimentos/listar`);
+      const resp  = await apiFetch(`/admin/estabelecimentos/listar`);
       const lista = await resp.json();
       const tipos = [...new Set(lista.map(m => m.tipo_estabelecimento).filter(Boolean))];
       setTiposExistentes(tipos);

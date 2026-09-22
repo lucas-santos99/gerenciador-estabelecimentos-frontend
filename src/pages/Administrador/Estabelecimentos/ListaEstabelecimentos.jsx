@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
+import { apiFetch } from "../../../utils/api";
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -24,9 +25,7 @@ export default function ListaEstabelecimentos() {
   async function carregarEstabelecimentos() {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/listar`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/listar`);
       const data = await resp.json();
       setLista(data.filter(m => m.status_assinatura !== "excluida"));
     } catch (err) {
@@ -41,9 +40,7 @@ export default function ListaEstabelecimentos() {
   async function excluirEstabelecimento(id, nome) {
     if (!window.confirm(`Excluir "${nome}"?`)) return;
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/${id}`, {
-        method: "DELETE", credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
       if (resp.ok) carregarEstabelecimentos();
       else {
         const json = await resp.json();

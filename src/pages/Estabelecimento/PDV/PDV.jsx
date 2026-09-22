@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ModalCamera from './ModalCamera';
 import { apiFetch } from '../../../utils/api';
+import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -2472,6 +2473,134 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const btnRemoverConfirmarRef = useRef(null);
   const btnRemoverCancelarRef  = useRef(null);
 
+  // ════════════════════════════════════════════════════════════
+  // TEMPO REAL (22/09/2026) — caixa e estoque sempre sincronizados
+  // Quando outra pessoa (ou outro caixa) muda um produto — preço,
+  // estoque, exclusão — chega um aviso pelo Supabase Realtime e:
+  //  1) a lista de resultados aberta na tela é relida em silêncio;
+  //  2) os itens do carrinho afetados são relidos: estoque atualizado
+  //     na hora; preço diferente NÃO muda sozinho — o item ganha um
+  //     aviso "Preço alterado" com botão pra aplicar (decisão do
+  //     usuário: nada muda no total sem o caixa ver). Enquanto houver
+  //     pendência (preço não aplicado, produto excluído, estoque menor
+  //     que o carrinho), Finalizar avisa em vez de abrir o pagamento.
+  // O backend confere preço/estoque de novo ao gravar a venda — isso
+  // aqui é pra o caixa saber ANTES, não a garantia em si.
+  // ════════════════════════════════════════════════════════════
+  const carrinhoRef         = useRef(carrinho);
+  const termoBuscaRef       = useRef(termoBusca);
+  const resultadosAtuaisRef = useRef(resultados);
+  carrinhoRef.current         = carrinho;
+  termoBuscaRef.current       = termoBusca;
+  resultadosAtuaisRef.current = resultados;
+
+  // Aplica os dados frescos do cadastro nos itens do carrinho.
+  // `idsConsultados`: produtos que foram pedidos ao backend — um id
+  // pedido que não voltou foi excluído no meio da venda.
+  function aplicarProdutosNoCarrinho(produtosFrescos, idsConsultados) {
+    const porId = new Map((produtosFrescos || []).map(p => [p.id, p]));
+    setCarrinho(prev => prev.map(item => {
+      if (!idsConsultados.includes(item.id)) return item;
+      const p = porId.get(item.id);
+      if (!p) return { ...item, indisponivel: true, preco_novo: undefined };
+
+      let precoAtual = parseFloat(p.preco_venda);
+      let estoque    = parseFloat(p.estoque_atual);
+      if (item.produto_variacao_id) {
+        const v = (p.variacoes || []).find(x => x.id === item.produto_variacao_id);
+        if (!v) return { ...item, indisponivel: true, preco_novo: undefined };
+        if (v.preco_venda != null) precoAtual = parseFloat(v.preco_venda);
+        estoque = parseFloat(v.estoque_atual);
+      }
+      const precoMudou = !isNaN(precoAtual) && Math.abs(precoAtual - parseFloat(item.preco_venda)) > 0.005;
+      return {
+        ...item,
+        estoque_atual: isNaN(estoque) ? item.estoque_atual : estoque,
+        preco_novo:    precoMudou ? precoAtual : undefined,
+        indisponivel:  false,
+      };
+    }));
+  }
+
+  async function sincronizarCarrinho(idsAlvo = null) {
+    const idsCarrinho = [...new Set(carrinhoRef.current.map(i => i.id))];
+    const ids = idsAlvo ? idsCarrinho.filter(id => idsAlvo.has(id)) : idsCarrinho;
+    if (!estabelecimentoId || ids.length === 0) return;
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/por-ids?ids=${ids.join(',')}`);
+      if (!resp.ok) return;
+      aplicarProdutosNoCarrinho(await resp.json(), ids);
+    } catch { /* silencioso — o próximo aviso tenta de novo */ }
+  }
+
+  async function sincronizarResultados(idsAlvo = null) {
+    const termo = termoBuscaRef.current;
+    const atuais = resultadosAtuaisRef.current;
+    if (!estabelecimentoId || !termo || termo.length < 2 || atuais.length === 0) return;
+    if (idsAlvo && !atuais.some(r => idsAlvo.has(r.id))) return;
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(termo)}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      // Só troca se o termo ainda é o mesmo (a pessoa pode ter digitado
+      // outra coisa enquanto a resposta vinha) — e mantém a seleção.
+      if (termoBuscaRef.current !== termo) return;
+      setResultados(data);
+      setBuscaIndex(i => (data.length === 0 ? -1 : Math.min(i, data.length - 1)));
+    } catch { /* silencioso */ }
+  }
+
+  useAvisosEstabelecimento(estabelecimentoId, ['produtos'], (resumo) => {
+    const idsAlvo = resumo?.ids || null; // Set, ou null = tudo
+    sincronizarCarrinho(idsAlvo);
+    sincronizarResultados(idsAlvo);
+  });
+
+  function aplicarPrecoNovo(idx) {
+    setCarrinho(prev => prev.map((it, i) => (
+      i === idx && it.preco_novo != null
+        ? { ...it, preco_venda: it.preco_novo, preco_novo: undefined }
+        : it
+    )));
+  }
+  function aplicarTodosPrecosNovos() {
+    setCarrinho(prev => prev.map(it => (
+      it.preco_novo != null ? { ...it, preco_venda: it.preco_novo, preco_novo: undefined } : it
+    )));
+  }
+
+  // Quantidade total no carrinho por produto/variação vs. estoque atual.
+  function estoqueExcedido(item) {
+    const est = parseFloat(item.estoque_atual);
+    if (isNaN(est)) return false;
+    const qtd = carrinho
+      .filter(i => i.id === item.id && (i.produto_variacao_id || null) === (item.produto_variacao_id || null))
+      .reduce((acc, i) => acc + parseFloat(i.quantidade || 0), 0);
+    return qtd - est > 0.0005;
+  }
+
+  const qtdPrecosAlterados = carrinho.filter(i => i.preco_novo != null).length;
+  const temIndisponivel    = carrinho.some(i => i.indisponivel);
+  const temEstoqueExcedido = carrinho.some(i => !i.indisponivel && estoqueExcedido(i));
+
+  // Porta de entrada única do pagamento (botão, F10/F2 e o 2º Enter do
+  // carrinho, que clica no botão) — segura a venda se houver pendência.
+  function abrirPagamento() {
+    if (qtdPrecosAlterados > 0) {
+      mostrarStatus('erro', 'Há preço alterado no carrinho — clique em "Aplicar" no item (ou "Aplicar todos") antes de finalizar.');
+      return;
+    }
+    if (temIndisponivel) {
+      mostrarStatus('erro', 'Há item que foi excluído do cadastro no carrinho — remova-o antes de finalizar.');
+      return;
+    }
+    if (temEstoqueExcedido) {
+      mostrarStatus('erro', 'O estoque de algum item diminuiu e ficou menor que o carrinho — ajuste a quantidade antes de finalizar.');
+      return;
+    }
+    setShowPagamento(true);
+  }
+
   useEffect(() => {
     if (!estabelecimentoId) return;
     (async () => {
@@ -2691,7 +2820,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       }
       if ((e.key === 'F10' || e.key === 'F2') && !showPagamento && !itemQuantificar && !itemEscolherVariacao && !showCamera && !modalPeso && carrinho.length > 0) {
         e.preventDefault();
-        setShowPagamento(true);
+        abrirPagamento();
         return;
       }
       if (e.key === 'F11') {
@@ -2990,7 +3119,20 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         }),
       });
       const result = await resp.json();
-      if (!resp.ok) throw new Error(result.error?.includes('check constraint') ? 'Falha de estoque. Verifique as quantidades.' : result.error || 'Erro no servidor.');
+      if (!resp.ok) {
+        // 22/09/2026 — o backend agora confere preço e estoque na hora de
+        // gravar. Se algo mudou desde que o item entrou no carrinho, a
+        // venda não é gravada e o carrinho mostra o que mudou.
+        if (resp.status === 409 && result.codigo === 'PRECO_ALTERADO' && Array.isArray(result.itens)) {
+          setCarrinho(prev => prev.map((it, i) => {
+            const alt = result.itens.find(a => a.index === i);
+            return alt ? { ...it, preco_novo: parseFloat(alt.preco_atual) } : it;
+          }));
+        } else if (resp.status === 409 && (result.codigo === 'ESTOQUE_INSUFICIENTE' || result.codigo === 'PRODUTO_INDISPONIVEL')) {
+          sincronizarCarrinho();
+        }
+        throw new Error(result.error || 'Erro no servidor.');
+      }
 
       setVendaFinalizada({
         itens:         carrinho,
@@ -3291,6 +3433,16 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           </div>
         </div>
         {vendaStatus && <div className={`pdv-status ${vendaStatus.tipo}`}>{vendaStatus.msg}</div>}
+        {qtdPrecosAlterados > 0 && (
+          <div className="pdv-aviso-precos" role="alert">
+            <span>
+              ⚠️ {qtdPrecosAlterados === 1 ? '1 item teve o preço alterado' : `${qtdPrecosAlterados} itens tiveram o preço alterado`} no cadastro enquanto a venda estava aberta.
+            </span>
+            <button type="button" className="pdv-aviso-precos-btn" onClick={aplicarTodosPrecosNovos}>
+              Aplicar todos
+            </button>
+          </div>
+        )}
         <ul className="pdv-carrinho-lista">
           {carrinho.length === 0 ? (
             <li className="pdv-carrinho-vazio"><span className="pdv-carrinho-vazio-icon">🛒</span><p>Carrinho vazio</p><small>Busque e selecione produtos ao lado</small></li>
@@ -3299,7 +3451,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
               <li
                 key={`${item.id}-${idx}`}
                 ref={el => carrinhoItemRefs.current[idx] = el}
-                className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}${idx === carrinhoFoco ? ' pdv-item-focado' : ''}`}
+                className={`pdv-item${item.pesavel ? ' pdv-item-pesavel' : ''}${idx === carrinhoFoco ? ' pdv-item-focado' : ''}${(item.preco_novo != null || item.indisponivel || estoqueExcedido(item)) ? ' pdv-item-alerta' : ''}`}
               >
                 <div className="pdv-item-imagem">
                   <ImagemProduto url={item.imagem_url} iconeClassName="pdv-item-imagem-placeholder" onExpandir={setImagemExpandida} />
@@ -3321,6 +3473,29 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                         : `${parseFloat(item.quantidade).toFixed(0)} un @ ${fmt(item.preco_venda)}`
                     }
                   </span>
+                  {/* Avisos em tempo real (22/09/2026) */}
+                  {item.preco_novo != null && (
+                    <span className="pdv-item-aviso pdv-item-aviso--preco">
+                      Preço alterado: {fmt(item.preco_venda)} → <strong>{fmt(item.preco_novo)}</strong>
+                      <button
+                        type="button"
+                        className="pdv-item-aviso-btn"
+                        onClick={(e) => { e.stopPropagation(); aplicarPrecoNovo(idx); }}
+                      >Aplicar</button>
+                    </span>
+                  )}
+                  {item.indisponivel && (
+                    <span className="pdv-item-aviso pdv-item-aviso--erro">
+                      Produto excluído do cadastro — remova do carrinho
+                    </span>
+                  )}
+                  {!item.indisponivel && estoqueExcedido(item) && (
+                    <span className="pdv-item-aviso pdv-item-aviso--erro">
+                      Estoque mudou — disponível agora: {item.unidade_medida === 'kg'
+                        ? `${parseFloat(item.estoque_atual).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+                        : `${Math.max(0, Math.trunc(parseFloat(item.estoque_atual)))} un`}
+                    </span>
+                  )}
                 </div>
                 <span className="pdv-item-total">{fmt(item.preco_venda * item.quantidade)}</span>
                 <button className="pdv-item-remover" onClick={() => { setCarrinhoFoco(idx); removerItem(idx); }} title="Remover (Delete)">×</button>
@@ -3337,7 +3512,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
             ref={btnFinalizarRef}
             type="button"
             className="pdv-btn-finalizar"
-            onClick={() => setShowPagamento(true)}
+            onClick={abrirPagamento}
             disabled={carrinho.length === 0 || loadingVenda || !pode('pdv_realizar_venda')}
             title={!pode('pdv_realizar_venda') ? SEM_PERM : 'F10 ou F2'}
           >

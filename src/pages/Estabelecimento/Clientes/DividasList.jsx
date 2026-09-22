@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Clientes/DividasList.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
@@ -343,10 +344,14 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   }
 
   /* ── Carregar dados ─────────────────────────────────────── */
-  async function carregarDados(fiadoAtivoParam = fiadoAtivo) {
+  // `silencioso` (22/09/2026, tempo real): recarrega sem o "carregando"
+  // da tela inteira e sem apagar a lista se der erro.
+  async function carregarDados(fiadoAtivoParam = fiadoAtivo, { silencioso = false } = {}) {
     if (!estabelecimentoId) return;
-    setLoading(true);
-    setErro('');
+    if (!silencioso) {
+      setLoading(true);
+      setErro('');
+    }
     try {
       const rTodos = await apiFetch(`/api/clientes`);
       if (!rTodos.ok) throw new Error('Erro ao buscar clientes');
@@ -362,11 +367,18 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
         setDividas([]);
       }
     } catch (err) {
-      setErro(err.message);
+      if (!silencioso) setErro(err.message);
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
   }
+
+  // Tempo real: cliente cadastrado/editado/excluído, venda fiado feita no
+  // PDV, pagamento recebido ou venda cancelada em qualquer tela/aparelho
+  // → lista de clientes e saldos devedores atualizam sozinhos.
+  useAvisosEstabelecimento(estabelecimentoId, ['clientes', 'vendas'], () => {
+    carregarDados(fiadoAtivo, { silencioso: true });
+  });
 
   /* ── Config de Pix (maquininha vs. sistema) + Fiado ativo? ──
      Roda primeiro pra descobrir se o Fiado está ligado, e SÓ DEPOIS

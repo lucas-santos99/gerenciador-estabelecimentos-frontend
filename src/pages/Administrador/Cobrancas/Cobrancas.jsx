@@ -226,7 +226,7 @@ export default function Cobrancas() {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
       const [rLista, rConfig] = await Promise.all([
-        fetch(`${API_URL}/admin/estabelecimentos/listar`),
+        apiFetch(`/admin/estabelecimentos/listar`),
         apiFetch("/superadmin/config-cobranca"),
       ]);
       const listaData  = (await rLista.json()) || [];

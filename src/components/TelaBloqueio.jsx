@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
+import { useAvisosEstabelecimento } from '../utils/realtimeEstab';
 import logo from '../assets/logo-lucasjsystems.png';
 import './TelaBloqueio.css';
 
@@ -63,6 +64,24 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     }
     return () => pararPolling();
   }, [mercearia_id]);
+
+  // Tempo real (22/09/2026): quando a licença muda no banco (webhook
+  // confirmou o pagamento, SuperAdmin liberou manualmente), a tela libera
+  // sozinha na hora. Com um pagamento em andamento no modal, segue o
+  // fluxo de sempre (mensagem de "pago" e redireciona); sem modal aberto
+  // (ex: liberação manual pelo SuperAdmin), redireciona direto. O polling
+  // de 5s durante o pagamento continua como reserva.
+  const verificarPagamentoRef = useRef(null);
+  useAvisosEstabelecimento(mercearia_id, ['licenca'], async () => {
+    if (verificarPagamentoRef.current) { verificarPagamentoRef.current(); return; }
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
+      if (!resp.ok) return;
+      const d = await resp.json();
+      if (d.data_vencimento) setVencimento(d.data_vencimento);
+      if (d.status_assinatura === "ativa") navigate(`/estabelecimentos/${mercearia_id}`, { replace: true });
+    } catch { /* silencioso */ }
+  });
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${zoom * 16}px`;
@@ -154,6 +173,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   // (unmount, botão "Voltar", confirmação de pagamento).
   function pararPolling() {
     clearInterval(pollingRef.current);
+    verificarPagamentoRef.current = null;
     if (visibilidadeHandlerRef.current) {
       document.removeEventListener("visibilitychange", visibilidadeHandlerRef.current);
       visibilidadeHandlerRef.current = null;
@@ -197,6 +217,8 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     };
     visibilidadeHandlerRef.current = aoVoltarAba;
     document.addEventListener("visibilitychange", aoVoltarAba);
+
+    verificarPagamentoRef.current = verificar; // aviso 'licenca' confirma na hora
 
     pollingRef.current = setInterval(verificar, 5000);
   }

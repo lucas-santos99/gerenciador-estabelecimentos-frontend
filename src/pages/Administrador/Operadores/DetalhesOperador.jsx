@@ -96,8 +96,8 @@ export default function DetalhesOperador() {
     setLoading(true);
     try {
       const [respOp, respPerms] = await Promise.all([
-        fetch(`${API_URL}/admin/operadores/detalhes/${id}`, { credentials: "include" }),
-        fetch(`${API_URL}/admin/operadores/${id}/permissoes`,  { credentials: "include" }),
+        apiFetch(`/admin/operadores/detalhes/${id}`),
+        apiFetch(`/admin/operadores/${id}/permissoes`),
       ]);
       const data = await respOp.json();
       setOp(respOp.ok ? data : null);

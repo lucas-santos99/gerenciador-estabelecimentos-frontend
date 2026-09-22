@@ -29,9 +29,7 @@ export default function Excluidas() {
   async function carregar() {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/admin/estabelecimentos/excluidas`, {
-        credentials: "include",
-      });
+      const resp = await apiFetch(`/admin/estabelecimentos/excluidas`);
       if (!resp.ok) throw new Error();
       setLista((await resp.json()) || []);
     } catch { setLista([]); }
