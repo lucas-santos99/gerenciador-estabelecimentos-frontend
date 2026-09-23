@@ -178,7 +178,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
   /* ── Baixar PDF DRE ──────────────────────────────────────── */
   // Cabeçalho/rodapé vêm da Identidade dos Relatórios (SuperAdmin).
-  async function baixarPDF() {
+  // modo 'imprimir' → abre direto a tela de impressão; senão baixa o PDF
+  async function baixarPDF(modo) {
     if (!dreData) return;
     const rel = await novoPdfRelatorio({
       tipo: 'financeiro_dre',
@@ -205,7 +206,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       styles: { fontSize: 10, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
     });
-    rel.salvar(`DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.pdf`);
+    rel.concluir(modo, `DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.pdf`);
   }
 
   function exportarDREExcel() {
@@ -261,7 +262,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     });
   }
 
-  async function baixarPDFResumoDia() {
+  async function baixarPDFResumoDia(modo) {
     const dados = linhasResumoDia();
     if (!dados.length) return;
     const rel = await novoPdfRelatorio({
@@ -278,7 +279,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       styles: { fontSize: 10, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
     });
-    rel.salvar(`Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.pdf`);
+    rel.concluir(modo, `Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════
@@ -567,7 +568,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     });
   }
 
-  async function baixarPDFOperador() {
+  async function baixarPDFOperador(modo) {
     if (!relOp.length) return;
     const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
 
@@ -608,7 +609,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       styles: { fontSize: 8, cellPadding: 2 },
       foot: [],
     });
-    rel.salvar(`Vendas_Operador_${nomeFantasia || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
+    rel.concluir(modo, `Vendas_Operador_${nomeFantasia || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════
@@ -702,11 +703,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           </button>
           <button
             className="fin-tab-btn-imprimir"
-            onClick={baixarPDFResumoDia}
+            onClick={() => baixarPDFResumoDia('baixar')}
             disabled={!resumo}
-            title="Exportar o resumo do dia em PDF"
+            title="Baixar o resumo do dia em PDF"
           >
             📄 PDF
+          </button>
+          <button
+            className="fin-tab-btn-imprimir"
+            onClick={() => baixarPDFResumoDia('imprimir')}
+            disabled={!resumo}
+            title="Imprimir o resumo do dia (abre a tela de impressão, sem baixar)"
+          >
+            🖨️ Imprimir
           </button>
         </div>
       </div>
@@ -853,10 +862,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               <button
                 type="button"
                 className="fin-btn-pdf"
-                onClick={baixarPDF}
+                onClick={() => baixarPDF('baixar')}
                 disabled={!dreData}
               >
                 📄 Baixar PDF
+              </button>
+              <button
+                type="button"
+                className="fin-btn-imprimir"
+                onClick={() => baixarPDF('imprimir')}
+                disabled={!dreData}
+                title="Abre a tela de impressão, sem baixar"
+              >
+                🖨️ Imprimir
               </button>
               <button
                 type="button"

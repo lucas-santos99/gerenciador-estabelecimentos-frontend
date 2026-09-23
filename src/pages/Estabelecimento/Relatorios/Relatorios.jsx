@@ -374,7 +374,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     });
   }
 
-  async function baixarPDFProdutos() {
+  async function baixarPDFProdutos(modo) {
     if (!reportProd.length) return;
     const body = reportProd.map((p, i) => {
       const lucro = parseFloat(p.receita_total) - parseFloat(p.custo_total || 0);
@@ -392,7 +392,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       body, theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
     });
-    rel.salvar(`Produtos_${nomeEstabelecimento || 'relatorio'}_${reportInicio}_a_${reportFim}.pdf`);
+    rel.concluir(modo, `Produtos_${nomeEstabelecimento || 'relatorio'}_${reportInicio}_a_${reportFim}.pdf`);
   }
 
   /* ── Resumo por Operador (agora derivado do histórico, exibido
@@ -428,7 +428,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     });
   }
 
-  async function baixarPDFResumoOperador() {
+  async function baixarPDFResumoOperador(modo) {
     if (!resumoPorOperador.length) return;
     const totalGeral = resumoPorOperador.reduce((s, op) => s + op.total_vendas, 0);
     const body = resumoPorOperador.map((op, i) => [
@@ -452,7 +452,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       body, theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
     });
-    rel.salvar(`Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
+    rel.concluir(modo, `Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
   }
 
   /* ── Estoque ── */
@@ -513,7 +513,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     });
   }
 
-  async function baixarPDFEstoque() {
+  async function baixarPDFEstoque(modo) {
     if (!estoqueFiltrado.length) return;
     const body = estoqueFiltrado.map(p => {
       const estAtual = parseFloat(p.estoque_atual);
@@ -539,7 +539,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       body, theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
     });
-    rel.salvar(`Estoque_${nomeEstabelecimento || 'relatorio'}_${dataHoje()}.pdf`);
+    rel.concluir(modo, `Estoque_${nomeEstabelecimento || 'relatorio'}_${dataHoje()}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -583,7 +583,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             {historicoFiltrado.length > 0 && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="fin-btn-excel" onClick={exportarHistoricoExcel}>📥 Excel</button>
-                <button className="fin-btn-pdf" onClick={baixarPDFHistorico}>📄 PDF</button>
+                <button className="fin-btn-imprimir" onClick={baixarPDFHistorico} title="Abre a tela de impressão (lá também dá pra salvar como PDF)">🖨️ Imprimir / PDF</button>
               </div>
             )}
           </div>
@@ -639,7 +639,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                     <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador</span>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="fin-btn-excel" onClick={exportarResumoOperadorExcel}>📥 Excel</button>
-                      <button className="fin-btn-pdf" onClick={baixarPDFResumoOperador}>📄 PDF</button>
+                      <button className="fin-btn-pdf" onClick={() => baixarPDFResumoOperador('baixar')}>📄 PDF</button>
+                      <button className="fin-btn-imprimir" onClick={() => baixarPDFResumoOperador('imprimir')} title="Abre a tela de impressão, sem baixar">🖨️ Imprimir</button>
                     </div>
                   </div>
                   <div className="fin-relop-grid" style={{ marginBottom: 24 }}>
@@ -795,7 +796,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             {reportProd.length > 0 && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="fin-btn-excel" onClick={exportarRelatorioExcel}>📥 Excel</button>
-                <button className="fin-btn-pdf" onClick={baixarPDFProdutos}>📄 PDF</button>
+                <button className="fin-btn-pdf" onClick={() => baixarPDFProdutos('baixar')}>📄 PDF</button>
+                <button className="fin-btn-imprimir" onClick={() => baixarPDFProdutos('imprimir')} title="Abre a tela de impressão, sem baixar">🖨️ Imprimir</button>
               </div>
             )}
           </div>
@@ -895,7 +897,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             {estoque.length > 0 && (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="fin-btn-excel" onClick={exportarEstoqueExcel}>📥 Excel</button>
-                <button className="fin-btn-pdf" onClick={baixarPDFEstoque}>📄 PDF</button>
+                <button className="fin-btn-pdf" onClick={() => baixarPDFEstoque('baixar')}>📄 PDF</button>
+                <button className="fin-btn-imprimir" onClick={() => baixarPDFEstoque('imprimir')} title="Abre a tela de impressão, sem baixar">🖨️ Imprimir</button>
               </div>
             )}
           </div>

@@ -31,6 +31,8 @@ import {
   definirConfigIdentidade,
   resolverIdentidade,
   esc,
+  ESCALA_MIN,
+  ESCALA_MAX,
 } from "../../../utils/relatorioIdentidade";
 import "./SuperAdmins.css";
 import "./IdentidadeRelatorios.css";
@@ -126,6 +128,65 @@ function Cor({ p, s, hf, campo, label }) {
   );
 }
 
+const OPCOES_EXIBICAO = [
+  { v: "logo",        t: "Só logo" },
+  { v: "nome",        t: "Só nome" },
+  { v: "logo_e_nome", t: "Logo + nome" },
+];
+
+// Botões lado a lado pra escolher uma opção (ex.: logo / nome / logo + nome)
+function Opcoes({ p, s, hf, campo, label, opcoes, dica }) {
+  return (
+    <div className="idr-adm-campo">
+      <span className="idr-adm-rotulo">
+        <span className="sa-config-item-label">{label}</span>
+        <Heranca hf={hf} campo={campo} />
+      </span>
+      <div className="idr-adm-segmentos" role="radiogroup" aria-label={label}>
+        {opcoes.map(o => (
+          <button
+            key={o.v}
+            type="button"
+            role="radio"
+            aria-checked={p[campo] === o.v}
+            className={`idr-adm-segmento${p[campo] === o.v ? " ativo" : ""}`}
+            onClick={() => s(campo, o.v)}
+          >
+            {o.t}
+          </button>
+        ))}
+      </div>
+      {dica && <span className="sa-config-hint">{dica}</span>}
+    </div>
+  );
+}
+
+// Controle deslizante de tamanho (em %)
+function Escala({ p, s, hf, campo, label, dica }) {
+  const valor = Number(p[campo]) || 100;
+  return (
+    <div className="idr-adm-campo">
+      <span className="idr-adm-rotulo">
+        <span className="sa-config-item-label">{label}</span>
+        <Heranca hf={hf} campo={campo} />
+      </span>
+      <div className="idr-adm-escala">
+        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => s(campo, Math.max(ESCALA_MIN, valor - 10))}
+          disabled={valor <= ESCALA_MIN} title="Diminuir">−</button>
+        <input type="range" min={ESCALA_MIN} max={ESCALA_MAX} step={5} value={valor}
+          onChange={e => s(campo, parseInt(e.target.value, 10))} aria-label={label} />
+        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => s(campo, Math.min(ESCALA_MAX, valor + 10))}
+          disabled={valor >= ESCALA_MAX} title="Aumentar">+</button>
+        <span className="idr-adm-escala-valor">{valor}%</span>
+        {valor !== 100 && (
+          <button type="button" className="idr-adm-escala-reset" onClick={() => s(campo, 100)} title="Voltar pro tamanho normal">normal</button>
+        )}
+      </div>
+      {dica && <span className="sa-config-hint">{dica}</span>}
+    </div>
+  );
+}
+
 function BlocoLogo({ p, s, hf, ctx, campo, label, dica, inputRef }) {
   const { enviando, enviarLogo } = ctx;
   const chave = campo === "sistema" ? "sistema_logo_url" : "marca_logo_url";
@@ -204,8 +265,15 @@ function BoxCabecalho({ p, s, hf, ctx, refs }) {
 
         <BlocoLogo p={p} s={s} hf={hf} ctx={ctx} campo="marca" label="Logo da sua marca" inputRef={refs.marca}
           dica="Vai na faixa do topo (modo Loja + minha marca) e no rodapé. Logo clara? Deixe a cor da faixa escura." />
+        <Opcoes p={p} s={s} hf={hf} campo="marca_exibicao" label="Sua marca aparece como" opcoes={OPCOES_EXIBICAO}
+          dica="Vale pro topo e pro rodapé. Sem logo enviada, sai sempre o nome." />
         <BlocoLogo p={p} s={s} hf={hf} ctx={ctx} campo="sistema" label="Logo do sistema (opcional)" inputRef={refs.sistema}
-          dica="Se tiver, aparece no canto direito da faixa do topo no lugar do nome do sistema." />
+          dica="Canto direito da faixa do topo." />
+        <Opcoes p={p} s={s} hf={hf} campo="sistema_exibicao" label="O sistema aparece como" opcoes={OPCOES_EXIBICAO}
+          dica="Sem logo do sistema enviada, sai sempre o nome." />
+
+        <Escala p={p} s={s} hf={hf} campo="escala_cabecalho" label="Tamanho do cabeçalho"
+          dica="Aumenta ou diminui a faixa do topo, as logos e os textos do cabeçalho (PDF, impressão e Excel)." />
 
         <div className="idr-adm-cores">
           <Cor p={p} s={s} hf={hf} campo="cor_faixa" label="Cor da faixa" />
@@ -256,6 +324,8 @@ function BoxRodape({ p, s, hf }) {
           <Chave p={p} s={s} hf={hf} campo="mostrar_contatos_rodape" label="Mostrar contatos" />
           <Chave p={p} s={s} hf={hf} campo="mostrar_paginacao" label="Número da página (PDF)" />
         </div>
+        <Escala p={p} s={s} hf={hf} campo="escala_rodape" label="Tamanho do rodapé"
+          dica="Aumenta ou diminui a faixa do rodapé, a logo e os textos dele (PDF, impressão e Excel)." />
       </div>
     </div>
   );
@@ -507,7 +577,7 @@ export default function IdentidadeRelatorios() {
   }
 
   /* ── Exemplos pra baixar (usam o que está na tela, sem salvar) ── */
-  async function baixarPdfExemplo() {
+  async function baixarPdfExemplo(modo) {
     setGerandoExemplo("pdf");
     try {
       const rel = await novoPdfRelatorio({
@@ -527,7 +597,7 @@ export default function IdentidadeRelatorios() {
         theme: "striped",
         styles: { fontSize: 9, cellPadding: 2.5 },
       });
-      rel.salvar("Exemplo_identidade_relatorios.pdf");
+      rel.concluir(modo, "Exemplo_identidade_relatorios.pdf");
     } catch (e) {
       setMsg("❌ Erro ao gerar o PDF de exemplo: " + e.message);
     }
@@ -727,8 +797,11 @@ export default function IdentidadeRelatorios() {
                     {!(aba === "por_tipo" && ehRecibo) && (
                       <>
                         <div className="idr-adm-acoes">
-                          <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={baixarPdfExemplo} disabled={gerandoExemplo !== null}>
+                          <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => baixarPdfExemplo("baixar")} disabled={gerandoExemplo !== null}>
                             {gerandoExemplo === "pdf" ? "⏳" : "📄"} PDF de exemplo
+                          </button>
+                          <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => baixarPdfExemplo("imprimir")} disabled={gerandoExemplo !== null}>
+                            🖨️ Imprimir exemplo
                           </button>
                           <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={baixarExcelExemplo} disabled={gerandoExemplo !== null}>
                             {gerandoExemplo === "xlsx" ? "⏳" : "📊"} Excel de exemplo

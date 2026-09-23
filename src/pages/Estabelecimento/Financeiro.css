@@ -443,6 +443,28 @@
 }
 .fin-btn-pdf:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* Imprimir direto (23/09/2026) — abre a tela de impressão com o mesmo
+   PDF, sem baixar. Usado no Financeiro e em Relatórios, ao lado do PDF. */
+.fin-btn-imprimir {
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--est-input);
+  color: var(--est-text-soft);
+  border: 1px solid var(--est-border);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+.fin-btn-imprimir:hover:not(:disabled) {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+}
+.fin-btn-imprimir:disabled { opacity: 0.35; cursor: not-allowed; }
+
 /* ========================= */
 /*  DRE — CARDS DE RESULTADO  */
 /* ========================= */
@@ -1255,6 +1277,7 @@
   .fin-form-filtros .fin-form-group { min-width: unset; width: 100%; }
   .fin-btn-gerar { width: 100%; }
   .fin-btn-pdf   { width: 100%; }
+  .fin-btn-imprimir { width: 100%; }
 
   .fin-contas-header { flex-wrap: wrap; gap: 8px; }
   .fin-filtro-btns { flex-wrap: wrap; }

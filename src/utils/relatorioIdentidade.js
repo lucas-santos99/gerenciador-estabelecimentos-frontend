@@ -36,6 +36,10 @@ export const IDENTIDADE_PADRAO = Object.freeze({
   marca_nome:               'Lucas J. Systems',
   marca_logo_url:           '',
   sistema_logo_url:         '',
+  marca_exibicao:           'logo',   // 'logo' | 'nome' | 'logo_e_nome'
+  sistema_exibicao:         'logo',   // 'logo' | 'nome' | 'logo_e_nome'
+  escala_cabecalho:         100,      // % (70–160)
+  escala_rodape:            100,      // % (70–160)
   cor_faixa:                '#0f172a',
   cor_texto_faixa:          '#e6f7f1',
   cor_destaque:             '#0f766e',
@@ -110,6 +114,24 @@ function corValida(c, reserva) {
 function hexParaRgb(hex) {
   const h = corValida(hex, '#000000').slice(1);
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+const EXIBICOES = ['logo', 'nome', 'logo_e_nome'];
+export const ESCALA_MIN = 70;
+export const ESCALA_MAX = 160;
+
+function escalaValida(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return 100;
+  return Math.min(ESCALA_MAX, Math.max(ESCALA_MIN, n));
+}
+
+/** O que mostrar da marca/sistema: { logo: bool, nome: bool } conforme a
+ *  opção escolhida e o que existe. Sem logo carregada, cai pro nome. */
+function oQueMostrar(exibicao, temLogo, temNome) {
+  const logo = temLogo && exibicao !== 'nome';
+  const nome = temNome && (exibicao !== 'logo' || !temLogo);
+  return { logo, nome };
 }
 
 function urlImagemSegura(u) {
@@ -236,6 +258,10 @@ export function resolverIdentidade(tipo, configOverride) {
   id.cor_texto_faixa = corValida(id.cor_texto_faixa, IDENTIDADE_PADRAO.cor_texto_faixa);
   id.cor_destaque    = corValida(id.cor_destaque, IDENTIDADE_PADRAO.cor_destaque);
   if (!['loja', 'loja_e_marca'].includes(id.cabecalho_modo)) id.cabecalho_modo = IDENTIDADE_PADRAO.cabecalho_modo;
+  if (!EXIBICOES.includes(id.marca_exibicao))   id.marca_exibicao   = IDENTIDADE_PADRAO.marca_exibicao;
+  if (!EXIBICOES.includes(id.sistema_exibicao)) id.sistema_exibicao = IDENTIDADE_PADRAO.sistema_exibicao;
+  id.escala_cabecalho = escalaValida(id.escala_cabecalho);
+  id.escala_rodape    = escalaValida(id.escala_rodape);
   return id;
 }
 
@@ -374,7 +400,10 @@ export async function novoPdfRelatorio({
   const corTextoFaixa = hexParaRgb(id.cor_texto_faixa);
   const corDestaque = hexParaRgb(id.cor_destaque);
 
-  const ALTURA_FAIXA = 13;
+  // Tamanhos ajustáveis na tela do SuperAdmin (70% a 160%)
+  const sc = id.escala_cabecalho / 100;
+  const sr = id.escala_rodape / 100;
+  const ALTURA_FAIXA = 13 * sc;
 
   // Rodapé: uma linha por informação ("Gerado por…", contatos, texto
   // livre) — a altura da faixa acompanha quantas linhas tiver.
@@ -384,7 +413,32 @@ export async function novoPdfRelatorio({
   const contatosRodape = linhaContatos(id);
   if (contatosRodape)        linhasRodape.push({ t: contatosRodape, b: false });
   if (id.rodape_texto_livre) linhasRodape.push({ t: id.rodape_texto_livre, b: false });
-  const ALTURA_RODAPE = Math.max(11, 5 + linhasRodape.length * 3.6);
+  const PASSO_RODAPE = 3.6 * sr;
+  const ALTURA_RODAPE = Math.max(11 * sr, 5 * sr + linhasRodape.length * PASSO_RODAPE);
+
+  // Desenha logo e/ou nome (conforme "exibicao") centralizado na altura
+  // `yCentro`. Com `direita`, `x` é a borda direita. Devolve a largura usada.
+  function desenharMarca({ logo, nome, exibicao, x, yCentro, alturaLogo, larguraMaxLogo, fonte, negrito, direita = false }) {
+    const quer = oQueMostrar(exibicao, !!logo, !!nome);
+    let wLogo = 0, hLogo = 0;
+    if (quer.logo) ({ w: wLogo, h: hLogo } = caberImagem(logo, larguraMaxLogo, alturaLogo));
+    doc.setFont('helvetica', negrito ? 'bold' : 'normal');
+    doc.setFontSize(fonte);
+    const txt = quer.nome ? textoPdf(nome) : '';
+    const wTxt = txt ? doc.getTextWidth(txt) : 0;
+    const espaco = quer.logo && txt ? alturaLogo * 0.4 : 0;
+    const total = wLogo + espaco + wTxt;
+    let cx = direita ? x - total : x;
+    if (quer.logo) {
+      doc.addImage(logo.dataUrl, 'PNG', cx, yCentro - hLogo / 2, wLogo, hLogo);
+      cx += wLogo + espaco;
+    }
+    if (txt) {
+      doc.setTextColor(...corTextoFaixa);
+      doc.text(txt, cx, yCentro + fonte * 0.3528 * 0.35);
+    }
+    return total;
+  }
 
   let y = M;
 
@@ -392,23 +446,15 @@ export async function novoPdfRelatorio({
   if (id.cabecalho_modo === 'loja_e_marca') {
     doc.setFillColor(...corFaixa);
     doc.rect(0, 0, W, ALTURA_FAIXA, 'F');
-    const logoMarca = logoPronta(id.marca_logo_url);
-    if (logoMarca) {
-      const { w, h } = caberImagem(logoMarca, 55, 8);
-      doc.addImage(logoMarca.dataUrl, 'PNG', M, (ALTURA_FAIXA - h) / 2, w, h);
-    } else if (id.marca_nome) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...corTextoFaixa);
-      doc.text(textoPdf(id.marca_nome), M, ALTURA_FAIXA / 2 + 1.5);
-    }
-    const logoSistema = logoPronta(id.sistema_logo_url);
-    if (logoSistema) {
-      const { w, h } = caberImagem(logoSistema, 55, 8);
-      doc.addImage(logoSistema.dataUrl, 'PNG', W - M - w, (ALTURA_FAIXA - h) / 2, w, h);
-    } else if (id.nome_sistema) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...corTextoFaixa);
-      doc.text(textoPdf(id.nome_sistema), W - M, ALTURA_FAIXA / 2 + 1.3, { align: 'right' });
-    }
-    y = ALTURA_FAIXA + 6;
+    desenharMarca({
+      logo: logoPronta(id.marca_logo_url), nome: id.marca_nome, exibicao: id.marca_exibicao,
+      x: M, yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 11 * sc, negrito: true,
+    });
+    desenharMarca({
+      logo: logoPronta(id.sistema_logo_url), nome: id.nome_sistema, exibicao: id.sistema_exibicao,
+      x: W - M, yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 8.5 * sc, negrito: false, direita: true,
+    });
+    y = ALTURA_FAIXA + 6 * sc;
   }
 
   /* Bloco da loja (esquerda) + título do relatório (direita) */
@@ -419,9 +465,9 @@ export async function novoPdfRelatorio({
 
   const logoLoja = loja && id.mostrar_logo_loja ? logoPronta(loja.logo_url) : null;
   if (logoLoja) {
-    const { w, h } = caberImagem(logoLoja, 26, 20);
+    const { w, h } = caberImagem(logoLoja, 26 * sc, 20 * sc);
     doc.addImage(logoLoja.dataUrl, 'PNG', M, topo, w, h);
-    xTexto = M + w + 4;
+    xTexto = M + w + 4 * sc;
     alturaLogo = h;
   }
 
@@ -431,42 +477,42 @@ export async function novoPdfRelatorio({
     ? linhasDadosLoja(loja, id)
     : (id.marca_nome && id.marca_nome !== nomeEsq ? [id.marca_nome] : []);
 
-  let yEsq = topo + 5;
+  let yEsq = topo + 5 * sc;
   if (nomeEsq) {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13 * sc); doc.setTextColor(20, 20, 20);
     const partes = doc.splitTextToSize(textoPdf(nomeEsq), larguraEsq);
     doc.text(partes, xTexto, yEsq);
-    yEsq += partes.length * 5.4;
+    yEsq += partes.length * 5.4 * sc;
   }
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(95, 100, 110);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * sc); doc.setTextColor(95, 100, 110);
   linhasEsq.forEach(l => {
     const partes = doc.splitTextToSize(textoPdf(l), larguraEsq);
     doc.text(partes, xTexto, yEsq);
-    yEsq += partes.length * 3.8;
+    yEsq += partes.length * 3.8 * sc;
   });
 
   const larguraDir = larguraUtil * 0.42;
-  let yDir = topo + 5;
+  let yDir = topo + 5 * sc;
   if (titulo) {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...corDestaque);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12 * sc); doc.setTextColor(...corDestaque);
     const partes = doc.splitTextToSize(textoPdf(titulo), larguraDir);
     doc.text(partes, W - M, yDir, { align: 'right' });
-    yDir += partes.length * 5;
+    yDir += partes.length * 5 * sc;
   }
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(95, 100, 110);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5 * sc); doc.setTextColor(95, 100, 110);
   if (subtitulo) {
     const partes = doc.splitTextToSize(textoPdf(subtitulo), larguraDir);
     doc.text(partes, W - M, yDir, { align: 'right' });
-    yDir += partes.length * 4;
+    yDir += partes.length * 4 * sc;
   }
   if (id.mostrar_data_geracao) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(7.5 * sc);
     doc.text(`Gerado em ${geradoEm}`, W - M, yDir, { align: 'right' });
-    yDir += 3.6;
+    yDir += 3.6 * sc;
   }
 
-  const fimBloco = Math.max(topo + alturaLogo, yEsq - 2, yDir - 2);
-  const yLinha = fimBloco + 3;
+  const fimBloco = Math.max(topo + alturaLogo, yEsq - 2 * sc, yDir - 2 * sc);
+  const yLinha = fimBloco + 3 * sc;
   doc.setDrawColor(...corDestaque);
   doc.setLineWidth(0.6);
   doc.line(M, yLinha, W - M, yLinha);
@@ -497,24 +543,35 @@ export async function novoPdfRelatorio({
       const yR = H - ALTURA_RODAPE;
       doc.setFillColor(...corFaixa);
       doc.rect(0, yR, W, ALTURA_RODAPE, 'F');
-      let xR = M;
-      if (logoMarca) {
-        const { w, h } = caberImagem(logoMarca, 30, 6);
-        doc.addImage(logoMarca.dataUrl, 'PNG', M, yR + (ALTURA_RODAPE - h) / 2, w, h);
-        xR = M + w + 4;
-      }
-      const larguraTextoRodape = W - M - xR - 30;
+      const larguraMarca = desenharMarca({
+        logo: logoMarca, nome: id.marca_nome, exibicao: id.marca_exibicao,
+        x: M, yCentro: yR + ALTURA_RODAPE / 2, alturaLogo: 6 * sr, larguraMaxLogo: 30 * sr, fonte: 7.5 * sr, negrito: true,
+      });
+      const xR = larguraMarca > 0 ? M + larguraMarca + 5 * sr : M;
+      const larguraTextoRodape = W - M - xR - 30 * sr;
       doc.setTextColor(...corTextoFaixa);
-      const yInicio = yR + (ALTURA_RODAPE - (linhasRodape.length - 1) * 3.6) / 2 + 1;
+      const yInicio = yR + (ALTURA_RODAPE - (linhasRodape.length - 1) * PASSO_RODAPE) / 2 + 1 * sr;
       linhasRodape.forEach((l, i) => {
         doc.setFont('helvetica', l.b ? 'bold' : 'normal');
-        doc.setFontSize(l.b ? 7.5 : 6.8);
-        const txt = doc.splitTextToSize(textoPdf(l.t), larguraTextoRodape)[0] || '';
-        doc.text(txt, xR, yInicio + i * 3.6);
+        // Texto maior que o espaço: diminui a letra até caber (até 70% do
+        // tamanho); se ainda assim não couber, corta com "...".
+        let fonte = (l.b ? 7.5 : 6.8) * sr;
+        const minimo = fonte * 0.7;
+        let txt = textoPdf(l.t);
+        doc.setFontSize(fonte);
+        while (doc.getTextWidth(txt) > larguraTextoRodape && fonte > minimo) {
+          fonte -= 0.25;
+          doc.setFontSize(fonte);
+        }
+        if (doc.getTextWidth(txt) > larguraTextoRodape) {
+          while (txt.length > 1 && doc.getTextWidth(txt + '...') > larguraTextoRodape) txt = txt.slice(0, -1);
+          txt = txt.trimEnd() + '...';
+        }
+        doc.text(txt, xR, yInicio + i * PASSO_RODAPE);
       });
       if (id.mostrar_paginacao) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
-        doc.text(`Página ${p} de ${total}`, W - M, yR + ALTURA_RODAPE / 2 + 1.2, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5 * sr);
+        doc.text(`Página ${p} de ${total}`, W - M, yR + ALTURA_RODAPE / 2 + 1.2 * sr, { align: 'right' });
       }
     }
   }
@@ -534,12 +591,55 @@ export async function novoPdfRelatorio({
       desenharRodapes();
       doc.save(nomeArquivo);
     },
+    /** Desenha rodapés e abre direto a tela de impressão (sem baixar). */
+    imprimir() {
+      desenharRodapes();
+      imprimirPdfBlob(doc.output('blob'));
+    },
+    /** `modo` 'imprimir' → tela de impressão; qualquer outro → baixa o arquivo.
+     *  (Os botões chamam a função sem argumento ou com o evento do clique,
+     *  que cai no "baixar".) */
+    concluir(modo, nomeArquivo) {
+      if (modo === 'imprimir') this.imprimir();
+      else this.salvar(nomeArquivo);
+    },
     /** Igual ao salvar, mas devolve o PDF (Blob) em vez de baixar — usado na prévia. */
     finalizarBlob() {
       desenharRodapes();
       return doc.output('blob');
     },
   };
+}
+
+/* Abre a tela de impressão do navegador com o PDF, sem baixar nada.
+   Carrega o PDF num iframe invisível da própria página e manda imprimir
+   (não depende de pop-up, então não é bloqueado mesmo depois de esperar
+   a identidade/logos carregarem). Se o navegador não deixar imprimir
+   pelo iframe, abre o PDF numa aba nova, com o botão de imprimir dele. */
+let iframeImpressao = null;
+let urlImpressao = null;
+export function imprimirPdfBlob(blob) {
+  if (iframeImpressao) { iframeImpressao.remove(); iframeImpressao = null; }
+  if (urlImpressao) { URL.revokeObjectURL(urlImpressao); urlImpressao = null; }
+  const url = URL.createObjectURL(blob);
+  urlImpressao = url;
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.title = 'Impressão';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
+  iframe.onload = () => {
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch {
+        window.open(url, '_blank');
+      }
+    }, 150);
+  };
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  iframeImpressao = iframe;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -562,16 +662,18 @@ export function htmlIdentidade({
   const loja = semLoja ? null : (lojaOverride || estado.loja);
   const geradoEm = agoraFormatado();
 
+  // Logo e/ou nome, conforme a opção de exibição escolhida
+  const marcaHtml = (src, nome, exibicao, classeNome) => {
+    const quer = oQueMostrar(exibicao, !!src, !!nome);
+    return `${quer.logo ? `<img src="${esc(src)}" alt="">` : ''}${quer.nome ? `<span class="${classeNome}">${esc(nome)}</span>` : ''}`;
+  };
+
   const faixa = id.cabecalho_modo === 'loja_e_marca'
-    ? (() => {
-        const sm = srcLogo(id.marca_logo_url);
-        const ss = srcLogo(id.sistema_logo_url);
-        return `
+    ? `
           <div class="idr-faixa">
-            <div class="idr-faixa-esq">${sm ? `<img src="${esc(sm)}" alt="">` : `<span class="idr-faixa-marca">${esc(id.marca_nome)}</span>`}</div>
-            <div class="idr-faixa-dir">${ss ? `<img src="${esc(ss)}" alt="">` : `<span>${esc(id.nome_sistema)}</span>`}</div>
-          </div>`;
-      })()
+            <div class="idr-faixa-esq">${marcaHtml(srcLogo(id.marca_logo_url), id.marca_nome, id.marca_exibicao, 'idr-faixa-marca')}</div>
+            <div class="idr-faixa-dir">${marcaHtml(srcLogo(id.sistema_logo_url), id.nome_sistema, id.sistema_exibicao, 'idr-faixa-sistema')}</div>
+          </div>`
     : '';
 
   const nomeEsq = loja ? (loja.nome || '') : (id.nome_sistema || id.marca_nome || '');
@@ -601,11 +703,11 @@ export function htmlIdentidade({
 
   const gerado = aplicarMarcadores(id.rodape_gerado_por, id);
   const contatos = linhaContatos(id);
-  const srcMarca = srcLogo(id.marca_logo_url);
+  const marcaRodape = marcaHtml(srcLogo(id.marca_logo_url), id.marca_nome, id.marca_exibicao, 'idr-rod-marca');
   const rodape = `
     <footer class="idr-rod">
       <div class="idr-rod-esq">
-        ${srcMarca ? `<img src="${esc(srcMarca)}" alt="">` : ''}
+        ${marcaRodape ? `<div class="idr-rod-marca-box">${marcaRodape}</div>` : ''}
         <div>
           ${gerado ? `<div class="idr-rod-gerado">${esc(gerado)}</div>` : ''}
           ${contatos ? `<div class="idr-rod-linha">${esc(contatos)}</div>` : ''}
@@ -615,32 +717,39 @@ export function htmlIdentidade({
       ${id.mostrar_data_geracao ? `<div class="idr-rod-dir">${esc(geradoEm)}</div>` : ''}
     </footer>`;
 
+  // Tamanhos ajustáveis (escala_cabecalho / escala_rodape, em %)
+  const c = (v) => `${(v * id.escala_cabecalho / 100).toFixed(1)}px`;
+  const r = (v) => `${(v * id.escala_rodape / 100).toFixed(1)}px`;
   const css = `
     .idr-cab, .idr-rod { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; }
-    .idr-cab { margin-bottom: 14px; }
-    .idr-faixa { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      background: ${id.cor_faixa}; color: ${id.cor_texto_faixa}; padding: 8px 14px; border-radius: 6px; margin-bottom: 12px; }
-    .idr-faixa img { max-height: 28px; max-width: 220px; display: block; }
-    .idr-faixa-marca { font-weight: 800; font-size: 15px; letter-spacing: .3px; }
-    .idr-faixa-dir { font-size: 11px; opacity: .92; text-align: right; }
-    .idr-bloco { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px;
-      padding-bottom: 10px; border-bottom: 2px solid ${id.cor_destaque}; }
-    .idr-loja { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
-    .idr-loja-logo { max-width: 90px; max-height: 70px; object-fit: contain; display: block; }
-    .idr-loja-nome { font-size: 18px; font-weight: 800; color: #111827; line-height: 1.2; }
-    .idr-loja-info { font-size: 10.5px; color: #5f646e; margin-top: 2px; }
+    .idr-cab { margin-bottom: ${c(14)}; }
+    .idr-faixa { display: flex; align-items: center; justify-content: space-between; gap: ${c(16)};
+      background: ${id.cor_faixa}; color: ${id.cor_texto_faixa}; padding: ${c(8)} ${c(14)}; border-radius: 6px; margin-bottom: ${c(12)}; }
+    .idr-faixa-esq, .idr-faixa-dir { display: flex; align-items: center; gap: ${c(10)}; min-width: 0; }
+    .idr-faixa img { max-height: ${c(28)}; max-width: ${c(220)}; display: block; }
+    .idr-faixa-marca { font-weight: 800; font-size: ${c(15)}; letter-spacing: .3px; white-space: nowrap; }
+    .idr-faixa-sistema { font-size: ${c(11)}; opacity: .92; white-space: nowrap; }
+    .idr-faixa-dir { justify-content: flex-end; text-align: right; }
+    .idr-bloco { display: flex; justify-content: space-between; align-items: flex-start; gap: ${c(18)};
+      padding-bottom: ${c(10)}; border-bottom: 2px solid ${id.cor_destaque}; }
+    .idr-loja { display: flex; align-items: flex-start; gap: ${c(12)}; min-width: 0; }
+    .idr-loja-logo { max-width: ${c(90)}; max-height: ${c(70)}; object-fit: contain; display: block; }
+    .idr-loja-nome { font-size: ${c(18)}; font-weight: 800; color: #111827; line-height: 1.2; }
+    .idr-loja-info { font-size: ${c(10.5)}; color: #5f646e; margin-top: 2px; }
     .idr-titulo-bloco { text-align: right; flex-shrink: 0; max-width: 45%; }
-    .idr-titulo { font-size: 15px; font-weight: 800; color: ${id.cor_destaque}; }
-    .idr-sub { font-size: 11px; color: #5f646e; margin-top: 3px; }
-    .idr-gerado { font-size: 9.5px; color: #8a8f98; margin-top: 3px; }
-    .idr-rod { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 22px;
-      background: ${id.cor_faixa}; color: ${id.cor_texto_faixa}; padding: 8px 14px; border-radius: 6px;
+    .idr-titulo { font-size: ${c(15)}; font-weight: 800; color: ${id.cor_destaque}; }
+    .idr-sub { font-size: ${c(11)}; color: #5f646e; margin-top: 3px; }
+    .idr-gerado { font-size: ${c(9.5)}; color: #8a8f98; margin-top: 3px; }
+    .idr-rod { display: flex; justify-content: space-between; align-items: center; gap: ${r(14)}; margin-top: 22px;
+      background: ${id.cor_faixa}; color: ${id.cor_texto_faixa}; padding: ${r(8)} ${r(14)}; border-radius: 6px;
       page-break-inside: avoid; break-inside: avoid; }
-    .idr-rod-esq { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .idr-rod-esq img { max-height: 20px; max-width: 120px; display: block; }
-    .idr-rod-gerado { font-size: 10.5px; font-weight: 700; }
-    .idr-rod-linha { font-size: 9.5px; opacity: .9; margin-top: 1px; }
-    .idr-rod-dir { font-size: 9.5px; opacity: .9; white-space: nowrap; }
+    .idr-rod-esq { display: flex; align-items: center; gap: ${r(12)}; min-width: 0; }
+    .idr-rod-marca-box { display: flex; align-items: center; gap: ${r(8)}; flex-shrink: 0; }
+    .idr-rod-marca-box img { max-height: ${r(20)}; max-width: ${r(120)}; display: block; }
+    .idr-rod-marca { font-size: ${r(11)}; font-weight: 800; white-space: nowrap; }
+    .idr-rod-gerado { font-size: ${r(10.5)}; font-weight: 700; }
+    .idr-rod-linha { font-size: ${r(9.5)}; opacity: .9; margin-top: 1px; }
+    .idr-rod-dir { font-size: ${r(9.5)}; opacity: .9; white-space: nowrap; }
   `;
 
   return { css, cabecalho, rodape, identidade: id };
@@ -705,23 +814,29 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
   const colIni = range.s.c;
   const colFim = Math.max(range.e.c, colIni + 3); // pelo menos 4 colunas pro texto do cabeçalho
 
+  // Tamanhos ajustáveis (escala_cabecalho / escala_rodape, em %).
+  // Planilha não leva imagem: a marca e o sistema entram sempre como texto.
+  const kc = id.escala_cabecalho / 100;
+  const kr = id.escala_rodape / 100;
+  const tam = (v, k) => Math.round(v * k * 2) / 2;
+
   // Linhas do cabeçalho
   const cab = [];
   const faixa = {
     fill: { patternType: 'solid', fgColor: { rgb: rgbHex(id.cor_faixa) } },
-    font: { bold: true, sz: 11, color: { rgb: rgbHex(id.cor_texto_faixa) } },
+    font: { bold: true, sz: tam(11, kc), color: { rgb: rgbHex(id.cor_texto_faixa) } },
     alignment: { vertical: 'center' },
   };
   if (id.cabecalho_modo === 'loja_e_marca') {
-    cab.push({ v: [id.marca_nome, id.nome_sistema].filter(Boolean).join('   ·   '), s: faixa, hpt: 22 });
+    cab.push({ v: [id.marca_nome, id.nome_sistema].filter(Boolean).join('   ·   '), s: faixa, hpt: tam(22, kc) });
   }
   const nomeEsq = loja ? (loja.nome || '') : (id.nome_sistema || id.marca_nome || '');
-  if (nomeEsq) cab.push({ v: nomeEsq, s: { font: { bold: true, sz: 14, color: { rgb: '111827' } } }, hpt: 22 });
+  if (nomeEsq) cab.push({ v: nomeEsq, s: { font: { bold: true, sz: tam(14, kc), color: { rgb: '111827' } } }, hpt: tam(22, kc) });
   const dados = loja ? linhasDadosLoja(loja, id) : (id.marca_nome && id.marca_nome !== nomeEsq ? [id.marca_nome] : []);
-  dados.forEach(l => cab.push({ v: l, s: { font: { sz: 9, color: { rgb: '5F646E' } } } }));
-  if (titulo) cab.push({ v: titulo, s: { font: { bold: true, sz: 12, color: { rgb: rgbHex(id.cor_destaque) } } }, hpt: 20 });
+  dados.forEach(l => cab.push({ v: l, s: { font: { sz: tam(9, kc), color: { rgb: '5F646E' } } } }));
+  if (titulo) cab.push({ v: titulo, s: { font: { bold: true, sz: tam(12, kc), color: { rgb: rgbHex(id.cor_destaque) } } }, hpt: tam(20, kc) });
   const linhaSub = [subtitulo, id.mostrar_data_geracao ? `Gerado em ${geradoEm}` : ''].filter(Boolean).join('   ·   ');
-  if (linhaSub) cab.push({ v: linhaSub, s: { font: { sz: 9, color: { rgb: '5F646E' } } } });
+  if (linhaSub) cab.push({ v: linhaSub, s: { font: { sz: tam(9, kc), color: { rgb: '5F646E' } } } });
   cab.push({ v: '', s: {} }); // respiro antes da tabela
 
   const N = cab.length;
@@ -770,9 +885,9 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
   const rod = [];
   const gerado = aplicarMarcadores(id.rodape_gerado_por, id);
   const contatos = linhaContatos(id);
-  if (gerado)                rod.push({ v: gerado, s: { ...faixa, font: { ...faixa.font, sz: 10 } } });
-  if (contatos)              rod.push({ v: contatos, s: { ...faixa, font: { sz: 9, color: { rgb: rgbHex(id.cor_texto_faixa) } } } });
-  if (id.rodape_texto_livre) rod.push({ v: id.rodape_texto_livre, s: { ...faixa, font: { sz: 9, color: { rgb: rgbHex(id.cor_texto_faixa) } } } });
+  if (gerado)                rod.push({ v: gerado, s: { ...faixa, font: { ...faixa.font, sz: tam(10, kr) } } });
+  if (contatos)              rod.push({ v: contatos, s: { ...faixa, font: { sz: tam(9, kr), color: { rgb: rgbHex(id.cor_texto_faixa) } } } });
+  if (id.rodape_texto_livre) rod.push({ v: id.rodape_texto_livre, s: { ...faixa, font: { sz: tam(9, kr), color: { rgb: rgbHex(id.cor_texto_faixa) } } } });
   let ultima = fimDados;
   rod.forEach((l, i) => {
     const r = fimDados + 2 + i;

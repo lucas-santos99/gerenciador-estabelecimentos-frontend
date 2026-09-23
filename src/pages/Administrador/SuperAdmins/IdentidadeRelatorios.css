@@ -121,3 +121,29 @@
 .idr-adm-tipo-resumo {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px;
 }
+
+/* ── Exibição (logo / nome) e tamanho do cabeçalho/rodapé ── */
+.idr-adm-segmentos {
+  display: inline-flex; flex-wrap: wrap; gap: 0; align-self: flex-start;
+  border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.idr-adm-segmento {
+  padding: 7px 14px; border: 0; background: var(--bg-hover); color: var(--text-secondary);
+  font-size: calc(0.78rem * var(--sa-font-scale, 1)); font-weight: 600; cursor: pointer;
+  border-right: 1px solid var(--border);
+}
+.idr-adm-segmento:last-child { border-right: 0; }
+.idr-adm-segmento:hover { color: var(--text-primary); }
+.idr-adm-segmento.ativo { background: #8b5cf6; color: #fff; }
+
+.idr-adm-escala { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.idr-adm-escala input[type="range"] { flex: 1; min-width: 140px; accent-color: #8b5cf6; cursor: pointer; }
+.idr-adm-escala-valor {
+  min-width: 48px; text-align: right; font-weight: 700; color: var(--text-primary);
+  font-size: calc(0.85rem * var(--sa-font-scale, 1)); font-variant-numeric: tabular-nums;
+}
+.idr-adm-escala-reset {
+  font-size: calc(0.7rem * var(--sa-font-scale, 1)); color: var(--text-secondary);
+  background: none; border: 1px dashed var(--border); border-radius: 999px; padding: 2px 9px; cursor: pointer;
+}
+.idr-adm-escala-reset:hover { color: var(--text-primary); }
