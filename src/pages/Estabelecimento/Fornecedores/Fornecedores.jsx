@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Fornecedores/Fornecedores.jsx
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
 import FornecedorModal from './FornecedorModal';
 import LancarCompraModal from './LancarCompraModal';
@@ -556,7 +557,11 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, aba === 'compras' ? 'Compras' : 'Produtos');
       const sufixo = aba === 'compras' ? 'Historico_Compras' : 'Produtos_Fornecidos';
-      XLSX.writeFile(wb, `${nomeArquivoBase()}_${sufixo}.xlsx`);
+      salvarExcelIdentidade(wb, `${nomeArquivoBase()}_${sufixo}.xlsx`, {
+        tipo: 'fornecedores',
+        titulo: aba === 'compras' ? `Histórico de Compras — ${dados.nome}` : `Produtos Fornecidos — ${dados.nome}`,
+        subtitulo: `${linhas.length} registro(s)`,
+      });
     } finally {
       setExportando(null);
     }
@@ -571,26 +576,28 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
         ? `Histórico de Compras — ${dados.nome}`
         : `Produtos Fornecidos — ${dados.nome}`;
 
+      // Cabeçalho/rodapé da Identidade dos Relatórios (SuperAdmin)
+      const idr = htmlIdentidade({ tipo: 'fornecedores', titulo, subtitulo: `${linhas.length} registro(s)` });
+
       const html = `
-        <html><head><title>${titulo}</title>
+        <html><head><meta charset="UTF-8"><title>${titulo.replace(/</g, '&lt;')}</title>
         <style>
           body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
-          h1 { font-size: 16px; margin-bottom: 2px; }
-          p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+          ${idr.css}
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
           th { background: #f0f0f0; }
           tr:nth-child(even) { background: #fafafa; }
         </style>
         </head><body>
-        <h1>${titulo}</h1>
-        <p class="sub">${linhas.length} registro(s) · Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
+        ${idr.cabecalho}
         <table>
           <thead><tr>${Object.keys(linhas[0]).map(k => `<th>${k}</th>`).join('')}</tr></thead>
           <tbody>
             ${linhas.map(l => `<tr>${Object.values(l).map(v => `<td>${String(v).replace(/</g, '&lt;')}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
+        ${idr.rodape}
         </body></html>
       `;
 

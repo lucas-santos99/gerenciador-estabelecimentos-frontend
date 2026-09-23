@@ -3,6 +3,7 @@ import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx-js-style';
+import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relatorioIdentidade';
 import ProdutoModal from './ProdutoModal';
 import '../Estoque.css';
 
@@ -392,7 +393,70 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     }
 
     const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    XLSX.writeFile(wb, `Estoque-${data}.xlsx`);
+    salvarExcelIdentidade(wb, `Estoque-${data}.xlsx`, {
+      tipo: 'estoque', titulo: 'Relatório de Estoque',
+      subtitulo: `${linhasProdutos.length} produto${linhasProdutos.length === 1 ? '' : 's'}`,
+    });
+  }
+
+  /* ── Imprimir (23/09/2026) ─────────────────────────────────
+     Antes era window.print() da própria tela (saía menu, botões e tudo).
+     Agora abre uma página de impressão só com a lista que está na tela
+     (respeita categoria e busca), com cabeçalho/rodapé da Identidade dos
+     Relatórios. */
+  function imprimirLista() {
+    const lista = produtosFiltrados;
+    if (lista.length === 0) return;
+    const nomeCategoria = categoriaAtiva === 'todos' ? 'Todas as categorias'
+      : categoriaAtiva === 'sem_categoria' ? 'Sem categoria'
+      : (categorias.find(c => c.id === categoriaAtiva)?.nome || '');
+    const filtros = [nomeCategoria, termoBusca.trim() ? `Busca: "${termoBusca.trim()}"` : '', `${lista.length} produto${lista.length === 1 ? '' : 's'}`]
+      .filter(Boolean).join(' · ');
+
+    const idr = htmlIdentidade({ tipo: 'estoque', titulo: 'Lista de Produtos', subtitulo: filtros });
+
+    const linhas = lista.map(p => {
+      const status = estoqueStatus(p);
+      const statusLabel = status === 'critico' ? 'Crítico' : status === 'baixo' ? 'Baixo' : 'OK';
+      const cat = categorias.find(c => c.id === p.categoria_id)?.nome || 'Sem categoria';
+      return `<tr class="st-${status}">
+        <td>${esc(p.nome)}${p.marca ? ` <span class="marca">· ${esc(p.marca)}</span>` : ''}</td>
+        <td>${esc(cat)}</td>
+        <td class="num">${esc(formatarEstoque(p.estoque_atual, p.unidade_medida))}</td>
+        <td class="num">${esc(fmt(p.preco_venda))}</td>
+        <td>${statusLabel}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lista de Produtos</title>
+      <style>
+        @page { size: A4; margin: 12mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1e293b; padding: 12px; }
+        ${idr.css}
+        table { width: 100%; border-collapse: collapse; }
+        thead th { background: ${idr.identidade.cor_destaque}; color: #fff; text-align: left; padding: 6px 8px;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+        td.num { text-align: right; white-space: nowrap; }
+        .marca { color: #64748b; }
+        tr.st-critico td { color: #b91c1c; font-weight: 700; }
+        tr.st-baixo td { color: #b45309; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      ${idr.cabecalho}
+      <table>
+        <thead><tr><th>Produto</th><th>Categoria</th><th style="text-align:right">Estoque</th><th style="text-align:right">Venda</th><th>Situação</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+      ${idr.rodape}
+      </body></html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
   }
 
   /* ── Filtros ─────────────────────────────────────────────── */
@@ -923,7 +987,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
             <button className="estoque-btn verde" onClick={exportarExcel} title="Exportar Excel">
               📥 Excel
             </button>
-            <button className="estoque-btn" onClick={() => window.print()} title="Imprimir">
+            <button className="estoque-btn" onClick={imprimirLista} title="Imprimir lista (com a identidade dos relatórios)">
               🖨️
             </button>
             <div className="estoque-view-toggle">

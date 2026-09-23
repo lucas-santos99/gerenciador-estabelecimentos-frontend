@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { apiFetch } from "../../utils/api";
 import { useAvisosEstabelecimento } from "../../utils/realtimeEstab";
+import { definirLojaIdentidade, definirLogoLojaIdentidade, prepararIdentidade } from "../../utils/relatorioIdentidade";
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
 
 import PDV           from "./PDV/PDV";
@@ -88,6 +89,11 @@ export default function PainelEstabelecimento() {
 
           setNomeEstabelecimento(data.nome_fantasia || data.nome || "");
           setLogoUrl(data.logo_url || "");
+          // Identidade dos relatórios (23/09/2026): dados da loja pro
+          // cabeçalho + pré-carrega configuração e logos, pra impressão
+          // abrir na hora do clique já com tudo pronto.
+          definirLojaIdentidade(data);
+          prepararIdentidade();
           setLicencaInfo({
             status_assinatura: data.status_assinatura || null,
             data_vencimento:   data.data_vencimento   || null,
@@ -133,6 +139,7 @@ export default function PainelEstabelecimento() {
         status_assinatura: data.status_assinatura || null,
         data_vencimento:   data.data_vencimento   || null,
       });
+      definirLojaIdentidade(data);
     } catch { /* silencioso — o próximo aviso tenta de novo */ }
   }, [estabelecimentoId, profile?.role, navigate]);
 
@@ -141,6 +148,7 @@ export default function PainelEstabelecimento() {
   /* ── Callback quando logo é atualizada nas configurações ─── */
   function handleLogoAtualizada(novaUrl) {
     setLogoUrl(novaUrl);
+    definirLogoLojaIdentidade(novaUrl);
   }
 
   /* ── Renderizar módulo ativo ─────────────────────────────── */

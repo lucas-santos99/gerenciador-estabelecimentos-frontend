@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
-import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { novoPdfRelatorio, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import '../Financeiro.css';
 
 
@@ -177,58 +177,35 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   }
 
   /* ── Baixar PDF DRE ──────────────────────────────────────── */
-  function baixarPDF() {
+  // Cabeçalho/rodapé vêm da Identidade dos Relatórios (SuperAdmin).
+  async function baixarPDF() {
     if (!dreData) return;
-    const doc = new jsPDF();
-
-    const gerar = (y) => {
-      doc.setFontSize(16);
-      doc.setFont(undefined, 'bold');
-      doc.text(nomeFantasia || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(80);
-      doc.text('Demonstrativo de Resultado do Exercício (DRE)', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Período: ${formatarData(dreInicio)} a ${formatarData(dreFim)}`, 105, y + 13, { align: 'center' });
-
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['Descrição', 'Valor']],
-        body: [
-          ['(+) Receita Bruta Total',   fmt(dreData.receita_bruta)],
-          ['   Em Dinheiro',            fmt(dreData.receita_dinheiro)],
-          ['   Em Pix',                 fmt(dreData.receita_pix)],
-          ['   Em Cartão',              fmt(dreData.receita_cartao)],
-          ['(-) CMV',                   `- ${fmt(dreData.cmv)}`],
-          ['(=) Lucro Bruto',           fmt(dreData.lucro_bruto)],
-          ['(-) Despesas Operacionais', `- ${fmt(dreData.despesas)}`],
-          ['(=) Lucro Líquido',         fmt(dreData.lucro_liquido)],
-          ['', ''],
-          ['(informativo, não desconta do lucro) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
-        ],
-        theme: 'striped',
-        styles: { fontSize: 10, cellPadding: 3 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-        columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
-      });
-
-      doc.save(`DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.pdf`);
-    };
-
-    if (logoUrl) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = logoUrl;
-      img.onload = () => {
-        const ratio = img.width / img.height;
-        doc.addImage(img, 'PNG', 15, 10, 25, 25 / ratio);
-        gerar(25 / ratio + 15);
-      };
-      img.onerror = () => gerar(15);
-    } else {
-      gerar(15);
-    }
+    const rel = await novoPdfRelatorio({
+      tipo: 'financeiro_dre',
+      titulo: 'Demonstrativo de Resultado do Exercício (DRE)',
+      subtitulo: `Período: ${formatarData(dreInicio)} a ${formatarData(dreFim)}`,
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['Descrição', 'Valor']],
+      body: [
+        ['(+) Receita Bruta Total',   fmt(dreData.receita_bruta)],
+        ['   Em Dinheiro',            fmt(dreData.receita_dinheiro)],
+        ['   Em Pix',                 fmt(dreData.receita_pix)],
+        ['   Em Cartão',              fmt(dreData.receita_cartao)],
+        ['(-) CMV',                   `- ${fmt(dreData.cmv)}`],
+        ['(=) Lucro Bruto',           fmt(dreData.lucro_bruto)],
+        ['(-) Despesas Operacionais', `- ${fmt(dreData.despesas)}`],
+        ['(=) Lucro Líquido',         fmt(dreData.lucro_liquido)],
+        ['', ''],
+        ['(informativo, não desconta do lucro) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
+      ],
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
+    });
+    rel.salvar(`DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.pdf`);
   }
 
   function exportarDREExcel() {
@@ -248,7 +225,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'DRE');
-    XLSX.writeFile(wb, `DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.xlsx`);
+    salvarExcelIdentidade(wb, `DRE_${nomeFantasia || 'relatorio'}_${dreInicio}_a_${dreFim}.xlsx`, {
+      tipo: 'financeiro_dre', titulo: 'Demonstrativo de Resultado do Exercício (DRE)',
+      subtitulo: `Período: ${formatarData(dreInicio)} a ${formatarData(dreFim)}`,
+    });
   }
 
   /* ── Exportação do Resumo do Dia (substitui o "Imprimir" antigo,
@@ -276,36 +256,29 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Resumo do Dia');
-    XLSX.writeFile(wb, `Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.xlsx`);
+    salvarExcelIdentidade(wb, `Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.xlsx`, {
+      tipo: 'financeiro_resumo_dia', titulo: 'Resumo do Dia', subtitulo: formatarData(hoje()),
+    });
   }
 
-  function baixarPDFResumoDia() {
+  async function baixarPDFResumoDia() {
     const dados = linhasResumoDia();
     if (!dados.length) return;
-    const doc = new jsPDF();
-    const gerar = (y) => {
-      doc.setFontSize(16); doc.setFont(undefined, 'bold');
-      doc.text(nomeFantasia || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
-      doc.text('Resumo do Dia', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Gerado em ${formatarData(hoje())}`, 105, y + 13, { align: 'center' });
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['Item', 'Valor']],
-        body: dados.map(d => [d['Item'], fmt(d['Valor (R$)'])]),
-        theme: 'striped',
-        styles: { fontSize: 10, cellPadding: 3 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-        columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
-      });
-      doc.save(`Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.pdf`);
-    };
-    if (logoUrl) {
-      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
-      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
-      img.onerror = () => gerar(15);
-    } else { gerar(15); }
+    const rel = await novoPdfRelatorio({
+      tipo: 'financeiro_resumo_dia',
+      titulo: 'Resumo do Dia',
+      subtitulo: formatarData(hoje()),
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['Item', 'Valor']],
+      body: dados.map(d => [d['Item'], fmt(d['Valor (R$)'])]),
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 'auto', halign: 'right' } },
+    });
+    rel.salvar(`Resumo_${nomeFantasia || 'estabelecimento'}_${hoje()}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════
@@ -588,74 +561,54 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendas por Operador');
-    XLSX.writeFile(wb, `Vendas_Operador_${relOpInicio}_${relOpFim}.xlsx`);
+    salvarExcelIdentidade(wb, `Vendas_Operador_${relOpInicio}_${relOpFim}.xlsx`, {
+      tipo: 'financeiro_operador', titulo: 'Relatório de Vendas por Operador',
+      subtitulo: `Período: ${formatarData(relOpInicio)} a ${formatarData(relOpFim)}`,
+    });
   }
 
-  function baixarPDFOperador() {
+  async function baixarPDFOperador() {
     if (!relOp.length) return;
-    const doc = new jsPDF();
     const totalGeral = relOp.reduce((s, op) => s + op.total_vendas, 0);
 
-    const gerar = (y) => {
-      doc.setFontSize(16);
-      doc.setFont(undefined, 'bold');
-      doc.text(nomeFantasia || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(80);
-      doc.text('Relatório de Vendas por Operador', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Período: ${formatarData(relOpInicio)} a ${formatarData(relOpFim)}`, 105, y + 13, { align: 'center' });
+    const body = relOp.map((op, i) => [
+      `#${i + 1}`,
+      op.operador_nome,
+      op.qtd_vendas,
+      fmt(op.total_vendas),
+      totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
+      fmt(op.total_dinheiro),
+      fmt(op.total_pix),
+      fmt(op.total_cartao),
+    ]);
 
-      const body = relOp.map((op, i) => [
-        `#${i + 1}`,
-        op.operador_nome,
-        op.qtd_vendas,
-        fmt(op.total_vendas),
-        totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
-        fmt(op.total_dinheiro),
-        fmt(op.total_pix),
-        fmt(op.total_cartao),
-      ]);
+    // Linha de totais
+    body.push([
+      '',
+      'TOTAL',
+      relOp.reduce((s, op) => s + op.qtd_vendas, 0),
+      fmt(totalGeral),
+      '100%',
+      fmt(relOp.reduce((s, op) => s + op.total_dinheiro, 0)),
+      fmt(relOp.reduce((s, op) => s + op.total_pix, 0)),
+      fmt(relOp.reduce((s, op) => s + op.total_cartao, 0)),
+    ]);
 
-      // Linha de totais
-      body.push([
-        '',
-        'TOTAL',
-        relOp.reduce((s, op) => s + op.qtd_vendas, 0),
-        fmt(totalGeral),
-        '100%',
-        fmt(relOp.reduce((s, op) => s + op.total_dinheiro, 0)),
-        fmt(relOp.reduce((s, op) => s + op.total_pix, 0)),
-        fmt(relOp.reduce((s, op) => s + op.total_cartao, 0)),
-      ]);
-
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
-        body,
-        theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-        foot: [],
-      });
-
-      doc.save(`Vendas_Operador_${nomeFantasia || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
-    };
-
-    if (logoUrl) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = logoUrl;
-      img.onload = () => {
-        const ratio = img.width / img.height;
-        doc.addImage(img, 'PNG', 15, 10, 25, 25 / ratio);
-        gerar(25 / ratio + 15);
-      };
-      img.onerror = () => gerar(15);
-    } else {
-      gerar(15);
-    }
+    const rel = await novoPdfRelatorio({
+      tipo: 'financeiro_operador',
+      titulo: 'Relatório de Vendas por Operador',
+      subtitulo: `Período: ${formatarData(relOpInicio)} a ${formatarData(relOpFim)}`,
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
+      body,
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2 },
+      foot: [],
+    });
+    rel.salvar(`Vendas_Operador_${nomeFantasia || 'relatorio'}_${relOpInicio}_a_${relOpFim}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════
@@ -676,7 +629,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Relatório de Vendas');
-    XLSX.writeFile(wb, `Relatorio_Vendas_${reportInicio}_${reportFim}.xlsx`);
+    salvarExcelIdentidade(wb, `Relatorio_Vendas_${reportInicio}_${reportFim}.xlsx`, {
+      tipo: 'financeiro_produtos', titulo: 'Relatório de Vendas por Produto',
+      subtitulo: `Período: ${formatarData(reportInicio)} a ${formatarData(reportFim)}`,
+    });
   }
 
   function exportarEstoqueExcel() {
@@ -696,7 +652,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
-    XLSX.writeFile(wb, `Estoque_${hoje()}.xlsx`);
+    salvarExcelIdentidade(wb, `Estoque_${hoje()}.xlsx`, {
+      tipo: 'financeiro_estoque', titulo: 'Relatório de Estoque', subtitulo: formatarData(hoje()),
+    });
   }
 
   /* ════════════════════════════════════════════════════════

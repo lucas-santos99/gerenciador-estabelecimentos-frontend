@@ -1,0 +1,123 @@
+/* src/pages/Administrador/SuperAdmins/IdentidadeRelatorios.css
+   Tela "Identidade dos Relatórios" (23/09/2026). Reaproveita as classes
+   sa-* de SuperAdmins.css; aqui só o que é específico desta tela. */
+
+.idr-adm-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1150px) {
+  .idr-adm-grade { grid-template-columns: minmax(0, 1fr); }
+}
+.idr-adm-coluna { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.idr-adm-coluna-previa { position: sticky; top: 16px; }
+@media (max-width: 1150px) { .idr-adm-coluna-previa { position: static; } }
+
+.idr-adm-campo { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.idr-adm-campo code {
+  background: var(--border); padding: 1px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+}
+.idr-adm-duas { display: flex; gap: 12px; flex-wrap: wrap; }
+.idr-adm-duas > .idr-adm-campo { min-width: 200px; }
+
+.idr-adm-modos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .idr-adm-modos { grid-template-columns: 1fr; } }
+.idr-adm-modo {
+  display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--bg-hover);
+  color: var(--text-primary);
+  font-size: calc(0.85rem * var(--sa-font-scale, 1));
+}
+.idr-adm-modo input { display: none; }
+.idr-adm-modo span { color: var(--text-secondary); font-size: calc(0.76rem * var(--sa-font-scale, 1)); }
+.idr-adm-modo.ativo { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.14); }
+
+.idr-adm-logo {
+  display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-hover);
+}
+.idr-adm-logo-prev {
+  width: 190px; height: 64px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: 8px 12px;
+  font-size: 0.75rem; opacity: .95;
+}
+.idr-adm-logo-prev img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.idr-adm-logo-info { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; }
+.idr-adm-logo-botoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+
+.idr-adm-cores { display: flex; gap: 16px; flex-wrap: wrap; }
+.idr-adm-cor {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  color: var(--text-primary); font-size: calc(0.8rem * var(--sa-font-scale, 1));
+}
+.idr-adm-cor input[type="color"] {
+  width: 38px; height: 30px; padding: 0; border: 1.5px solid var(--border); border-radius: 8px;
+  background: none; cursor: pointer;
+}
+
+.idr-adm-chaves { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.idr-adm-chave {
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+  color: var(--text-primary); font-size: calc(0.8rem * var(--sa-font-scale, 1));
+}
+.idr-adm-chave input { width: 16px; height: 16px; accent-color: #8b5cf6; cursor: pointer; }
+
+.idr-adm-acoes { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+
+.idr-adm-iframe {
+  width: 100%; height: 470px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
+}
+
+.idr-adm-recibo { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4px; }
+.idr-adm-recibo-papel {
+  width: 250px; background: #fff; color: #000; border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace; font-size: 11px;
+  padding: 12px 12px 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); text-align: center;
+}
+.idr-adm-recibo-logo {
+  margin: 0 auto 6px; width: 90px; padding: 6px 0; border: 1px dashed #999; font-size: 9px; color: #555;
+}
+.idr-adm-recibo-nome { font-weight: bold; font-size: 13px; }
+.idr-adm-recibo-info { font-size: 9px; color: #444; margin-top: 3px; }
+.idr-adm-recibo-linha { border-top: 1px dashed #000; margin: 7px 0; }
+.idr-adm-recibo-item { display: flex; justify-content: space-between; margin: 2px 0; text-align: left; }
+.idr-adm-recibo-msg { font-weight: bold; font-size: 12px; margin-top: 4px; }
+
+/* ── Opção 2: personalização por tipo de relatório ─────────── */
+.idr-adm-rotulo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.idr-adm-chave-linha { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.idr-adm-herdado {
+  font-size: calc(0.66rem * var(--sa-font-scale, 1)); color: var(--text-muted);
+  border: 1px dashed var(--border); border-radius: 999px; padding: 1px 7px; white-space: nowrap;
+}
+.idr-adm-reverter {
+  font-size: calc(0.66rem * var(--sa-font-scale, 1)); font-weight: 700; white-space: nowrap;
+  color: #8b5cf6; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35);
+  border-radius: 999px; padding: 1px 8px; cursor: pointer;
+}
+.idr-adm-reverter:hover { background: rgba(139,92,246,0.22); }
+
+.idr-adm-tipos {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px;
+}
+.idr-adm-tipo {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left;
+  padding: 9px 12px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg-hover); color: var(--text-primary);
+  font-size: calc(0.78rem * var(--sa-font-scale, 1));
+}
+.idr-adm-tipo:hover { border-color: rgba(139,92,246,0.5); }
+.idr-adm-tipo.ativo { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,0.14); }
+.idr-adm-tipo.personalizado { font-weight: 700; }
+.idr-adm-tipo-badge {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #8b5cf6; color: #fff; font-size: 0.7rem; font-weight: 700;
+}
+.idr-adm-tipo-resumo {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px;
+}

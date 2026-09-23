@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ModalCamera from './ModalCamera';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
+import { identidadeRecibo } from '../../../utils/relatorioIdentidade';
 import './PDV.css';
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -2198,6 +2199,11 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
     Dinheiro: '💵 Dinheiro', Pix: '📱 Pix', Debito: '💳 Débito', Credito: '💳 Crédito', Fiado: '📋 Fiado',
   };
 
+  // Identidade dos Relatórios (23/09/2026) — logo/dados da loja, mensagem
+  // final e última linha do recibo, configuráveis pelo SuperAdmin. Já vem
+  // pronta da memória (o painel pré-carrega ao abrir), sem esperar nada.
+  const idRec = identidadeRecibo();
+
   function imprimir() {
     const conteudo = reciboRef.current?.innerHTML;
     if (!conteudo) return;
@@ -2224,7 +2230,9 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
               background: #fff;
             }
             .rec-header { text-align: center; margin-bottom: 8px; }
+            .rec-logo { display: block; margin: 0 auto 4px; max-width: 42mm; max-height: 20mm; object-fit: contain; filter: grayscale(1); }
             .rec-nome { font-size: 15px; font-weight: bold; }
+            .rec-loja-info { font-size: 9px; color: #333; margin-top: 1px; }
             .rec-data { font-size: 10px; color: #555; margin-top: 2px; }
             .rec-divider { border: none; border-top: 1px dashed #000; margin: 6px 0; }
             .rec-item { display: flex; justify-content: space-between; margin: 3px 0; font-size: 11px; }
@@ -2328,7 +2336,11 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
         <div style={{ display: 'none' }}>
           <div ref={reciboRef}>
             <div className="rec-header">
+              {idRec.logoLoja && <img className="rec-logo" src={idRec.logoLoja} alt="" />}
               <div className="rec-nome">{nomeEstabelecimento || 'Estabelecimento'}</div>
+              {idRec.linhasLoja.map((linha, i) => (
+                <div key={i} className="rec-loja-info">{linha}</div>
+              ))}
               <div className="rec-data">{horarioStr}</div>
             </div>
             <hr className="rec-divider" />
@@ -2408,8 +2420,8 @@ function ModalPosVenda({ venda, nomeEstabelecimento, onFechar }) {
               </div>
             )}
             <hr className="rec-divider" />
-            <div className="rec-obrigado">Obrigado!</div>
-            <div className="rec-footer">Lucas J. Systems</div>
+            {idRec.mensagem && <div className="rec-obrigado">{idRec.mensagem}</div>}
+            {idRec.rodape && <div className="rec-footer">{idRec.rodape}</div>}
           </div>
         </div>
 

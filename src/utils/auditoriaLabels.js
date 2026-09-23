@@ -55,6 +55,7 @@ export const ACAO_LABEL = {
   editar_config_global:   '⚙️ Config global editada',
   editar_tela_bloqueio:   '🔒 Tela de bloqueio editada',
   editar_config_cobranca: '💳 Config de cobrança editada',
+  editar_identidade_relatorios: '🧾 Identidade dos relatórios editada',
 
   // Operadores (tanto ação do merchant no próprio estabelecimento quanto
   // ação do SuperAdmin sobre operadores de qualquer estabelecimento)

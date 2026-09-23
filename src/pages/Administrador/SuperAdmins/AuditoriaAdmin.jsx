@@ -5,6 +5,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
 import { MODULO_LABEL, ACAO_LABEL } from "../../../utils/auditoriaLabels";
 import * as XLSX from "xlsx";
+import { htmlIdentidade, salvarExcelIdentidade, prepararIdentidade } from "../../../utils/relatorioIdentidade";
 import "./AuditoriaAdmin.css";
 
 async function getToken() {
@@ -66,6 +67,10 @@ export default function AuditoriaAdmin() {
   const [busca,        setBusca]       = useState(params.get("busca") || "");
   const [dataInicio,   setDataInicio]  = useState("");
   const [dataFim,      setDataFim]     = useState("");
+
+  /* ── Identidade dos relatórios: pré-carrega pra impressão sair com
+     cabeçalho/rodapé completos (a janela abre sem esperar nada) ── */
+  useEffect(() => { prepararIdentidade(); }, []);
 
   /* ── carregar lista de estabelecimentos p/ filtro ────────── */
   useEffect(() => {
@@ -234,7 +239,10 @@ export default function AuditoriaAdmin() {
       ws["!cols"] = [{ wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 24 }, { wch: 16 }, { wch: 22 }, { wch: 50 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-      XLSX.writeFile(wb, `auditoria_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      await salvarExcelIdentidade(wb, `auditoria_${new Date().toISOString().slice(0, 10)}.xlsx`, {
+        tipo: "auditoria", semLoja: true, titulo: "Auditoria Geral",
+        subtitulo: `${linhas.length} registro(s)${truncado ? " (limitado a 3.000)" : ""}`,
+      });
       if (truncado) alert("A exportação trouxe os primeiros 3.000 registros que batem no filtro. Refine o período pra exportar tudo.");
     } catch (e) {
       alert("Erro ao exportar: " + (e.message || "erro desconhecido"));
@@ -248,26 +256,32 @@ export default function AuditoriaAdmin() {
       const { registros: todos, truncado } = await buscarTodosParaExportar();
       const linhas = todos.map(formatarLinhaExport);
 
+      // Cabeçalho/rodapé da Identidade dos Relatórios — relatório do
+      // SuperAdmin, sem estabelecimento (só a marca/sistema).
+      const idr = htmlIdentidade({
+        tipo: "auditoria", semLoja: true, titulo: "Auditoria Geral",
+        subtitulo: `${linhas.length} registro(s)${truncado ? " (limitado a 3.000)" : ""}`,
+      });
+
       const html = `
-        <html><head><title>Auditoria</title>
+        <html><head><meta charset="UTF-8"><title>Auditoria</title>
         <style>
           body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
-          h1 { font-size: 16px; margin-bottom: 4px; }
-          p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+          ${idr.css}
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; vertical-align: top; }
           th { background: #f0f0f0; }
           tr:nth-child(even) { background: #fafafa; }
         </style>
         </head><body>
-        <h1>Auditoria Geral — Lucas J. Systems</h1>
-        <p class="sub">Exportado em ${new Date().toLocaleString("pt-BR")} — ${linhas.length} registro(s)${truncado ? " (limitado a 3.000)" : ""}</p>
+        ${idr.cabecalho}
         <table>
           <thead><tr>${Object.keys(linhas[0] || { "Sem dados": "" }).map(k => `<th>${k}</th>`).join("")}</tr></thead>
           <tbody>
             ${linhas.map(l => `<tr>${Object.values(l).map(v => `<td>${String(v).replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}
           </tbody>
         </table>
+        ${idr.rodape}
         </body></html>
       `;
 

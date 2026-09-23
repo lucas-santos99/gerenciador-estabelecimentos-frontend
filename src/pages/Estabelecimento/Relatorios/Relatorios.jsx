@@ -1,9 +1,9 @@
 // src/pages/Estabelecimento/Relatorios/Relatorios.jsx
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { novoPdfRelatorio, htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import './Relatorios.css';
 // As classes .fin-badge-meio/.fin-historico-*/.fin-relop-* usadas nessa
 // aba (Histórico de Vendas / Resumo por operador) vivem em Financeiro.css
@@ -254,7 +254,11 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Vendas');
-    XLSX.writeFile(wb, `Historico_Vendas_${histInicio}_${histFim}.xlsx`);
+    const operadorExcel = histOperador ? (operadoresNoPeriodo.find(o => o.id === histOperador)?.nome || '') : 'Todos os operadores';
+    salvarExcelIdentidade(wb, `Historico_Vendas_${histInicio}_${histFim}.xlsx`, {
+      tipo: 'vendas_historico', titulo: 'Histórico de Vendas',
+      subtitulo: `Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorExcel}`,
+    });
   }
 
   function baixarPDFHistorico() {
@@ -293,6 +297,13 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       `;
     }).join('');
 
+    // Cabeçalho/rodapé da Identidade dos Relatórios (SuperAdmin)
+    const idr = htmlIdentidade({
+      tipo: 'vendas_historico',
+      titulo: 'Histórico de Vendas',
+      subtitulo: `Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorLabel}`,
+    });
+
     const alturaJanela = Math.round((window.screen?.availHeight || 900) * 0.92);
     const janela = window.open('', '_blank', `width=860,height=${alturaJanela},top=20,left=100`);
     janela.document.write(`
@@ -305,13 +316,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             @page { size: A4; margin: 15mm; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; padding: 12px; }
-            .hp-header { text-align: center; margin-bottom: 18px; }
-            .hp-logo { max-width: 90px; max-height: 90px; margin: 0 auto 8px; display: block; }
-            .hp-nome { font-size: 20px; font-weight: 800; }
-            .hp-sub { font-size: 14px; color: #0d9488; margin-top: 2px; }
-            .hp-periodo { font-size: 11px; color: #64748b; margin-top: 4px; }
+            ${idr.css}
             table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-            thead th { background: #0f766e; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; }
+            thead th { background: ${idr.identidade.cor_destaque}; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .hp-venda-row td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
             .hp-valor { font-weight: 700; text-align: right; }
             .hp-itens-row td { padding: 4px 10px 10px 24px; border-bottom: 2px solid #e2e8f0; }
@@ -321,17 +328,13 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           </style>
         </head>
         <body>
-          <div class="hp-header">
-            ${logoUrl ? `<img class="hp-logo" src="${logoUrl}" />` : ''}
-            <div class="hp-nome">${nomeEstabelecimento || ''}</div>
-            <div class="hp-sub">Histórico de Vendas</div>
-            <div class="hp-periodo">Período: ${formatarData(histInicio)} a ${formatarData(histFim)} — ${operadorLabel}</div>
-          </div>
+          ${idr.cabecalho}
           <table>
             <thead><tr><th>Data</th><th>Operador</th><th>Cliente</th><th>Pagamento</th><th>Status</th><th>Valor</th></tr></thead>
             <tbody>${linhasHtml}</tbody>
           </table>
           <div class="hp-total"><span>TOTAL (ativas)</span><span>${fmt(totalGeral)}</span></div>
+          ${idr.rodape}
         </body>
       </html>
     `);
@@ -365,37 +368,31 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Produtos Vendidos');
-    XLSX.writeFile(wb, `Produtos_${reportInicio}_${reportFim}.xlsx`);
+    salvarExcelIdentidade(wb, `Produtos_${reportInicio}_${reportFim}.xlsx`, {
+      tipo: 'vendas_produtos', titulo: 'Produtos Vendidos',
+      subtitulo: `Período: ${formatarData(reportInicio)} a ${formatarData(reportFim)}`,
+    });
   }
 
-  function baixarPDFProdutos() {
+  async function baixarPDFProdutos() {
     if (!reportProd.length) return;
-    const doc = new jsPDF();
-    const gerar = (y) => {
-      doc.setFontSize(16); doc.setFont(undefined, 'bold');
-      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
-      doc.text('Produtos Mais Vendidos', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Período: ${formatarData(reportInicio)} a ${formatarData(reportFim)}`, 105, y + 13, { align: 'center' });
-      const body = reportProd.map((p, i) => {
-        const lucro = parseFloat(p.receita_total) - parseFloat(p.custo_total || 0);
-        return [`#${i + 1}`, p.produto_nome, p.categoria_nome || '—', fmt(p.receita_total), fmt(lucro)];
-      });
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['#', 'Produto', 'Categoria', 'Receita', 'Lucro']],
-        body, theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-      });
-      doc.save(`Produtos_${nomeEstabelecimento || 'relatorio'}_${reportInicio}_a_${reportFim}.pdf`);
-    };
-    if (logoUrl) {
-      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
-      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
-      img.onerror = () => gerar(15);
-    } else { gerar(15); }
+    const body = reportProd.map((p, i) => {
+      const lucro = parseFloat(p.receita_total) - parseFloat(p.custo_total || 0);
+      return [`#${i + 1}`, p.produto_nome, p.categoria_nome || '—', fmt(p.receita_total), fmt(lucro)];
+    });
+    const rel = await novoPdfRelatorio({
+      tipo: 'vendas_produtos',
+      titulo: 'Produtos Mais Vendidos',
+      subtitulo: `Período: ${formatarData(reportInicio)} a ${formatarData(reportFim)}`,
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['#', 'Produto', 'Categoria', 'Receita', 'Lucro']],
+      body, theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2 },
+    });
+    rel.salvar(`Produtos_${nomeEstabelecimento || 'relatorio'}_${reportInicio}_a_${reportFim}.pdf`);
   }
 
   /* ── Resumo por Operador (agora derivado do histórico, exibido
@@ -425,43 +422,37 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendas por Operador');
-    XLSX.writeFile(wb, `Vendas_Operador_${histInicio}_${histFim}.xlsx`);
+    salvarExcelIdentidade(wb, `Vendas_Operador_${histInicio}_${histFim}.xlsx`, {
+      tipo: 'vendas_operador', titulo: 'Relatório de Vendas por Operador',
+      subtitulo: `Período: ${formatarData(histInicio)} a ${formatarData(histFim)}`,
+    });
   }
 
-  function baixarPDFResumoOperador() {
+  async function baixarPDFResumoOperador() {
     if (!resumoPorOperador.length) return;
-    const doc = new jsPDF();
     const totalGeral = resumoPorOperador.reduce((s, op) => s + op.total_vendas, 0);
-    const gerar = (y) => {
-      doc.setFontSize(16); doc.setFont(undefined, 'bold');
-      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
-      doc.text('Relatório de Vendas por Operador', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Período: ${formatarData(histInicio)} a ${formatarData(histFim)}`, 105, y + 13, { align: 'center' });
-      const body = resumoPorOperador.map((op, i) => [
-        `#${i + 1}`, op.operador_nome, op.qtd_vendas, fmt(op.total_vendas),
-        totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
-        fmt(op.total_dinheiro), fmt(op.total_pix), fmt(op.total_cartao),
-      ]);
-      body.push(['', 'TOTAL', resumoPorOperador.reduce((s, op) => s + op.qtd_vendas, 0), fmt(totalGeral), '100%',
-        fmt(resumoPorOperador.reduce((s, op) => s + op.total_dinheiro, 0)),
-        fmt(resumoPorOperador.reduce((s, op) => s + op.total_pix, 0)),
-        fmt(resumoPorOperador.reduce((s, op) => s + op.total_cartao, 0))]);
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
-        body, theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-      });
-      doc.save(`Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
-    };
-    if (logoUrl) {
-      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
-      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
-      img.onerror = () => gerar(15);
-    } else { gerar(15); }
+    const body = resumoPorOperador.map((op, i) => [
+      `#${i + 1}`, op.operador_nome, op.qtd_vendas, fmt(op.total_vendas),
+      totalGeral > 0 ? `${((op.total_vendas / totalGeral) * 100).toFixed(1)}%` : '0%',
+      fmt(op.total_dinheiro), fmt(op.total_pix), fmt(op.total_cartao),
+    ]);
+    body.push(['', 'TOTAL', resumoPorOperador.reduce((s, op) => s + op.qtd_vendas, 0), fmt(totalGeral), '100%',
+      fmt(resumoPorOperador.reduce((s, op) => s + op.total_dinheiro, 0)),
+      fmt(resumoPorOperador.reduce((s, op) => s + op.total_pix, 0)),
+      fmt(resumoPorOperador.reduce((s, op) => s + op.total_cartao, 0))]);
+    const rel = await novoPdfRelatorio({
+      tipo: 'vendas_operador',
+      titulo: 'Relatório de Vendas por Operador',
+      subtitulo: `Período: ${formatarData(histInicio)} a ${formatarData(histFim)}`,
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['', 'Operador', 'Vendas', 'Total', '%', 'Dinheiro', 'Pix', 'Cartão']],
+      body, theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2 },
+    });
+    rel.salvar(`Vendas_Operador_${nomeEstabelecimento || 'relatorio'}_${histInicio}_a_${histFim}.pdf`);
   }
 
   /* ── Estoque ── */
@@ -491,6 +482,14 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   const qtdCritico = estoque.filter(p => estoqueStatus(p) === 'critico').length;
   const qtdBaixo   = estoque.filter(p => estoqueStatus(p) === 'baixo').length;
 
+  // Texto do filtro aplicado (vai no subtítulo do PDF/Excel de estoque)
+  function filtroEstoqueDescricao() {
+    const partes = [];
+    if (filtrCategoria) partes.push(`Categoria: ${categorias.find(c => c.id === filtrCategoria)?.nome || filtrCategoria}`);
+    if (filtrEstoque !== 'todos') partes.push(`Situação: ${filtrEstoque === 'critico' ? 'Crítico' : filtrEstoque === 'baixo' ? 'Baixo' : 'Normal'}`);
+    return partes.length ? partes.join(' · ') : 'Todos os produtos';
+  }
+
   function exportarEstoqueExcel() {
     if (!estoqueFiltrado.length) return;
     const catLabel = filtrCategoria
@@ -509,45 +508,38 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
     const sufixo = filtrCategoria ? `_${catLabel}` : '';
     const sufixoStatus = filtrEstoque !== 'todos' ? `_${filtrEstoque}` : '';
-    XLSX.writeFile(wb, `Estoque${sufixo}${sufixoStatus}_${dataHoje()}.xlsx`);
+    salvarExcelIdentidade(wb, `Estoque${sufixo}${sufixoStatus}_${dataHoje()}.xlsx`, {
+      tipo: 'estoque', titulo: 'Relatório de Estoque', subtitulo: filtroEstoqueDescricao(),
+    });
   }
 
-  function baixarPDFEstoque() {
+  async function baixarPDFEstoque() {
     if (!estoqueFiltrado.length) return;
-    const doc = new jsPDF();
-    const gerar = (y) => {
-      doc.setFontSize(16); doc.setFont(undefined, 'bold');
-      doc.text(nomeEstabelecimento || 'Relatório', 105, y, { align: 'center' });
-      doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80);
-      doc.text('Relatório de Estoque', 105, y + 7, { align: 'center' });
-      doc.setFontSize(9);
-      doc.text(`Gerado em ${formatarData(dataHoje())}`, 105, y + 13, { align: 'center' });
-      const body = estoqueFiltrado.map(p => {
-        const estAtual = parseFloat(p.estoque_atual);
-        const unidade = p.unidade_medida === 'kg'
-          ? `${estAtual.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
-          : `${Math.trunc(estAtual)} un`;
-        const status = estoqueStatus(p);
-        return [
-          p.nome, p.nome_categoria || '—', unidade,
-          status === 'critico' ? 'Crítico' : status === 'baixo' ? 'Baixo' : 'Normal',
-          fmt(p.preco_venda), fmt(parseFloat(p.preco_venda || 0) * estAtual),
-        ];
-      });
-      autoTable(doc, {
-        startY: y + 20,
-        head: [['Produto', 'Categoria', 'Estoque', 'Status', 'Venda Unit.', 'Total']],
-        body, theme: 'striped',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255 },
-      });
-      doc.save(`Estoque_${nomeEstabelecimento || 'relatorio'}_${dataHoje()}.pdf`);
-    };
-    if (logoUrl) {
-      const img = new Image(); img.crossOrigin = 'Anonymous'; img.src = logoUrl;
-      img.onload = () => { const r = img.width / img.height; doc.addImage(img, 'PNG', 15, 10, 25, 25 / r); gerar(25 / r + 15); };
-      img.onerror = () => gerar(15);
-    } else { gerar(15); }
+    const body = estoqueFiltrado.map(p => {
+      const estAtual = parseFloat(p.estoque_atual);
+      const unidade = p.unidade_medida === 'kg'
+        ? `${estAtual.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg`
+        : `${Math.trunc(estAtual)} un`;
+      const status = estoqueStatus(p);
+      return [
+        p.nome, p.nome_categoria || '—', unidade,
+        status === 'critico' ? 'Crítico' : status === 'baixo' ? 'Baixo' : 'Normal',
+        fmt(p.preco_venda), fmt(parseFloat(p.preco_venda || 0) * estAtual),
+      ];
+    });
+    const rel = await novoPdfRelatorio({
+      tipo: 'estoque',
+      titulo: 'Relatório de Estoque',
+      subtitulo: filtroEstoqueDescricao(),
+    });
+    autoTable(rel.doc, {
+      ...rel.tabela,
+      startY: rel.y,
+      head: [['Produto', 'Categoria', 'Estoque', 'Status', 'Venda Unit.', 'Total']],
+      body, theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2 },
+    });
+    rel.salvar(`Estoque_${nomeEstabelecimento || 'relatorio'}_${dataHoje()}.pdf`);
   }
 
   /* ════════════════════════════════════════════════════════ */

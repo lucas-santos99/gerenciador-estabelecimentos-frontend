@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Inventario/Inventario.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
 import './Inventario.css';
 
@@ -229,7 +230,10 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
-    XLSX.writeFile(wb, `${inventario.nome.replace(/\s+/g, '_')}.xlsx`);
+    salvarExcelIdentidade(wb, `${inventario.nome.replace(/\s+/g, '_')}.xlsx`, {
+      tipo: 'inventario', titulo: `Inventário — ${inventario.nome}`,
+      subtitulo: `Iniciado por ${inventario.usuario_nome} em ${fmtData(inventario.iniciado_em)} · ${dados.length} produto(s)`,
+    });
   }
 
   function exportarPDF() {
@@ -242,26 +246,32 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
       'Status':    i.estoque_contado === null ? 'Não contado' : i.diferenca === 0 ? 'OK' : i.diferenca > 0 ? 'Sobra' : 'Falta',
     }));
 
+    // Cabeçalho/rodapé da Identidade dos Relatórios (SuperAdmin)
+    const idr = htmlIdentidade({
+      tipo: 'inventario',
+      titulo: `Inventário — ${inventario.nome}`,
+      subtitulo: `Iniciado por ${inventario.usuario_nome} em ${fmtData(inventario.iniciado_em)} · ${linhas.length} produto(s)`,
+    });
+
     const html = `
-      <html><head><title>${inventario.nome}</title>
+      <html><head><meta charset="UTF-8"><title>${String(inventario.nome).replace(/</g, '&lt;')}</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
-        h1 { font-size: 16px; margin-bottom: 2px; }
-        p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+        ${idr.css}
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
         th { background: #f0f0f0; }
         tr:nth-child(even) { background: #fafafa; }
       </style>
       </head><body>
-      <h1>${inventario.nome}</h1>
-      <p class="sub">Iniciado por ${inventario.usuario_nome} em ${fmtData(inventario.iniciado_em)} · ${linhas.length} produto(s)</p>
+      ${idr.cabecalho}
       <table>
         <thead><tr>${Object.keys(linhas[0] || { 'Sem dados': '' }).map(k => `<th>${k}</th>`).join('')}</tr></thead>
         <tbody>
           ${linhas.map(l => `<tr>${Object.values(l).map(v => `<td>${String(v).replace(/</g, '&lt;')}</td>`).join('')}</tr>`).join('')}
         </tbody>
       </table>
+      ${idr.rodape}
       </body></html>
     `;
 
@@ -566,7 +576,10 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
       ws['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
-      XLSX.writeFile(wb, `${inv.nome.replace(/\s+/g, '_')}.xlsx`);
+      await salvarExcelIdentidade(wb, `${inv.nome.replace(/\s+/g, '_')}.xlsx`, {
+        tipo: 'inventario', titulo: `Inventário — ${inv.nome}`,
+        subtitulo: `${STATUS_LABEL[inv.status] || ''} · Iniciado por ${inv.usuario_nome} em ${fmtData(inv.iniciado_em)} · ${linhas.length} produto(s)`,
+      });
     } catch (err) {
       alert(err.message || 'Erro ao exportar Excel.');
     }
@@ -579,12 +592,18 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
       const itens = await buscarItensParaExportar(inv);
       const linhas = linhasParaExportar(itens);
 
+      // Cabeçalho/rodapé da Identidade dos Relatórios (SuperAdmin)
+      const idr = htmlIdentidade({
+        tipo: 'inventario',
+        titulo: `Inventário — ${inv.nome}`,
+        subtitulo: `Status: ${STATUS_LABEL[inv.status] || ''} · Iniciado por ${inv.usuario_nome} em ${fmtData(inv.iniciado_em)}${inv.finalizado_em ? ` · Finalizado em ${fmtData(inv.finalizado_em)}` : ''} · ${linhas.length} produto(s)`,
+      });
+
       const html = `
-        <html><head><title>${inv.nome}</title>
+        <html><head><meta charset="UTF-8"><title>${String(inv.nome).replace(/</g, '&lt;')}</title>
         <style>
           body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
-          h1 { font-size: 16px; margin-bottom: 2px; }
-          p.sub { color: #666; margin-top: 0; margin-bottom: 16px; }
+          ${idr.css}
           table { width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
           th { background: #f0f0f0; }
@@ -593,18 +612,14 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
           .status-Sobra { color: #16a34a; font-weight: 700; }
         </style>
         </head><body>
-        <h1>${inv.nome}</h1>
-        <p class="sub">
-          Status: ${STATUS_LABEL[inv.status]} · Iniciado por ${inv.usuario_nome} em ${fmtData(inv.iniciado_em)}
-          ${inv.finalizado_em ? ` · Finalizado em ${fmtData(inv.finalizado_em)}` : ''}
-          · ${linhas.length} produto(s)
-        </p>
+        ${idr.cabecalho}
         <table>
           <thead><tr>${Object.keys(linhas[0] || { 'Sem dados': '' }).map(k => `<th>${k}</th>`).join('')}</tr></thead>
           <tbody>
             ${linhas.map(l => `<tr>${Object.entries(l).map(([k, v]) => `<td class="status-${k === 'Status' ? v : ''}">${String(v).replace(/</g, '&lt;')}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
+        ${idr.rodape}
         </body></html>
       `;
 
@@ -962,7 +977,15 @@ function AbaMovimentacoes({ estabelecimentoId, categorias }) {
     const ws = XLSX.utils.json_to_sheet(dados);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Movimentações');
-    XLSX.writeFile(wb, `Movimentacoes_${filtros.data_inicio}_${filtros.data_fim}.xlsx`);
+    salvarExcelIdentidade(wb, `Movimentacoes_${filtros.data_inicio}_${filtros.data_fim}.xlsx`, {
+      tipo: 'inventario_movimentacoes', titulo: 'Movimentações de Estoque',
+      subtitulo: [
+        filtros.data_inicio || filtros.data_fim
+          ? `Período: ${filtros.data_inicio ? new Date(filtros.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'início'} a ${filtros.data_fim ? new Date(filtros.data_fim + 'T12:00:00').toLocaleDateString('pt-BR') : 'hoje'}`
+          : '',
+        `${dados.length} movimentação(ões)`,
+      ].filter(Boolean).join(' · '),
+    });
   }
 
   const TIPO_MOV_LABEL = {

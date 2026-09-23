@@ -6,6 +6,7 @@ import ClienteModal from './ClienteModal';
 import ModalRecebimento from './ModalRecebimento';
 import '../Clientes.css';
 import * as XLSX from 'xlsx';
+import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { TIMEZONE_PADRAO, hojeStrTZ, paraDataStrTZ, subtrairDias } from '../../../utils/fusoHorario';
 
 
@@ -556,7 +557,11 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, viewMode === 'devedores' ? 'Devedores' : 'Clientes');
     const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    XLSX.writeFile(wb, `Clientes_${data}.xlsx`);
+    salvarExcelIdentidade(wb, `Clientes_${data}.xlsx`, {
+      tipo: 'clientes',
+      titulo: viewMode === 'devedores' ? 'Clientes com Dívida (Fiado)' : 'Lista de Clientes',
+      subtitulo: `${lista.length} cliente(s)`,
+    });
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -988,7 +993,12 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
     const ws = XLSX.utils.json_to_sheet(linhas);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Compras');
-    XLSX.writeFile(wb, `Compras_${cliente.nome.replace(/\s+/g, '_')}.xlsx`);
+    const periodoExcel = (filtroDe || filtroAte)
+      ? `Período: ${filtroDe ? new Date(filtroDe + 'T12:00:00').toLocaleDateString('pt-BR') : 'início'} a ${filtroAte ? new Date(filtroAte + 'T12:00:00').toLocaleDateString('pt-BR') : 'hoje'}`
+      : 'Todo o período';
+    salvarExcelIdentidade(wb, `Compras_${cliente.nome.replace(/\s+/g, '_')}.xlsx`, {
+      tipo: 'clientes_compras', titulo: `Histórico de Compras — ${cliente.nome}`, subtitulo: periodoExcel,
+    });
   }
 
   function baixarPDF() {
@@ -1027,6 +1037,14 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
       `;
     }).join('');
 
+    // Cabeçalho/rodapé da Identidade dos Relatórios (SuperAdmin). O nome
+    // do cliente vai no título (antes ficava no lugar do subtítulo).
+    const idr = htmlIdentidade({
+      tipo: 'clientes_compras',
+      titulo: `Histórico de Compras — ${cliente.nome}`,
+      subtitulo: periodo,
+    });
+
     const alturaJanela = Math.round((window.screen?.availHeight || 900) * 0.92);
     const janela = window.open('', '_blank', `width=820,height=${alturaJanela},top=20,left=100`);
     janela.document.write(`
@@ -1039,12 +1057,9 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
             @page { size: A4; margin: 15mm; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; padding: 12px; }
-            .hp-header { text-align: center; margin-bottom: 18px; }
-            .hp-nome { font-size: 20px; font-weight: 800; }
-            .hp-sub { font-size: 14px; color: #0d9488; margin-top: 2px; }
-            .hp-periodo { font-size: 11px; color: #64748b; margin-top: 4px; }
+            ${idr.css}
             table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-            thead th { background: #0f766e; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; }
+            thead th { background: ${idr.identidade.cor_destaque}; color: #fff; text-align: left; padding: 8px 10px; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .hp-venda-row td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
             .hp-valor { font-weight: 700; text-align: right; }
             .hp-itens-row td { padding: 4px 10px 10px 24px; border-bottom: 2px solid #e2e8f0; }
@@ -1054,16 +1069,13 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           </style>
         </head>
         <body>
-          <div class="hp-header">
-            <div class="hp-nome">${nomeEstabelecimento || ''}</div>
-            <div class="hp-sub">Histórico de Compras — ${cliente.nome}</div>
-            <div class="hp-periodo">${periodo}</div>
-          </div>
+          ${idr.cabecalho}
           <table>
             <thead><tr><th>Data</th><th>Vendedor</th><th>Pagamento</th><th>Status</th><th>Valor</th></tr></thead>
             <tbody>${linhasHtml}</tbody>
           </table>
           <div class="hp-total"><span>TOTAL (ativas)</span><span>${fmt(totalGeral)}</span></div>
+          ${idr.rodape}
         </body>
       </html>
     `);
