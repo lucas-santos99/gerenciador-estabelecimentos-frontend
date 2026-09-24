@@ -1376,3 +1376,61 @@ body.light .cli-alerta-item.proximo {
   transition: background 0.15s;
 }
 .cli-lightbox-fechar:hover { background: rgba(255,255,255,0.22); }
+
+/* ════════════════════════════════════════════════════════════
+   23/09/2026 — Recebimento de fiado igual ao PDV (ModalRecebimento.jsx)
+   O modal reaproveita as classes pdv-* (importa PDV.css); aqui ficam só
+   os detalhes próprios desta tela.
+   ════════════════════════════════════════════════════════════ */
+.cli-rcb-modal .pdv-pagamento-total-valor {
+  font-size: calc(3rem * var(--pdv-pag-zoom, 1));
+}
+.cli-rcb-subinfo {
+  display: block;
+  margin-top: 10px;
+  font-size: calc(0.85rem * var(--pdv-pag-zoom, 1));
+  color: var(--est-text-soft);
+  line-height: 1.5;
+}
+.cli-rcb-subinfo strong { color: var(--est-text); }
+.cli-rcb-parcial {
+  margin: -4px 0 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(180,83,9,0.10);
+  border: 1px solid rgba(180,83,9,0.30);
+  color: #b45309;
+  font-size: calc(0.85rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+}
+.cli-rcb-trocar {
+  display: block;
+  margin: 14px auto 0;
+}
+.cli-rcb-concluido {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cli-rcb-resumo {
+  border: 1px solid var(--est-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cli-rcb-resumo > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: calc(10px * var(--pdv-pag-zoom, 1)) calc(14px * var(--pdv-pag-zoom, 1));
+  border-bottom: 1px solid var(--est-border);
+  font-size: calc(0.95rem * var(--pdv-pag-zoom, 1));
+}
+.cli-rcb-resumo > div:last-child { border-bottom: none; }
+.cli-rcb-resumo span { color: var(--est-text-soft); }
+.cli-rcb-resumo strong { color: var(--est-text); font-family: 'JetBrains Mono', monospace; }
+.cli-rcb-resumo .cli-rcb-quitado strong { color: var(--est-success); }
+.cli-pagar-venda-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

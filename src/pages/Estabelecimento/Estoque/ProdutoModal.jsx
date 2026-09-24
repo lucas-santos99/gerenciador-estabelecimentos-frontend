@@ -187,18 +187,46 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [erroImagem, setErroImagem] = useState('');
   const imagemInputRef = useRef(null);
   const idxImagemAlvo = useRef(null);
+  // 23/09/2026 — "espelhar" valores de uma variação já preenchida ao criar
+  // outra. Guarda qual variação serve de modelo ('' = em branco) e qual
+  // variação nova deve ganhar o foco no campo Tamanho depois de criada.
+  const [modeloIdx, setModeloIdx] = useState('ultima');
+  const tamanhoRefs = useRef({});
+  const focarNovaKey = useRef(null);
 
-  function adicionar() {
+  useEffect(() => {
+    const k = focarNovaKey.current;
+    if (!k) return;
+    focarNovaKey.current = null;
+    const el = tamanhoRefs.current[k];
+    if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }, [variacoes.length]);
+
+  // Adiciona uma variação nova. Com `modelo`, copia cor, gênero e os dois
+  // preços dela; tamanho, estoque, código de barras e foto ficam em branco
+  // (cada tamanho tem estoque e código próprios — copiar isso daria erro).
+  function adicionar(modelo = null) {
+    const key = Math.random().toString(36).slice(2);
+    focarNovaKey.current = key;
     setVariacoes(prev => [...prev, {
-      _key: Math.random().toString(36).slice(2),
-      tamanho: '', cor: '', genero: '',
+      _key: key,
+      tamanho: '',
+      cor: modelo ? (modelo.cor || '') : '',
+      genero: modelo ? (modelo.genero || '') : '',
       codigo_barras: '',
       estoque_atual: '',
-      preco_custo: '',
-      preco_venda: '',
+      preco_custo: modelo ? (modelo.preco_custo || '') : '',
+      preco_venda: modelo ? (modelo.preco_venda || '') : '',
       imagem_url: '',
       imagem_origem: '',
     }]);
+  }
+  function adicionarEspelhando() {
+    const idx = modeloIdx === 'ultima' ? variacoes.length - 1 : Number(modeloIdx);
+    adicionar(variacoes[idx] || null);
+  }
+  function resumoVariacao(v) {
+    return [v.tamanho, v.cor, v.genero].map(x => (x || '').trim()).filter(Boolean).join(' · ');
   }
   function atualizarCampo(idx, campo, valor) {
     setVariacoes(prev => prev.map((v, i) => i === idx ? { ...v, [campo]: valor } : v));
@@ -296,55 +324,79 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
 
       {erroImagem && <div className="prod-modal-erro">⚠️ {erroImagem}</div>}
 
-      {variacoes.length === 0 ? (
+      {variacoes.length === 0 && (
         <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
-      ) : (
-        <div className="prod-variacao-linha prod-variacao-cabecalho">
-          <span>Tamanho</span><span>Cor</span><span>Gênero</span><span>Estoque ({unidadeMedida})</span><span></span>
-        </div>
       )}
 
-      {variacoes.map((v, idx) => (
-        <div className="prod-variacao-grupo" key={v.id || v._key || idx}>
-          <div className="prod-variacao-linha">
-            <input maxLength={30}
-              className="prod-input"
-              list="opcoes-tamanho-datalist"
-              placeholder="P, M, G…"
-              value={v.tamanho}
-              onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
-              disabled={somenteLeitura}
-            />
-            <input maxLength={40}
-              className="prod-input"
-              list="opcoes-cor-datalist"
-              placeholder="Cor"
-              value={v.cor}
-              onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
-              disabled={somenteLeitura}
-            />
-            <input maxLength={30}
-              className="prod-input"
-              list="opcoes-genero-datalist"
-              placeholder="Masc, Fem, Unissex…"
-              value={v.genero || ''}
-              onChange={e => atualizarCampo(idx, 'genero', e.target.value)}
-              disabled={somenteLeitura}
-            />
-            <input maxLength={15}
-              className="prod-input"
-              type="text"
-              inputMode="decimal"
-              placeholder="0"
-              value={v.estoque_atual}
-              onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
-              disabled={somenteLeitura}
-            />
+      {/* 23/09/2026 — cada variação num cartão próprio, numerado, com o
+          nome de cada campo em cima (antes só a 1ª linha tinha cabeçalho). */}
+      {variacoes.map((v, idx) => {
+        const chave = v.id || v._key || idx;
+        const resumo = resumoVariacao(v);
+        return (
+        <div className="prod-variacao-grupo prod-variacao-card" key={chave}>
+          <div className="prod-variacao-card-topo">
+            <span className="prod-variacao-numero">Variação {idx + 1}</span>
+            <span className={`prod-variacao-resumo${resumo ? '' : ' vazio'}`}>{resumo || 'preencha tamanho, cor ou gênero'}</span>
             {!somenteLeitura && (
-              <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
-                ✕
-              </button>
+              <div className="prod-variacao-card-acoes">
+                <button type="button" className="prod-variacao-duplicar" onClick={() => adicionar(v)}
+                  title="Criar uma nova variação com a mesma cor, gênero e preços desta (tamanho, estoque e código ficam em branco)">
+                  ⧉ Espelhar
+                </button>
+                <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
+                  ✕
+                </button>
+              </div>
             )}
+          </div>
+          <div className="prod-variacao-linha prod-variacao-linha--rotulada">
+            <label className="prod-variacao-campo">
+              <span className="prod-variacao-preco-label">Tamanho</span>
+              <input maxLength={30}
+                ref={el => { tamanhoRefs.current[chave] = el; }}
+                className="prod-input"
+                list="opcoes-tamanho-datalist"
+                placeholder="P, M, G…"
+                value={v.tamanho}
+                onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
+                disabled={somenteLeitura}
+              />
+            </label>
+            <label className="prod-variacao-campo">
+              <span className="prod-variacao-preco-label">Cor</span>
+              <input maxLength={40}
+                className="prod-input"
+                list="opcoes-cor-datalist"
+                placeholder="Azul, Preto…"
+                value={v.cor}
+                onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
+                disabled={somenteLeitura}
+              />
+            </label>
+            <label className="prod-variacao-campo">
+              <span className="prod-variacao-preco-label">Gênero</span>
+              <input maxLength={30}
+                className="prod-input"
+                list="opcoes-genero-datalist"
+                placeholder="Masc, Fem, Unissex…"
+                value={v.genero || ''}
+                onChange={e => atualizarCampo(idx, 'genero', e.target.value)}
+                disabled={somenteLeitura}
+              />
+            </label>
+            <label className="prod-variacao-campo">
+              <span className="prod-variacao-preco-label">Estoque ({unidadeMedida})</span>
+              <input maxLength={15}
+                className="prod-input"
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={v.estoque_atual}
+                onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
+                disabled={somenteLeitura}
+              />
+            </label>
           </div>
 
           <div className="prod-variacao-preco-linha">
@@ -410,10 +462,11 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
             </div>
           </div>
 
+          <span className="prod-variacao-preco-label" style={{ display: 'block', margin: '4px 0 3px' }}>Código de barras desta variação (opcional)</span>
           <div className="prod-variacao-codigo-linha">
             <input maxLength={50}
               className="prod-input prod-variacao-codigo-input"
-              placeholder="Código de barras da variação (opcional)"
+              placeholder="Digite, escaneie ou gere um código próprio"
               value={v.codigo_barras || ''}
               onChange={e => atualizarCampo(idx, 'codigo_barras', e.target.value)}
               disabled={somenteLeitura}
@@ -431,7 +484,8 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <input
         ref={imagemInputRef}
@@ -452,9 +506,31 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       </datalist>
 
       {!somenteLeitura && (
-        <button type="button" className="prod-btn-add-variacao" onClick={adicionar}>
-          + Adicionar variação
-        </button>
+        <div className="prod-variacao-add-barra">
+          <button type="button" className="prod-btn-add-variacao" onClick={() => adicionar()}>
+            + Adicionar variação em branco
+          </button>
+          {variacoes.length > 0 && (
+            <div className="prod-variacao-espelhar">
+              <button type="button" className="prod-btn-add-variacao prod-btn-espelhar" onClick={adicionarEspelhando}
+                title="Nova variação já com a cor, o gênero e os preços da variação escolhida — só falta o tamanho, o estoque e o código">
+                ⧉ Adicionar espelhando
+              </button>
+              <select className="prod-input prod-variacao-espelhar-select" value={modeloIdx} onChange={e => setModeloIdx(e.target.value)}
+                aria-label="Variação que serve de modelo">
+                <option value="ultima">a última variação</option>
+                {variacoes.map((v, i) => (
+                  <option key={v.id || v._key || i} value={String(i)}>
+                    Variação {i + 1}{resumoVariacao(v) ? ` — ${resumoVariacao(v)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {variacoes.length > 0 && (
+            <span className="prod-label-hint">Espelhar copia cor, gênero e preços. Tamanho, estoque e código de barras ficam em branco — cada tamanho tem os seus.</span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1204,6 +1280,27 @@ export default function ProdutoModal({
       setErro('Toda variação precisa de pelo menos um Tamanho, Cor ou Gênero preenchidos.');
       return;
     }
+    // 23/09/2026 — aviso rápido antes de ir pro servidor (que confere de
+    // novo, inclusive contra os outros produtos da loja): variação repetida
+    // e código de barras repetido dentro deste próprio produto.
+    if (form.tem_variacoes) {
+      const chaves = new Map();
+      for (let i = 0; i < variacoes.length; i++) {
+        const v = variacoes[i];
+        const k = [v.tamanho, v.cor, v.genero].map(x => String(x || '').trim().toLowerCase()).join('|');
+        if (chaves.has(k)) { setErro(`As variações ${chaves.get(k) + 1} e ${i + 1} estão iguais (mesmo tamanho, cor e gênero). Mude uma delas.`); return; }
+        chaves.set(k, i);
+      }
+      const codigos = new Map();
+      const cProd = String(form.codigo_barras || '').trim();
+      if (cProd) codigos.set(cProd, 'o produto');
+      for (let i = 0; i < variacoes.length; i++) {
+        const c = String(variacoes[i].codigo_barras || '').trim();
+        if (!c) continue;
+        if (codigos.has(c)) { setErro(`O código de barras ${c} está repetido (${codigos.get(c)} e a variação ${i + 1}). Cada um precisa de um código diferente.`); return; }
+        codigos.set(c, `a variação ${i + 1}`);
+      }
+    }
 
     // Preço de venda geral é obrigatório — a não ser que o produto tenha
     // variações e cada uma delas já tenha o próprio preço de venda definido
@@ -1333,7 +1430,7 @@ export default function ProdutoModal({
       )}
 
       <div className="prod-modal-overlay">
-        <div className="prod-modal" style={{ '--prod-modal-font-scale': modalFontScale }}>
+        <div className={`prod-modal${form.tem_variacoes ? ' prod-modal--variacoes' : ''}`} style={{ '--prod-modal-font-scale': modalFontScale }}>
 
           <div className="prod-modal-titulo-row">
             <div className="prod-modal-titulo">
@@ -1894,6 +1991,18 @@ export default function ProdutoModal({
                           </button>
                         </span>
                       ) : null
+                    )}
+
+                    {/* 23/09/2026 — sem etiqueta de balança = produto a granel */}
+                    {!form.vendido_por_peso && (
+                      <div className="prod-granel-aviso">
+                        <span className="prod-granel-aviso-icone">🥄</span>
+                        <span>
+                          <strong>Produto a granel</strong> — vendido por peso, sem etiqueta de balança.
+                          No PDV, o caixa busca pelo nome e digita o peso mostrado na balança.
+                          Se a balança imprimir etiqueta com código de barras pra este produto, marque a opção acima.
+                        </span>
+                      </div>
                     )}
 
                     {form.vendido_por_peso && (

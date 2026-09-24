@@ -134,6 +134,12 @@ const OPCOES_EXIBICAO = [
   { v: "logo_e_nome", t: "Logo + nome" },
 ];
 
+// Alinhamento do cabeçalho/rodapé (23/09/2026)
+const OPCOES_ALINHAMENTO = [
+  { v: "lados",  t: "⬅ ➡ Nas laterais" },
+  { v: "centro", t: "⬌ Centralizado" },
+];
+
 // Botões lado a lado pra escolher uma opção (ex.: logo / nome / logo + nome)
 function Opcoes({ p, s, hf, campo, label, opcoes, dica }) {
   return (
@@ -272,6 +278,8 @@ function BoxCabecalho({ p, s, hf, ctx, refs }) {
         <Opcoes p={p} s={s} hf={hf} campo="sistema_exibicao" label="O sistema aparece como" opcoes={OPCOES_EXIBICAO}
           dica="Sem logo do sistema enviada, sai sempre o nome." />
 
+        <Opcoes p={p} s={s} hf={hf} campo="alinhamento_cabecalho" label="Alinhamento do cabeçalho" opcoes={OPCOES_ALINHAMENTO}
+          dica="Nas laterais: loja à esquerda e título à direita. Centralizado: tudo no meio, um embaixo do outro (vale também pra faixa da marca)." />
         <Escala p={p} s={s} hf={hf} campo="escala_cabecalho" label="Tamanho do cabeçalho"
           dica="Aumenta ou diminui a faixa do topo, as logos e os textos do cabeçalho (PDF, impressão e Excel)." />
 
@@ -324,6 +332,8 @@ function BoxRodape({ p, s, hf }) {
           <Chave p={p} s={s} hf={hf} campo="mostrar_contatos_rodape" label="Mostrar contatos" />
           <Chave p={p} s={s} hf={hf} campo="mostrar_paginacao" label="Número da página (PDF)" />
         </div>
+        <Opcoes p={p} s={s} hf={hf} campo="alinhamento_rodape" label="Alinhamento do rodapé" opcoes={OPCOES_ALINHAMENTO}
+          dica="Nas laterais: marca à esquerda e número da página à direita. Centralizado: marca, textos e página no meio." />
         <Escala p={p} s={s} hf={hf} campo="escala_rodape" label="Tamanho do rodapé"
           dica="Aumenta ou diminui a faixa do rodapé, a logo e os textos dele (PDF, impressão e Excel)." />
       </div>

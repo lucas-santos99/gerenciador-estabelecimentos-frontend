@@ -2588,3 +2588,160 @@
   transition: background 0.15s;
 }
 .prod-lightbox-fechar:hover { background: rgba(255,255,255,0.22); }
+/* ════════════════════════════════════════════════════════════
+   23/09/2026 — Variações em cartões separados + espelhar valores,
+   atalho F2 no "+ Produto" e aviso de produto a granel
+   ════════════════════════════════════════════════════════════ */
+
+/* Modal mais largo quando o produto tem variações */
+.prod-modal.prod-modal--variacoes {
+  max-width: 1000px;
+}
+
+/* Cada variação num cartão próprio, bem separado do próximo */
+.prod-variacao-grupo.prod-variacao-card {
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-left: 4px solid var(--est-accent);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+.prod-variacao-grupo.prod-variacao-card:last-of-type {
+  border-bottom: 1px solid var(--est-border);
+  margin-bottom: 14px;
+}
+.prod-variacao-card-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--est-border);
+}
+.prod-variacao-numero {
+  font-size: calc(0.72rem * var(--prod-modal-font-scale, 1));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.prod-variacao-resumo {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(0.82rem * var(--prod-modal-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prod-variacao-resumo.vazio {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--est-text-muted);
+}
+.prod-variacao-card-acoes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.prod-variacao-duplicar {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px dashed var(--est-border-accent, var(--est-accent));
+  background: var(--est-accent-dim);
+  color: var(--est-accent);
+  font-size: calc(0.72rem * var(--prod-modal-font-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.prod-variacao-duplicar:hover { background: var(--est-accent); color: #fff; }
+
+/* Linha com o nome de cada campo em cima (Tamanho / Cor / Gênero / Estoque) */
+.prod-variacao-linha.prod-variacao-linha--rotulada {
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 130px;
+  align-items: end;
+}
+.prod-variacao-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.prod-variacao-campo > .prod-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Barra de adicionar: em branco / espelhando outra variação */
+.prod-variacao-add-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.prod-variacao-add-barra .prod-btn-add-variacao { margin-top: 0; }
+.prod-variacao-espelhar {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.prod-variacao-espelhar .prod-btn-espelhar {
+  width: auto;
+  flex-shrink: 0;
+  border-style: solid;
+}
+.prod-variacao-espelhar-select {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .prod-variacao-linha.prod-variacao-linha--rotulada { grid-template-columns: 1fr 1fr; }
+  .prod-variacao-espelhar { flex-direction: column; }
+}
+
+/* Aviso de produto a granel (kg sem etiqueta de balança) */
+.prod-granel-aviso {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(180,83,9,0.10);
+  border: 1px solid rgba(180,83,9,0.30);
+  color: #b45309;
+  font-size: calc(0.8rem * var(--prod-modal-font-scale, 1));
+  line-height: 1.5;
+}
+.prod-granel-aviso strong { color: #92400e; }
+.prod-granel-aviso-icone { font-size: calc(1.1rem * var(--prod-modal-font-scale, 1)); line-height: 1.2; }
+
+/* Atalho F2 no botão "+ Produto" */
+.estoque-btn-novo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.estoque-atalho {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72em;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.18);
+  color: inherit;
+  line-height: 1.4;
+}

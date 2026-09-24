@@ -40,6 +40,8 @@ export const IDENTIDADE_PADRAO = Object.freeze({
   sistema_exibicao:         'logo',   // 'logo' | 'nome' | 'logo_e_nome'
   escala_cabecalho:         100,      // % (70–160)
   escala_rodape:            100,      // % (70–160)
+  alinhamento_cabecalho:    'lados',  // 'lados' (loja à esquerda, título à direita) | 'centro'
+  alinhamento_rodape:       'lados',  // 'lados' (marca à esquerda, página à direita) | 'centro'
   cor_faixa:                '#0f172a',
   cor_texto_faixa:          '#e6f7f1',
   cor_destaque:             '#0f766e',
@@ -117,6 +119,7 @@ function hexParaRgb(hex) {
 }
 
 const EXIBICOES = ['logo', 'nome', 'logo_e_nome'];
+const ALINHAMENTOS = ['lados', 'centro'];
 export const ESCALA_MIN = 70;
 export const ESCALA_MAX = 160;
 
@@ -262,6 +265,8 @@ export function resolverIdentidade(tipo, configOverride) {
   if (!EXIBICOES.includes(id.sistema_exibicao)) id.sistema_exibicao = IDENTIDADE_PADRAO.sistema_exibicao;
   id.escala_cabecalho = escalaValida(id.escala_cabecalho);
   id.escala_rodape    = escalaValida(id.escala_rodape);
+  if (!ALINHAMENTOS.includes(id.alinhamento_cabecalho)) id.alinhamento_cabecalho = IDENTIDADE_PADRAO.alinhamento_cabecalho;
+  if (!ALINHAMENTOS.includes(id.alinhamento_rodape))    id.alinhamento_rodape    = IDENTIDADE_PADRAO.alinhamento_rodape;
   return id;
 }
 
@@ -414,11 +419,20 @@ export async function novoPdfRelatorio({
   if (contatosRodape)        linhasRodape.push({ t: contatosRodape, b: false });
   if (id.rodape_texto_livre) linhasRodape.push({ t: id.rodape_texto_livre, b: false });
   const PASSO_RODAPE = 3.6 * sr;
-  const ALTURA_RODAPE = Math.max(11 * sr, 5 * sr + linhasRodape.length * PASSO_RODAPE);
+  // Centralizado (23/09): tudo empilhado no meio — marca em cima, depois as
+  // linhas de texto e a paginação por último.
+  const rodCentro = id.alinhamento_rodape === 'centro';
+  const cabCentro = id.alinhamento_cabecalho === 'centro';
+  const temMarcaRodape = oQueMostrar(id.marca_exibicao, !!logoPronta(id.marca_logo_url), !!id.marca_nome);
+  const ALTURA_MARCA_RODAPE = (temMarcaRodape.logo || temMarcaRodape.nome) ? 6.5 * sr : 0;
+  const linhasCentro = linhasRodape.length + (id.mostrar_paginacao ? 1 : 0);
+  const ALTURA_RODAPE = rodCentro
+    ? Math.max(11 * sr, 5 * sr + ALTURA_MARCA_RODAPE + linhasCentro * PASSO_RODAPE)
+    : Math.max(11 * sr, 5 * sr + linhasRodape.length * PASSO_RODAPE);
 
   // Desenha logo e/ou nome (conforme "exibicao") centralizado na altura
   // `yCentro`. Com `direita`, `x` é a borda direita. Devolve a largura usada.
-  function desenharMarca({ logo, nome, exibicao, x, yCentro, alturaLogo, larguraMaxLogo, fonte, negrito, direita = false }) {
+  function desenharMarca({ logo, nome, exibicao, x, yCentro, alturaLogo, larguraMaxLogo, fonte, negrito, direita = false, medir = false }) {
     const quer = oQueMostrar(exibicao, !!logo, !!nome);
     let wLogo = 0, hLogo = 0;
     if (quer.logo) ({ w: wLogo, h: hLogo } = caberImagem(logo, larguraMaxLogo, alturaLogo));
@@ -428,6 +442,7 @@ export async function novoPdfRelatorio({
     const wTxt = txt ? doc.getTextWidth(txt) : 0;
     const espaco = quer.logo && txt ? alturaLogo * 0.4 : 0;
     const total = wLogo + espaco + wTxt;
+    if (medir) return total; // só mede a largura, sem desenhar
     let cx = direita ? x - total : x;
     if (quer.logo) {
       doc.addImage(logo.dataUrl, 'PNG', cx, yCentro - hLogo / 2, wLogo, hLogo);
@@ -446,14 +461,30 @@ export async function novoPdfRelatorio({
   if (id.cabecalho_modo === 'loja_e_marca') {
     doc.setFillColor(...corFaixa);
     doc.rect(0, 0, W, ALTURA_FAIXA, 'F');
-    desenharMarca({
+    const argMarca = {
       logo: logoPronta(id.marca_logo_url), nome: id.marca_nome, exibicao: id.marca_exibicao,
-      x: M, yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 11 * sc, negrito: true,
-    });
-    desenharMarca({
+      yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 11 * sc, negrito: true,
+    };
+    const argSistema = {
       logo: logoPronta(id.sistema_logo_url), nome: id.nome_sistema, exibicao: id.sistema_exibicao,
-      x: W - M, yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 8.5 * sc, negrito: false, direita: true,
-    });
+      yCentro: ALTURA_FAIXA / 2, alturaLogo: 8 * sc, larguraMaxLogo: 55 * sc, fonte: 8.5 * sc, negrito: false,
+    };
+    if (cabCentro) {
+      // Marca e sistema juntos no meio da faixa, separados por um traço
+      const wM = desenharMarca({ ...argMarca, x: 0, medir: true });
+      const wS = desenharMarca({ ...argSistema, x: 0, medir: true });
+      const vao = wM > 0 && wS > 0 ? 10 * sc : 0;
+      let xc = (W - (wM + vao + wS)) / 2;
+      if (wM > 0) desenharMarca({ ...argMarca, x: xc });
+      if (vao) {
+        doc.setDrawColor(...corTextoFaixa); doc.setLineWidth(0.3);
+        doc.line(xc + wM + vao / 2, ALTURA_FAIXA * 0.3, xc + wM + vao / 2, ALTURA_FAIXA * 0.7);
+      }
+      if (wS > 0) desenharMarca({ ...argSistema, x: xc + wM + vao });
+    } else {
+      desenharMarca({ ...argMarca, x: M });
+      desenharMarca({ ...argSistema, x: W - M, direita: true });
+    }
     y = ALTURA_FAIXA + 6 * sc;
   }
 
@@ -464,54 +495,100 @@ export async function novoPdfRelatorio({
   let alturaLogo = 0;
 
   const logoLoja = loja && id.mostrar_logo_loja ? logoPronta(loja.logo_url) : null;
-  if (logoLoja) {
-    const { w, h } = caberImagem(logoLoja, 26 * sc, 20 * sc);
-    doc.addImage(logoLoja.dataUrl, 'PNG', M, topo, w, h);
-    xTexto = M + w + 4 * sc;
-    alturaLogo = h;
-  }
-
-  const larguraEsq = larguraUtil * 0.56 - (xTexto - M);
   const nomeEsq = loja ? (loja.nome || '') : (id.nome_sistema || id.marca_nome || '');
   const linhasEsq = loja
     ? linhasDadosLoja(loja, id)
     : (id.marca_nome && id.marca_nome !== nomeEsq ? [id.marca_nome] : []);
 
-  let yEsq = topo + 5 * sc;
-  if (nomeEsq) {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13 * sc); doc.setTextColor(20, 20, 20);
-    const partes = doc.splitTextToSize(textoPdf(nomeEsq), larguraEsq);
-    doc.text(partes, xTexto, yEsq);
-    yEsq += partes.length * 5.4 * sc;
-  }
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * sc); doc.setTextColor(95, 100, 110);
-  linhasEsq.forEach(l => {
-    const partes = doc.splitTextToSize(textoPdf(l), larguraEsq);
-    doc.text(partes, xTexto, yEsq);
-    yEsq += partes.length * 3.8 * sc;
-  });
+  let fimBloco;
+  if (cabCentro) {
+    // Centralizado: logo, nome da loja, dados, título, subtítulo e data,
+    // um embaixo do outro, no meio da página.
+    const cx = W / 2;
+    let yc = topo;
+    if (logoLoja) {
+      const { w, h } = caberImagem(logoLoja, 30 * sc, 18 * sc);
+      doc.addImage(logoLoja.dataUrl, 'PNG', cx - w / 2, yc, w, h);
+      yc += h + 3 * sc;
+    }
+    yc += 4 * sc;
+    if (nomeEsq) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13 * sc); doc.setTextColor(20, 20, 20);
+      const partes = doc.splitTextToSize(textoPdf(nomeEsq), larguraUtil);
+      doc.text(partes, cx, yc, { align: 'center' });
+      yc += partes.length * 5.4 * sc;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * sc); doc.setTextColor(95, 100, 110);
+    linhasEsq.forEach(l => {
+      const partes = doc.splitTextToSize(textoPdf(l), larguraUtil);
+      doc.text(partes, cx, yc, { align: 'center' });
+      yc += partes.length * 3.8 * sc;
+    });
+    if (titulo) {
+      yc += 2.5 * sc;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12 * sc); doc.setTextColor(...corDestaque);
+      const partes = doc.splitTextToSize(textoPdf(titulo), larguraUtil);
+      doc.text(partes, cx, yc, { align: 'center' });
+      yc += partes.length * 5 * sc;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5 * sc); doc.setTextColor(95, 100, 110);
+    if (subtitulo) {
+      const partes = doc.splitTextToSize(textoPdf(subtitulo), larguraUtil);
+      doc.text(partes, cx, yc, { align: 'center' });
+      yc += partes.length * 4 * sc;
+    }
+    if (id.mostrar_data_geracao) {
+      doc.setFontSize(7.5 * sc);
+      doc.text(`Gerado em ${geradoEm}`, cx, yc, { align: 'center' });
+      yc += 3.6 * sc;
+    }
+    fimBloco = yc - 2 * sc;
+  } else {
+    if (logoLoja) {
+      const { w, h } = caberImagem(logoLoja, 26 * sc, 20 * sc);
+      doc.addImage(logoLoja.dataUrl, 'PNG', M, topo, w, h);
+      xTexto = M + w + 4 * sc;
+      alturaLogo = h;
+    }
 
-  const larguraDir = larguraUtil * 0.42;
-  let yDir = topo + 5 * sc;
-  if (titulo) {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12 * sc); doc.setTextColor(...corDestaque);
-    const partes = doc.splitTextToSize(textoPdf(titulo), larguraDir);
-    doc.text(partes, W - M, yDir, { align: 'right' });
-    yDir += partes.length * 5 * sc;
-  }
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5 * sc); doc.setTextColor(95, 100, 110);
-  if (subtitulo) {
-    const partes = doc.splitTextToSize(textoPdf(subtitulo), larguraDir);
-    doc.text(partes, W - M, yDir, { align: 'right' });
-    yDir += partes.length * 4 * sc;
-  }
-  if (id.mostrar_data_geracao) {
-    doc.setFontSize(7.5 * sc);
-    doc.text(`Gerado em ${geradoEm}`, W - M, yDir, { align: 'right' });
-    yDir += 3.6 * sc;
-  }
+    const larguraEsq = larguraUtil * 0.56 - (xTexto - M);
 
-  const fimBloco = Math.max(topo + alturaLogo, yEsq - 2 * sc, yDir - 2 * sc);
+    let yEsq = topo + 5 * sc;
+    if (nomeEsq) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13 * sc); doc.setTextColor(20, 20, 20);
+      const partes = doc.splitTextToSize(textoPdf(nomeEsq), larguraEsq);
+      doc.text(partes, xTexto, yEsq);
+      yEsq += partes.length * 5.4 * sc;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8 * sc); doc.setTextColor(95, 100, 110);
+    linhasEsq.forEach(l => {
+      const partes = doc.splitTextToSize(textoPdf(l), larguraEsq);
+      doc.text(partes, xTexto, yEsq);
+      yEsq += partes.length * 3.8 * sc;
+    });
+
+    const larguraDir = larguraUtil * 0.42;
+    let yDir = topo + 5 * sc;
+    if (titulo) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12 * sc); doc.setTextColor(...corDestaque);
+      const partes = doc.splitTextToSize(textoPdf(titulo), larguraDir);
+      doc.text(partes, W - M, yDir, { align: 'right' });
+      yDir += partes.length * 5 * sc;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5 * sc); doc.setTextColor(95, 100, 110);
+    if (subtitulo) {
+      const partes = doc.splitTextToSize(textoPdf(subtitulo), larguraDir);
+      doc.text(partes, W - M, yDir, { align: 'right' });
+      yDir += partes.length * 4 * sc;
+    }
+    if (id.mostrar_data_geracao) {
+      doc.setFontSize(7.5 * sc);
+      doc.text(`Gerado em ${geradoEm}`, W - M, yDir, { align: 'right' });
+      yDir += 3.6 * sc;
+    }
+
+    fimBloco = Math.max(topo + alturaLogo, yEsq - 2 * sc, yDir - 2 * sc);
+  }
   const yLinha = fimBloco + 3 * sc;
   doc.setDrawColor(...corDestaque);
   doc.setLineWidth(0.6);
@@ -530,7 +607,8 @@ export async function novoPdfRelatorio({
       // Cabeçalho resumido nas páginas 2 em diante
       if (p > 1) {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(95, 100, 110);
-        doc.text(doc.splitTextToSize(tituloCurto, larguraUtil * 0.8)[0] || '', M, 10);
+        if (cabCentro) doc.text(doc.splitTextToSize(tituloCurto, larguraUtil * 0.6)[0] || '', W / 2, 10, { align: 'center' });
+        else doc.text(doc.splitTextToSize(tituloCurto, larguraUtil * 0.8)[0] || '', M, 10);
         if (id.mostrar_data_geracao) {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
           doc.text(geradoEm, W - M, 10, { align: 'right' });
@@ -543,6 +621,40 @@ export async function novoPdfRelatorio({
       const yR = H - ALTURA_RODAPE;
       doc.setFillColor(...corFaixa);
       doc.rect(0, yR, W, ALTURA_RODAPE, 'F');
+
+      if (rodCentro) {
+        // Tudo centralizado: marca em cima, linhas de texto e a paginação embaixo
+        const larguraCentro = W - 2 * M;
+        const altConteudo = ALTURA_MARCA_RODAPE + linhasCentro * PASSO_RODAPE;
+        let yc = yR + (ALTURA_RODAPE - altConteudo) / 2;
+        if (ALTURA_MARCA_RODAPE) {
+          const argM = {
+            logo: logoMarca, nome: id.marca_nome, exibicao: id.marca_exibicao,
+            yCentro: yc + ALTURA_MARCA_RODAPE / 2, alturaLogo: 5 * sr, larguraMaxLogo: 30 * sr, fonte: 7.5 * sr, negrito: true,
+          };
+          const wM = desenharMarca({ ...argM, x: 0, medir: true });
+          desenharMarca({ ...argM, x: (W - wM) / 2 });
+          yc += ALTURA_MARCA_RODAPE;
+        }
+        doc.setTextColor(...corTextoFaixa);
+        const textos = linhasRodape.map(l => ({ ...l }));
+        if (id.mostrar_paginacao) textos.push({ t: `Página ${p} de ${total}`, b: false });
+        textos.forEach((l, i) => {
+          doc.setFont('helvetica', l.b ? 'bold' : 'normal');
+          let fonte = (l.b ? 7.5 : 6.8) * sr;
+          const minimo = fonte * 0.7;
+          let txt = textoPdf(l.t);
+          doc.setFontSize(fonte);
+          while (doc.getTextWidth(txt) > larguraCentro && fonte > minimo) { fonte -= 0.25; doc.setFontSize(fonte); }
+          if (doc.getTextWidth(txt) > larguraCentro) {
+            while (txt.length > 1 && doc.getTextWidth(txt + '...') > larguraCentro) txt = txt.slice(0, -1);
+            txt = txt.trimEnd() + '...';
+          }
+          doc.text(txt, W / 2, yc + (i + 0.75) * PASSO_RODAPE, { align: 'center' });
+        });
+        continue;
+      }
+
       const larguraMarca = desenharMarca({
         logo: logoMarca, nome: id.marca_nome, exibicao: id.marca_exibicao,
         x: M, yCentro: yR + ALTURA_RODAPE / 2, alturaLogo: 6 * sr, larguraMaxLogo: 30 * sr, fonte: 7.5 * sr, negrito: true,
@@ -683,7 +795,7 @@ export function htmlIdentidade({
   const srcLoja = loja && id.mostrar_logo_loja ? srcLogo(loja.logo_url) : '';
 
   const cabecalho = `
-    <header class="idr-cab">
+    <header class="idr-cab${id.alinhamento_cabecalho === 'centro' ? ' idr-centro' : ''}">
       ${faixa}
       <div class="idr-bloco">
         <div class="idr-loja">
@@ -705,7 +817,7 @@ export function htmlIdentidade({
   const contatos = linhaContatos(id);
   const marcaRodape = marcaHtml(srcLogo(id.marca_logo_url), id.marca_nome, id.marca_exibicao, 'idr-rod-marca');
   const rodape = `
-    <footer class="idr-rod">
+    <footer class="idr-rod${id.alinhamento_rodape === 'centro' ? ' idr-centro' : ''}">
       <div class="idr-rod-esq">
         ${marcaRodape ? `<div class="idr-rod-marca-box">${marcaRodape}</div>` : ''}
         <div>
@@ -750,6 +862,15 @@ export function htmlIdentidade({
     .idr-rod-gerado { font-size: ${r(10.5)}; font-weight: 700; }
     .idr-rod-linha { font-size: ${r(9.5)}; opacity: .9; margin-top: 1px; }
     .idr-rod-dir { font-size: ${r(9.5)}; opacity: .9; white-space: nowrap; }
+    /* Alinhamento centralizado (23/09) */
+    .idr-cab.idr-centro .idr-faixa { justify-content: center; }
+    .idr-cab.idr-centro .idr-faixa-dir { justify-content: center; border-left: 1px solid currentColor; padding-left: ${c(14)}; }
+    .idr-cab.idr-centro .idr-faixa-dir:first-child { border-left: 0; padding-left: 0; }
+    .idr-cab.idr-centro .idr-bloco { flex-direction: column; align-items: center; text-align: center; gap: ${c(8)}; }
+    .idr-cab.idr-centro .idr-loja { flex-direction: column; align-items: center; gap: ${c(6)}; }
+    .idr-cab.idr-centro .idr-titulo-bloco { text-align: center; max-width: 100%; }
+    .idr-rod.idr-centro { flex-direction: column; justify-content: center; text-align: center; gap: ${r(4)}; }
+    .idr-rod.idr-centro .idr-rod-esq { flex-direction: column; gap: ${r(4)}; }
   `;
 
   return { css, cabecalho, rodape, identidade: id };
@@ -822,6 +943,10 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
 
   // Linhas do cabeçalho
   const cab = [];
+  // Alinhamento (23/09): 'centro' centraliza as linhas do cabeçalho/rodapé
+  // (as células já são mescladas na largura da tabela).
+  const alinCab = id.alinhamento_cabecalho === 'centro' ? { horizontal: 'center' } : {};
+  const alinRod = id.alinhamento_rodape === 'centro' ? { horizontal: 'center' } : {};
   const faixa = {
     fill: { patternType: 'solid', fgColor: { rgb: rgbHex(id.cor_faixa) } },
     font: { bold: true, sz: tam(11, kc), color: { rgb: rgbHex(id.cor_texto_faixa) } },
@@ -859,9 +984,10 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
 
   cab.forEach((l, i) => {
     const r = range.s.r + i;
+    const s = { ...l.s, alignment: { ...(l.s.alignment || {}), ...alinCab } };
     for (let c = colIni; c <= colFim; c++) {
       const ref = U.encode_cell({ r, c });
-      ws[ref] = c === colIni ? { t: 's', v: l.v, s: l.s } : { t: 's', v: '', s: l.s };
+      ws[ref] = c === colIni ? { t: 's', v: l.v, s } : { t: 's', v: '', s };
     }
     merges.push({ s: { r, c: colIni }, e: { r, c: colFim } });
     alturas[r] = l.hpt ? { hpt: l.hpt } : undefined;
@@ -891,8 +1017,9 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
   let ultima = fimDados;
   rod.forEach((l, i) => {
     const r = fimDados + 2 + i;
+    const s = { ...l.s, alignment: { ...(l.s.alignment || {}), ...alinRod } };
     for (let c = colIni; c <= colFim; c++) {
-      ws[U.encode_cell({ r, c })] = c === colIni ? { t: 's', v: l.v, s: l.s } : { t: 's', v: '', s: l.s };
+      ws[U.encode_cell({ r, c })] = c === colIni ? { t: 's', v: l.v, s } : { t: 's', v: '', s };
     }
     merges.push({ s: { r, c: colIni }, e: { r, c: colFim } });
     ultima = r;

@@ -206,6 +206,22 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     }
   }, [produtoFocadoId, produtos]);
 
+  /* ── Atalho F2 = + Produto (23/09/2026) ─────────────────────
+     Só com a tela livre (nenhum modal/lightbox aberto) e com permissão
+     de adicionar. O PDV não fica montado junto, então não conflita com o
+     F2 de lá (finalizar venda). */
+  useEffect(() => {
+    if (!podeAdicionar || modalAberto || imagemExpandida) return;
+    function handleAtalhoNovo(e) {
+      if (e.key !== 'F2' || e.repeat) return;
+      e.preventDefault();
+      setProdutoEditar(null);
+      setModalAberto(true);
+    }
+    window.addEventListener('keydown', handleAtalhoNovo);
+    return () => window.removeEventListener('keydown', handleAtalhoNovo);
+  }, [podeAdicionar, modalAberto, imagemExpandida]);
+
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
   useEffect(() => {
     if (!imagemExpandida) return;
@@ -1003,8 +1019,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               >▦</button>
             </div>
             {podeAdicionar && (
-              <button className="estoque-btn primary" onClick={abrirNovo}>
-                + Produto
+              <button className="estoque-btn primary estoque-btn-novo" onClick={abrirNovo} title="Cadastrar um produto novo — atalho: tecla F2">
+                + Produto <kbd className="estoque-atalho">F2</kbd>
               </button>
             )}
           </div>

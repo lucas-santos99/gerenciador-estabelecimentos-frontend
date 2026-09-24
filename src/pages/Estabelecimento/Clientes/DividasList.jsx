@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import ClienteModal from './ClienteModal';
-import ModalRecebimento from './ModalRecebimento';
+import ModalRecebimento, { fmtDataHora } from './ModalRecebimento';
 import '../Clientes.css';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
@@ -61,13 +61,6 @@ function periodoPadrao30Dias(timezone = TIMEZONE_PADRAO) {
   return { de: subtrairDias(hojeStr, 30), ate: hojeStr };
 }
 
-function formatarData(s) {
-  if (!s) return '—';
-  try {
-    return new Date(s).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
-  } catch { return '—'; }
-}
-
 // Ícone de "sem imagem" — SVG em vez de emoji, mesmo padrão já usado no
 // Estoque (ProdutoList.jsx), pra não depender da fonte de emoji do sistema
 function IconePacoteMini({ className }) {
@@ -81,15 +74,16 @@ function IconePacoteMini({ className }) {
 }
 
 /* ── Painel de detalhes do fiado ───────────────────────────── */
-function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
+// 23/09/2026 — data E hora da compra/pagamento (no fuso do estabelecimento),
+// e o pagamento de cada compra passou a abrir o mesmo modal completo do PDV
+// (ModalRecebimento, modo "venda") em vez do select simples de antes.
+// `versao` muda sempre que um pagamento é registrado → recarrega a lista.
+function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, semPermMsg = '', timezone = TIMEZONE_PADRAO, versao = 0 }) {
   const [vendas,        setVendas]        = useState([]);
   const [pagamentos,    setPagamentos]    = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [erro,          setErro]          = useState('');
-  const [abaDetalhe,    setAbaDetalhe]    = useState('compras');
-  const [pagandoVenda,  setPagandoVenda]  = useState(null); // venda sendo paga
-  const [meioPagVenda,  setMeioPagVenda]  = useState('Dinheiro');
-  const [salvandoPag,   setSalvandoPag]   = useState(false); // 'compras' | 'pagamentos'
+  const [abaDetalhe,    setAbaDetalhe]    = useState('compras'); // 'compras' | 'pagamentos'
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
 
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
@@ -100,8 +94,8 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [imagemExpandida]);
 
-  async function carregar() {
-      setLoading(true);
+  async function carregar({ silencioso = false } = {}) {
+      if (!silencioso) setLoading(true);
       setErro('');
       try {
         const [rVendas, rPagamentos] = await Promise.all([
@@ -116,31 +110,7 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
     }
 
   useEffect(() => { carregar(); }, [cliente.id]);
-
-  async function pagarVenda(venda) {
-    setSalvandoPag(true);
-    setErro('');
-    try {
-      const resp = await apiFetch('/api/clientes/pagar-venda', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendaId:       venda.venda_id,
-          clienteId:     cliente.id,
-          meioPagamento: meioPagVenda,
-        }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Erro ao pagar');
-      setPagandoVenda(null);
-      await carregar();
-      onAtualizar?.();
-    } catch (err) {
-      setErro(err.message);
-    } finally {
-      setSalvandoPag(false);
-    }
-  }
+  useEffect(() => { if (versao > 0) carregar({ silencioso: true }); }, [versao]);
 
   return (
     <div className="cli-detalhes">
@@ -186,7 +156,7 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
               vendas.map(venda => (
                 <div key={venda.venda_id} className="cli-venda-card">
                   <div className="cli-venda-info">
-                    <span className="cli-venda-info-data">📅 {formatarData(venda.data_venda)}</span>
+                    <span className="cli-venda-info-data">📅 {fmtDataHora(venda.data_venda, timezone)}</span>
                     <span className="cli-venda-info-valor">{fmt(venda.valor_total)}</span>
                   </div>
                   <ul className="cli-venda-itens">
@@ -223,40 +193,15 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
                     })}
                   </ul>
 
-                  {/* Botão pagar esta compra */}
-                  {pagandoVenda?.venda_id === venda.venda_id ? (
-                    <div className="cli-pagar-venda-form">
-                      <select
-                        className="cli-pagar-venda-select"
-                        value={meioPagVenda}
-                        onChange={e => setMeioPagVenda(e.target.value)}
-                        disabled={salvandoPag}
-                      >
-                        {['Dinheiro','Pix','Debito','Credito'].map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                      <button
-                        className="cli-pagar-venda-btn confirmar"
-                        onClick={() => pagarVenda(venda)}
-                        disabled={salvandoPag}
-                      >
-                        {salvandoPag ? '⏳' : `✓ Confirmar ${fmt(venda.valor_total)}`}
-                      </button>
-                      <button
-                        className="cli-pagar-venda-btn cancelar"
-                        onClick={() => setPagandoVenda(null)}
-                        disabled={salvandoPag}
-                      >✕</button>
-                    </div>
-                  ) : (
-                    <button
-                      className="cli-pagar-venda-trigger"
-                      onClick={() => { setPagandoVenda(venda); setMeioPagVenda('Dinheiro'); }}
-                    >
-                      💰 Pagar esta compra
-                    </button>
-                  )}
+                  {/* Botão pagar esta compra — abre o modal completo (igual PDV) */}
+                  <button
+                    className="cli-pagar-venda-trigger"
+                    onClick={podeReceber ? () => onPagarVenda?.(venda) : undefined}
+                    disabled={!podeReceber}
+                    title={!podeReceber ? semPermMsg : undefined}
+                  >
+                    💰 Pagar esta compra
+                  </button>
                 </div>
               ))
             )}
@@ -275,7 +220,7 @@ function DetalhesFiado({ cliente, onFechar, onAtualizar }) {
               pagamentos.map((p, i) => (
                 <div key={i} className="cli-pagamento-card">
                   <div className="cli-pagamento-info">
-                    <span className="cli-pagamento-data">📅 {formatarData(p.data_transacao)}</span>
+                    <span className="cli-pagamento-data">📅 {fmtDataHora(p.data_transacao, timezone)}</span>
                     <span className={`cli-pagamento-meio ${p.meio_pagamento?.toLowerCase()}`}>{p.meio_pagamento}</span>
                   </div>
                   <span className="cli-pagamento-valor">- {fmt(p.valor)}</span>
@@ -318,6 +263,8 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   const [modalAberto,       setModalAberto]       = useState(false);
   const [clienteReceber,    setClienteReceber]    = useState(null);
   const [modalRecebimento,  setModalRecebimento]  = useState(false);
+  const [vendaReceber,      setVendaReceber]      = useState(null); // compra específica (modo "venda") ou null (modo "divida")
+  const [versaoFiado,       setVersaoFiado]       = useState(0);    // muda a cada pagamento → detalhe do fiado recarrega
   const [pixConfig,         setPixConfig]         = useState({ modo: 'maquininha', disponivel: false });
   const [estabTimezone,     setEstabTimezone]     = useState(TIMEZONE_PADRAO); // fuso oficial do estabelecimento (mercearias.timezone) — usado pra bucketar datas de venda no dia certo, independente de onde quem está olhando a tela está
   const [fiadoAtivo,        setFiadoAtivo]        = useState(true); // null enquanto carrega = assume true, ajusta depois
@@ -379,6 +326,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   // → lista de clientes e saldos devedores atualizam sozinhos.
   useAvisosEstabelecimento(estabelecimentoId, ['clientes', 'vendas'], () => {
     carregarDados(fiadoAtivo, { silencioso: true });
+    setVersaoFiado(v => v + 1); // detalhe do fiado aberto também se atualiza
   });
 
   /* ── Config de Pix (maquininha vs. sistema) + Fiado ativo? ──
@@ -408,31 +356,42 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   }, [estabelecimentoId]);
 
   /* ── Handlers recebimento ───────────────────────────────── */
+  // Usa sempre a versão mais nova do cliente (dívida atualizada) que já
+  // está na lista — o objeto guardado no detalhe pode estar desatualizado.
+  function clienteAtualizado(cliente) {
+    return dividas.find(c => c.id === cliente.id) || todosClientes.find(c => c.id === cliente.id) || cliente;
+  }
+
+  // 💰 Receber do card → valor livre (até a dívida toda)
   function abrirRecebimento(cliente) {
-    setClienteReceber(cliente);
+    setVendaReceber(null);
+    setClienteReceber(clienteAtualizado(cliente));
     setModalRecebimento(true);
   }
 
-  async function confirmarRecebimento(valorPago, meioPagamento) {
-    const resp = await apiFetch(`/api/clientes/liquidar`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        clienteId: clienteReceber.id,
-        estabelecimentoId,
-        valorPago,
-        meioPagamento,
-      }),
-    });
-    const result = await resp.json();
-    if (!resp.ok) throw new Error(result.error || 'Erro ao registrar pagamento');
-    await carregarDados();
+  // 💰 Pagar esta compra (detalhe do fiado) → valor fixo daquela compra
+  function abrirPagamentoVenda(cliente, venda) {
+    setVendaReceber(venda);
+    setClienteReceber(clienteAtualizado(cliente));
+    setModalRecebimento(true);
+  }
+
+  function fecharRecebimento() {
+    setModalRecebimento(false);
+    setClienteReceber(null);
+    setVendaReceber(null);
+  }
+
+  // O próprio modal grava no backend; aqui só atualiza as telas.
+  function aposRecebimento() {
+    carregarDados(fiadoAtivo, { silencioso: true });
+    setVersaoFiado(v => v + 1);
   }
 
   /* ── Excluir cliente ─────────────────────────────────────── */
   async function excluirCliente(cliente) {
     if (parseFloat(cliente.saldo_devedor) > 0.01) {
-      alert('Não é possível excluir cliente com saldo devedor pendente.');
+      alert('Não é possível excluir cliente com dívida pendente.');
       return;
     }
     if (!window.confirm(`Excluir o cliente "${cliente.nome}"? Esta ação é irreversível.`)) return;
@@ -592,10 +551,15 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
       {/* Modal recebimento */}
       {modalRecebimento && clienteReceber && (
         <ModalRecebimento
+          key={`${clienteReceber.id}-${vendaReceber?.venda_id || 'divida'}`}
+          modo={vendaReceber ? 'venda' : 'divida'}
           cliente={clienteReceber}
-          onClose={() => { setModalRecebimento(false); setClienteReceber(null); }}
-          onConfirmar={confirmarRecebimento}
+          venda={vendaReceber}
+          onClose={fecharRecebimento}
+          onConcluido={aposRecebimento}
           estabelecimentoId={estabelecimentoId}
+          nomeEstabelecimento={nomeEstabelecimento}
+          timezone={estabTimezone}
           pixConfig={pixConfig}
         />
       )}
@@ -782,7 +746,11 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
           <DetalhesFiado
             cliente={clienteDetalhes}
             onFechar={() => setClienteDetalhes(null)}
-            onAtualizar={carregarDados}
+            onPagarVenda={venda => abrirPagamentoVenda(clienteDetalhes, venda)}
+            podeReceber={pode('clientes_receber')}
+            semPermMsg={SEM_PERM}
+            timezone={estabTimezone}
+            versao={versaoFiado}
           />
         )}
 

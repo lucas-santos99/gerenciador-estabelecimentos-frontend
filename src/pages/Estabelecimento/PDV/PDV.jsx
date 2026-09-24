@@ -293,8 +293,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     if (!metodoConfirmado) return;
     if (meioPagamento === 'Dividido') return; // fluxo próprio, sem foco automático de campo único
     if (meioPagamento === 'Dinheiro') {
-      const val = total.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 });
-      setValorRecebido(val);
+      // 23/09 — vírgula automática (máscara tipo calculadora): já abre com o total
+      // formatado e, ao digitar, os dígitos entram da direita pra esquerda.
+      setValorRecebido(digitarValorMascarado(total.toFixed(2)));
     }
     if (meioPagamento === 'Fiado') {
       if (!clienteSelecionado) setTimeout(() => inputClienteRef.current?.focus(), 0);
@@ -1261,7 +1262,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
         const limiteStr = fmt(limite);
         const novoStr = fmt(novoSaldo);
         const ok = window.confirm(
-          `⚠️ Limite de crédito excedido!\n\nLimite: ${limiteStr}\nNovo saldo após venda: ${novoStr}\n\nDeseja continuar mesmo assim?`
+          `⚠️ Limite de crédito excedido!\n\nLimite: ${limiteStr}\nDívida após esta compra: ${novoStr}\n\nDeseja continuar mesmo assim?`
         );
         if (!ok) return;
       }
@@ -1518,7 +1519,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
             {meioPagamento === 'Dinheiro' && (
               <>
                 <span className="pdv-troco-input-label">Valor recebido (R$)</span>
-                <input maxLength={15} ref={inputDinheiroRef} className="pdv-troco-input" type="text" value={valorRecebido} onChange={e => setValorRecebido(e.target.value)} onKeyDown={handleDinheiroKey} />
+                <input maxLength={15} ref={inputDinheiroRef} className="pdv-troco-input" type="text" inputMode="numeric" value={valorRecebido} onChange={e => setValorRecebido(digitarValorMascarado(e.target.value))} onKeyDown={handleDinheiroKey} />
                 <div className="pdv-troco-display">
                   <span>Troco</span>
                   <strong>{fmt(troco)}</strong>
@@ -2094,11 +2095,11 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                     <span className="pdv-cliente-selecionado-nome">📋 {clienteSelecionado.nome}</span>
                     <div className="pdv-cliente-selecionado-info">
                       <div className="pdv-cliente-info-item">
-                        <span className="pdv-cliente-info-label">Saldo atual</span>
+                        <span className="pdv-cliente-info-label">Dívida atual</span>
                         <span className="pdv-cliente-info-valor">{fmt(clienteSelecionado.saldo_devedor)}</span>
                       </div>
                       <div className="pdv-cliente-info-item">
-                        <span className="pdv-cliente-info-label">Novo saldo</span>
+                        <span className="pdv-cliente-info-label">Dívida após a compra</span>
                         <span className="pdv-cliente-info-valor novo-saldo">{fmt((parseFloat(clienteSelecionado.saldo_devedor) || 0) + total)}</span>
                       </div>
                       {parseFloat(clienteSelecionado.limite_credito || 0) > 0 && (
@@ -2755,7 +2756,24 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
     if (itemQuantificar || modalPeso || showPagamento) return;
 
     // ── Interceptar EAN-13 pesável (prefixo "2") ──────────
-    const pesavel = decodificarEAN13Pesavel(codigo);
+    // 23/09/2026 — o código de barras INTERNO gerado pelo sistema (produto
+    // ou variação sem etiqueta de fábrica) também começa com "2" (faixa
+    // GS1 20-29). Antes, qualquer código com "2" na frente era lido como
+    // etiqueta de balança e o PDV respondia "código pesável não
+    // encontrado". Agora primeiro procura o código INTEIRO cadastrado na
+    // loja; só se não achar é que trata como etiqueta de balança.
+    let pesavel = decodificarEAN13Pesavel(codigo);
+    if (pesavel) {
+      try {
+        const respExato = await apiFetch(
+          `/api/estabelecimentos/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(codigo)}`
+        );
+        if (respExato.ok) {
+          const exatos = await respExato.json();
+          if (Array.isArray(exatos) && exatos.length > 0) pesavel = null; // é um código cadastrado, segue a busca normal
+        }
+      } catch { /* sem resposta: segue como etiqueta de balança */ }
+    }
     if (pesavel) {
       setLoadingBusca(true);
       try {
