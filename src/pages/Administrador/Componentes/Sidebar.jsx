@@ -56,6 +56,12 @@ const Icons = {
       <line x1="8" y1="17" x2="13" y2="17"/>
     </svg>
   ),
+  WhatsApp: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21l1.65-4.95A8.5 8.5 0 1 1 8.2 19.6L3 21z"/>
+      <path d="M9 9.5c.3 1.9 1.9 3.9 4 4.8l1.2-1.1 1.8.8v1.3c-3.4.5-7.3-3.1-7.2-6.8H10l.6 1.7-1 .8"/>
+    </svg>
+  ),
   Logout: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -181,6 +187,7 @@ export default function Sidebar() {
         { label: "Solicitações",         path: "/admin/solicitacoes",        icon: Icons.Mail, badge: solicitacoesPendentes },
         { label: "Comunicados",          path: "/admin/comunicados",         icon: Icons.Megaphone },
         { label: "Cobranças",            path: "/admin/cobrancas",           icon: Icons.Cobranca  },
+        { label: "WhatsApp",             path: "/admin/whatsapp",            icon: Icons.WhatsApp  },
         { label: "Auditoria",            path: "/admin/auditoria",           icon: Icons.Audit     },
         { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings  },
         { label: "Identidade dos Relatórios", path: "/admin/identidade-relatorios", icon: Icons.Relatorio },

@@ -21,6 +21,7 @@ import Cobrancas from "./pages/Administrador/Cobrancas/Cobrancas";
 import SolicitacoesAdmin from "./pages/Administrador/Solicitacoes/SolicitacoesAdmin";
 import Comunicados from "./pages/Administrador/Comunicados/Comunicados";
 import NotificacoesAdmin from "./pages/Administrador/Notificacoes/NotificacoesAdmin";
+import WhatsAppAdmin from "./pages/Administrador/WhatsApp/WhatsAppAdmin";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
@@ -179,6 +180,12 @@ function App() {
       <Route path="/admin/notificacoes" element={
         <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
           <NotificacoesAdmin />
+        </RoleRoute></ProtectedRoute>
+      }/>
+
+      <Route path="/admin/whatsapp" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <WhatsAppAdmin />
         </RoleRoute></ProtectedRoute>
       }/>
 
