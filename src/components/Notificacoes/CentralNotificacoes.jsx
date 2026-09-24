@@ -9,9 +9,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../utils/api';
 import {
-  useNotificacoes, ROTULO_GRUPO, OPCOES_ADIAR, tempoRelativo, fmtDataHoraCurta,
+  useNotificacoes, ROTULO_GRUPO, OPCOES_ADIAR, tempoRelativo, fmtDataHoraCurta, tocarSom,
 } from './NotificacoesContext';
 import LembreteModal, { ROTULO_RECORRENCIA } from './LembreteModal';
+import Dica from './Dica';
 import './Notificacoes.css';
 
 const fmtBRL = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -98,10 +99,11 @@ function CartaoAviso({ item, selecionado, onSelecionar, timezone }) {
 /* ════════════════════════════════════════════════════════════
    ABA: CAIXA DE ENTRADA
    ════════════════════════════════════════════════════════════ */
-function CaixaEntrada() {
+function CaixaEntrada({ status, setStatus, grupo, setGrupo }) {
+  // status: ativas | nao_lidas | adiadas | dispensadas — grupo: todos | atrasado | hoje | proximo | info
+  // (ficam na tela da central porque os cartões de resumo do topo também mexem neles)
   const ntf = useNotificacoes();
   const [categoria, setCategoria] = useState('todas');
-  const [status, setStatus]       = useState('ativas'); // ativas | nao_lidas | adiadas | dispensadas
   const [busca, setBusca]         = useState('');
   const [selecao, setSelecao]     = useState(() => new Set());
   const tz = ntf.dados?.timezone;
@@ -114,10 +116,11 @@ function CaixaEntrada() {
       if (status === 'nao_lidas' && (i.lida || i.adiada || i.dispensada)) return false;
       if (status === 'adiadas' && (!i.adiada || i.dispensada)) return false;
       if (status === 'dispensadas' && !i.dispensada) return false;
+      if (grupo !== 'todos' && i.grupo !== grupo) return false;
       if (termo && !`${i.titulo} ${i.descricao || ''}`.toLowerCase().includes(termo)) return false;
       return true;
     });
-  }, [ntf.itens, categoria, status, busca]);
+  }, [ntf.itens, categoria, status, grupo, busca]);
 
   const grupos = useMemo(() => {
     const g = { atrasado: [], hoje: [], proximo: [], info: [] };
@@ -125,7 +128,7 @@ function CaixaEntrada() {
     return g;
   }, [filtrados]);
 
-  useEffect(() => { setSelecao(new Set()); }, [categoria, status, busca]);
+  useEffect(() => { setSelecao(new Set()); }, [categoria, status, grupo, busca]);
 
   function selecionar(chave, marcado) {
     setSelecao(s => { const n = new Set(s); marcado ? n.add(chave) : n.delete(chave); return n; });
@@ -176,6 +179,13 @@ function CaixaEntrada() {
           </div>
           <input className="ntf-busca" type="search" maxLength={100} placeholder="🔍 Buscar aviso…" value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
+
+        {grupo !== 'todos' && (
+          <div className="ntf-filtro-ativo">
+            <span>Mostrando só: <strong>{ROTULO_GRUPO[grupo]}</strong></span>
+            <button type="button" onClick={() => setGrupo('todos')} title="Tirar este filtro">✕ Mostrar todos</button>
+          </div>
+        )}
 
         {filtrados.length > 0 && (
           <div className={`ntf-bulk${selecao.size ? ' ativo' : ''}`}>
@@ -391,6 +401,54 @@ const FREQUENCIAS = [
   { v: 'uma_vez', t: 'Só uma vez',        d: 'Lida, só volta se o aviso mudar (ex.: novo vencimento).' },
 ];
 
+// Explicação de cada campo (ícone "?")
+const DICA_ANTECEDENCIA = {
+  fiado: 'Quantos dias antes do vencimento do fiado o aviso começa a aparecer. Depois de vencido, continua avisando até o cliente pagar.',
+  contas: 'Quantos dias antes do vencimento da conta o aviso começa a aparecer. Depois de vencida, continua avisando até ser marcada como paga.',
+  fornecedores: 'Quantos dias antes da data de pagar o fornecedor o aviso começa a aparecer. Continua avisando até a conta ser paga.',
+  assinatura: 'Quantos dias antes do vencimento da sua assinatura do sistema o aviso começa a aparecer.',
+  licencas: 'Quantos dias antes de a licença de um estabelecimento vencer o aviso começa a aparecer. Vencidas e bloqueadas aparecem sempre.',
+  pagamentos: 'Por quantos dias um pagamento recebido continua aparecendo na central.',
+  cadastros: 'Por quantos dias um estabelecimento recém-cadastrado continua aparecendo na central.',
+};
+const DICA_FREQUENCIA = 'Depois que você marca um aviso como lido, quando ele volta a aparecer como novo (se ainda estiver pendente). Sempre que entrar: a cada login. 1 vez por dia: volta no dia seguinte. A cada X horas: volta depois do intervalo. Só uma vez: só volta se o aviso mudar (ex.: novo vencimento).';
+const DICA_RESUMO_CAT = 'Se marcado, os avisos deste tipo entram no resumo que aparece ao fazer login. Desmarcado, eles continuam no sininho e na central, só não aparecem no resumo.';
+const DICA_ESTOQUE = 'Abaixo do mínimo ou zerado: avisa quando o estoque chega no mínimo cadastrado no produto (ou zera). Só quando zerar: avisa apenas quando acabar.';
+const DICA_INTERVALO = 'De quantas em quantas horas um aviso já lido volta a aparecer como novo.';
+
+// Dias de antecedência: opções prontas + "Outro…" pra digitar qualquer número (0 a 365)
+function SeletorDias({ valor, onChange, janela }) {
+  const opcoes = janela ? [1, 3, 7, 15, 30, 60, 90] : [0, 1, 2, 3, 5, 7, 10, 15, 30];
+  const [digitando, setDigitando] = useState(() => !opcoes.includes(valor));
+  const [texto, setTexto] = useState(String(valor ?? ''));
+  useEffect(() => { setTexto(String(valor ?? '')); }, [valor]);
+  const rotulo = (n) => janela ? `${n} dia${n === 1 ? '' : 's'}` : n === 0 ? 'Só no dia / atrasados' : `${n} dia${n === 1 ? '' : 's'} antes`;
+
+  if (digitando) {
+    const aplicar = (t) => {
+      const n = parseInt(String(t).replace(/\D/g, ''), 10);
+      if (Number.isInteger(n)) onChange(Math.min(365, Math.max(janela ? 1 : 0, n)));
+    };
+    return (
+      <div className="ntf-dias-custom">
+        <input className="ntf-input" type="text" inputMode="numeric" maxLength={3} value={texto} autoFocus
+          onChange={e => { const t = e.target.value.replace(/\D/g, ''); setTexto(t); if (t !== '') aplicar(t); }}
+          onBlur={() => { if (texto === '') setTexto(String(valor)); }} aria-label="Número de dias" />
+        <span>{janela ? 'dias' : 'dias antes'}</span>
+        <button type="button" className="ntf-btn ntf-btn-fantasma ntf-btn-mini" onClick={() => setDigitando(false)} title="Voltar pras opções prontas">▾ Opções</button>
+      </div>
+    );
+  }
+  return (
+    <select className="ntf-select" value={opcoes.includes(valor) ? valor : 'outro'}
+      onChange={e => { if (e.target.value === 'outro') { setDigitando(true); return; } onChange(parseInt(e.target.value, 10)); }}>
+      {opcoes.map(n => <option key={n} value={n}>{rotulo(n)}</option>)}
+      {!opcoes.includes(valor) && <option value="outro" disabled hidden>{rotulo(valor)}</option>}
+      <option value="outro">✏️ Outro… (digitar)</option>
+    </select>
+  );
+}
+
 const TEXTO_ANTECEDENCIA = {
   fiado: 'Avisar quantos dias antes do vencimento',
   contas: 'Avisar quantos dias antes do vencimento',
@@ -434,15 +492,16 @@ function AbaPreferencias() {
         <div className="ntf-pref-geral-item">
           <Chave marcado={prefs.resumo_login} onChange={v => setGeral('resumo_login', v)} />
           <div>
-            <strong>Resumo ao entrar</strong>
+            <strong>Resumo ao entrar <Dica texto="Uma janela que aparece uma vez a cada login com o que está atrasado, vence hoje e nos próximos dias. Cada tipo de aviso escolhe abaixo se entra nesse resumo." /></strong>
             <span>Ao fazer login, mostra um resumo do que está atrasado, vence hoje e nos próximos dias.</span>
           </div>
         </div>
         <div className="ntf-pref-geral-item">
           <Chave marcado={prefs.som} onChange={v => setGeral('som', v)} />
           <div>
-            <strong>Som ao chegar notificação nova</strong>
+            <strong>Som ao chegar notificação nova <Dica texto="Toca um 'plim' curtinho quando aparece um aviso novo enquanto o sistema está aberto. Não toca ao entrar, só quando chega algo novo depois." /></strong>
             <span>Um "plim" discreto quando surgir um aviso novo com o sistema aberto.</span>
+            <button type="button" className="ntf-btn ntf-btn-fantasma ntf-btn-mini ntf-btn-som" onClick={tocarSom} title="Ouvir como é o som (mesmo desligado)">🔊 Testar som</button>
           </div>
         </div>
       </div>
@@ -466,18 +525,14 @@ function AbaPreferencias() {
               {p.ativo && (
                 <div className="ntf-pref-corpo">
                   {temAntecedencia && (
-                    <label className="ntf-pref-campo">
-                      <span>{TEXTO_ANTECEDENCIA[c.id]}</span>
-                      <select className="ntf-select" value={p.antecedencia_dias} onChange={e => setCat(c.id, 'antecedencia_dias', parseInt(e.target.value, 10))}>
-                        {(janela ? [1, 3, 7, 15, 30, 60] : [0, 1, 2, 3, 5, 7, 10, 15, 30]).map(n => (
-                          <option key={n} value={n}>{janela ? `${n} dia${n === 1 ? '' : 's'}` : n === 0 ? 'Só no dia / atrasados' : `${n} dia${n === 1 ? '' : 's'} antes`}</option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="ntf-pref-campo">
+                      <span>{TEXTO_ANTECEDENCIA[c.id]} <Dica texto={DICA_ANTECEDENCIA[c.id]} /></span>
+                      <SeletorDias valor={p.antecedencia_dias} janela={janela} onChange={n => setCat(c.id, 'antecedencia_dias', n)} />
+                    </div>
                   )}
                   {c.id === 'estoque' && (
                     <label className="ntf-pref-campo">
-                      <span>Avisar quando o produto estiver</span>
+                      <span>Avisar quando o produto estiver <Dica texto={DICA_ESTOQUE} /></span>
                       <select className="ntf-select" value={p.nivel_estoque || 'baixo'} onChange={e => setCat(c.id, 'nivel_estoque', e.target.value)}>
                         <option value="baixo">Abaixo do mínimo ou zerado</option>
                         <option value="zerado">Só quando zerar</option>
@@ -485,7 +540,7 @@ function AbaPreferencias() {
                     </label>
                   )}
                   <div className="ntf-pref-campo">
-                    <span>Depois de lido, volta a aparecer…</span>
+                    <span>Depois de lido, volta a aparecer… <Dica texto={DICA_FREQUENCIA} /></span>
                     <div className="ntf-seg ntf-seg-quebra">
                       {FREQUENCIAS.map(f => (
                         <button key={f.v} type="button" className={p.frequencia === f.v ? 'ativo' : ''} onClick={() => setCat(c.id, 'frequencia', f.v)} title={f.d}>{f.t}</button>
@@ -495,7 +550,7 @@ function AbaPreferencias() {
                   </div>
                   {p.frequencia === 'horas' && (
                     <label className="ntf-pref-campo">
-                      <span>Intervalo</span>
+                      <span>Intervalo <Dica texto={DICA_INTERVALO} /></span>
                       <select className="ntf-select" value={p.intervalo_horas || 4} onChange={e => setCat(c.id, 'intervalo_horas', parseInt(e.target.value, 10))}>
                         {[1, 2, 3, 4, 6, 8, 12, 24].map(h => <option key={h} value={h}>A cada {h} hora{h === 1 ? '' : 's'}</option>)}
                       </select>
@@ -504,6 +559,7 @@ function AbaPreferencias() {
                   <label className="ntf-pref-linha">
                     <input type="checkbox" checked={p.no_resumo !== false} onChange={e => setCat(c.id, 'no_resumo', e.target.checked)} />
                     Incluir no resumo ao entrar
+                    <Dica texto={DICA_RESUMO_CAT} />
                   </label>
                 </div>
               )}
@@ -540,6 +596,8 @@ export default function CentralNotificacoes({ abaInicial = 'caixa' }) {
   const ntf = useNotificacoes();
   const [aba, setAba] = useState(() => ntf?.pedidoCentral?.aba || abaInicial);
   const [novoLembrete, setNovoLembrete] = useState(false);
+  const [statusCaixa, setStatusCaixa] = useState(() => ntf?.pedidoCentral?.filtro?.status || 'ativas');
+  const [grupoCaixa, setGrupoCaixa]   = useState(() => ntf?.pedidoCentral?.filtro?.grupo || 'todos');
   // Pedido vindo do sininho / resumo ("ver central", "+ lembrete"):
   // aplica e descarta, pra não reabrir sozinho numa próxima visita à tela.
   const pedidoTs = ntf?.pedidoCentral?.ts;
@@ -547,19 +605,28 @@ export default function CentralNotificacoes({ abaInicial = 'caixa' }) {
     if (!pedidoTs) return;
     setAba(ntf.pedidoCentral.aba || 'caixa');
     if (ntf.pedidoCentral.novo) setNovoLembrete(true);
+    const f = ntf.pedidoCentral.filtro;
+    if (f) { setStatusCaixa(f.status || 'ativas'); setGrupoCaixa(f.grupo || 'todos'); }
     ntf.limparPedidoCentral();
   }, [pedidoTs]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!ntf) return null;
   const c = ntf.contagem;
   const proximos = ntf.itens.filter(i => !i.adiada && !i.dispensada && i.grupo === 'proximo').length;
 
+  // Cartões do topo = atalhos de filtro da caixa de entrada (clicar de novo desfaz)
   const cards = [
-    { id: 'nl',   n: c.nao_lidas, t: 'Não lidas',     cls: 'accent' },
-    { id: 'atr',  n: c.atrasadas, t: 'Atrasados',     cls: 'perigo' },
-    { id: 'hoje', n: c.hoje,      t: 'Para hoje',     cls: 'alerta' },
-    { id: 'prox', n: proximos,    t: 'Próximos dias', cls: 'info' },
-    { id: 'adi',  n: c.adiadas,   t: 'Adiados',       cls: 'neutro' },
+    { id: 'nl',   n: c.nao_lidas, t: 'Não lidas',     cls: 'accent', status: 'nao_lidas', grupo: 'todos' },
+    { id: 'atr',  n: c.atrasadas, t: 'Atrasados',     cls: 'perigo', status: 'ativas',    grupo: 'atrasado' },
+    { id: 'hoje', n: c.hoje,      t: 'Para hoje',     cls: 'alerta', status: 'ativas',    grupo: 'hoje' },
+    { id: 'prox', n: proximos,    t: 'Próximos dias', cls: 'info',   status: 'ativas',    grupo: 'proximo' },
+    { id: 'adi',  n: c.adiadas,   t: 'Adiados',       cls: 'neutro', status: 'adiadas',   grupo: 'todos' },
   ];
+  const cardAtivo = (k) => aba === 'caixa' && statusCaixa === k.status && grupoCaixa === k.grupo;
+  function clicarCard(k) {
+    setAba('caixa');
+    if (cardAtivo(k)) { setStatusCaixa('ativas'); setGrupoCaixa('todos'); return; }
+    setStatusCaixa(k.status); setGrupoCaixa(k.grupo);
+  }
 
   return (
     <div className="ntf-root">
@@ -578,10 +645,12 @@ export default function CentralNotificacoes({ abaInicial = 'caixa' }) {
 
       <div className="ntf-stats">
         {cards.map(k => (
-          <div key={k.id} className={`ntf-stat ntf-stat-${k.cls}`}>
+          <button key={k.id} type="button" className={`ntf-stat ntf-stat-${k.cls} clicavel${cardAtivo(k) ? ' ativo' : ''}`}
+            onClick={() => clicarCard(k)} aria-pressed={cardAtivo(k)}
+            title={cardAtivo(k) ? 'Clique de novo pra mostrar todos' : `Mostrar só: ${k.t.toLowerCase()}`}>
             <span className="ntf-stat-n">{k.n}</span>
             <span className="ntf-stat-t">{k.t}</span>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -596,7 +665,7 @@ export default function CentralNotificacoes({ abaInicial = 'caixa' }) {
       </nav>
 
       <div className="ntf-conteudo">
-        {aba === 'caixa' && <CaixaEntrada />}
+        {aba === 'caixa' && <CaixaEntrada status={statusCaixa} setStatus={setStatusCaixa} grupo={grupoCaixa} setGrupo={setGrupoCaixa} />}
         {aba === 'lembretes' && <AbaLembretes abrirNovoInicial={novoLembrete} onNovoAberto={() => setNovoLembrete(false)} />}
         {aba === 'prefs' && <AbaPreferencias />}
       </div>

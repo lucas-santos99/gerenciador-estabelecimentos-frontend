@@ -60,7 +60,8 @@ export function marcarResumoMostrado() {
 }
 
 // Som curtinho (dois tons) — só se o usuário ligar nas preferências.
-function tocarSom() {
+// Exportado pro botão "Testar som" das preferências.
+export function tocarSom() {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
@@ -209,9 +210,10 @@ export function NotificacoesProvider({ contexto = 'estab', estabelecimentoId = n
   }, [enviarEstado, onNavegar]);
 
   // Leva pra tela da central já na aba certa ('caixa' | 'lembretes' | 'lembretes-novo' | 'prefs')
-  const irParaCentral = useCallback((aba = 'caixa') => {
+  // e, opcionalmente, com um filtro rápido: { grupo: 'atrasado'|'hoje'|'proximo'|'info' } ou { status: 'nao_lidas'|'adiadas' }
+  const irParaCentral = useCallback((aba = 'caixa', filtro = null) => {
     const novo = aba === 'lembretes-novo';
-    setPedidoCentral({ aba: novo ? 'lembretes' : aba, novo, ts: Date.now() });
+    setPedidoCentral({ aba: novo ? 'lembretes' : aba, novo, filtro, ts: Date.now() });
     onAbrirCentral?.();
   }, [onAbrirCentral]);
 

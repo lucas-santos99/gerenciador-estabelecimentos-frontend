@@ -101,8 +101,16 @@ export default function SinoNotificacoes({ className = '', titulo = 'Notificaç�
 
           {(ntf.contagem.atrasadas > 0 || ntf.contagem.hoje > 0) && (
             <div className="ntf-pop-resumo">
-              {ntf.contagem.atrasadas > 0 && <span className="perigo">● {ntf.contagem.atrasadas} atrasado{ntf.contagem.atrasadas === 1 ? '' : 's'}</span>}
-              {ntf.contagem.hoje > 0 && <span className="alerta">● {ntf.contagem.hoje} para hoje</span>}
+              {ntf.contagem.atrasadas > 0 && (
+                <button type="button" className="perigo" onClick={() => { setAberto(false); ntf.irParaCentral('caixa', { grupo: 'atrasado' }); }} title="Ver só os atrasados">
+                  ● {ntf.contagem.atrasadas} atrasado{ntf.contagem.atrasadas === 1 ? '' : 's'}
+                </button>
+              )}
+              {ntf.contagem.hoje > 0 && (
+                <button type="button" className="alerta" onClick={() => { setAberto(false); ntf.irParaCentral('caixa', { grupo: 'hoje' }); }} title="Ver só os de hoje">
+                  ● {ntf.contagem.hoje} para hoje
+                </button>
+              )}
             </div>
           )}
 

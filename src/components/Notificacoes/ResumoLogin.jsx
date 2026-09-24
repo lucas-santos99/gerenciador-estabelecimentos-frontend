@@ -88,10 +88,11 @@ export default function ResumoLogin({ nome = '', bloqueado = false }) {
 
         <div className="ntf-resumo-blocos">
           {blocos.map(b => (
-            <div key={b.id} className={`ntf-stat ntf-stat-${b.cls}`}>
+            <button key={b.id} type="button" className={`ntf-stat ntf-stat-${b.cls} clicavel`} title={`Ver ${b.t.toLowerCase()} na central`}
+              onClick={() => { fechar(); ntf.irParaCentral('caixa', { grupo: b.id }); }}>
               <span className="ntf-stat-n">{b.n}</span>
               <span className="ntf-stat-t">{b.ic} {b.t}</span>
-            </div>
+            </button>
           ))}
         </div>
 

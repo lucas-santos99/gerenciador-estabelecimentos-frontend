@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../utils/api';
 import { TIMEZONE_PADRAO, hojeStrTZ } from '../../utils/fusoHorario';
+import Dica from './Dica';
 
 export const ROTULO_RECORRENCIA = {
   nenhuma: 'Não repete',
@@ -64,10 +65,11 @@ function somarDiasStr(dataStr, dias) {
   return d.toISOString().slice(0, 10);
 }
 
-function horaSugerida(timeZone) {
-  // próxima hora cheia (+1h) no fuso da loja
+// Sugestão pra lembrete novo: próxima hora cheia no fuso da loja — com a
+// data do MESMO instante (às 23h a sugestão já cai pro dia seguinte, 00:00).
+function dataHoraSugerida(timeZone) {
   const p = partesNoFuso(new Date(Date.now() + 3600000), timeZone);
-  return `${p.hour}:00`;
+  return { data: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour}:00` };
 }
 
 export default function LembreteModal({ lembrete = null, contexto = 'estab', timezone, onFechar, onSalvo }) {
@@ -93,7 +95,7 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
     }
     return {
       titulo: '', descricao: '', categoria: '',
-      data: hoje, hora: horaSugerida(tz), dia_inteiro: false,
+      ...dataHoraSugerida(tz), dia_inteiro: false,
       recorrencia: 'nenhuma', antecedencia_min: 0, prioridade: 'normal', visibilidade: 'so_eu',
     };
   });
@@ -167,20 +169,20 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
 
         <div className="ntf-modal-corpo">
           <label className="ntf-campo">
-            <span>Título *</span>
+            <span>Título * <Dica texto="O que você precisa lembrar. É o texto que aparece em destaque no sininho, no resumo ao entrar e na central." /></span>
             <input ref={tituloRef} className="ntf-input" maxLength={150} placeholder="Ex.: Pagar boleto da energia, ligar pro fornecedor…"
               value={form.titulo} onChange={e => set('titulo', e.target.value)} />
           </label>
 
           <label className="ntf-campo">
-            <span>Detalhes <small>(opcional)</small></span>
+            <span>Detalhes <small>(opcional)</small> <Dica texto="Informações extras que aparecem embaixo do título: valor, telefone, endereço, o que levar…" /></span>
             <textarea className="ntf-input" rows={3} maxLength={500} placeholder="Anotações, valores, telefone…"
               value={form.descricao} onChange={e => set('descricao', e.target.value)} />
             <small className="ntf-contador">{form.descricao.length}/500</small>
           </label>
 
           <div className="ntf-campo">
-            <span>Quando *</span>
+            <span>Quando * <Dica texto="Dia e hora do compromisso, no horário da loja. Use os atalhos (Hoje, Amanhã…) ou escolha no calendário. Se a data já passou, o lembrete entra como atrasado." /></span>
             <div className="ntf-chips">
               {atalhosData.map(a => (
                 <button key={a.t} type="button" className={`ntf-chip${form.data === a.d ? ' ativo' : ''}`} onClick={() => set('data', a.d)}>{a.t}</button>
@@ -193,19 +195,20 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
             <label className="ntf-pref-linha">
               <input type="checkbox" checked={form.dia_inteiro} onChange={e => set('dia_inteiro', e.target.checked)} />
               Dia inteiro (sem horário)
+              <Dica texto="Pra coisas do dia, sem hora marcada (ex.: pagar um boleto). O lembrete aparece a partir do início do dia e só fica atrasado quando o dia termina." />
             </label>
             {noPassado && !editando && <small className="ntf-aviso-campo">⚠️ Essa data já passou — o lembrete vai aparecer como atrasado.</small>}
           </div>
 
           <div className="ntf-linha-2">
             <label className="ntf-campo">
-              <span>Repetir</span>
+              <span>Repetir <Dica texto="Pra compromissos que se repetem (aluguel todo mês, pedido toda semana…). Quando você marca como feito, o lembrete pula sozinho pra próxima data." /></span>
               <select className="ntf-select" value={form.recorrencia} onChange={e => set('recorrencia', e.target.value)}>
                 {Object.entries(ROTULO_RECORRENCIA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
               </select>
             </label>
             <label className="ntf-campo">
-              <span>Avisar</span>
+              <span>Avisar <Dica texto="Com quanto tempo de antecedência o lembrete começa a aparecer no sininho. 'Na hora' = só quando chegar o dia e a hora." /></span>
               <select className="ntf-select" value={antecedencias.some(a => a.v === form.antecedencia_min) ? form.antecedencia_min : 0}
                 onChange={e => set('antecedencia_min', parseInt(e.target.value, 10))}>
                 {antecedencias.map(a => <option key={a.v} value={a.v}>{a.t}</option>)}
@@ -217,7 +220,7 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
           )}
 
           <div className="ntf-campo">
-            <span>Prioridade</span>
+            <span>Prioridade <Dica texto="Define o destaque e a ordem do lembrete. Alta: fica no topo, com etiqueta 'Alta' e vira 'Urgente' (vermelho) se atrasar. Normal: padrão. Baixa: aparece por último, discreta. Não muda quando você é avisado." /></span>
             <div className="ntf-seg ntf-seg-cheio">
               {[['baixa', '▽ Baixa'], ['normal', '◆ Normal'], ['alta', '▲ Alta']].map(([v, t]) => (
                 <button key={v} type="button" className={`${form.prioridade === v ? 'ativo' : ''} prio-${v}`} onClick={() => set('prioridade', v)}>{t}</button>
@@ -227,7 +230,7 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
 
           <div className="ntf-linha-2">
             <label className="ntf-campo">
-              <span>Etiqueta <small>(opcional)</small></span>
+              <span>Etiqueta <small>(opcional)</small> <Dica texto="Uma palavra pra organizar (Pagamento, Entrega, Ligação…). Aparece no lembrete e ajuda na busca." /></span>
               <input className="ntf-input" list="ntf-sugestoes-cat" maxLength={40} placeholder="Ex.: Pagamento"
                 value={form.categoria} onChange={e => set('categoria', e.target.value)} />
               <datalist id="ntf-sugestoes-cat">
@@ -235,7 +238,7 @@ export default function LembreteModal({ lembrete = null, contexto = 'estab', tim
               </datalist>
             </label>
             <label className="ntf-campo">
-              <span>Quem vê</span>
+              <span>Quem vê <Dica texto={contexto === 'admin' ? "Só eu: só você recebe o aviso. Todos os SuperAdmins: todos da equipe recebem, e qualquer SuperAdmin pode editar ou concluir." : "Só eu: só você recebe o aviso. Toda a equipe da loja: dono e operadores recebem; o dono também pode editar ou excluir."} /></span>
               <select className="ntf-select" value={form.visibilidade} onChange={e => set('visibilidade', e.target.value)}>
                 <option value="so_eu">🔒 Só eu</option>
                 <option value="todos">{contexto === 'admin' ? '👥 Todos os SuperAdmins' : '👥 Toda a equipe da loja'}</option>
