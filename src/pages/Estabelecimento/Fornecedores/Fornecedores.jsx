@@ -1,10 +1,11 @@
 // src/pages/Estabelecimento/Fornecedores/Fornecedores.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
 import FornecedorModal from './FornecedorModal';
 import LancarCompraModal from './LancarCompraModal';
+import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import '../Clientes.css';
 import './Fornecedores.css';
 
@@ -66,6 +67,13 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   const [modalCompra,    setModalCompra]    = useState(false);
   const [fornecedorParaCompra, setFornecedorParaCompra] = useState(null);
   const [detalhesId,     setDetalhesId]     = useState(null);
+  // Vindo de uma notificação ("pagar fornecedor"): abre Contas a Pagar
+  // já no filtro certo, com a conta em destaque.
+  const [destinoConta,   setDestinoConta]   = useState(null);
+  useDestinoNotificacao('fornecedores', (d) => {
+    setTela('contas');
+    if (d?.conta_id) setDestinoConta({ id: d.conta_id, status: d.status || 'pendente', ts: Date.now() });
+  });
 
   const pode = (perm) => isMerchant || (permissoes || []).includes(perm);
 
@@ -124,7 +132,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
       </div>
 
       {tela === 'contas' ? (
-        <ContasFornecedores fontScale={fontScale} />
+        <ContasFornecedores fontScale={fontScale} destino={destinoConta} />
       ) : (
       <>
       <div className="cli-header">
@@ -271,7 +279,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
    CONTAS A PAGAR DE FORNECEDORES — visão agregada, todos os
    fornecedores juntos numa lista só (não precisa abrir um por um)
 ════════════════════════════════════════════════════════════ */
-function ContasFornecedores({ fontScale = 1 }) {
+function ContasFornecedores({ fontScale = 1, destino = null }) {
   const [lista,       setLista]       = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filtroStatus, setFiltroStatus] = useState('pendente'); // 'pendente' | 'paga' | 'atrasada'
@@ -280,6 +288,21 @@ function ContasFornecedores({ fontScale = 1 }) {
   const [pagando,     setPagando]     = useState(null);
   const [compraDetalheId, setCompraDetalheId] = useState(null);
   const [avisoAberto, setAvisoAberto] = useState(() => localStorage.getItem('forn-contapag-aviso-fechado') !== 'true');
+  const [destaqueId,  setDestaqueId]  = useState(null);
+  const cardRefs = useRef({});
+  useEffect(() => {
+    if (!destino?.ts) return;
+    setFiltroDataDe(''); setFiltroDataAte('');
+    setFiltroStatus(['pendente', 'atrasada', 'paga'].includes(destino.status) ? destino.status : 'pendente');
+    setDestaqueId(destino.id);
+  }, [destino?.ts]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!destaqueId || loading) return;
+    const el = cardRefs.current[destaqueId];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setDestaqueId(null), 4000);
+    return () => clearTimeout(t);
+  }, [destaqueId, loading, lista]);
   function fecharAviso() {
     setAvisoAberto(false);
     localStorage.setItem('forn-contapag-aviso-fechado', 'true');
@@ -385,7 +408,8 @@ function ContasFornecedores({ fontScale = 1 }) {
       ) : (
         <div className="forn-contapag-grid">
           {listaFiltrada.map(c => (
-            <div key={c.conta_a_pagar_id} className={`forn-contapag-card ${c.status}`}>
+            <div key={c.conta_a_pagar_id} ref={el => { cardRefs.current[c.conta_a_pagar_id] = el; }}
+              className={`forn-contapag-card ${c.status}${c.conta_a_pagar_id === destaqueId ? ' ntf-destaque' : ''}`}>
               <div className="forn-contapag-card-header">
                 <span className="forn-contapag-nome">{c.fornecedor_nome}</span>
                 <span className={`forn-contapag-badge ${c.status}`}>{c.status}</span>

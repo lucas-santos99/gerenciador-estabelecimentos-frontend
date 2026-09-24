@@ -8,6 +8,7 @@ import '../Clientes.css';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { TIMEZONE_PADRAO, hojeStrTZ, paraDataStrTZ, subtrairDias } from '../../../utils/fusoHorario';
+import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -354,6 +355,22 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
       carregarDados(ativo);
     })();
   }, [estabelecimentoId]);
+
+  /* ── Vindo de uma notificação (fiado vencendo/vencido) ─────
+     Abre a aba Fiado já com o detalhe daquele cliente aberto. */
+  const [destinoClienteId, setDestinoClienteId] = useState(null);
+  useDestinoNotificacao('clientes', (d) => {
+    if (!d?.cliente_id) return;
+    mudarAba('devedores');
+    setTermoBusca('');
+    setDestinoClienteId(d.cliente_id);
+  });
+  useEffect(() => {
+    if (!destinoClienteId || loading) return;
+    const c = dividas.find(x => x.id === destinoClienteId) || todosClientes.find(x => x.id === destinoClienteId);
+    if (c) { setClienteDetalhes(c); setClienteNavId(c.id); }
+    setDestinoClienteId(null);
+  }, [destinoClienteId, loading, dividas, todosClientes]);
 
   /* ── Handlers recebimento ───────────────────────────────── */
   // Usa sempre a versão mais nova do cliente (dívida atualizada) que já

@@ -20,6 +20,7 @@ import IdentidadeRelatorios from "./pages/Administrador/SuperAdmins/IdentidadeRe
 import Cobrancas from "./pages/Administrador/Cobrancas/Cobrancas";
 import SolicitacoesAdmin from "./pages/Administrador/Solicitacoes/SolicitacoesAdmin";
 import Comunicados from "./pages/Administrador/Comunicados/Comunicados";
+import NotificacoesAdmin from "./pages/Administrador/Notificacoes/NotificacoesAdmin";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 
 // Painéis
@@ -42,6 +43,8 @@ import EditarOperador from "./pages/Administrador/Operadores/EditarOperador";
 // Contexto
 import { useAuth } from "./contexts/AuthProvider";
 import { redirectByRole } from "./utils/redirectByRole";
+import { NotificacoesProvider } from "./components/Notificacoes/NotificacoesContext";
+import ResumoLogin from "./components/Notificacoes/ResumoLogin";
 
 import "./App.css";
 
@@ -69,6 +72,30 @@ function TelaBloqueioWrapper() {
   );
 }
 
+/* ── Central de Notificações do SuperAdmin ─────────────────
+   Fica acima das rotas pra não recarregar a cada troca de página
+   do painel admin. Pra quem não é SuperAdmin fica desligada (o painel
+   do estabelecimento tem o próprio Provider). */
+function NotificacoesAdminRaiz({ children }) {
+  const { profile, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const ehAdmin = profile?.role === "super_admin" && !!user && profile?.id === user.id;
+  const naAreaAdmin = location.pathname.startsWith("/admin");
+
+  const onNavegar = React.useCallback((acao) => {
+    if (acao?.tipo === "rota" && acao.rota) navigate(acao.rota);
+  }, [navigate]);
+  const onAbrirCentral = React.useCallback(() => navigate("/admin/notificacoes"), [navigate]);
+
+  return (
+    <NotificacoesProvider contexto={ehAdmin ? "admin" : "nenhum"} onNavegar={onNavegar} onAbrirCentral={onAbrirCentral}>
+      {children}
+      {ehAdmin && naAreaAdmin && <ResumoLogin nome={profile?.nome} />}
+    </NotificacoesProvider>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════ */
 function App() {
   const { profile, loading, user } = useAuth();
@@ -89,7 +116,7 @@ function App() {
   }, [profile, loading, user, location.pathname, navigate]);
 
   return (
-    <>
+    <NotificacoesAdminRaiz>
     <PersonificacaoBanner />
     <Routes>
 
@@ -146,6 +173,12 @@ function App() {
       <Route path="/admin/comunicados" element={
         <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
           <Comunicados />
+        </RoleRoute></ProtectedRoute>
+      }/>
+
+      <Route path="/admin/notificacoes" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <NotificacoesAdmin />
         </RoleRoute></ProtectedRoute>
       }/>
 
@@ -221,7 +254,7 @@ function App() {
       <Route path="*"              element={<div style={{ padding: 20 }}>Página não encontrada.</div>} />
 
     </Routes>
-    </>
+    </NotificacoesAdminRaiz>
   );
 }
 

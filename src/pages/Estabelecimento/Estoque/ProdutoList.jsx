@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx-js-style';
 import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relatorioIdentidade';
 import ProdutoModal from './ProdutoModal';
+import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import '../Estoque.css';
 
 
@@ -206,14 +207,29 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     }
   }, [produtoFocadoId, produtos]);
 
-  /* ── Atalho F2 = + Produto (23/09/2026) ─────────────────────
+  /* ── Vindo de uma notificação (estoque baixo/zerado) ─────────
+     Mostra todas as categorias, limpa a busca e destaca o produto. */
+  const [destinoProdutoId, setDestinoProdutoId] = useState(null);
+  useDestinoNotificacao('estoque', (d) => {
+    if (!d?.produto_id) return;
+    setTermoBusca('');
+    setCategoriaAtiva('todos');
+    setDestinoProdutoId(d.produto_id);
+  });
+  useEffect(() => {
+    if (!destinoProdutoId || loading) return;
+    if (produtos.some(p => p.id === destinoProdutoId)) setProdutoFocadoId(destinoProdutoId);
+    setDestinoProdutoId(null);
+  }, [destinoProdutoId, loading, produtos]);
+
+  /* ── Atalho F7 = + Produto (23/09/2026) ─────────────────────
      Só com a tela livre (nenhum modal/lightbox aberto) e com permissão
-     de adicionar. O PDV não fica montado junto, então não conflita com o
-     F2 de lá (finalizar venda). */
+     de adicionar. F7 (e não F2) porque F2–F6 já são os atalhos globais
+     do menu do painel (F2 = PDV, F3 = Estoque…). */
   useEffect(() => {
     if (!podeAdicionar || modalAberto || imagemExpandida) return;
     function handleAtalhoNovo(e) {
-      if (e.key !== 'F2' || e.repeat) return;
+      if (e.key !== 'F7' || e.repeat) return;
       e.preventDefault();
       setProdutoEditar(null);
       setModalAberto(true);
@@ -1019,8 +1035,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               >▦</button>
             </div>
             {podeAdicionar && (
-              <button className="estoque-btn primary estoque-btn-novo" onClick={abrirNovo} title="Cadastrar um produto novo — atalho: tecla F2">
-                + Produto <kbd className="estoque-atalho">F2</kbd>
+              <button className="estoque-btn primary estoque-btn-novo" onClick={abrirNovo} title="Cadastrar um produto novo — atalho: tecla F7">
+                + Produto <kbd className="estoque-atalho">F7</kbd>
               </button>
             )}
           </div>

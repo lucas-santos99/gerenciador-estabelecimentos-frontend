@@ -5,6 +5,7 @@ import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { novoPdfRelatorio, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
+import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import '../Financeiro.css';
 
 
@@ -85,6 +86,16 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [contaFoco, setContaFoco] = useState(null);
   const contaCardRefs = useRef({});
 
+  // Vindo de uma notificação (conta vencendo/vencida): abre Contas a Pagar
+  // no filtro certo e destaca a conta.
+  const [contaDestino, setContaDestino] = useState(null);
+  useDestinoNotificacao('financeiro', (d) => {
+    setAbaAtiva('contas');
+    setFiltroContaDe(''); setFiltroContaAte('');
+    if (['pendente', 'atrasada', 'paga'].includes(d?.status)) setFiltroStatus(d.status);
+    if (d?.conta_id) setContaDestino(d.conta_id);
+  });
+
   /* ── Estado Relatório Produtos ───────────────────────────── */
   const [categorias,     setCategorias]     = useState([]);
   const [reportProd,     setReportProd]     = useState([]);
@@ -114,6 +125,22 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   const [erroRelOp,    setErroRelOp]    = useState('');
   const [relOpInicio,  setRelOpInicio]  = useState(hoje());
   const [relOpFim,     setRelOpFim]     = useState(hoje());
+
+  // Destaca a conta vinda da notificação assim que a lista (re)carregar
+  const destinoViuCarregarRef = useRef(false);
+  useEffect(() => {
+    if (!contaDestino || abaAtiva !== 'contas') return;
+    if (loadingContas) { destinoViuCarregarRef.current = true; return; }
+    if (contas.some(c => c.id === contaDestino)) {
+      setContaFoco(contaDestino);
+      setTimeout(() => contaCardRefs.current[contaDestino]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      setContaDestino(null);
+      destinoViuCarregarRef.current = false;
+    } else if (destinoViuCarregarRef.current) {
+      setContaDestino(null); // carregou e não está na lista (já paga/excluída)
+      destinoViuCarregarRef.current = false;
+    }
+  }, [contaDestino, loadingContas, contas, abaAtiva]);
 
   /* ── Carga inicial ───────────────────────────────────────── */
   useEffect(() => {

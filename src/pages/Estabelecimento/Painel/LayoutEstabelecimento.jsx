@@ -6,6 +6,9 @@ import { apiFetch } from "../../../utils/api";
 import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from "../../../utils/realtimeEstab";
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
+import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import ResumoLogin from "../../../components/Notificacoes/ResumoLogin";
+import { useNotificacoes } from "../../../components/Notificacoes/NotificacoesContext";
 import "./LayoutEstabelecimento.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -181,6 +184,8 @@ export default function LayoutEstabelecimento({
 }) {
   const navigate  = useNavigate();
   const { logout, profile } = useAuth();
+  const ntf = useNotificacoes();
+  const naoLidasNtf = ntf?.contagem?.nao_lidas || 0;
 
   /* ── abas disponíveis para este role/permissões ───────────── */
   const isMerchant = profile?.role === 'merchant';
@@ -327,6 +332,9 @@ export default function LayoutEstabelecimento({
   // poll). Só some de vez quando o próprio backend para de devolvê-lo
   // (desativado, expirou, ou "uma_vez" já visto).
   const comunicadosVistosSessaoRef = useRef(new Set());
+  // Resumo de notificações ao entrar espera a 1ª busca de comunicados
+  // (e o modal bloqueante, se houver) pra não abrir um por cima do outro.
+  const [comunicadosProntos, setComunicadosProntos] = useState(false);
 
   // Busca os comunicados ativos e sincroniza os dois formatos. Chamada
   // ao montar e em polling (abaixo) — assim um comunicado novo cadastrado
@@ -368,6 +376,7 @@ export default function LayoutEstabelecimento({
       // enquanto estava aberto), fecha a visão ampliada sozinho.
       setComunicadoExpandido(atual => (atual && !idsValidos.has(atual.id)) ? null : atual);
     } catch { /* silencioso — o próximo polling tenta de novo */ }
+    finally { setComunicadosProntos(true); }
   }, [estabelecimentoId]);
 
   useEffect(() => { buscarComunicados(); }, [buscarComunicados]);
@@ -521,6 +530,9 @@ export default function LayoutEstabelecimento({
         {mobileOpen ? <Icons.Close /> : <Icons.Menu />}
       </button>
 
+      {/* SININHO — mobile (no desktop fica ao lado do nome da loja) */}
+      <SinoNotificacoes className="ntf-sino-mobile" />
+
       {/* OVERLAY MOBILE */}
       {mobileOpen && (
         <div className="est-overlay" onClick={() => setMobileOpen(false)} />
@@ -557,11 +569,28 @@ export default function LayoutEstabelecimento({
               {profile?.role === 'merchant' ? 'Administrador' : 'Operador'}
             </span>
           </div>
+          <SinoNotificacoes />
         </div>
 
         {/* Nav */}
         <ul className="est-nav">
           <div className="est-nav-section">Menu</div>
+          {/* Central de Notificações — pra todo mundo (cada um vê o que a permissão deixa) */}
+          <li className={`est-nav-item${abaAtiva === "notificacoes" ? " active" : ""}`}>
+            <button
+              className="est-nav-link"
+              onClick={() => { onAbaChange?.("notificacoes"); setMobileOpen(false); }}
+            >
+              <span className="est-nav-icon ntf-nav-icone-wrap">
+                <IconeSino />
+                {naoLidasNtf > 0 && <span className="ntf-nav-ponto" />}
+              </span>
+              <span className="est-nav-label">Notificações</span>
+              {naoLidasNtf > 0 && <span className="ntf-nav-badge">{naoLidasNtf > 99 ? "99+" : naoLidasNtf}</span>}
+            </button>
+            <span className="est-nav-tooltip">Notificações{naoLidasNtf > 0 ? ` (${naoLidasNtf})` : ""}</span>
+          </li>
+          <div className="est-nav-divider" />
           {ABAS.map(aba => (
             <React.Fragment key={aba.key}>
               {/* Divisor antes do bloco de módulos extras, e outro isolando Configurações no final */}
@@ -761,6 +790,9 @@ export default function LayoutEstabelecimento({
           </div>
         </div>
       )}
+
+      {/* ── RESUMO DE NOTIFICAÇÕES AO ENTRAR (uma vez por login) ── */}
+      <ResumoLogin nome={profile?.nome} bloqueado={!comunicadosProntos || comunicadosModal.length > 0} />
 
       {/* ── COMUNICADO — MODAL BLOQUEANTE ──────────────────── */}
       {/* Sem onClick no overlay de propósito — só fecha confirmando,

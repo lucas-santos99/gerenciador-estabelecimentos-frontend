@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
+import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import { useNotificacoes } from "../../../components/Notificacoes/NotificacoesContext";
 import "./Sidebar.css";
 
 /* ── Ícones SVG inline ─────────────────────────────────────── */
@@ -105,6 +107,8 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const ntf = useNotificacoes();
+  const naoLidasNtf = ntf?.contagem?.nao_lidas || 0;
 
   /* ── tema ─────────────────────────────────────────────────── */
   const [theme, setTheme] = useState(() => {
@@ -173,6 +177,7 @@ export default function Sidebar() {
       section: "Menu",
       items: [
         { label: "Painel",               path: "/admin",                     icon: Icons.Dashboard },
+        { label: "Notificações",         path: "/admin/notificacoes",        icon: IconeSino, badge: naoLidasNtf, ntf: true },
         { label: "Solicitações",         path: "/admin/solicitacoes",        icon: Icons.Mail, badge: solicitacoesPendentes },
         { label: "Comunicados",          path: "/admin/comunicados",         icon: Icons.Megaphone },
         { label: "Cobranças",            path: "/admin/cobrancas",           icon: Icons.Cobranca  },
@@ -202,6 +207,9 @@ export default function Sidebar() {
         {mobileOpen ? <Icons.Close /> : <Icons.Menu />}
       </button>
 
+      {/* SININHO — mobile (no desktop fica no topo da sidebar) */}
+      <SinoNotificacoes className="ntf-sino-mobile" />
+
       {/* OVERLAY — mobile */}
       {mobileOpen && (
         <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
@@ -226,6 +234,7 @@ export default function Sidebar() {
             <span className="logo-primary">Lucas</span>
             <span className="logo-secondary">J. Systems</span>
           </div>
+          <SinoNotificacoes />
         </div>
 
         {/* MENU */}
@@ -240,7 +249,10 @@ export default function Sidebar() {
                 return (
                   <li key={item.path} className={isActive ? "active" : ""}>
                     <Link to={item.path}>
-                      <span className="sb-icon"><item.icon /></span>
+                      <span className={`sb-icon${item.ntf ? " ntf-nav-icone-wrap" : ""}`}>
+                        <item.icon />
+                        {item.ntf && !!item.badge && <span className="ntf-nav-ponto" />}
+                      </span>
                       <span className="sb-label">{item.label}</span>
                       {!!item.badge && (
                         <span
@@ -250,7 +262,7 @@ export default function Sidebar() {
                             padding: "1px 6px", marginLeft: "auto", lineHeight: 1.4,
                           }}
                         >
-                          {item.badge}
+                          {item.badge > 99 ? "99+" : item.badge}
                         </span>
                       )}
                     </Link>

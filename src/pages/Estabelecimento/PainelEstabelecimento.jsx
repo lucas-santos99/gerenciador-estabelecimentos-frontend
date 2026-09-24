@@ -6,6 +6,8 @@ import { apiFetch } from "../../utils/api";
 import { useAvisosEstabelecimento } from "../../utils/realtimeEstab";
 import { definirLojaIdentidade, definirLogoLojaIdentidade, prepararIdentidade } from "../../utils/relatorioIdentidade";
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
+import { NotificacoesProvider, enviarDestino } from "../../components/Notificacoes/NotificacoesContext";
+import CentralNotificacoes from "../../components/Notificacoes/CentralNotificacoes";
 
 import PDV           from "./PDV/PDV";
 import ProdutoList   from "./Estoque/ProdutoList";
@@ -46,6 +48,15 @@ export default function PainelEstabelecimento() {
     }
     setAbaAtiva(novaAba);
   }, [abaAtiva]);
+
+  // Central de Notificações (23/09/2026): "Abrir" num aviso leva pro módulo
+  // certo já no item (cliente, conta, produto) — o módulo lê o destino.
+  const abrirDestinoNotificacao = useCallback((acao) => {
+    if (acao?.tipo !== 'aba' || !acao.aba) return;
+    enviarDestino(acao);
+    handleAbaChange(acao.aba);
+  }, [handleAbaChange]);
+  const abrirCentralNotificacoes = useCallback(() => handleAbaChange('notificacoes'), [handleAbaChange]);
 
   // Callback passado ao PDV para registrar seu interceptor
   const registrarInterceptorPDV = useCallback((fn) => {
@@ -239,6 +250,9 @@ export default function PainelEstabelecimento() {
           />
         );
 
+      case "notificacoes":
+        return <CentralNotificacoes />;
+
       case "auditoria":
         return (
           <Auditoria
@@ -269,6 +283,12 @@ export default function PainelEstabelecimento() {
 
   /* ════════════════════════════════════════════════════════ */
   return (
+    <NotificacoesProvider
+      contexto="estab"
+      estabelecimentoId={estabelecimentoId}
+      onNavegar={abrirDestinoNotificacao}
+      onAbrirCentral={abrirCentralNotificacoes}
+    >
     <LayoutEstabelecimento
       abaAtiva={abaAtiva}
       onAbaChange={handleAbaChange}
@@ -286,5 +306,6 @@ export default function PainelEstabelecimento() {
     >
       {renderModulo()}
     </LayoutEstabelecimento>
+    </NotificacoesProvider>
   );
 }
