@@ -914,18 +914,31 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
     return () => window.removeEventListener('keydown', handleEsc);
   }, [imagemExpandida]);
 
+  // 23/09/2026 — o período vai pro servidor (antes o filtro era só aqui na
+  // tela, em cima das 200 compras mais recentes: um período mais antigo
+  // aparecia vazio mesmo tendo compras, e "Limpar" nunca mostrava tudo).
+  const periodoInvertido = !!(filtroDe && filtroAte && filtroDe > filtroAte);
+  const padrao30 = periodoPadrao30Dias(timezone);
+  const ehPadrao30 = filtroDe === padrao30.de && filtroAte === padrao30.ate;
+  const LIMITE_HISTORICO = 200; // mesmo limite do backend
+
   async function carregar() {
+    if (periodoInvertido) return;
     setLoading(true);
     setErro('');
     try {
-      const resp = await apiFetch(`/api/clientes/${cliente.id}/historico-compras`);
+      const qs = new URLSearchParams();
+      if (filtroDe)  qs.set('de', filtroDe);
+      if (filtroAte) qs.set('ate', filtroAte);
+      const sufixo = qs.toString() ? `?${qs}` : '';
+      const resp = await apiFetch(`/api/clientes/${cliente.id}/historico-compras${sufixo}`);
       if (!resp.ok) throw new Error('Erro ao buscar histórico');
       setVendas(await resp.json());
     } catch (err) { setErro(err.message); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { carregar(); }, [cliente.id]);
+  useEffect(() => { carregar(); }, [cliente.id, filtroDe, filtroAte]);
 
   // Bucketa cada venda no fuso OFICIAL do estabelecimento (mercearias.timezone),
   // não no fuso do navegador de quem está olhando a tela — evita reintroduzir
@@ -1087,12 +1100,15 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           <span className="cli-form-label">Até</span>
           <input className="cli-form-input" type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)} />
           {(filtroDe || filtroAte) && (
-            <button className="cli-btn" onClick={() => { setFiltroDe(''); setFiltroAte(''); }}>✕ Limpar</button>
+            <button className="cli-btn" onClick={() => { setFiltroDe(''); setFiltroAte(''); }} title="Tirar as datas e mostrar todo o histórico do cliente">✕ Limpar</button>
+          )}
+          {!ehPadrao30 && (
+            <button className="cli-btn" onClick={() => { setFiltroDe(padrao30.de); setFiltroAte(padrao30.ate); }} title="Voltar pro período padrão">↺ Últimos 30 dias</button>
           )}
         </div>
         <div className="cli-hist-filtro-export">
-          <button className="cli-btn verde" onClick={exportarExcel} disabled={!vendasFiltradas.length}>📥 Excel</button>
-          <button className="cli-btn" onClick={baixarPDF} disabled={!vendasFiltradas.length}>🖨️ PDF</button>
+          <button className="cli-btn verde" onClick={exportarExcel} disabled={!vendasFiltradas.length || periodoInvertido}>📥 Excel</button>
+          <button className="cli-btn" onClick={baixarPDF} disabled={!vendasFiltradas.length || periodoInvertido}>🖨️ PDF</button>
         </div>
       </div>
 
@@ -1104,8 +1120,16 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           </div>
         )}
         {erro && <div className="cli-erro">⚠️ {erro}</div>}
+        {periodoInvertido && (
+          <div className="cli-erro">⚠️ A data "De" está depois da data "Até". Ajuste o período.</div>
+        )}
+        {!loading && !periodoInvertido && vendas.length >= LIMITE_HISTORICO && (
+          <div className="cli-hist-aviso-limite">
+            Mostrando as {LIMITE_HISTORICO} compras mais recentes {filtroDe || filtroAte ? 'deste período' : 'do cliente'}. Pra ver as mais antigas, escolha as datas acima.
+          </div>
+        )}
 
-        {!loading && (
+        {!loading && !periodoInvertido && (
           vendasFiltradas.length === 0 ? (
             <div className="cli-vazio">
               <span className="cli-vazio-icon">🧾</span>
@@ -1117,7 +1141,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
               <div key={venda.id} className={`cli-venda-card${venda.status === 'cancelada' ? ' cancelada' : ''}`}>
                 <div className="cli-venda-info">
                   <span className="cli-venda-info-data">
-                    📅 {new Date(venda.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    📅 {fmtDataHora(venda.data_venda, timezone)}
                     {' · '}{labelMeioPagamento(venda)}
                     {venda.operador_nome && <>{' · '}🧑‍💼 {venda.operador_nome}</>}
                     {venda.status === 'cancelada' && <span className="cli-venda-cancelada-badge">✕ Cancelada</span>}

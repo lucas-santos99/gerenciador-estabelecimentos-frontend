@@ -1434,3 +1434,15 @@ body.light .cli-alerta-item.proximo {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* 23/09/2026 — aviso quando o histórico de compras bate no limite de 200 */
+.cli-hist-aviso-limite {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(180,83,9,0.10);
+  border: 1px solid rgba(180,83,9,0.30);
+  color: #b45309;
+  font-size: 0.8rem;
+  font-weight: 600;
+}

@@ -118,7 +118,7 @@ export default function ClienteModal({
   async function excluir() {
     if (!isEdit) return;
     if (parseFloat(cliente.saldo_devedor) > 0.01) {
-      setErro('Não é possível excluir cliente com saldo devedor pendente.');
+      setErro('Não é possível excluir cliente com dívida pendente.');
       return;
     }
     if (!window.confirm(`Excluir "${cliente.nome}"? Esta ação é irreversível.`)) return;
@@ -271,10 +271,10 @@ export default function ClienteModal({
           </div>
           )}
 
-          {/* Saldo atual no modo editar — só faz sentido com fiado ativo */}
+          {/* Dívida atual no modo editar — só faz sentido com fiado ativo */}
           {isEdit && fiadoAtivo && (
             <div className={`cli-saldo-info${parseFloat(cliente.saldo_devedor) > 0.01 ? ' devedor' : ' ok'}`}>
-              Saldo atual: {fmt(cliente.saldo_devedor)}
+              {parseFloat(cliente.saldo_devedor) > 0.01 ? `Dívida atual: ${fmt(cliente.saldo_devedor)}` : '✓ Sem dívida'}
             </div>
           )}
 
