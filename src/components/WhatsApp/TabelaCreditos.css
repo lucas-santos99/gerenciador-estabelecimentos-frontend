@@ -1,0 +1,70 @@
+/* ============================================================
+   TabelaCreditos.css — "Como funcionam os créditos" (24/09/2026)
+   Usado no painel do SuperAdmin e (depois) na tela da loja.
+   Tokens globais de tema (body.dark / body.light). Prefixo: wacr-
+   ============================================================ */
+
+.wacr {
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--bg-card, rgba(255,255,255,0.03));
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  color: var(--text-primary, #f0f6ff);
+  min-width: 0;
+}
+.wacr *, .wacr *::before, .wacr *::after { box-sizing: border-box; }
+
+.wacr-titulo { margin: 0 0 6px; font-size: 1rem; font-weight: 800; color: var(--text-primary, #f0f6ff); }
+.wacr-intro { margin: 0 0 14px; font-size: 0.84rem; line-height: 1.55; color: var(--text-secondary, #7a90a8); }
+.wacr-intro strong { color: var(--text-primary, #f0f6ff); }
+
+.wacr-rolagem { overflow-x: auto; }
+.wacr-tabela { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.wacr-tabela th {
+  text-align: left; padding: 8px 10px; white-space: nowrap;
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-secondary, #7a90a8); border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+}
+.wacr-tabela td {
+  padding: 10px; vertical-align: top;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  color: var(--text-primary, #f0f6ff);
+}
+.wacr-tabela tr:last-child td { border-bottom: none; }
+.wacr-tabela .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wacr-nome { font-weight: 700; white-space: nowrap; }
+.wacr-exemplo { color: var(--text-secondary, #7a90a8); font-size: 0.8rem; line-height: 1.45; min-width: 220px; }
+.wacr-peso {
+  display: inline-block; padding: 3px 9px; border-radius: 99px; font-weight: 800; font-size: 0.78rem;
+  background: var(--bg-badge, rgba(20,184,166,0.12)); color: var(--text-accent, #14b8a6);
+}
+.wacr-mistura { margin: 8px 0 14px; font-size: 0.76rem; color: var(--text-secondary, #7a90a8); }
+
+.wacr-caixas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.wacr-caixa {
+  padding: 12px 14px; border-radius: 12px; font-size: 0.8rem; line-height: 1.5;
+  color: var(--text-secondary, #7a90a8); border: 1px solid var(--border, rgba(255,255,255,0.08));
+}
+.wacr-caixa > strong { display: block; margin-bottom: 4px; font-size: 0.84rem; color: var(--text-primary, #f0f6ff); }
+.wacr-caixa ul { margin: 0; padding-left: 18px; }
+.wacr-caixa li strong { color: var(--text-primary, #f0f6ff); }
+.wacr-caixa.ok { background: var(--bg-success, rgba(34,197,94,0.08)); }
+.wacr-caixa.aviso { background: var(--bg-warning, rgba(245,158,11,0.08)); }
+
+@media (max-width: 700px) {
+  .wacr { padding: 14px; }
+  .wacr-caixas { grid-template-columns: minmax(0, 1fr); }
+  /* Celular: cada linha vira um cartão (nome + créditos em cima, exemplo e quantidade embaixo) */
+  .wacr-tabela thead { display: none; }
+  .wacr-tabela, .wacr-tabela tbody { display: block; }
+  .wacr-tabela tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  }
+  .wacr-tabela tr:last-child { border-bottom: none; }
+  .wacr-tabela td { display: block; padding: 0; border: none; }
+  .wacr-nome { white-space: normal; grid-column: 1; grid-row: 1; }
+  .wacr-tabela td.num:nth-child(3) { grid-column: 2; grid-row: 1; }
+  .wacr-exemplo { min-width: 0; grid-column: 1 / -1; grid-row: 2; }
+  .wacr-tabela td.num:nth-child(4) { grid-column: 1 / -1; grid-row: 3; text-align: left; color: var(--text-secondary, #7a90a8); font-size: 0.78rem; }
+}

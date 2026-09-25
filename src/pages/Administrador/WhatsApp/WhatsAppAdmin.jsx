@@ -15,6 +15,7 @@
 // ============================================================
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
+import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import { apiFetch } from "../../../utils/api";
 import {
   TIPOS_PEDIDO, normalizarParametros, piorCasoPorPedido,
@@ -35,12 +36,12 @@ const TIPO_DICA = {
   alerta: "Aviso automático enviado pelo sistema (estoque baixo, conta vencendo…).",
 };
 const RECURSOS = [
-  { k: "alertas", label: "Alertas automáticos" },
-  { k: "consultas", label: "Perguntas / consultas" },
-  { k: "pdf", label: "Relatórios em PDF" },
-  { k: "cadastro", label: "Cadastro pelo WhatsApp" },
-  { k: "foto", label: "Foto de nota / produto" },
-  { k: "ia_audio", label: "Áudio (IA)" },
+  { k: "alertas", label: "Alertas automáticos", dica: "Avisos que o sistema manda sozinho (fiado vencendo, estoque baixo, contas, resumo do dia). Cada alerta gasta o peso de “Alerta” (padrão 0,5 crédito)." },
+  { k: "consultas", label: "Perguntas / consultas", dica: "O comerciante pergunta (“quanto vendi hoje?”, “quantas Coca tenho?”) e recebe a resposta. 1 consulta completa = 1 crédito (padrão)." },
+  { k: "pdf", label: "Relatórios em PDF", dica: "Pedir um relatório e receber o PDF pelo WhatsApp. 1 pedido = 1 crédito (padrão)." },
+  { k: "cadastro", label: "Cadastro pelo WhatsApp", dica: "Cadastrar ou ajustar algo (produto, estoque, receber fiado) com confirmação e PIN. 1 pedido = 2 créditos (padrão)." },
+  { k: "foto", label: "Foto de nota / produto", dica: "Mandar foto de nota ou contagem; a IA lê e o comerciante confirma antes de gravar. 1 pedido = 4 créditos (padrão)." },
+  { k: "ia_audio", label: "Áudio (IA)", dica: "Aceitar perguntas por áudio (a IA transcreve). Custo de frações de centavo; gasta o mesmo crédito do tipo de pedido." },
 ];
 const ACAO_TETO = {
   pausar: "Pausar as respostas até o próximo ciclo (alertas continuam)",
@@ -93,10 +94,12 @@ function comValor(obj, caminho, valor) {
 const pegar = (obj, caminho) => caminho.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
 
 /* ── Componentes pequenos (fora do principal pra não perder o foco) ── */
-function Dica({ texto }) {
+// lado: "cima" (padrão) | "baixo" (dentro de tabela com rolagem) | "esq" (perto da borda direita)
+function Dica({ texto, lado }) {
   if (!texto) return null;
   return (
-    <span className="wa-dica" tabIndex={0} aria-label={texto}>
+    <span className={`wa-dica${lado ? ` ${lado}` : ""}`} tabIndex={0} aria-label={texto}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
       ?<span className="wa-dica-balao" role="tooltip">{texto}</span>
     </span>
   );
@@ -388,11 +391,11 @@ function AbaPlanos({ planos, params, podeEditar, recarregar, avisar }) {
           <strong>{brl(cmc, 4)}</strong>
         </div>
         <div>
-          <span className="wa-faixa-rot">Impostos + taxa do pagamento</span>
+          <span className="wa-faixa-rot">Impostos + taxa do pagamento <Dica texto="Soma dos impostos e da taxa do meio de pagamento, descontada de todo preço. Muda em Custos e parâmetros → Preço mínimo dos planos." /></span>
           <strong>{nf((params?.precificacao.impostos_pct || 0) + (params?.precificacao.taxa_gateway_pct || 0), 1)}%</strong>
         </div>
         <div>
-          <span className="wa-faixa-rot">Margem de segurança</span>
+          <span className="wa-faixa-rot">Margem de segurança <Dica texto="Folga multiplicada sobre o pior caso (× 1,30 = 30% a mais), pra aguentar alta do dólar ou reajuste da Meta sem prejuízo." /></span>
           <strong>× {nf(params?.precificacao.margem_seguranca, 2)}</strong>
         </div>
         {podeEditar && (
@@ -412,12 +415,24 @@ function AbaPlanos({ planos, params, podeEditar, recarregar, avisar }) {
         </div>
       ) : (
         <>
-          <h3 className="wa-subtitulo">Planos mensais <span>{mensais.length}</span></h3>
+          <h3 className="wa-subtitulo">Planos mensais <span>{mensais.length}</span>
+            <Dica texto="Assinatura mensal: o saldo de créditos renova todo mês e não acumula." /></h3>
           {grade(mensais, "Nenhum plano mensal.")}
           <h3 className="wa-subtitulo">Pacotes extras <span>{pacotes.length}</span>
             <Dica texto="Créditos avulsos pra quando o saldo do mês acabar. Valem até o fim do ciclo." /></h3>
           {grade(pacotes, "Nenhum pacote extra. Opcional: créditos avulsos pra quem acabar o saldo antes do fim do mês.")}
         </>
+      )}
+
+      {params && (
+        <div className="wa-previa-creditos">
+          <div className="wa-previa-rotulo">
+            👁️ Prévia — é isto que o comerciante vai ver na tela de contratação do WhatsApp
+            <Dica texto="Mesma explicação usada na tela da loja. Os números seguem os pesos salvos em Custos e parâmetros; o exemplo usa os créditos do primeiro plano mensal ativo." />
+          </div>
+          <TabelaCreditos pesos={params.pesos}
+            creditos={(mensais.find(p => p.ativo) || mensais[0])?.creditos || 150} />
+        </div>
       )}
 
       {modal && (
@@ -477,15 +492,16 @@ function CartaoPlano({ pl, podeEditar, ocupado, onEditar, onAtivo, onExcluir }) 
       <div className="wa-plano-creditos">
         <strong>{nf(pl.creditos)}</strong> créditos
         {pl.numeros > 1 && <span> · {pl.numeros} números</span>}
+        <Dica texto={`1 crédito = 1 consulta completa (pergunta + resposta). ${nf(pl.creditos)} créditos ≈ ${nf(pl.creditos)} consultas, ou metade disso em cadastros, ou o dobro em alertas — o comerciante mistura como quiser.`} />
       </div>
       {recursos.length > 0 && (
         <div className="wa-chips">{recursos.map(r => <span key={r.k} className="wa-chip">{r.label}</span>)}</div>
       )}
       <dl className="wa-plano-conta">
-        <div><dt>Custo no pior caso</dt><dd>{brl(c.custo_pior)}</dd></div>
-        <div><dt>Impostos + taxa</dt><dd>{brl(c.impostos_taxas)}</dd></div>
-        <div className="forte"><dt>Sobra pra você</dt><dd className={c.margem < 0 ? "neg" : ""}>{brl(c.margem)} <small>({nf(c.margem_pct, 1)}%)</small></dd></div>
-        <div><dt>Preço mínimo</dt><dd>{brl(c.preco_minimo)}</dd></div>
+        <div><dt>Custo no pior caso <Dica texto="Quanto você pagaria (Meta + IA) se o comerciante gastasse TODOS os créditos do jeito mais caro possível. No uso normal o custo real fica bem abaixo disso." /></dt><dd>{brl(c.custo_pior)}</dd></div>
+        <div><dt>Impostos + taxa <Dica texto="Parte do preço que vai pra impostos e pra taxa do meio de pagamento (Pix/cartão). Percentuais definidos em Custos e parâmetros." /></dt><dd>{brl(c.impostos_taxas)}</dd></div>
+        <div className="forte"><dt>Sobra pra você <Dica texto="Preço − custo no pior caso − impostos e taxa. É o seu lucro mínimo garantido, mesmo se a loja usar tudo do jeito mais caro." /></dt><dd className={c.margem < 0 ? "neg" : ""}>{brl(c.margem)} <small>({nf(c.margem_pct, 1)}%)</small></dd></div>
+        <div><dt>Preço mínimo <Dica texto="Menor preço que cobre o pior caso com a margem de segurança e os impostos/taxa. Abaixo disso o plano pode dar prejuízo — o sistema pede confirmação." /></dt><dd>{brl(c.preco_minimo)}</dd></div>
       </dl>
       <Selo situacao={c.situacao} />
       {podeEditar && (
@@ -562,16 +578,19 @@ function ModalPlano({ plano, params, onFechar, onSalvo }) {
 
         <div className="wa-modal-corpo">
           <div className="wa-modal-form">
-            <div className="wa-seg">
-              <button type="button" className={f.tipo === "plano" ? "ativo" : ""} onClick={() => set("tipo", "plano")}>Plano mensal</button>
-              <button type="button" className={f.tipo === "pacote" ? "ativo" : ""} onClick={() => set("tipo", "pacote")}>Pacote extra</button>
+            <div className="wa-seg-linha">
+              <div className="wa-seg">
+                <button type="button" className={f.tipo === "plano" ? "ativo" : ""} onClick={() => set("tipo", "plano")}>Plano mensal</button>
+                <button type="button" className={f.tipo === "pacote" ? "ativo" : ""} onClick={() => set("tipo", "pacote")}>Pacote extra</button>
+              </div>
+              <Dica lado="baixo" texto="Plano mensal: o comerciante assina e recebe o saldo de créditos todo mês (não acumula). Pacote extra: créditos avulsos pra quem acabou o saldo antes do fim do mês; valem até o fim do ciclo." />
             </div>
             <label className="wa-campo">
-              <span className="wa-campo-label">Nome</span>
+              <span className="wa-campo-label">Nome <Dica texto="Nome que o comerciante vê na hora de contratar (ex.: Básico, Completo, +100 créditos)." /></span>
               <input className="sa-input" value={f.nome} maxLength={80} onChange={e => set("nome", e.target.value)} placeholder={f.tipo === "pacote" ? "Ex.: +100 créditos" : "Ex.: Básico"} autoFocus />
             </label>
             <label className="wa-campo">
-              <span className="wa-campo-label">Descrição <small>(o comerciante vê)</small></span>
+              <span className="wa-campo-label">Descrição <small>(o comerciante vê)</small> <Dica texto="Texto curto explicando pra quem o plano serve. Aparece embaixo do nome na tela de contratação. Opcional." /></span>
               <textarea className="sa-input" rows={2} maxLength={500} value={f.descricao} onChange={e => set("descricao", e.target.value)} placeholder="Ex.: Ideal pra quem quer alertas e perguntas do dia a dia." />
             </label>
             <div className="wa-linha">
@@ -588,37 +607,38 @@ function ModalPlano({ plano, params, onFechar, onSalvo }) {
                 {RECURSOS.map(r => (
                   <label key={r.k} className="wa-check">
                     <input type="checkbox" checked={!!f.recursos[r.k]} onChange={e => setRec(r.k, e.target.checked)} />
-                    {r.label}
+                    {r.label} <Dica texto={r.dica} />
                   </label>
                 ))}
               </div>
             </div>
             <div className="wa-linha wa-linha-baixo">
-              <label className="wa-check"><input type="checkbox" checked={f.destaque} onChange={e => set("destaque", e.target.checked)} /> Destacar (“mais escolhido”)</label>
-              <label className="wa-check"><input type="checkbox" checked={f.ativo} onChange={e => set("ativo", e.target.checked)} /> Ativo (oferecido às lojas)</label>
+              <label className="wa-check"><input type="checkbox" checked={f.destaque} onChange={e => set("destaque", e.target.checked)} /> Destacar (“mais escolhido”) <Dica texto="Marca o plano com uma estrela e um selo de destaque na tela de contratação, pra chamar atenção." /></label>
+              <label className="wa-check"><input type="checkbox" checked={f.ativo} onChange={e => set("ativo", e.target.checked)} /> Ativo (oferecido às lojas) <Dica texto="Desmarcado, o plano fica salvo mas não aparece pra contratar. Quem já assinou continua com ele." /></label>
               <Campo label="Ordem" tipo="inteiro" valor={f.ordem} onChange={v => set("ordem", v.replace(/[^\d-]/g, ""))} largura={90}
                 dica="Posição na lista (menor aparece primeiro)." />
             </div>
           </div>
 
           <aside className="wa-calc">
-            <h4>Conta ao vivo</h4>
+            <h4>Conta ao vivo <Dica lado="esq" texto="Recalcula a cada tecla com os parâmetros salvos em Custos e parâmetros. Quem decide de verdade ao salvar é o servidor, com a mesma conta." /></h4>
             <dl>
-              <div><dt>Custo máx. por crédito</dt><dd>{brl(calc.custo_max_credito, 4)}</dd></div>
-              <div><dt>Custo no pior caso</dt><dd>{brl(calc.custo_pior)}</dd></div>
-              <div><dt>Impostos + taxa</dt><dd>{brl(calc.impostos_taxas)}</dd></div>
-              <div className="forte"><dt>Sobra pra você</dt><dd className={calc.margem < 0 ? "neg" : ""}>{brl(calc.margem)} <small>({nf(calc.margem_pct, 1)}%)</small></dd></div>
+              <div><dt>Custo máx. por crédito <Dica lado="esq" texto="O quanto 1 crédito pode custar pra você no pior caso: o tipo de pedido mais caro incluído no plano, usando tudo que as travas permitem (mensagens da Meta + IA)." /></dt><dd>{brl(calc.custo_max_credito, 4)}</dd></div>
+              <div><dt>Custo no pior caso <Dica lado="esq" texto="Quanto você pagaria (Meta + IA) se o comerciante gastasse TODOS os créditos do jeito mais caro possível. No uso normal o custo real fica bem abaixo disso." /></dt><dd>{brl(calc.custo_pior)}</dd></div>
+              <div><dt>Impostos + taxa <Dica lado="esq" texto="Parte do preço que vai pra impostos e pra taxa do meio de pagamento (Pix/cartão). Percentuais definidos em Custos e parâmetros." /></dt><dd>{brl(calc.impostos_taxas)}</dd></div>
+              <div className="forte"><dt>Sobra pra você <Dica lado="esq" texto="Preço − custo no pior caso − impostos e taxa. É o seu lucro mínimo garantido, mesmo se a loja usar tudo do jeito mais caro." /></dt><dd className={calc.margem < 0 ? "neg" : ""}>{brl(calc.margem)} <small>({nf(calc.margem_pct, 1)}%)</small></dd></div>
             </dl>
             <div className="wa-calc-min">
-              <span>Preço mínimo</span>
+              <span>Preço mínimo <Dica lado="esq" texto="Menor preço que cobre o pior caso com a margem de segurança e os impostos/taxa. Abaixo disso o plano pode dar prejuízo — o sistema pede confirmação." /></span>
               <strong>{brl(calc.preco_minimo)}</strong>
               <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={!creditos}
+                title="Preenche o preço com o mínimo, arredondado pra cima (ex.: 21,67 → 21,70)"
                 onClick={() => set("preco", numStr((Math.ceil(calc.preco_minimo * 10) / 10).toFixed(2)))}>Usar o mínimo</button>
             </div>
             {creditos > 0 && <Selo situacao={calc.situacao} />}
             {creditos > 0 && cabe.length > 0 && (
               <div className="wa-cabe">
-                <span>Com {nf(creditos)} créditos dá pra fazer, por exemplo:</span>
+                <span>Com {nf(creditos)} créditos dá pra fazer, por exemplo: <Dica lado="esq" texto="Cada linha é “se usar tudo só nisso”. 1 crédito = 1 consulta completa (a pergunta e a resposta, incluindo confirmação). Pesos editáveis em Custos e parâmetros." /></span>
                 <ul>{cabe.map(c => <li key={c.t}><strong>{nf(c.qtd)}</strong> {TIPO_PLURAL[c.t]}</li>)}</ul>
                 <small>…ou qualquer mistura, até acabar o saldo.</small>
               </div>
@@ -699,7 +719,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
               </div>
             )}
             <label className="wa-campo">
-              <span className="wa-campo-label">Modelo em uso</span>
+              <span className="wa-campo-label">Modelo em uso <Dica texto="Nome do modelo de IA que interpreta as mensagens (só informativo). Os atalhos acima preenchem nome e custos de uma vez." /></span>
               <input className="sa-input" value={pegar(rasc, "ia.modelo") || ""} maxLength={80} disabled={d} onChange={e => setP("ia.modelo", e.target.value)} />
             </label>
             <div className="wa-linha">
@@ -716,7 +736,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
           </Secao>
 
           <Secao icone="⚖️" titulo="Pesos: quantos créditos cada pedido gasta"
-            sub="O comerciante tem um saldo único e usa como quiser. Pedido completo conta uma vez (confirmações e correções já estão dentro).">
+            sub="O comerciante tem um saldo único e usa como quiser. Pedido completo conta uma vez (confirmações e correções já estão dentro). A tabela que o comerciante vê está na aba Planos.">
             <div className="wa-linha wa-linha-5">
               {TIPOS_PEDIDO.map(t => (
                 <React.Fragment key={t}>{C(`pesos.${t}`, TIPO_LABEL[t], { dica: TIPO_DICA[t] })}</React.Fragment>
@@ -729,7 +749,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
           <Secao icone="🛡️" titulo="Travas por pedido (o que garante o pior caso)"
             sub="Limite de mensagens e de leituras da IA dentro de um pedido. Passou disso, o sistema encerra educadamente e pede pra começar de novo.">
             <table className="wa-tabela wa-tabela-travas">
-              <thead><tr><th>Pedido</th><th>Envios máx. <Dica texto="Quantas mensagens o sistema pode mandar dentro de um pedido (resposta, confirmação, correção…)." /></th><th>Leituras IA máx. <Dica texto="Quantas vezes a IA pode interpretar mensagens dentro do pedido (inclui correções)." /></th></tr></thead>
+              <thead><tr><th>Pedido <Dica lado="baixo" texto="Tipo de pedido completo (do começo ao fim, com confirmações e correções)." /></th><th>Envios máx. <Dica texto="Quantas mensagens o sistema pode mandar dentro de um pedido (resposta, confirmação, correção…)." /></th><th>Leituras IA máx. <Dica texto="Quantas vezes a IA pode interpretar mensagens dentro do pedido (inclui correções)." /></th></tr></thead>
               <tbody>
                 {TIPOS_PEDIDO.map(t => (
                   <tr key={t}>
@@ -766,7 +786,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
               {C("teto_loja.acao_pct", "Agir em", { tipo: "inteiro", sufixo: "% do plano", dica: "Quando chegar a essa %, o sistema toma a ação abaixo (a loja paga R$ 30 e já gastou R$ 21 → 70%)." })}
             </div>
             <label className="wa-campo">
-              <span className="wa-campo-label">Ação ao atingir o limite</span>
+              <span className="wa-campo-label">Ação ao atingir o limite <Dica texto="O que o sistema faz quando o custo real de uma loja chega ao “Agir em”. É um disjuntor raro: no uso normal o saldo de créditos acaba bem antes." /></span>
               <select className="sa-input" value={pegar(rasc, "teto_loja.acao")} disabled={d} onChange={e => setP("teto_loja.acao", e.target.value)}>
                 {Object.entries(ACAO_TETO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
@@ -783,7 +803,14 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
         sub={`Tudo que as travas permitem, com os valores acima${JSON.stringify(p) !== JSON.stringify(pSalvo) ? " (ainda não salvos)" : ""}.`}>
         <div className="wa-tabela-rolagem">
           <table className="wa-tabela">
-            <thead><tr><th>Pedido</th><th>Meta</th><th>IA</th><th>Total</th><th>Peso</th><th>Custo por crédito</th></tr></thead>
+            <thead><tr>
+              <th>Pedido</th>
+              <th>Meta <Dica lado="baixo" texto="Envios máximos da trava × preço da mensagem (resposta ou alerta)." /></th>
+              <th>IA <Dica lado="baixo" texto="Leituras máximas da IA × custo por interpretação (+ leitura da foto, no pedido por foto), em reais com IOF." /></th>
+              <th>Total <Dica lado="baixo" texto="Meta + IA: o máximo que um pedido desse tipo pode custar." /></th>
+              <th>Peso <Dica lado="baixo" texto="Quantos créditos esse pedido gasta do saldo do comerciante." /></th>
+              <th>Custo por crédito <Dica lado="baixo" texto="Total ÷ peso. O maior valor da coluna (marcado) vira o custo máximo por crédito usado no preço mínimo." /></th>
+            </tr></thead>
             <tbody>
               {TIPOS_PEDIDO.map(t => (
                 <tr key={t} className={t === maxTipo ? "wa-linha-max" : ""}>
@@ -867,7 +894,13 @@ function Simulador() {
           {res.planos.length === 0 ? <div className="wa-vazio-mini">Crie planos pra ver o impacto em cada um.</div> : (
             <div className="wa-tabela-rolagem">
               <table className="wa-tabela">
-                <thead><tr><th>Plano</th><th>Preço</th><th>Sobra hoje</th><th>Sobra no cenário</th><th>Mínimo no cenário</th><th>Situação</th></tr></thead>
+                <thead><tr>
+                  <th>Plano</th><th>Preço</th>
+                  <th>Sobra hoje <Dica lado="baixo" texto="Lucro mínimo do plano com os parâmetros salvos hoje." /></th>
+                  <th>Sobra no cenário <Dica lado="baixo" texto="Lucro mínimo se o cenário simulado acontecer. Negativo = prejuízo no pior caso." /></th>
+                  <th>Mínimo no cenário <Dica lado="baixo" texto="Preço mínimo que o plano precisaria ter nesse cenário." /></th>
+                  <th>Situação</th>
+                </tr></thead>
                 <tbody>
                   {res.planos.map(pl => (
                     <tr key={pl.id} className={pl.ativo ? "" : "wa-linha-inativa"}>
@@ -927,13 +960,13 @@ function AbaUso() {
       {carregando ? <div className="sa-loading"><div className="sa-spinner" /></div> : erro ? <div className="wa-erro">{erro}</div> : u && (
         <>
           <div className="wa-cards">
-            <div className="wa-card"><span>Mensagens</span><strong>{nf(u.total_mensagens)}</strong></div>
-            <div className="wa-card"><span>Meta</span><strong>{brl(u.custo_meta)}</strong></div>
-            <div className="wa-card"><span>IA</span><strong>{brl(u.custo_ia)}</strong></div>
-            <div className="wa-card ok"><span>Franquia grátis <Dica texto="Desconto estimado das respostas gratuitas do mês (se a franquia da Meta se confirmar)." /></span><strong>− {brl(u.desconto_respostas_gratis)}</strong></div>
-            <div className="wa-card"><span>Chip / fixo</span><strong>{brl(u.custo_fixo_chip)}</strong></div>
+            <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Todas as mensagens registradas no mês: enviadas e recebidas." /></span><strong>{nf(u.total_mensagens)}</strong></div>
+            <div className="wa-card"><span>Meta <Dica lado="baixo" texto="Custo estimado das mensagens enviadas (a Meta não cobra as recebidas)." /></span><strong>{brl(u.custo_meta)}</strong></div>
+            <div className="wa-card"><span>IA <Dica lado="baixo" texto="Custo estimado da IA (tokens) no mês, em reais com IOF." /></span><strong>{brl(u.custo_ia)}</strong></div>
+            <div className="wa-card ok"><span>Franquia grátis <Dica lado="baixo" texto="Desconto estimado das respostas gratuitas do mês (se a franquia da Meta se confirmar)." /></span><strong>− {brl(u.desconto_respostas_gratis)}</strong></div>
+            <div className="wa-card"><span>Chip / fixo <Dica lado="baixo" texto="Custo fixo do mês (recarga do chip do número central), definido em Custos e parâmetros." /></span><strong>{brl(u.custo_fixo_chip)}</strong></div>
             <div className={`wa-card destaque${u.acima_teto_global ? " perigo" : ""}`}>
-              <span>Custo total estimado</span><strong>{brl(u.custo_total)}</strong>
+              <span>Custo total estimado <Dica lado="baixo" texto="Meta + IA − franquia grátis + chip. A barra compara com o teto global do mês." /></span><strong>{brl(u.custo_total)}</strong>
               {pctTeto !== null && (
                 <div className="wa-barra" title={`${nf(pctTeto, 0)}% do teto de ${brl(u.teto_global)}`}>
                   <div style={{ width: `${pctTeto}%` }} />
@@ -956,7 +989,7 @@ function AbaUso() {
             <div className="wa-custos-grade">
               <Secao icone="🗂️" titulo="Por tipo">
                 <table className="wa-tabela">
-                  <thead><tr><th>Tipo</th><th>Qtd.</th><th>Custo</th></tr></thead>
+                  <thead><tr><th>Tipo</th><th>Qtd. <Dica lado="baixo" texto="Quantidade de mensagens desse tipo no mês." /></th><th>Custo <Dica lado="baixo" texto="Meta + IA dessas mensagens." /></th></tr></thead>
                   <tbody>
                     {Object.entries(u.por_tipo).map(([k, v]) => (
                       <tr key={k}><td>{TIPO_ENVIO[k] || k}</td><td>{nf(v.quantidade)}</td><td>{brl(v.custo)}</td></tr>
@@ -968,7 +1001,7 @@ function AbaUso() {
                 {u.por_loja.length === 0 ? <div className="wa-vazio-mini">Nenhum uso por loja.</div> : (
                   <div className="wa-tabela-rolagem">
                     <table className="wa-tabela">
-                      <thead><tr><th>Loja</th><th>Msgs</th><th>Créditos</th><th>Meta</th><th>IA</th><th>Total</th></tr></thead>
+                      <thead><tr><th>Loja</th><th>Msgs</th><th>Créditos <Dica lado="baixo" texto="Créditos gastos pela loja no mês." /></th><th>Meta</th><th>IA</th><th>Total <Dica lado="esq" texto="Custo real da loja no mês — é o que o teto por loja (50%/70%) compara com o valor do plano." /></th></tr></thead>
                       <tbody>
                         {u.por_loja.map(l => (
                           <tr key={l.mercearia_id}>
@@ -1052,6 +1085,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
           <input type="checkbox" checked={ativo} disabled={d} onChange={e => setP("cobranca_auto.ativo", e.target.checked)} />
           <span className="wa-toggle-trilho"><span /></span>
           <span>{ativo ? "Ligado: enviar lembretes pelo WhatsApp" : "Desligado"}</span>
+          <Dica texto="Quando ligado (e com o número conectado), o sistema manda sozinho o lembrete de vencimento da mensalidade pelo WhatsApp, nos dias escolhidos abaixo." />
         </label>
 
         <div className={`wa-cobranca-regras${ativo ? "" : " apagado"}`}>
@@ -1070,6 +1104,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
 
       <Secao icone="🏪" titulo="Lojas que NÃO recebem o lembrete automático"
         sub="Ex.: quem paga por outro canal, combinou diferente ou pediu pra não receber.">
+        <p className="wa-nota">Desmarque a loja pra ela não receber o lembrete automático. <Dica texto="Marcada = recebe. A loja desmarcada continua podendo ser cobrada manualmente pela tela Cobranças." /></p>
         <input className="sa-input wa-busca" placeholder="Buscar loja…" value={busca} onChange={e => setBusca(e.target.value)} />
         {lojas === null ? <div className="sa-loading"><div className="sa-spinner" /></div> : lista.length === 0 ? (
           <div className="wa-vazio-mini">{busca ? "Nenhuma loja encontrada." : "Nenhum estabelecimento cadastrado."}</div>

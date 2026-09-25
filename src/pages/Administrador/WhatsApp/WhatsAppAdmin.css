@@ -15,7 +15,7 @@
 }
 .wa-status > div { display: flex; flex-direction: column; gap: 2px; }
 .wa-status strong { font-size: 0.92rem; color: var(--text-primary); }
-.wa-status span { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; }
+.wa-status > div > span { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; }
 .wa-status.off { border-color: rgba(245,158,11,0.35); background: var(--bg-warning); }
 .wa-status.on  { border-color: rgba(34,197,94,0.35); background: var(--bg-success); }
 .wa-status-bola { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,0.18); }
@@ -66,8 +66,12 @@
   width: max-content; max-width: 260px; padding: 9px 11px; border-radius: 9px; z-index: 50;
   background: #0f172a; color: #f1f5f9; font-size: 0.76rem; font-weight: 500; line-height: 1.45;
   text-align: left; white-space: normal; box-shadow: 0 8px 24px rgba(0,0,0,0.25); pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.14);
 }
 .wa-dica:hover .wa-dica-balao, .wa-dica:focus .wa-dica-balao { display: block; }
+.wa-dica.baixo .wa-dica-balao { bottom: auto; top: calc(100% + 8px); }
+.wa-dica.esq .wa-dica-balao { left: auto; right: -6px; transform: none; }
+.wa-seg-linha { display: flex; align-items: center; gap: 8px; }
 
 /* ── Faixa de info + planos ──────────────────────────────────── */
 .wa-faixa-info {
@@ -128,6 +132,12 @@
 .wa-btn-excluir:hover { color: var(--text-danger) !important; border-color: rgba(239,68,68,0.4) !important; }
 .wa-plano-rodape { font-size: 0.7rem; color: var(--text-muted); }
 
+.wa-previa-creditos { margin-top: 28px; }
+.wa-previa-rotulo {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+}
+
 /* ── Vazio ───────────────────────────────────────────────────── */
 .wa-vazio {
   text-align: center; padding: 44px 24px; border-radius: 16px;
@@ -164,7 +174,7 @@
 }
 .wa-calc h4 { margin: 0; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
 .wa-calc-min { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border); }
-.wa-calc-min span { font-size: 0.76rem; color: var(--text-secondary); width: 100%; }
+.wa-calc-min > span { font-size: 0.76rem; color: var(--text-secondary); width: 100%; }
 .wa-calc-min strong { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
 .wa-calc-min .sa-btn { margin-left: auto; }
 .wa-cabe { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45; }
