@@ -18,7 +18,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import { apiFetch } from "../../../utils/api";
 import {
-  TIPOS_PEDIDO, normalizarParametros, piorCasoPorPedido,
+  TIPOS_PEDIDO, normalizarParametros, aplicarDolarAuto, piorCasoPorPedido,
   custoMaxPorCredito, calcularPlano, iaEmReais,
 } from "../../../utils/whatsappCustos";
 import "../SuperAdmins/SuperAdmins.css";
@@ -153,6 +153,8 @@ export default function WhatsAppAdmin() {
   const [salvo, setSalvo] = useState(null);   // parâmetros como estão no banco (normalizados)
   const [rasc, setRasc] = useState(null);     // rascunho em edição (pode ter texto)
   const [salvandoParams, setSalvandoParams] = useState(false);
+  const [cotacao, setCotacao] = useState(null);   // { valor, fonte, data, atualizado_em, erro? }
+  const [atualizandoDolar, setAtualizandoDolar] = useState(false);
 
   const [planos, setPlanos] = useState([]);
   const [historico, setHistorico] = useState([]);
@@ -191,6 +193,7 @@ export default function WhatsAppAdmin() {
         if (!vivo) return;
         setSalvo(j.parametros);
         setRasc(j.parametros);
+        setCotacao(j.cotacao || null);
         setPodeEditar(!!j.pode_editar);
         await carregarPlanos();
       } catch (e) {
@@ -210,10 +213,11 @@ export default function WhatsAppAdmin() {
   }, [aba, carregarHistorico, lojas]);
 
   // Parâmetros "de verdade" do rascunho (texto → número, limites)
-  const pRasc = useMemo(() => (rasc ? normalizarParametros(rasc) : null), [rasc]);
+  // Com o dólar automático, a folga digitada já muda a conta ao vivo.
+  const pRasc = useMemo(() => (rasc ? aplicarDolarAuto(normalizarParametros(rasc), cotacao) : null), [rasc, cotacao]);
   const sujo = useMemo(
-    () => !!(salvo && pRasc && JSON.stringify(pRasc) !== JSON.stringify(normalizarParametros(salvo))),
-    [salvo, pRasc]
+    () => !!(salvo && pRasc && JSON.stringify(pRasc) !== JSON.stringify(aplicarDolarAuto(normalizarParametros(salvo), cotacao))),
+    [salvo, pRasc, cotacao]
   );
   const pSalvo = useMemo(() => (salvo ? normalizarParametros(salvo) : null), [salvo]);
 
@@ -227,12 +231,34 @@ export default function WhatsAppAdmin() {
       if (!r.ok) throw new Error(j.error || "Erro ao salvar.");
       setSalvo(j.parametros);
       setRasc(j.parametros);
+      if (j.cotacao !== undefined) setCotacao(j.cotacao);
       await carregarPlanos();
       avisar("Parâmetros salvos.");
     } catch (e) {
       avisar(e.message, "erro");
     } finally {
       setSalvandoParams(false);
+    }
+  }
+
+  // "↻ Atualizar agora": busca a cotação do dia no servidor. Só troca o
+  // dólar (salvo e rascunho) — não mexe em mais nada que esteja sendo editado.
+  async function atualizarDolar() {
+    setAtualizandoDolar(true);
+    try {
+      const r = await apiFetch(`${API}/dolar/atualizar`, { method: "POST" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Erro ao atualizar a cotação.");
+      setCotacao(j.cotacao || null);
+      setSalvo(s => comValor(s, "ia.dolar", j.parametros.ia.dolar));
+      setRasc(x => comValor(x, "ia.dolar", j.parametros.ia.dolar));
+      await carregarPlanos();
+      if (j.cotacao?.erro) avisar(j.cotacao.erro, "erro");
+      else avisar(`Dólar atualizado: ${brl(j.cotacao.valor, 4)}`);
+    } catch (e) {
+      avisar(e.message, "erro");
+    } finally {
+      setAtualizandoDolar(false);
     }
   }
 
@@ -296,6 +322,7 @@ export default function WhatsAppAdmin() {
             )}
             {aba === "custos" && (
               <AbaCustos rasc={rasc} p={pRasc} setP={setP} setRasc={setRasc} podeEditar={podeEditar}
+                cotacao={cotacao} onAtualizarDolar={atualizarDolar} atualizandoDolar={atualizandoDolar}
                 planos={planos} pSalvo={pSalvo} />
             )}
             {aba === "uso" && <AbaUso />}
@@ -669,7 +696,7 @@ function ModalPlano({ plano, params, onFechar, onSalvo }) {
 /* ══════════════════════════════════════════════════════════════
    ABA CUSTOS E PARÂMETROS
    ══════════════════════════════════════════════════════════════ */
-function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
+function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao, onAtualizarDolar, atualizandoDolar }) {
   const d = !podeEditar;
   const pc = useMemo(() => piorCasoPorPedido(p), [p]);
   const maxTipo = TIPOS_PEDIDO.reduce((a, t) => (pc[t].por_credito > pc[a].por_credito ? t : a), TIPOS_PEDIDO[0]);
@@ -704,36 +731,8 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
             </div>
           </Secao>
 
-          <Secao icone="🤖" titulo="Custo da IA (cobrado em dólar)"
-            sub="A IA não é da Meta: é cobrada à parte pelo provedor escolhido, no cartão internacional (com IOF).">
-            {!d && (
-              <div className="wa-presets">
-                {PRESETS_IA.map(pr => (
-                  <button key={pr.nome} type="button"
-                    className={`wa-preset${pegar(rasc, "ia.modelo") === pr.nome ? " ativo" : ""}`}
-                    onClick={() => setRasc(r => comValor(comValor(comValor(r, "ia.modelo", pr.nome), "ia.usd_por_interpretacao", pr.interp), "ia.usd_por_imagem", pr.img))}>
-                    {pr.rotulo}
-                    <small>US$ {numStr(pr.interp)} / interpretação · US$ {numStr(pr.img)} / foto</small>
-                  </button>
-                ))}
-              </div>
-            )}
-            <label className="wa-campo">
-              <span className="wa-campo-label">Modelo em uso <Dica texto="Nome do modelo de IA que interpreta as mensagens (só informativo). Os atalhos acima preenchem nome e custos de uma vez." /></span>
-              <input className="sa-input" value={pegar(rasc, "ia.modelo") || ""} maxLength={80} disabled={d} onChange={e => setP("ia.modelo", e.target.value)} />
-            </label>
-            <div className="wa-linha">
-              {C("ia.usd_por_interpretacao", "Por interpretação", { prefixo: "US$", dica: "Custo de a IA ler a mensagem e decidir o que fazer (~6.000 tokens de entrada + 400 de saída)." })}
-              {C("ia.usd_por_imagem", "Por foto lida", { prefixo: "US$", dica: "Custo extra de a IA ler uma foto (nota fiscal, produto)." })}
-            </div>
-            <div className="wa-linha">
-              {C("ia.dolar", "Dólar", { prefixo: "R$", dica: "Cotação usada na conta. Use um valor um pouco acima do atual pra ter folga." })}
-              {C("ia.iof_pct", "IOF", { sufixo: "%", dica: "IOF do cartão em compras internacionais." })}
-            </div>
-            <p className="wa-nota">
-              Em reais: {brl(iaEmReais(p.ia.usd_por_interpretacao, p), 4)} por interpretação · {brl(iaEmReais(p.ia.usd_por_imagem, p), 4)} por foto.
-            </p>
-          </Secao>
+          <SecaoIA rasc={rasc} p={p} setP={setP} setRasc={setRasc} d={d} C={C}
+            cotacao={cotacao} onAtualizarDolar={onAtualizarDolar} atualizandoDolar={atualizandoDolar} />
 
           <Secao icone="⚖️" titulo="Pesos: quantos créditos cada pedido gasta"
             sub="O comerciante tem um saldo único e usa como quiser. Pedido completo conta uma vez (confirmações e correções já estão dentro). A tabela que o comerciante vê está na aba Planos.">
@@ -847,6 +846,148 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo }) {
 
       <Simulador />
     </div>
+  );
+}
+
+/* ── IA: modelos (atalhos + os que o admin cadastrar) e dólar do dia ── */
+function SecaoIA({ rasc, p, setP, setRasc, d, C, cotacao, onAtualizarDolar, atualizandoDolar }) {
+  const [novo, setNovo] = useState(null); // { nome, interp, img } enquanto o formulário está aberto
+  const [erroNovo, setErroNovo] = useState("");
+  const extras = Array.isArray(pegar(rasc, "ia.modelos")) ? pegar(rasc, "ia.modelos") : [];
+  const modeloAtual = pegar(rasc, "ia.modelo");
+  const auto = pegar(rasc, "ia.dolar_auto") !== false;
+
+  const usar = (nome, interp, img) =>
+    setRasc(r => comValor(comValor(comValor(r, "ia.modelo", nome), "ia.usd_por_interpretacao", interp), "ia.usd_por_imagem", img));
+
+  function adicionar() {
+    const nome = (novo.nome || "").trim();
+    if (!nome) return setErroNovo("Informe o nome do modelo.");
+    const todos = [...PRESETS_IA.map(x => x.nome), ...extras.map(x => x.nome)].map(x => x.toLowerCase());
+    if (todos.includes(nome.toLowerCase())) return setErroNovo("Já existe um modelo com esse nome.");
+    if (extras.length >= 20) return setErroNovo("Limite de 20 modelos cadastrados.");
+    const m = { nome, usd_por_interpretacao: lerNum(novo.interp), usd_por_imagem: lerNum(novo.img) };
+    setRasc(r => {
+      const lista = [...(Array.isArray(pegar(r, "ia.modelos")) ? pegar(r, "ia.modelos") : []), m];
+      return comValor(r, "ia.modelos", lista);
+    });
+    usar(m.nome, m.usd_por_interpretacao, m.usd_por_imagem);
+    setNovo(null); setErroNovo("");
+  }
+  function remover(nome) {
+    setRasc(r => comValor(r, "ia.modelos", (pegar(r, "ia.modelos") || []).filter(x => x.nome !== nome)));
+  }
+
+  const dataCot = cotacao?.data || cotacao?.atualizado_em;
+  let quando = "";
+  if (dataCot) {
+    // PTAX/AwesomeAPI mandam "AAAA-MM-DD HH:MM:SS.mmm" no horário de Brasília
+    const dt = new Date(String(dataCot).replace(" ", "T").replace(/(\.\d{3})\d*$/, "$1"));
+    if (!Number.isNaN(dt.getTime())) quando = dt.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  }
+
+  return (
+    <Secao icone="🤖" titulo="Custo da IA (cobrado em dólar)"
+      sub="A IA não é da Meta: é cobrada à parte pelo provedor escolhido, no cartão internacional (com IOF).">
+      <div className="wa-campo">
+        <span className="wa-campo-label">Modelos <Dica texto="Clique num modelo pra usar os custos dele na conta. Os dois primeiros são atalhos fixos; você pode cadastrar outros com o custo que o provedor cobra (US$ por interpretação e por foto)." /></span>
+        <div className="wa-presets">
+          {PRESETS_IA.map(pr => (
+            <button key={pr.nome} type="button" disabled={d}
+              className={`wa-preset${modeloAtual === pr.nome ? " ativo" : ""}`}
+              onClick={() => usar(pr.nome, pr.interp, pr.img)}>
+              {pr.rotulo}
+              <small>US$ {numStr(pr.interp)} / interpretação · US$ {numStr(pr.img)} / foto</small>
+            </button>
+          ))}
+          {extras.map(m => (
+            <div key={m.nome} className={`wa-preset wa-preset-extra${modeloAtual === m.nome ? " ativo" : ""}`}>
+              <button type="button" className="wa-preset-usar" disabled={d}
+                onClick={() => usar(m.nome, m.usd_por_interpretacao, m.usd_por_imagem)}>
+                {m.nome}
+                <small>US$ {numStr(m.usd_por_interpretacao)} / interpretação · US$ {numStr(m.usd_por_imagem)} / foto</small>
+              </button>
+              {!d && <button type="button" className="wa-preset-x" aria-label={`Remover ${m.nome}`} title="Remover da lista" onClick={() => remover(m.nome)}>×</button>}
+            </div>
+          ))}
+          {!d && !novo && (
+            <button type="button" className="wa-preset wa-preset-novo"
+              onClick={() => { setErroNovo(""); setNovo({ nome: "", interp: numStr(p.ia.usd_por_interpretacao), img: numStr(p.ia.usd_por_imagem) }); }}>
+              + Adicionar modelo
+              <small>Cadastrar outro provedor ou modelo</small>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {novo && (
+        <div className="wa-novo-modelo">
+          <label className="wa-campo">
+            <span className="wa-campo-label">Nome do modelo <Dica texto="Ex.: GPT-4.1 mini, Gemini 2.5 Flash. Só pra você identificar." /></span>
+            <input className="sa-input" value={novo.nome} maxLength={60} autoFocus placeholder="Ex.: GPT-4.1 mini"
+              onChange={e => setNovo(x => ({ ...x, nome: e.target.value }))}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); adicionar(); } if (e.key === "Escape") setNovo(null); }} />
+          </label>
+          <div className="wa-linha">
+            <Campo label="US$ por interpretação" prefixo="US$" valor={novo.interp} onChange={v => setNovo(x => ({ ...x, interp: v }))}
+              dica="Quanto o provedor cobra pra ler uma mensagem e decidir o que fazer (~6.000 tokens de entrada + 400 de saída). Calcule pela tabela de preço por milhão de tokens do provedor." />
+            <Campo label="US$ por foto" prefixo="US$" valor={novo.img} onChange={v => setNovo(x => ({ ...x, img: v }))}
+              dica="Custo extra de ler uma imagem (nota fiscal, produto). Use 0 se o modelo não lê imagem." />
+          </div>
+          {erroNovo && <div className="wa-erro">{erroNovo}</div>}
+          <div className="wa-novo-modelo-acoes">
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setNovo(null)}>Cancelar</button>
+            <button type="button" className="sa-btn sa-btn-primary sa-btn-sm" onClick={adicionar}>Adicionar e usar</button>
+          </div>
+        </div>
+      )}
+
+      <label className="wa-campo">
+        <span className="wa-campo-label">Modelo em uso <Dica texto="Nome do modelo de IA que interpreta as mensagens (só informativo). Clicar num modelo acima preenche nome e custos de uma vez." /></span>
+        <input className="sa-input" value={modeloAtual || ""} maxLength={80} disabled={d} onChange={e => setP("ia.modelo", e.target.value)} />
+      </label>
+      <div className="wa-linha">
+        {C("ia.usd_por_interpretacao", "Por interpretação", { prefixo: "US$", dica: "Custo de a IA ler a mensagem e decidir o que fazer (~6.000 tokens de entrada + 400 de saída)." })}
+        {C("ia.usd_por_imagem", "Por foto lida", { prefixo: "US$", dica: "Custo extra de a IA ler uma foto (nota fiscal, produto)." })}
+      </div>
+
+      <div className="wa-dolar">
+        <label className={`wa-toggle${d ? " desab" : ""}`}>
+          <input type="checkbox" checked={auto} disabled={d} onChange={e => setP("ia.dolar_auto", e.target.checked)} />
+          <span className="wa-toggle-trilho"><span /></span>
+          <span>Dólar do dia automático</span>
+          <Dica texto="Ligado: o sistema busca a cotação oficial (Banco Central, PTAX de venda) no máximo a cada 6 horas e soma a folga. Desligado: você digita o valor." />
+        </label>
+        {auto && (
+          <div className="wa-dolar-info">
+            {cotacao?.valor ? (
+              <span>
+                Cotação: <strong>{brl(cotacao.valor, 4)}</strong>
+                {cotacao.fonte && <> · {cotacao.fonte}</>}
+                {quando && <> · {quando}</>}
+                {" "}+ folga de {nf(p.ia.dolar_folga_pct, 1)}% = <strong>{brl(p.ia.dolar, 4)}</strong>
+              </span>
+            ) : (
+              <span>Cotação ainda não disponível — usando o valor salvo ({brl(p.ia.dolar, 4)}).</span>
+            )}
+            {cotacao?.erro && <span className="wa-dolar-erro">{cotacao.erro}</span>}
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={onAtualizarDolar} disabled={atualizandoDolar}>
+              {atualizandoDolar ? "Atualizando…" : "↻ Atualizar agora"}
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="wa-linha">
+        {auto
+          ? C("ia.dolar_folga_pct", "Folga sobre a cotação", { sufixo: "%", dica: "O cartão internacional cobra um pouco acima da cotação oficial (spread). Essa folga cobre isso e pequenas variações do dia. Sugestão: 4% a 6%." })
+          : C("ia.dolar", "Dólar", { prefixo: "R$", dica: "Cotação usada na conta, digitada por você. Use um valor um pouco acima do atual pra ter folga." })}
+        {C("ia.iof_pct", "IOF", { sufixo: "%", dica: "IOF do cartão em compras internacionais." })}
+      </div>
+      <p className="wa-nota">
+        Em reais: {brl(iaEmReais(p.ia.usd_por_interpretacao, p), 4)} por interpretação · {brl(iaEmReais(p.ia.usd_por_imagem, p), 4)} por foto
+        {auto && <> (dólar usado: {brl(p.ia.dolar, 4)})</>}.
+      </p>
+    </Secao>
   );
 }
 
@@ -1138,7 +1279,8 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
 const ROTULO_PARAM = {
   "meta.preco_utilidade": "Preço alerta", "meta.preco_resposta": "Preço resposta", "meta.preco_marketing": "Preço marketing",
   "meta.respostas_gratis_mes": "Respostas grátis", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
-  "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",
+  "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.dolar_auto": "Dólar automático",
+  "ia.dolar_folga_pct": "Folga sobre o dólar %", "ia.modelos": "Modelos de IA cadastrados", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",
   "precificacao.taxa_gateway_pct": "Taxa pagamento %", "precificacao.margem_seguranca": "Margem de segurança",
   "precificacao.margem_minima_pct": "Margem mínima %", "teto_loja.aviso_pct": "Teto loja: aviso %", "teto_loja.acao_pct": "Teto loja: ação %",
   "teto_loja.acao": "Teto loja: ação", "teto_global.mensal_reais": "Teto global", "custos_fixos.chip_mensal": "Chip/mês",
@@ -1153,6 +1295,7 @@ function achatar(o, pre = "", out = {}) {
   return out;
 }
 const fmtValor = (v) => {
+  if (Array.isArray(v) && v.some(x => x && typeof x === "object")) return v.map(x => x.nome || "?").join(", ") || "—";
   if (Array.isArray(v)) return v.length > 4 ? `${v.length} itens` : (v.join(", ") || "—");
   if (typeof v === "boolean") return v ? "sim" : "não";
   if (typeof v === "number") return v % 1 ? nf(v, 4).replace(/0+$/, "").replace(/,$/, "") : nf(v);
