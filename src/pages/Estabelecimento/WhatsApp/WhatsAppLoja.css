@@ -1,0 +1,220 @@
+/* ============================================================
+   WhatsAppLoja.css — tela do WhatsApp no painel da loja (29/09/2026)
+   Tokens do painel do estabelecimento (--est-*, body.dark/light).
+   Prefixo: wal-
+   ============================================================ */
+
+.wal-root {
+  display: flex; flex-direction: column; gap: 18px;
+  max-width: 1100px; margin: 0 auto; padding-bottom: 40px;
+  color: var(--est-text); font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.wal-root *, .wal-root *::before, .wal-root *::after { box-sizing: border-box; }
+
+.wal-carregando { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px; color: var(--est-text-soft); }
+.wal-spinner {
+  width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--est-border);
+  border-top-color: var(--est-accent); animation: walGira .7s linear infinite;
+}
+@keyframes walGira { to { transform: rotate(360deg); } }
+
+.wal-erro-geral {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; border-radius: 14px;
+  background: var(--est-danger-dim); color: var(--est-danger);
+}
+
+/* ── Cabeçalho ───────────────────────────────────────────────── */
+.wal-cabecalho { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.wal-cabecalho h2 { margin: 0 0 4px; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; }
+.wal-cabecalho p { margin: 0; max-width: 680px; font-size: 0.88rem; color: var(--est-text-soft); line-height: 1.5; }
+.wal-status { flex-shrink: 0; padding: 6px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 800; }
+.wal-status.on { background: var(--est-success-dim); color: var(--est-success); }
+.wal-status.off { background: var(--est-warning-dim); color: var(--est-warning); }
+
+.wal-aviso { padding: 12px 16px; border-radius: 12px; font-size: 0.86rem; line-height: 1.5; }
+.wal-aviso.info { background: var(--est-accent-dim); color: var(--est-text); border-left: 3px solid var(--est-accent); }
+.wal-aviso.perigo { background: var(--est-danger-dim); color: var(--est-text); border-left: 3px solid var(--est-danger); }
+.wal-aviso.neutro { background: var(--est-hover); color: var(--est-text); border-left: 3px solid var(--est-border-accent); }
+
+/* ── Cartões ─────────────────────────────────────────────────── */
+.wal-card {
+  padding: 18px 20px; border-radius: 16px; background: var(--est-card);
+  border: 1px solid var(--est-border); box-shadow: var(--est-shadow);
+}
+.wal-titulo { margin: 0 0 4px; font-size: 1.02rem; font-weight: 800; }
+.wal-titulo-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wal-contador { font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--est-hover); color: var(--est-text-soft); }
+.wal-sutil { margin: 4px 0 12px; font-size: 0.83rem; color: var(--est-text-soft); line-height: 1.5; }
+.wal-sutil strong { color: var(--est-text); }
+.wal-rotulo { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--est-text-soft); }
+.wal-perigo-txt { color: var(--est-danger); font-weight: 700; }
+
+/* Pendente */
+.wal-pendente { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-color: var(--est-border-accent); }
+.wal-pendente-icone { font-size: 2rem; }
+.wal-pendente-txt { flex: 1; min-width: 220px; }
+.wal-pendente-txt h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.wal-pendente-txt p { margin: 0 0 4px; font-size: 0.86rem; }
+
+/* Saldo */
+.wal-saldo-topo { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.wal-saldo-num { margin-top: 4px; }
+.wal-saldo-num strong { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; color: var(--est-accent); font-variant-numeric: tabular-nums; }
+.wal-saldo-num span { font-size: 0.9rem; color: var(--est-text-soft); }
+.wal-saldo-ciclo { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 0.84rem; }
+.wal-saldo-ciclo strong { font-size: 0.95rem; }
+.wal-barra { height: 10px; border-radius: 99px; background: var(--est-hover); overflow: hidden; border: 1px solid var(--est-border); }
+.wal-barra > div { height: 100%; border-radius: 99px; background: var(--est-gradient); transition: width .4s ease; }
+.wal-barra.baixo > div { background: var(--est-danger); }
+.wal-saldo-rodape { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 0.82rem; color: var(--est-text-soft); }
+.wal-saldo-rodape strong { color: var(--est-text); }
+
+.wal-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.wal-acoes.fim { justify-content: flex-end; }
+
+/* Extrato */
+.wal-extrato { margin-top: 14px; max-height: 360px; overflow: auto; border: 1px solid var(--est-border); border-radius: 12px; }
+.wal-extrato table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.wal-extrato th { position: sticky; top: 0; background: var(--est-card-solid); text-align: left; padding: 8px 12px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--est-text-soft); border-bottom: 1px solid var(--est-border); }
+.wal-extrato td { padding: 8px 12px; border-bottom: 1px solid var(--est-border); vertical-align: top; }
+.wal-extrato tr:last-child td { border-bottom: none; }
+.wal-extrato td small { color: var(--est-text-soft); }
+.wal-extrato .num { text-align: right; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wal-extrato .pos { color: var(--est-success); }
+.wal-extrato .neg { color: var(--est-text); }
+.wal-extrato p { padding: 0 12px; }
+
+/* Pacotes */
+.wal-pacotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.wal-pacote {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid var(--est-border); background: var(--est-hover);
+}
+.wal-pacote > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wal-pacote span { font-size: 0.8rem; color: var(--est-text-soft); }
+.wal-pedidos { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.wal-pedidos li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 0.82rem; color: var(--est-text-soft); }
+.wal-pedidos small { width: 100%; }
+
+.wal-chip { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--est-hover); color: var(--est-text-soft); }
+.wal-chip.aguardando { background: var(--est-warning-dim); color: var(--est-warning); }
+.wal-chip.aprovado { background: var(--est-success-dim); color: var(--est-success); }
+.wal-chip.recusado { background: var(--est-danger-dim); color: var(--est-danger); }
+
+/* Planos */
+.wal-secao-planos { display: flex; flex-direction: column; }
+.wal-planos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 6px; }
+.wal-planos > div { display: flex; }
+.wal-plano {
+  position: relative; flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 20px 18px 18px;
+  border-radius: 16px; background: var(--est-card); border: 1px solid var(--est-border); box-shadow: var(--est-shadow);
+  transition: border-color .2s, transform .2s;
+}
+.wal-plano:hover { border-color: var(--est-border-accent); transform: translateY(-2px); }
+.wal-plano.destaque { border-color: var(--est-accent); box-shadow: 0 0 0 1px var(--est-accent), var(--est-shadow); }
+.wal-plano.atual { border-style: dashed; }
+.wal-plano-selo {
+  position: absolute; top: -11px; left: 16px; padding: 3px 10px; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 800; background: var(--est-gradient); color: #fff;
+}
+.wal-plano-selo.atual { background: var(--est-card-solid); color: var(--est-accent); border: 1px solid var(--est-accent); }
+.wal-plano h4 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+.wal-plano-preco strong { font-size: 1.7rem; font-weight: 800; color: var(--est-accent); letter-spacing: -0.02em; }
+.wal-plano-preco span { font-size: 0.85rem; color: var(--est-text-soft); margin-left: 2px; }
+.wal-plano-creditos { font-size: 0.9rem; }
+.wal-plano-creditos strong { font-size: 1.05rem; }
+.wal-plano-equiv { font-size: 0.78rem; color: var(--est-text-soft); }
+.wal-plano-desc { margin: 4px 0 0; font-size: 0.82rem; color: var(--est-text-soft); line-height: 1.45; }
+.wal-plano-rec { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; }
+.wal-plano .wal-btn { margin-top: auto; width: 100%; justify-content: center; }
+
+/* Números */
+.wal-numeros { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--est-border); border-radius: 12px; overflow: hidden; }
+.wal-numeros li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--est-border); }
+.wal-numeros li:last-child { border-bottom: none; }
+.wal-numeros li > div:first-child { flex: 1; min-width: 160px; display: flex; flex-direction: column; }
+.wal-numeros li > div:first-child span { font-size: 0.82rem; color: var(--est-text-soft); font-variant-numeric: tabular-nums; }
+.wal-numero-acoes { display: flex; gap: 12px; }
+.wal-novo-numero {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; padding: 14px;
+  border-radius: 12px; border: 1px dashed var(--est-border-accent); background: var(--est-hover);
+}
+.wal-novo-numero label { display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--est-text-soft); }
+.wal-novo-numero input {
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--est-border); background: var(--est-input);
+  color: var(--est-input-text, var(--est-text)); font-family: inherit; font-size: 0.9rem; text-transform: none; letter-spacing: 0;
+}
+.wal-novo-numero input:focus { outline: none; border-color: var(--est-accent); box-shadow: 0 0 0 3px var(--est-accent-dim); }
+.wal-novo-numero .wal-acoes { grid-column: 1 / -1; margin-top: 2px; justify-content: flex-end; }
+
+/* Botões */
+.wal-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--est-border); background: var(--est-card-solid); color: var(--est-text);
+  font-family: inherit; font-size: 0.84rem; font-weight: 700; transition: border-color .15s, background .15s, transform .1s;
+}
+.wal-btn:hover:not(:disabled) { border-color: var(--est-border-accent); background: var(--est-hover); }
+.wal-btn:active:not(:disabled) { transform: scale(0.98); }
+.wal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.wal-btn-primario { background: var(--est-gradient); color: #fff; border-color: transparent; }
+.wal-btn-primario:hover:not(:disabled) { background: var(--est-gradient); filter: brightness(1.08); }
+.wal-btn-perigo { background: var(--est-danger); color: #fff; border-color: transparent; }
+.wal-btn-perigo:hover:not(:disabled) { background: var(--est-danger); filter: brightness(1.08); }
+.wal-btn-leve { background: transparent; }
+.wal-link {
+  border: none; background: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 700;
+  color: var(--est-accent); text-decoration: underline; text-underline-offset: 2px;
+}
+.wal-link.perigo { color: var(--est-danger); }
+.wal-link:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Modais */
+.wal-overlay {
+  position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--est-overlay); backdrop-filter: blur(3px);
+}
+.wal-modal {
+  width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; padding: 22px; border-radius: 18px;
+  background: var(--est-card-solid); border: 1px solid var(--est-border); box-shadow: var(--est-shadow); color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.wal-modal *, .wal-modal *::before, .wal-modal *::after { box-sizing: border-box; }
+.wal-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.wal-modal-head h3 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+.wal-x { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--est-border); background: var(--est-hover); color: var(--est-text-soft); font-size: 1.2rem; cursor: pointer; }
+.wal-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.wal-resumo > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--est-hover); }
+.wal-resumo span { font-size: 0.72rem; color: var(--est-text-soft); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.wal-resumo strong { font-size: 1.05rem; }
+.wal-termos {
+  max-height: 280px; overflow-y: auto; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--est-border);
+  background: var(--est-hover); font-size: 0.82rem; line-height: 1.55;
+}
+.wal-termos h4 { margin: 0 0 8px; font-size: 0.9rem; }
+.wal-termos h4 small { font-weight: 500; color: var(--est-text-soft); }
+.wal-termos > div { margin-bottom: 10px; }
+.wal-termos p { margin: 3px 0; color: var(--est-text-soft); }
+.wal-aceite { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 4px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.wal-aceite input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--est-accent); flex-shrink: 0; }
+.wal-codigo {
+  margin: 8px 0 14px; padding: 14px; border-radius: 14px; text-align: center; background: var(--est-accent-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 700; letter-spacing: 0.35em; color: var(--est-accent);
+}
+.wal-passos { margin: 0; padding-left: 20px; font-size: 0.84rem; line-height: 1.6; color: var(--est-text-soft); }
+.wal-confirmar-txt { margin: 0; font-size: 0.9rem; line-height: 1.55; color: var(--est-text-soft); }
+
+.wal-toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 400; max-width: calc(100vw - 32px);
+  padding: 12px 18px; border-radius: 12px; font-size: 0.86rem; font-weight: 700; box-shadow: var(--est-shadow);
+  background: var(--est-card-solid); color: var(--est-success); border: 1px solid var(--est-success);
+}
+.wal-toast.erro { color: var(--est-danger); border-color: var(--est-danger); }
+
+@media (max-width: 700px) {
+  .wal-card { padding: 14px; }
+  .wal-saldo-ciclo { text-align: left; }
+  .wal-novo-numero { grid-template-columns: minmax(0, 1fr); }
+  .wal-resumo { grid-template-columns: minmax(0, 1fr); }
+  .wal-acoes .wal-btn { flex: 1 1 auto; justify-content: center; }
+  .wal-codigo { font-size: 1.8rem; letter-spacing: 0.25em; }
+}

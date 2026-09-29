@@ -125,6 +125,12 @@ const Icons = {
       <path d="M9 14l2 2 4-4"/>
     </svg>
   ),
+  WhatsApp: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21l1.65-4.95A8.5 8.5 0 1 1 8.2 19.6L3 21z"/>
+      <path d="M9 10h.01M12 10h.01M15 10h.01"/>
+    </svg>
+  ),
   Close: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6"  x2="6"  y2="18"/>
@@ -156,6 +162,11 @@ const ABA_INVENTARIO = {
 
 const ABA_FORNECEDORES = {
   key: "fornecedores", label: "Fornecedores", icon: Icons.Fornecedores, shortcut: null,
+};
+
+// WhatsApp (29/09/2026): contratação e uso do serviço — só o dono
+const ABA_WHATSAPP = {
+  key: "whatsapp", label: "WhatsApp", icon: Icons.WhatsApp, shortcut: null,
 };
 
 const ABA_AUDITORIA = {
@@ -420,7 +431,7 @@ export default function LayoutEstabelecimento({
 
   const ABAS = (() => {
     const base = isMerchant
-      ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_AUDITORIA, ABA_CONFIG]
+      ? [...ABAS_BASE, ABA_RELATORIOS, ABA_INVENTARIO, ABA_FORNECEDORES, ABA_OPERADORES, ABA_WHATSAPP, ABA_AUDITORIA, ABA_CONFIG]
       : (() => {
           // Operador: só mostra abas cujo key está nas permissões.
           // Auditoria entra no "pool" mas fica desativada por padrão — só

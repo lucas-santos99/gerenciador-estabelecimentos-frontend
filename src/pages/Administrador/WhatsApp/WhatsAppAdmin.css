@@ -401,6 +401,49 @@
 }
 .wa-toast.erro { color: var(--text-danger); border-color: rgba(239,68,68,0.4); }
 
+/* ── Aba Lojas (29/09) ────────────────────────────────────────── */
+.wa-aba-badge {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--text-danger, #ef4444); color: #fff; font-size: 0.68rem; font-weight: 800;
+}
+.wa-lojas-aba { display: flex; flex-direction: column; gap: 16px; }
+.wa-lojas-aba > .wa-aviso-cobranca { margin-bottom: 0; }
+.wa-pedidos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.wa-pedidos li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.wa-pedidos li:last-child { border-bottom: none; }
+.wa-pedido-info { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 2px; font-size: 0.84rem; color: var(--text-primary); }
+.wa-pedido-info > strong { font-size: 0.92rem; }
+.wa-pedido-info small { color: var(--text-secondary); font-size: 0.76rem; }
+.wa-pedido-info em { font-style: normal; font-weight: 700; }
+.wa-pedido-acoes { display: flex; gap: 8px; }
+.wa-encerradas { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.wa-encerradas .wa-pedidos { width: 100%; }
+.wa-tabela-lojas td { vertical-align: middle; }
+.wa-tabela-lojas td small { color: var(--text-secondary); }
+.wa-nowrap { white-space: nowrap; }
+.wa-tag-encerra { display: inline-block; margin-left: 8px; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--bg-warning); color: var(--text-warning); }
+.wa-saldo-cel { min-width: 130px; }
+.wa-saldo-cel span { display: block; margin-bottom: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wa-barra.baixa > div { background: #ef4444; }
+.wa-acoes-cel { white-space: nowrap; text-align: right; }
+.wa-acoes-cel .sa-btn + .sa-btn { margin-left: 6px; }
+.sa-modal.wa-modal-lojas { max-width: 500px; }
+.sa-modal.wa-modal-lojas .wa-campo { margin-bottom: 16px; }
+.sa-modal.wa-modal-lojas .wa-linha .wa-campo { margin-bottom: 16px; }
+.sa-modal.wa-modal-extrato { max-width: 680px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.wa-extrato-rolagem { max-height: 60vh; overflow-y: auto; }
+.wa-tabela td.neg { color: var(--text-danger); }
+.wa-escolhas { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.wa-escolha {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-hover);
+}
+.wa-escolha.ativo { border-color: var(--text-accent); box-shadow: 0 0 0 1px var(--text-accent); }
+.wa-escolha input { margin-top: 3px; accent-color: #14b8a6; }
+.wa-escolha span { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; color: var(--text-primary); }
+.wa-escolha small { color: var(--text-secondary); font-size: 0.78rem; }
+.wa-cards-receita { margin-top: -4px; }
+
 /* ── Responsivo ──────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .wa-custos-grade { grid-template-columns: minmax(0, 1fr); }

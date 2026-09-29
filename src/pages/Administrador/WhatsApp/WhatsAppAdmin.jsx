@@ -25,6 +25,7 @@ import "../SuperAdmins/SuperAdmins.css";
 import "./WhatsAppAdmin.css";
 
 const API = "/api/whatsapp/admin";
+const ABAS_VALIDAS = ["planos", "lojas", "custos", "uso", "cobranca", "historico"];
 
 const TIPO_LABEL = { consulta: "Consulta", pdf: "Relatório PDF", cadastro: "Cadastro", foto: "Foto", alerta: "Alerta" };
 const TIPO_PLURAL = { consulta: "consultas", pdf: "relatórios em PDF", cadastro: "cadastros", foto: "fotos lidas", alerta: "alertas" };
@@ -144,7 +145,11 @@ function Secao({ titulo, sub, children, icone }) {
 
 /* ── Página ─────────────────────────────────────────────────── */
 export default function WhatsAppAdmin() {
-  const [aba, setAba] = useState("planos");
+  // ?aba=lojas (link da Central de Notificações) abre direto na aba certa
+  const [aba, setAba] = useState(() => {
+    try { const a = new URLSearchParams(window.location.search).get("aba"); return ABAS_VALIDAS.includes(a) ? a : "planos"; } catch { return "planos"; }
+  });
+  const [pendLojas, setPendLojas] = useState(0);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [toast, setToast] = useState(null);
@@ -196,6 +201,10 @@ export default function WhatsAppAdmin() {
         setCotacao(j.cotacao || null);
         setPodeEditar(!!j.pode_editar);
         await carregarPlanos();
+        // Contador da aba Lojas (pedidos esperando) — sem travar a página se falhar
+        apiFetch(`${API}/assinaturas`).then(r2 => r2.json().then(j2 => {
+          if (vivo && r2.ok) setPendLojas((j2.pendentes?.length || 0) + (j2.pacotes?.length || 0));
+        })).catch(() => {});
       } catch (e) {
         if (vivo) setErro(e.message || "Erro ao carregar.");
       } finally {
@@ -264,6 +273,7 @@ export default function WhatsAppAdmin() {
 
   const abas = [
     { id: "planos", label: "Planos", icone: "📦" },
+    { id: "lojas", label: "Lojas", icone: "🏪", badge: pendLojas },
     { id: "custos", label: "Custos e parâmetros", icone: "🧮", sujo },
     { id: "uso", label: "Uso do mês", icone: "📊" },
     { id: "cobranca", label: "Cobrança de mensalidades", icone: "🔔", sujo },
@@ -312,6 +322,7 @@ export default function WhatsAppAdmin() {
                   className={aba === a.id ? "ativo" : ""} onClick={() => setAba(a.id)}>
                   <span aria-hidden="true">{a.icone}</span> {a.label}
                   {a.sujo && <span className="wa-aba-ponto" title="Alterações não salvas" />}
+                  {a.badge > 0 && <span className="wa-aba-badge" title="Esperando você">{a.badge}</span>}
                 </button>
               ))}
             </nav>
@@ -326,6 +337,7 @@ export default function WhatsAppAdmin() {
                 planos={planos} pSalvo={pSalvo} />
             )}
             {aba === "uso" && <AbaUso />}
+            {aba === "lojas" && <AbaLojas podeEditarPagina={podeEditar} avisar={avisar} onPendentes={setPendLojas} />}
             {aba === "cobranca" && (
               <AbaCobranca rasc={rasc} p={pRasc} setP={setP} podeEditar={podeEditar} lojas={lojas} />
             )}
@@ -1071,6 +1083,282 @@ const TIPO_ENVIO = {
   teste: "Testes", recebida: "Recebidas (Meta grátis; custo = IA)",
 };
 
+/* ══════════════════════════════════════════════════════════════
+   ABA LOJAS — planos contratados, pedidos, pacotes (29/09)
+   ══════════════════════════════════════════════════════════════ */
+const STATUS_ASSIN = { recusada: "Recusada", cancelada: "Cancelada", substituida: "Trocou de plano", desistiu: "Desistiu" };
+const MOV_TIPO = { credito_ciclo: "Créditos do ciclo", pacote: "Pacote extra", consumo: "Uso", estorno: "Estorno", ajuste: "Ajuste", expirado: "Expirado" };
+const dataBRs = (s) => { if (!s) return ""; const [a, m, d] = String(s).slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
+
+function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
+  const [d, setD] = useState(null);
+  const [erro, setErro] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const [modal, setModal] = useState(null); // { tipo, item, motivo, quantidade, imediato }
+  const [extrato, setExtrato] = useState(null); // { item, movimentos }
+  const [verEncerradas, setVerEncerradas] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const r = await apiFetch(`${API}/assinaturas`);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Erro ao carregar.");
+      setD(j); setErro("");
+      onPendentes((j.pendentes?.length || 0) + (j.pacotes?.length || 0));
+    } catch (e) { setErro(e.message); }
+  }, [onPendentes]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const pode = !!(d?.pode_editar ?? podeEditarPagina);
+
+  async function acao(caminho, corpo, msg) {
+    setOcupado(true);
+    try {
+      const r = await apiFetch(`${API}${caminho}`, { method: "POST", body: JSON.stringify(corpo || {}) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Não foi possível concluir.");
+      avisar(msg);
+      setModal(null);
+      await carregar();
+    } catch (e) { avisar(e.message, "erro"); } finally { setOcupado(false); }
+  }
+
+  async function abrirExtrato(item) {
+    try {
+      const r = await apiFetch(`${API}/assinaturas/${item.id}/extrato`);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Erro ao carregar o extrato.");
+      setExtrato({ item, movimentos: j.movimentos || [] });
+    } catch (e) { avisar(e.message, "erro"); }
+  }
+
+  if (erro) return <div className="wa-erro-geral"><strong>Não foi possível carregar os planos das lojas.</strong><span>{erro}</span><small>Se acabou de atualizar o sistema, confira se o SQL 12 já foi rodado no Supabase.</small></div>;
+  if (!d) return <div className="sa-loading"><div className="sa-spinner" /></div>;
+
+  const nada = !d.pendentes.length && !d.pacotes.length && !d.ativas.length;
+
+  return (
+    <div className="wa-aba wa-lojas-aba">
+      <div className="wa-aviso-cobranca">
+        <strong>Nesta fase, a ativação é manual.</strong> A loja escolhe o plano e aceita os termos; você combina o pagamento e ativa aqui. Ao ativar, começa o ciclo de 1 mês com o saldo do plano. Troca de plano começa um ciclo novo; o saldo do plano antigo expira.
+      </div>
+
+      {nada && (
+        <div className="wa-vazio">
+          <div className="wa-vazio-icone">🏪</div>
+          <h3>Nenhuma loja com plano ainda</h3>
+          <p>Quando um estabelecimento escolher um plano no menu <strong>WhatsApp</strong> do painel dele, o pedido aparece aqui pra você ativar.</p>
+        </div>
+      )}
+
+      {d.pendentes.length > 0 && (
+        <Secao icone="⏳" titulo={`Pedindo ativação (${d.pendentes.length})`} sub="Confirme o pagamento combinado antes de ativar.">
+          <ul className="wa-pedidos">
+            {d.pendentes.map(p => (
+              <li key={p.id}>
+                <div className="wa-pedido-info">
+                  <strong>{p.loja_nome}</strong>
+                  <span>{p.troca_de ? <>Troca de <em>{p.troca_de}</em> para </> : "Plano "}<strong>{p.plano_nome}</strong> · {brl(p.preco)}/mês · {nf(p.creditos)} créditos · {p.numeros} número{p.numeros === 1 ? "" : "s"}</span>
+                  <small>Pedido por {p.solicitado_por_nome || "—"} em {dataHora(p.criado_em)} · aceitou os termos v{p.termos_versao}</small>
+                </div>
+                {pode && (
+                  <div className="wa-pedido-acoes">
+                    <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "recusar", item: p, motivo: "" })}>Recusar</button>
+                    <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ativar", item: p })}>Ativar</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Secao>
+      )}
+
+      {d.pacotes.length > 0 && (
+        <Secao icone="➕" titulo={`Pacotes extras pedidos (${d.pacotes.length})`} sub="Ao aprovar, os créditos entram no ciclo atual da loja.">
+          <ul className="wa-pedidos">
+            {d.pacotes.map(p => (
+              <li key={p.id}>
+                <div className="wa-pedido-info">
+                  <strong>{p.loja_nome}</strong>
+                  <span>{p.nome} · +{nf(p.creditos)} créditos · {brl(p.preco)}</span>
+                  <small>Pedido por {p.solicitado_por_nome || "—"} em {dataHora(p.criado_em)}</small>
+                </div>
+                {pode && (
+                  <div className="wa-pedido-acoes">
+                    <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "recusar_pacote", item: p, motivo: "" })}>Recusar</button>
+                    <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado}
+                      onClick={() => acao(`/pacotes/${p.id}/aprovar`, {}, `Pacote aprovado: +${nf(p.creditos)} créditos para ${p.loja_nome}.`)}>Aprovar</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Secao>
+      )}
+
+      {d.ativas.length > 0 && (
+        <Secao icone="✅" titulo={`Planos ativos (${d.ativas.length})`}>
+          <div className="wa-tabela-rolagem">
+            <table className="wa-tabela wa-tabela-lojas">
+              <thead><tr>
+                <th>Loja</th><th>Plano</th><th>Ciclo</th>
+                <th>Saldo <Dica lado="baixo" texto="Créditos disponíveis no ciclo atual / total que entrou no ciclo (plano + pacotes + ajustes)." /></th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                {d.ativas.map(a => {
+                  const pct = a.entradas > 0 ? Math.max(0, Math.min(100, (a.saldo / a.entradas) * 100)) : 0;
+                  return (
+                    <tr key={a.id}>
+                      <td><strong>{a.loja_nome}</strong>{a.cancelar_no_fim && <span className="wa-tag-encerra">encerra no fim do ciclo</span>}</td>
+                      <td>{a.plano_nome}<small> · {brl(a.preco)}/mês</small></td>
+                      <td className="wa-nowrap">{dataBRs(a.ciclo_inicio)} a {dataBRs(a.ciclo_fim)}</td>
+                      <td className="wa-saldo-cel">
+                        <span>{nf(a.saldo, a.saldo % 1 ? 1 : 0)} / {nf(a.entradas)}</span>
+                        <div className={`wa-barra${pct <= 20 ? " baixa" : ""}`}><div style={{ width: `${pct}%` }} /></div>
+                      </td>
+                      <td className="wa-acoes-cel">
+                        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirExtrato(a)}>Extrato</button>
+                        {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ajuste", item: a, quantidade: "", motivo: "" })}>Ajustar</button>}
+                        {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm wa-btn-excluir" disabled={ocupado} onClick={() => setModal({ tipo: "encerrar", item: a, imediato: false, motivo: "" })}>Encerrar</button>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Secao>
+      )}
+
+      {d.encerradas.length > 0 && (
+        <div className="wa-encerradas">
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setVerEncerradas(v => !v)}>
+            {verEncerradas ? "Esconder" : "Ver"} encerrados nos últimos 60 dias ({d.encerradas.length})
+          </button>
+          {verEncerradas && (
+            <ul className="wa-pedidos">
+              {d.encerradas.map(e => (
+                <li key={e.id}>
+                  <div className="wa-pedido-info">
+                    <strong>{e.loja_nome}</strong>
+                    <span>{e.plano_nome} · {brl(e.preco)}/mês · <em>{STATUS_ASSIN[e.status] || e.status}</em></span>
+                    <small>{dataHora(e.encerrado_em)}{e.encerrado_por_nome ? ` · ${e.encerrado_por_nome}` : ""}{e.motivo ? ` · ${e.motivo}` : ""}</small>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {modal && (
+        <div className="sa-modal-overlay" onClick={() => !ocupado && setModal(null)}>
+          <div className="sa-modal wa-modal-lojas" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+            {modal.tipo === "ativar" && (<>
+              <div className="sa-modal-icon">✅</div>
+              <div className="sa-modal-title">Ativar o plano de {modal.item.loja_nome}?</div>
+              <div className="sa-modal-subtitle">
+                {modal.item.troca_de ? <>Troca de <strong>{modal.item.troca_de}</strong> para </> : null}<strong>{modal.item.plano_nome}</strong> — {brl(modal.item.preco)}/mês, {nf(modal.item.creditos)} créditos.
+                {" "}O ciclo começa hoje e vai até a véspera do mesmo dia do mês que vem.{modal.item.troca_de ? " O saldo do plano atual expira." : ""}
+              </div>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
+                <button type="button" className="sa-btn sa-btn-success" disabled={ocupado}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/ativar`, {}, `Plano ${modal.item.plano_nome} ativado para ${modal.item.loja_nome}.`)}>Ativar agora</button>
+              </div>
+            </>)}
+            {(modal.tipo === "recusar" || modal.tipo === "recusar_pacote") && (<>
+              <div className="sa-modal-icon danger">✋</div>
+              <div className="sa-modal-title">Recusar {modal.tipo === "recusar" ? "a solicitação" : "o pacote"} de {modal.item.loja_nome}?</div>
+              <div className="sa-modal-subtitle">A loja vê o motivo na tela do WhatsApp dela.</div>
+              <label className="wa-campo">
+                <span className="wa-campo-label">Motivo (opcional)</span>
+                <textarea className="sa-input" rows={2} maxLength={300} value={modal.motivo} placeholder="Ex.: aguardando o pagamento"
+                  onChange={e => setModal(m => ({ ...m, motivo: e.target.value }))} />
+              </label>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
+                <button type="button" className="sa-btn sa-btn-danger" disabled={ocupado}
+                  onClick={() => acao(modal.tipo === "recusar" ? `/assinaturas/${modal.item.id}/recusar` : `/pacotes/${modal.item.id}/recusar`, { motivo: modal.motivo }, "Recusado.")}>Recusar</button>
+              </div>
+            </>)}
+            {modal.tipo === "ajuste" && (<>
+              <div className="sa-modal-icon">🧮</div>
+              <div className="sa-modal-title">Ajustar créditos de {modal.item.loja_nome}</div>
+              <div className="sa-modal-subtitle">Soma (ex.: 20) ou tira (ex.: -20) créditos do ciclo atual. Fica no extrato da loja com o motivo.</div>
+              <div className="wa-linha">
+                <Campo label="Créditos" valor={modal.quantidade} onChange={v => setModal(m => ({ ...m, quantidade: v }))} largura={140} />
+                <label className="wa-campo">
+                  <span className="wa-campo-label">Motivo</span>
+                  <input className="sa-input" maxLength={300} value={modal.motivo} placeholder="Ex.: cortesia, compensação de falha"
+                    onChange={e => setModal(m => ({ ...m, motivo: e.target.value }))} />
+                </label>
+              </div>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
+                <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado || !lerNum(modal.quantidade) || !modal.motivo.trim()}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/ajuste`, { quantidade: modal.quantidade, motivo: modal.motivo }, "Créditos ajustados.")}>Salvar ajuste</button>
+              </div>
+            </>)}
+            {modal.tipo === "encerrar" && (<>
+              <div className="sa-modal-icon danger">⏹️</div>
+              <div className="sa-modal-title">Encerrar o plano de {modal.item.loja_nome}?</div>
+              <div className="wa-escolhas">
+                <label className={`wa-escolha${!modal.imediato ? " ativo" : ""}`}>
+                  <input type="radio" checked={!modal.imediato} onChange={() => setModal(m => ({ ...m, imediato: false }))} />
+                  <span><strong>No fim do ciclo ({dataBRs(modal.item.ciclo_fim)})</strong><small>A loja usa até lá; depois o plano encerra sozinho.</small></span>
+                </label>
+                <label className={`wa-escolha${modal.imediato ? " ativo" : ""}`}>
+                  <input type="radio" checked={!!modal.imediato} onChange={() => setModal(m => ({ ...m, imediato: true }))} />
+                  <span><strong>Agora</strong><small>O saldo restante expira na hora e os pacotes pendentes são recusados.</small></span>
+                </label>
+              </div>
+              <label className="wa-campo">
+                <span className="wa-campo-label">Motivo (opcional)</span>
+                <input className="sa-input" maxLength={300} value={modal.motivo} onChange={e => setModal(m => ({ ...m, motivo: e.target.value }))} />
+              </label>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
+                <button type="button" className="sa-btn sa-btn-danger" disabled={ocupado}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/encerrar`, { imediato: !!modal.imediato, motivo: modal.motivo }, modal.imediato ? "Plano encerrado." : "Encerramento agendado para o fim do ciclo.")}>Encerrar</button>
+              </div>
+            </>)}
+          </div>
+        </div>
+      )}
+
+      {extrato && (
+        <div className="sa-modal-overlay" onClick={() => setExtrato(null)}>
+          <div className="sa-modal wa-modal-lojas wa-modal-extrato" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="wa-modal-head">
+              <div className="sa-modal-title">Extrato — {extrato.item.loja_nome}</div>
+              <button type="button" className="wa-x" onClick={() => setExtrato(null)} aria-label="Fechar">×</button>
+            </div>
+            <p className="wa-nota">Ciclo {dataBRs(extrato.item.ciclo_inicio)} a {dataBRs(extrato.item.ciclo_fim)} · saldo {nf(extrato.item.saldo, extrato.item.saldo % 1 ? 1 : 0)} de {nf(extrato.item.entradas)}</p>
+            {extrato.movimentos.length === 0 ? <div className="wa-vazio-mini">Nenhum movimento.</div> : (
+              <div className="wa-tabela-rolagem wa-extrato-rolagem">
+                <table className="wa-tabela">
+                  <thead><tr><th>Quando</th><th>O quê</th><th>Créditos</th></tr></thead>
+                  <tbody>
+                    {extrato.movimentos.map(m => (
+                      <tr key={m.id}>
+                        <td className="wa-nowrap">{dataHora(m.criado_em)}</td>
+                        <td>{MOV_TIPO[m.tipo] || m.tipo}{m.descricao ? <small> — {m.descricao}</small> : null}{m.criado_por_nome ? <small> · {m.criado_por_nome}</small> : null}</td>
+                        <td className={Number(m.quantidade) < 0 ? "neg" : ""}><strong>{Number(m.quantidade) > 0 ? "+" : ""}{nf(m.quantidade, Number(m.quantidade) % 1 ? 1 : 0)}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AbaUso() {
   const [mes, setMes] = useState(mesAtual);
   const [u, setU] = useState(null);
@@ -1116,6 +1404,13 @@ function AbaUso() {
               {pctTeto !== null && <small>{nf(pctTeto, 0)}% do teto de {brl(u.teto_global)}</small>}
             </div>
           </div>
+          {u.receita_planos && (
+            <div className="wa-cards wa-cards-receita">
+              <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Ciclos de plano iniciados no mês (preço contratado de cada loja) + pacotes extras aprovados no mês. Nesta fase o pagamento é combinado à parte — confira se foi recebido." /></span><strong>{brl(u.receita_planos.total)}</strong>
+                <small>{nf(u.receita_planos.ciclos)} ciclo{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}</small></div>
+              <div className={`wa-card ${u.receita_planos.total - u.custo_total >= 0 ? "ok" : "perigo"}`}><span>Sobra estimada <Dica lado="baixo" texto="Receita dos planos − custo total estimado (Meta + IA + chip). Ainda sem descontar impostos e taxa do pagamento." /></span><strong>{brl(u.receita_planos.total - u.custo_total)}</strong><small>antes de impostos e taxas</small></div>
+            </div>
+          )}
           {u.custo_cobranca_mensalidade > 0 && (
             <p className="wa-nota">Inclui {brl(u.custo_cobranca_mensalidade)} de lembretes de cobrança da mensalidade (custo seu, fora dos planos).</p>
           )}

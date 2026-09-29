@@ -19,6 +19,7 @@ import Relatorios    from "./Relatorios/Relatorios";
 import Inventario    from "./Inventario/Inventario";
 import Fornecedores  from "./Fornecedores/Fornecedores";
 import Auditoria     from "./Auditoria/Auditoria";
+import WhatsAppLoja  from "./WhatsApp/WhatsAppLoja";
 
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
@@ -252,6 +253,10 @@ export default function PainelEstabelecimento() {
 
       case "notificacoes":
         return <CentralNotificacoes />;
+
+      case "whatsapp":
+        // Só o dono contrata/gerencia (o backend também barra operador)
+        return isMerchant ? <WhatsAppLoja /> : null;
 
       case "auditoria":
         return (
