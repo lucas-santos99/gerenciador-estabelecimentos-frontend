@@ -23,6 +23,7 @@ export const MODULO_LABEL = {
   auth:           '🔑 Autenticação',
   estabelecimentos: '🏢 Estabelecimentos',
   superadmins:    '👑 SuperAdmins',
+  assinatura:     '💳 Assinatura',
 };
 
 export const MODULO_COR = {
@@ -31,6 +32,7 @@ export const MODULO_COR = {
   fornecedores: 'orange', inventario: 'cyan',
   operadores: 'pink', auth: 'blue',
   estabelecimentos: 'teal', superadmins: 'purple',
+  assinatura: 'green',
 };
 
 export const ACAO_LABEL = {
@@ -112,4 +114,10 @@ export const ACAO_LABEL = {
   desativar_superadmin:     '⛔ SuperAdmin desativado',
   alterar_senha_superadmin: '🔑 Senha do SuperAdmin alterada',
   tornar_master:            '👑 Definido como master',
+
+  // Assinatura (pagamento da licença — webhooks Asaas/Efí)
+  licenca_renovada_cartao:     '💳 Licença renovada (cartão)',
+  licenca_renovada_pix:        '📱 Licença renovada (Pix)',
+  licenca_pagamento_estornado: '↩️ Pagamento estornado',
+  licenca_pagamento_alerta:    '⚠️ Pagamento para revisar',
 };

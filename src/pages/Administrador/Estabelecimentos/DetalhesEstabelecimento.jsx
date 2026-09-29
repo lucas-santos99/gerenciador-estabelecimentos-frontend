@@ -423,10 +423,12 @@ export default function DetalhesEstabelecimento() {
                         background: h.forma_pagamento === "cortesia" ? "rgba(245,158,11,0.12)" :
                                     h.forma_pagamento === "pix"      ? "rgba(20,184,166,0.12)" :
                                     h.forma_pagamento === "cartao"   ? "rgba(99,102,241,0.12)" :
+                                    h.forma_pagamento === "estorno"  ? "rgba(239,68,68,0.12)" :
                                     "rgba(107,114,128,0.12)",
                         color: h.forma_pagamento === "cortesia" ? "#b45309" :
                                h.forma_pagamento === "pix"      ? "#0d9488" :
                                h.forma_pagamento === "cartao"   ? "#4338ca" :
+                               h.forma_pagamento === "estorno"  ? "#dc2626" :
                                "#6b7280",
                       }}>
                         {h.forma_pagamento}
