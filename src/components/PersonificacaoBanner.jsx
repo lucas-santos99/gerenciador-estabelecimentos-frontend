@@ -8,9 +8,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthProvider";
 
 const ROTULO_ROLE = {
-  merchant: "dono do estabelecimento",
-  operator: "operador",
-  super_admin: "superadmin",
+  merchant: "Administrador do estabelecimento",
+  operator: "Operador",
+  super_admin: "SuperAdmin",
 };
 
 export default function PersonificacaoBanner() {

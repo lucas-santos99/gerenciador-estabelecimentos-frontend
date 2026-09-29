@@ -457,3 +457,14 @@
   .wa-barra-salvar { width: calc(100vw - 32px); bottom: 12px; }
   .wa-sim-form .sa-btn { width: 100%; justify-content: center; }
 }
+
+/* ── Uso do mês separado: lojas × seu uso × total (29/09) ── */
+.wa-uso-bloco { border: 1px solid var(--border, rgba(0,0,0,0.08)); border-radius: 14px; padding: 16px 16px 6px; margin: 14px 0; background: var(--bg-card, transparent); }
+.wa-uso-bloco.seu { border-left: 4px solid #8b5cf6; }
+.wa-uso-bloco:not(.seu):not(.total) { border-left: 4px solid #14b8a6; }
+.wa-uso-bloco.total { border-left: 4px solid #64748b; }
+.wa-uso-bloco-topo { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.wa-uso-bloco-topo h3 { margin: 0; font-size: 1rem; color: var(--text-primary); }
+.wa-uso-bloco-topo span { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; }
+.wa-uso-bloco .wa-vazio-mini { margin-bottom: 10px; }
+.wa-uso-bloco .wa-custos-grade { margin-bottom: 10px; }

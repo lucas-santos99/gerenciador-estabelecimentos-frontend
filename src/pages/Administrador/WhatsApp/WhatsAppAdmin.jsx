@@ -1388,73 +1388,129 @@ function AbaUso() {
 
       {carregando ? <div className="sa-loading"><div className="sa-spinner" /></div> : erro ? <div className="wa-erro">{erro}</div> : u && (
         <>
-          <div className="wa-cards">
-            <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Todas as mensagens registradas no mês: enviadas e recebidas." /></span><strong>{nf(u.total_mensagens)}</strong></div>
-            <div className="wa-card"><span>Meta <Dica lado="baixo" texto="Custo estimado das mensagens enviadas (a Meta não cobra as recebidas)." /></span><strong>{brl(u.custo_meta)}</strong></div>
-            <div className="wa-card"><span>IA <Dica lado="baixo" texto="Custo estimado da IA (tokens) no mês, em reais com IOF." /></span><strong>{brl(u.custo_ia)}</strong></div>
-            <div className="wa-card ok"><span>Franquia grátis <Dica lado="baixo" texto="Desconto estimado das respostas gratuitas do mês (se a franquia da Meta se confirmar)." /></span><strong>− {brl(u.desconto_respostas_gratis)}</strong></div>
-            <div className="wa-card"><span>Chip / fixo <Dica lado="baixo" texto="Custo fixo do mês (recarga do chip do número central), definido em Custos e parâmetros." /></span><strong>{brl(u.custo_fixo_chip)}</strong></div>
-            <div className={`wa-card destaque${u.acima_teto_global ? " perigo" : ""}`}>
-              <span>Custo total estimado <Dica lado="baixo" texto="Meta + IA − franquia grátis + chip. A barra compara com o teto global do mês." /></span><strong>{brl(u.custo_total)}</strong>
-              {pctTeto !== null && (
-                <div className="wa-barra" title={`${nf(pctTeto, 0)}% do teto de ${brl(u.teto_global)}`}>
-                  <div style={{ width: `${pctTeto}%` }} />
-                </div>
-              )}
-              {pctTeto !== null && <small>{nf(pctTeto, 0)}% do teto de {brl(u.teto_global)}</small>}
-            </div>
-          </div>
-          {u.receita_planos && (
-            <div className="wa-cards wa-cards-receita">
-              <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Ciclos de plano iniciados no mês (preço contratado de cada loja) + pacotes extras aprovados no mês. Nesta fase o pagamento é combinado à parte — confira se foi recebido." /></span><strong>{brl(u.receita_planos.total)}</strong>
-                <small>{nf(u.receita_planos.ciclos)} ciclo{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}</small></div>
-              <div className={`wa-card ${u.receita_planos.total - u.custo_total >= 0 ? "ok" : "perigo"}`}><span>Sobra estimada <Dica lado="baixo" texto="Receita dos planos − custo total estimado (Meta + IA + chip). Ainda sem descontar impostos e taxa do pagamento." /></span><strong>{brl(u.receita_planos.total - u.custo_total)}</strong><small>antes de impostos e taxas</small></div>
-            </div>
-          )}
-          {u.custo_cobranca_mensalidade > 0 && (
-            <p className="wa-nota">Inclui {brl(u.custo_cobranca_mensalidade)} de lembretes de cobrança da mensalidade (custo seu, fora dos planos).</p>
-          )}
+          <p className="wa-nota">
+            O mesmo número atende duas coisas, contadas <strong>separadas</strong> abaixo: o <strong>uso dos estabelecimentos</strong> (o serviço
+            que você vende nos planos) e o <strong>seu uso</strong> (cobrança automática da mensalidade e testes, que é custo seu e sai da mensalidade).
+          </p>
 
-          {u.total_mensagens === 0 ? (
+          {u.total_mensagens === 0 && (
             <div className="wa-vazio">
               <div className="wa-vazio-icone">📭</div>
               <h3>Nenhuma mensagem neste mês</h3>
-              <p>O registro começa quando o número for conectado. Cada envio e cada mensagem recebida entra aqui com o custo estimado da Meta e da IA.</p>
-            </div>
-          ) : (
-            <div className="wa-custos-grade">
-              <Secao icone="🗂️" titulo="Por tipo">
-                <table className="wa-tabela">
-                  <thead><tr><th>Tipo</th><th>Qtd. <Dica lado="baixo" texto="Quantidade de mensagens desse tipo no mês." /></th><th>Custo <Dica lado="baixo" texto="Meta + IA dessas mensagens." /></th></tr></thead>
-                  <tbody>
-                    {Object.entries(u.por_tipo).map(([k, v]) => (
-                      <tr key={k}><td>{TIPO_ENVIO[k] || k}</td><td>{nf(v.quantidade)}</td><td>{brl(v.custo)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Secao>
-              <Secao icone="🏪" titulo="Por estabelecimento" sub="Sem a cobrança da mensalidade (essa é custo seu).">
-                {u.por_loja.length === 0 ? <div className="wa-vazio-mini">Nenhum uso por loja.</div> : (
-                  <div className="wa-tabela-rolagem">
-                    <table className="wa-tabela">
-                      <thead><tr><th>Loja</th><th>Msgs</th><th>Créditos <Dica lado="baixo" texto="Créditos gastos pela loja no mês." /></th><th>Meta</th><th>IA</th><th>Total <Dica lado="esq" texto="Custo real da loja no mês — é o que o teto por loja (50%/70%) compara com o valor do plano." /></th></tr></thead>
-                      <tbody>
-                        {u.por_loja.map(l => (
-                          <tr key={l.mercearia_id}>
-                            <td>{l.nome}</td><td>{nf(l.mensagens)}</td><td>{nf(l.creditos, 1)}</td>
-                            <td>{brl(l.custo_meta)}</td><td>{brl(l.custo_ia)}</td><td><strong>{brl(l.custo_total)}</strong></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Secao>
+              <p>O registro começa quando o número for conectado. Cada envio e cada mensagem recebida entra aqui com o custo estimado da Meta e da IA, já separado entre lojas e seu uso.</p>
             </div>
           )}
+
+          {/* ── Estabelecimentos ─────────────────────────────── */}
+          <div className="wa-uso-bloco">
+            <div className="wa-uso-bloco-topo">
+              <h3>🏪 Uso dos estabelecimentos</h3>
+              <span>Alertas, respostas da IA e mensagens recebidas das lojas. É o que os planos pagam.</span>
+            </div>
+            <div className="wa-cards">
+              <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Mensagens das lojas no mês: alertas enviados, respostas e mensagens recebidas." /></span><strong>{nf(u.lojas?.mensagens ?? 0)}</strong></div>
+              <div className="wa-card"><span>Meta <Dica lado="baixo" texto="Custo estimado das mensagens enviadas às lojas (a Meta não cobra as recebidas)." /></span><strong>{brl(u.lojas?.custo_meta ?? 0)}</strong></div>
+              <div className="wa-card"><span>IA <Dica lado="baixo" texto="Custo estimado da IA (tokens) para responder as lojas, em reais com IOF." /></span><strong>{brl(u.lojas?.custo_ia ?? 0)}</strong></div>
+              <div className="wa-card ok"><span>Franquia grátis <Dica lado="baixo" texto="Desconto estimado das respostas gratuitas do mês (se a franquia da Meta se confirmar). Respostas são sempre das lojas." /></span><strong>− {brl(u.lojas?.desconto_respostas_gratis ?? 0)}</strong></div>
+              <div className="wa-card destaque"><span>Custo das lojas <Dica lado="baixo" texto="Meta + IA − franquia grátis, só do uso das lojas." /></span><strong>{brl(u.lojas?.custo_total ?? 0)}</strong></div>
+            </div>
+            {u.receita_planos && (
+              <div className="wa-cards wa-cards-receita">
+                <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Ciclos de plano iniciados no mês (preço contratado de cada loja) + pacotes extras aprovados no mês. Nesta fase o pagamento é combinado à parte — confira se foi recebido." /></span><strong>{brl(u.receita_planos.total)}</strong>
+                  <small>{nf(u.receita_planos.ciclos)} ciclo{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}</small></div>
+                {u.lojas?.sobra != null && (
+                  <div className={`wa-card ${u.lojas.sobra >= 0 ? "ok" : "perigo"}`}><span>Sobra do serviço <Dica lado="baixo" texto="Receita dos planos − custo das lojas − chip do número. Não inclui o seu uso (cobrança da mensalidade). Ainda sem descontar impostos e taxa do pagamento." /></span><strong>{brl(u.lojas.sobra)}</strong><small>antes de impostos e taxas</small></div>
+                )}
+              </div>
+            )}
+            {(u.lojas?.mensagens ?? 0) === 0 ? (
+              <div className="wa-vazio-mini">Nenhuma mensagem de estabelecimento neste mês.</div>
+            ) : (
+              <div className="wa-custos-grade">
+                <Secao icone="🗂️" titulo="Por tipo">
+                  <TabelaTipos porTipo={u.lojas.por_tipo} />
+                </Secao>
+                <Secao icone="🏪" titulo="Por estabelecimento">
+                  {u.por_loja.length === 0 ? <div className="wa-vazio-mini">Nenhum uso por loja.</div> : (
+                    <div className="wa-tabela-rolagem">
+                      <table className="wa-tabela">
+                        <thead><tr><th>Loja</th><th>Msgs</th><th>Créditos <Dica lado="baixo" texto="Créditos gastos pela loja no mês." /></th><th>Meta</th><th>IA</th><th>Total <Dica lado="esq" texto="Custo real da loja no mês — é o que o teto por loja (50%/70%) compara com o valor do plano." /></th></tr></thead>
+                        <tbody>
+                          {u.por_loja.map(l => (
+                            <tr key={l.mercearia_id}>
+                              <td>{l.nome}</td><td>{nf(l.mensagens)}</td><td>{nf(l.creditos, 1)}</td>
+                              <td>{brl(l.custo_meta)}</td><td>{brl(l.custo_ia)}</td><td><strong>{brl(l.custo_total)}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Secao>
+              </div>
+            )}
+          </div>
+
+          {/* ── Seu uso ───────────────────────────────────────── */}
+          <div className="wa-uso-bloco seu">
+            <div className="wa-uso-bloco-topo">
+              <h3>👤 Seu uso</h3>
+              <span>Cobrança automática da mensalidade e testes. Custo seu, fora dos planos (sai da mensalidade).</span>
+            </div>
+            <div className="wa-cards">
+              <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Lembretes de cobrança da mensalidade e mensagens de teste enviados no mês." /></span><strong>{nf(u.seu?.mensagens ?? 0)}</strong></div>
+              <div className="wa-card"><span>Meta <Dica lado="baixo" texto="Custo estimado dessas mensagens na Meta." /></span><strong>{brl(u.seu?.custo_meta ?? 0)}</strong></div>
+              <div className="wa-card"><span>IA <Dica lado="baixo" texto="Custo de IA do seu uso (normalmente zero: a cobrança é um modelo pronto, sem IA)." /></span><strong>{brl(u.seu?.custo_ia ?? 0)}</strong></div>
+              <div className="wa-card destaque"><span>Seu custo <Dica lado="baixo" texto="Meta + IA do seu uso no mês." /></span><strong>{brl(u.seu?.custo_total ?? 0)}</strong></div>
+            </div>
+            {(u.seu?.mensagens ?? 0) === 0 ? (
+              <div className="wa-vazio-mini">Nenhuma mensagem sua neste mês.</div>
+            ) : (
+              <Secao icone="🗂️" titulo="Por tipo">
+                <TabelaTipos porTipo={u.seu.por_tipo} />
+              </Secao>
+            )}
+          </div>
+
+          {/* ── Total do número ──────────────────────────────── */}
+          <div className="wa-uso-bloco total">
+            <div className="wa-uso-bloco-topo">
+              <h3>📊 Total do número</h3>
+              <span>Tudo somado: lojas + seu uso + chip. É o que a Meta e a IA vão cobrar de você no mês.</span>
+            </div>
+            <div className="wa-cards">
+              <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Todas as mensagens registradas no mês: enviadas e recebidas." /></span><strong>{nf(u.total_mensagens)}</strong></div>
+              <div className="wa-card"><span>Chip / fixo <Dica lado="baixo" texto="Custo fixo do mês (recarga do chip do número central), definido em Custos e parâmetros." /></span><strong>{brl(u.custo_fixo_chip)}</strong></div>
+              <div className={`wa-card destaque${u.acima_teto_global ? " perigo" : ""}`}>
+                <span>Custo total estimado <Dica lado="baixo" texto="Custo das lojas + seu custo + chip. A barra compara com o teto global do mês." /></span><strong>{brl(u.custo_total)}</strong>
+                {pctTeto !== null && (
+                  <div className="wa-barra" title={`${nf(pctTeto, 0)}% do teto de ${brl(u.teto_global)}`}>
+                    <div style={{ width: `${pctTeto}%` }} />
+                  </div>
+                )}
+                {pctTeto !== null && <small>{nf(pctTeto, 0)}% do teto de {brl(u.teto_global)}</small>}
+              </div>
+            </div>
+          </div>
+
         </>
       )}
     </div>
+  );
+}
+
+function TabelaTipos({ porTipo }) {
+  const linhas = Object.entries(porTipo || {});
+  if (!linhas.length) return <div className="wa-vazio-mini">Nada no mês.</div>;
+  return (
+    <table className="wa-tabela">
+      <thead><tr><th>Tipo</th><th>Qtd. <Dica lado="baixo" texto="Quantidade de mensagens desse tipo no mês." /></th><th>Custo <Dica lado="baixo" texto="Meta + IA dessas mensagens." /></th></tr></thead>
+      <tbody>
+        {linhas.map(([k, v]) => (
+          <tr key={k}><td>{TIPO_ENVIO[k] || k}</td><td>{nf(v.quantidade)}</td><td>{brl(v.custo)}</td></tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
