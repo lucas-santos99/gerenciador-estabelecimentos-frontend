@@ -9,8 +9,10 @@
 // MESMO componente mostrado no painel do SuperAdmin (TabelaCreditos).
 // Backend: /api/whatsapp/loja (routes/whatsappLojaRoutes.js).
 // ============================================================
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../../utils/api";
+import { useAuth } from "../../../contexts/AuthProvider";
+import { useAvisosEstabelecimento, usePollingReserva } from "../../../utils/realtimeEstab";
 import { tiposDoPlano } from "../../../utils/whatsappCustos";
 import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import "./WhatsAppLoja.css";
@@ -26,6 +28,14 @@ const MOV_LABEL = {
   ajuste: "Ajuste", expirado: "Expirado",
 };
 const PEDIDO_LABEL = { consulta: "Pergunta", pdf: "Relatório PDF", cadastro: "Cadastro", foto: "Foto", alerta: "Alerta" };
+// Uso do ciclo por tipo de pedido (30/09) — ordem fixa na tela
+const PEDIDO_USO = [
+  { id: "consulta", icone: "💬", nome: "Perguntas" },
+  { id: "alerta",   icone: "🔔", nome: "Alertas" },
+  { id: "pdf",      icone: "📄", nome: "Relatórios em PDF" },
+  { id: "cadastro", icone: "📝", nome: "Cadastros" },
+  { id: "foto",     icone: "📷", nome: "Fotos" },
+];
 const STATUS_PACOTE = { aguardando: "Aguardando aprovação", aprovado: "Aprovado", recusado: "Recusado", desistiu: "Cancelado por você" };
 
 const brl = (v) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -101,6 +111,7 @@ function CartaoPlano({ pl, pesos, atual, onEscolher, desabilitado, textoBotao })
 
 /* ── Página ─────────────────────────────────────────────────── */
 export default function WhatsAppLoja() {
+  const { profile } = useAuth();
   const [d, setD] = useState(null);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -137,6 +148,23 @@ export default function WhatsAppLoja() {
     }
   }, []);
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Tempo real (30/09): saldo, uso, extrato, pedidos e números se atualizam
+  // sozinhos quando algo muda (uma pergunta respondida, pacote aprovado,
+  // plano ativado...). Sem dados no aviso — só recarrega pela mesma rota.
+  const extratoAbertoRef = useRef(false);
+  extratoAbertoRef.current = !!extrato;
+  const recarregarTudo = useCallback(async () => {
+    await carregar();
+    if (!extratoAbertoRef.current) return;
+    try {
+      const r = await apiFetch(`${API}/extrato`);
+      const j = await r.json();
+      if (r.ok && extratoAbertoRef.current) setExtrato(j.movimentos || []);
+    } catch { /* mantém o que já está na tela */ }
+  }, [carregar]);
+  useAvisosEstabelecimento(profile?.mercearia_id, ["whatsapp"], recarregarTudo, { atraso: 600 });
+  usePollingReserva(recarregarTudo, 120000);
 
   async function chamar(caminho, opcoes, msgOk) {
     setOcupado(true);
@@ -203,6 +231,14 @@ export default function WhatsAppLoja() {
 
   const pct = ativa && ativa.entradas > 0 ? Math.min(100, Math.max(0, (ativa.saldo / ativa.entradas) * 100)) : 0;
   const diasRestantes = ativa ? diasAte(ativa.hoje, ativa.ciclo_fim) + 1 : 0;
+  // Ritmo do ciclo: média por dia e previsão de quando o saldo acaba
+  const diasPassados = ativa ? Math.max(1, diasAte(ativa.ciclo_inicio, ativa.hoje) + 1) : 1;
+  const mediaDia = ativa ? (Number(ativa.usados) || 0) / diasPassados : 0;
+  const diasDeSaldo = mediaDia > 0 ? (Number(ativa.saldo) || 0) / mediaDia : Infinity;
+  const fimSaldo = ativa && Number.isFinite(diasDeSaldo)
+    ? new Date(Date.parse(`${ativa.hoje}T12:00:00Z`) + Math.floor(diasDeSaldo) * 86400000).toISOString().slice(0, 10)
+    : null;
+  const usoPorPedido = ativa ? PEDIDO_USO.map(t => ({ ...t, ...(ativa.por_pedido?.[t.id] || { pedidos: 0, creditos: 0 }) })).filter(t => t.pedidos > 0 || t.creditos > 0) : [];
   const vinculos = d.vinculos || [];
   const podeNumeros = !!(ativa || pendente);
   const semPlanos = !d.planos.length;
@@ -277,6 +313,37 @@ export default function WhatsAppLoja() {
           <div className="wal-saldo-rodape">
             <span>Usados neste ciclo: <strong>{nfAuto(ativa.usados)}</strong></span>
             {pct <= 20 && ativa.entradas > 0 && <span className="wal-perigo-txt">Saldo baixo — considere um pacote extra.</span>}
+            <span className="wal-ao-vivo" title="Esta tela se atualiza sozinha quando você usa o WhatsApp.">● Atualiza sozinho</span>
+          </div>
+
+          {/* ── Onde você usou neste ciclo (30/09) ────────── */}
+          <div className="wal-uso">
+            <span className="wal-rotulo">Onde você usou neste ciclo</span>
+            {usoPorPedido.length === 0 ? (
+              <p className="wal-sutil">Nenhum uso ainda neste ciclo. Cada pergunta, alerta ou relatório pelo WhatsApp aparece aqui na hora.</p>
+            ) : (
+              <ul className="wal-uso-lista">
+                {usoPorPedido.map(t => {
+                  const parte = ativa.usados > 0 ? Math.min(100, (t.creditos / ativa.usados) * 100) : 0;
+                  return (
+                    <li key={t.id}>
+                      <span className="wal-uso-nome">{t.icone} {t.nome}</span>
+                      <span className="wal-uso-qtd">{nf(t.pedidos)} {t.pedidos === 1 ? "vez" : "vezes"}</span>
+                      <span className="wal-uso-barra" aria-hidden="true"><span style={{ width: `${parte}%` }} /></span>
+                      <span className="wal-uso-cred"><strong>{nfAuto(t.creditos)}</strong> crédito{t.creditos === 1 ? "" : "s"}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {mediaDia > 0 && (
+              <p className={`wal-ritmo${fimSaldo && diasDeSaldo < diasRestantes - 1 ? " alerta" : ""}`}>
+                Ritmo: ~{nfAuto(Math.round(mediaDia * 10) / 10)} crédito{mediaDia === 1 ? "" : "s"} por dia.{" "}
+                {fimSaldo && diasDeSaldo < diasRestantes - 1
+                  ? <>Nesse ritmo, o saldo acaba por volta de <strong>{dataBR(fimSaldo)}</strong>, antes do fim do ciclo.</>
+                  : <>Nesse ritmo, o saldo dá até o fim do ciclo.</>}
+              </p>
+            )}
           </div>
           <div className="wal-acoes">
             <button type="button" className="wal-btn" onClick={abrirExtrato}>{extrato ? "Esconder extrato" : "📄 Ver extrato do ciclo"}</button>

@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import { apiFetch } from "../../../utils/api";
+import { useAvisosGlobais } from "../../../utils/realtimeEstab";
 import {
   TIPOS_PEDIDO, normalizarParametros, aplicarDolarAuto, piorCasoPorPedido,
   custoMaxPorCredito, calcularPlano, iaEmReais,
@@ -213,6 +214,15 @@ export default function WhatsAppAdmin() {
     })();
     return () => { vivo = false; };
   }, [carregarPlanos]);
+
+  // Tempo real (30/09): loja pediu/trocou plano ou pacote → contador da
+  // aba Lojas atualiza sozinho (a própria aba também recarrega).
+  const atualizarContadorLojas = useCallback(() => {
+    apiFetch(`${API}/assinaturas`).then(r2 => r2.json().then(j2 => {
+      if (r2.ok) setPendLojas((j2.pendentes?.length || 0) + (j2.pacotes?.length || 0));
+    })).catch(() => {});
+  }, []);
+  useAvisosGlobais(["whatsapp_admin"], atualizarContadorLojas, { atraso: 800 });
 
   useEffect(() => {
     if (aba === "historico") carregarHistorico();
@@ -1108,6 +1118,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
     } catch (e) { setErro(e.message); }
   }, [onPendentes]);
   useEffect(() => { carregar(); }, [carregar]);
+  useAvisosGlobais(["whatsapp_admin"], carregar, { atraso: 800 });
 
   const pode = !!(d?.pode_editar ?? podeEditarPagina);
 

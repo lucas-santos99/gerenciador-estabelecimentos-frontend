@@ -218,3 +218,22 @@
   .wal-acoes .wal-btn { flex: 1 1 auto; justify-content: center; }
   .wal-codigo { font-size: 1.8rem; letter-spacing: 0.25em; }
 }
+
+/* ── Uso do ciclo + tempo real (30/09) ───────────────────── */
+.wal-ao-vivo { margin-left: auto; font-size: 0.74rem; font-weight: 600; color: var(--est-success); white-space: nowrap; }
+.wal-uso { margin: 14px 0 4px; padding: 14px 16px; border-radius: 12px; background: var(--est-hover); border: 1px solid var(--est-border); }
+.wal-uso .wal-sutil { margin: 6px 0 0; }
+.wal-uso-lista { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wal-uso-lista li { display: grid; grid-template-columns: minmax(0, 1fr) 80px minmax(80px, 1.4fr) 120px; align-items: center; gap: 12px; font-size: 0.86rem; }
+.wal-uso-nome { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wal-uso-qtd { color: var(--est-text-soft); font-size: 0.8rem; white-space: nowrap; text-align: right; }
+.wal-uso-barra { height: 8px; border-radius: 99px; background: var(--est-border); overflow: hidden; }
+.wal-uso-barra > span { display: block; height: 100%; border-radius: 99px; background: var(--est-accent); }
+.wal-uso-cred { font-size: 0.82rem; color: var(--est-text-soft); white-space: nowrap; text-align: right; }
+.wal-uso-cred strong { color: var(--est-text); }
+.wal-ritmo { margin: 12px 0 0; font-size: 0.82rem; color: var(--est-text-soft); line-height: 1.5; }
+.wal-ritmo.alerta { color: var(--est-warning); }
+.wal-ritmo strong { color: inherit; }
+@media (max-width: 560px) {
+  .wal-uso-lista li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; column-gap: 12px; }
+}
