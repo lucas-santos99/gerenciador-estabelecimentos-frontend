@@ -468,3 +468,34 @@
 .wa-uso-bloco-topo span { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; }
 .wa-uso-bloco .wa-vazio-mini { margin-bottom: 10px; }
 .wa-uso-bloco .wa-custos-grade { margin-bottom: 10px; }
+
+/* ── Aba Conexão (30/09) ─────────────────────────────────── */
+.wa-status.teste { border-color: rgba(59,130,246,0.35); background: var(--bg-info, rgba(59,130,246,0.08)); }
+.wa-status.teste .wa-status-bola { background: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.18); }
+.wa-conexao-dados { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.wa-conexao-dados > div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; border-bottom: 1px dashed var(--border); padding-bottom: 8px; }
+.wa-conexao-dados > div:last-child { border-bottom: none; }
+.wa-conexao-dados dt { font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
+.wa-conexao-dados dd { margin: 0; font-size: 0.88rem; color: var(--text-primary); text-align: right; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.wa-conexao-dados code, .wa-conf-lista code, .wa-nota code { font-size: 0.78rem; background: var(--bg-hover); padding: 1px 6px; border-radius: 6px; }
+.wa-pilula { display: inline-block; font-size: 0.74rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--bg-hover); color: var(--text-secondary); white-space: nowrap; }
+.wa-pilula.ok { background: var(--bg-success); color: var(--text-success); }
+.wa-pilula.atencao { background: var(--bg-warning); color: #b45309; }
+.wa-pilula.perigo { background: var(--bg-danger); color: var(--text-danger); }
+.wa-conf-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wa-conf-item { display: flex; gap: 10px; align-items: flex-start; }
+.wa-conf-item > div { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; color: var(--text-primary); }
+.wa-conf-item small { font-size: 0.78rem; color: var(--text-secondary); }
+.wa-conf-marca { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 0.78rem; font-weight: 800; flex-shrink: 0; }
+.wa-conf-item.ok .wa-conf-marca { background: var(--bg-success); color: var(--text-success); }
+.wa-conf-item.falta .wa-conf-marca { background: var(--bg-danger); color: var(--text-danger); }
+.wa-copiar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wa-copiar code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 0.8rem; padding: 8px 10px; border-radius: 8px; background: var(--bg-hover); border: 1px solid var(--border); }
+.wa-aba > .wa-custos-grade + .wa-secao, .wa-aba > .wa-secao + .wa-secao { margin-top: 16px; }
+.wa-copiar .sa-btn { flex: 0 0 auto; width: auto; }
+.wa-teste { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.wa-msg-erro { display: block; margin-top: 3px; font-size: 0.74rem; color: var(--text-danger); max-width: 280px; }
+.wa-sutil-txt { color: var(--text-secondary); }
+@media (max-width: 700px) {
+  .wa-teste { grid-template-columns: 1fr; }
+}

@@ -26,7 +26,7 @@ import "../SuperAdmins/SuperAdmins.css";
 import "./WhatsAppAdmin.css";
 
 const API = "/api/whatsapp/admin";
-const ABAS_VALIDAS = ["planos", "lojas", "custos", "uso", "cobranca", "historico"];
+const ABAS_VALIDAS = ["conexao", "planos", "lojas", "custos", "uso", "cobranca", "historico"];
 
 const TIPO_LABEL = { consulta: "Consulta", pdf: "Relatório PDF", cadastro: "Cadastro", foto: "Foto", alerta: "Alerta" };
 const TIPO_PLURAL = { consulta: "consultas", pdf: "relatórios em PDF", cadastro: "cadastros", foto: "fotos lidas", alerta: "alertas" };
@@ -151,6 +151,7 @@ export default function WhatsAppAdmin() {
     try { const a = new URLSearchParams(window.location.search).get("aba"); return ABAS_VALIDAS.includes(a) ? a : "planos"; } catch { return "planos"; }
   });
   const [pendLojas, setPendLojas] = useState(0);
+  const [numeroMeta, setNumeroMeta] = useState(null); // número conectado na Meta (30/09)
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [toast, setToast] = useState(null);
@@ -224,6 +225,13 @@ export default function WhatsAppAdmin() {
   }, []);
   useAvisosGlobais(["whatsapp_admin"], atualizarContadorLojas, { atraso: 800 });
 
+  // Situação do número na Meta, pro aviso do topo (sem travar a página)
+  useEffect(() => {
+    apiFetch(`${API}/conexao`).then(r => r.json().then(j => {
+      if (r.ok && j.numero?.display_phone_number) setNumeroMeta(j.numero.display_phone_number);
+    })).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (aba === "historico") carregarHistorico();
     if (aba === "cobranca" && lojas === null) {
@@ -282,6 +290,7 @@ export default function WhatsAppAdmin() {
   }
 
   const abas = [
+    { id: "conexao", label: "Conexão", icone: "🔌" },
     { id: "planos", label: "Planos", icone: "📦" },
     { id: "lojas", label: "Lojas", icone: "🏪", badge: pendLojas },
     { id: "custos", label: "Custos e parâmetros", icone: "🧮", sujo },
@@ -310,14 +319,16 @@ export default function WhatsAppAdmin() {
           </div>
         ) : (
           <>
-            <div className={`wa-status ${pSalvo?.integracao?.ativo ? "on" : "off"}`}>
+            <div className={`wa-status ${pSalvo?.integracao?.ativo ? "on" : numeroMeta ? "teste" : "off"}`}>
               <span className="wa-status-bola" />
               <div>
-                <strong>{pSalvo?.integracao?.ativo ? "Número conectado" : "Aguardando número brasileiro"}</strong>
+                <strong>{pSalvo?.integracao?.ativo ? `Número conectado${numeroMeta ? ` (${numeroMeta})` : ""} e liberado para as lojas` : numeroMeta ? `Número conectado (${numeroMeta}) — em testes` : "Aguardando número brasileiro"}</strong>
                 <span>
                   {pSalvo?.integracao?.ativo
                     ? "Envios e respostas ativos."
-                    : "Nada é enviado ainda. Já dá pra montar os planos, os custos e as regras; tudo passa a valer quando o número for conectado na Meta."}
+                    : numeroMeta
+                      ? "O número já envia e recebe mensagens. As lojas ainda veem \"Em breve\" — libere na aba Conexão quando os testes estiverem ok."
+                      : "Nada é enviado ainda. Já dá pra montar os planos, os custos e as regras; tudo passa a valer quando o número for conectado na Meta."}
                 </span>
               </div>
             </div>
@@ -347,6 +358,13 @@ export default function WhatsAppAdmin() {
                 planos={planos} pSalvo={pSalvo} />
             )}
             {aba === "uso" && <AbaUso />}
+            {aba === "conexao" && (
+              <AbaConexao podeEditarPagina={podeEditar} avisar={avisar} liberado={!!salvo?.integracao?.ativo}
+                onLiberado={(ativo) => {
+                  setSalvo(s => (s ? { ...s, integracao: { ...s.integracao, ativo } } : s));
+                  setRasc(r => (r ? { ...r, integracao: { ...r.integracao, ativo } } : r));
+                }} />
+            )}
             {aba === "lojas" && <AbaLojas podeEditarPagina={podeEditar} avisar={avisar} onPendentes={setPendLojas} />}
             {aba === "cobranca" && (
               <AbaCobranca rasc={rasc} p={pRasc} setP={setP} podeEditar={podeEditar} lojas={lojas} />
@@ -1092,6 +1110,187 @@ const TIPO_ENVIO = {
   alerta: "Alertas", resposta: "Respostas", cobranca_mensalidade: "Cobrança da mensalidade",
   teste: "Testes", recebida: "Recebidas (Meta grátis; custo = IA)",
 };
+
+/* ══════════════════════════════════════════════════════════════
+   ABA CONEXÃO — número real na Meta, webhook, teste (30/09)
+   ══════════════════════════════════════════════════════════════ */
+const NOME_STATUS = { APPROVED: "Aprovado", PENDING_REVIEW: "Em análise", DECLINED: "Recusado", EXPIRED: "Expirado", NONE: "—", AVAILABLE_WITHOUT_REVIEW: "Liberado" };
+const QUALIDADE = { GREEN: ["Alta", "ok"], YELLOW: ["Média", "atencao"], RED: ["Baixa", "perigo"], UNKNOWN: ["Sem dados ainda", ""], NA: ["Sem dados ainda", ""] };
+const LIMITE_TIER = { TIER_50: "50", TIER_250: "250", TIER_1K: "1.000", TIER_2K: "2.000", TIER_10K: "10.000", TIER_100K: "100.000", TIER_UNLIMITED: "Ilimitado" };
+const STATUS_MSG = { enviado: "Enviada", entregue: "Entregue", lido: "Lida", falhou: "Falhou", recebido: "Recebida" };
+
+function ItemConfig({ ok, nome, variavel, texto }) {
+  return (
+    <li className={`wa-conf-item ${ok ? "ok" : "falta"}`}>
+      <span className="wa-conf-marca" aria-hidden="true">{ok ? "✓" : "✗"}</span>
+      <div><span><strong>{nome}</strong> <code>{variavel}</code></span><small>{texto}</small></div>
+    </li>
+  );
+}
+
+function AbaConexao({ podeEditarPagina, avisar, liberado, onLiberado }) {
+  const [c, setC] = useState(null);
+  const [erro, setErro] = useState("");
+  const [msgs, setMsgs] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [tel, setTel] = useState("");
+  const [texto, setTexto] = useState("Teste do Gerenciador de Estabelecimentos ✅");
+
+  const carregar = useCallback(async () => {
+    try {
+      const [r1, r2] = await Promise.all([apiFetch(`${API}/conexao`), apiFetch(`${API}/mensagens?limite=30`)]);
+      const j1 = await r1.json(); const j2 = await r2.json();
+      if (!r1.ok) throw new Error(j1.error || "Erro ao carregar.");
+      setC(j1); setErro("");
+      setMsgs(r2.ok && Array.isArray(j2) ? j2 : []);
+    } catch (e) { setErro(e.message); }
+  }, []);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const pode = !!(c?.pode_editar ?? podeEditarPagina);
+
+  async function acao(caminho, corpo, msgOk) {
+    setOcupado(true);
+    try {
+      const r = await apiFetch(`${API}${caminho}`, { method: "POST", body: JSON.stringify(corpo || {}) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Não foi possível concluir.");
+      if (msgOk) avisar(msgOk);
+      await carregar();
+      return j;
+    } catch (e) { avisar(e.message, "erro"); return null; }
+    finally { setOcupado(false); }
+  }
+
+  async function copiar(t) {
+    try { await navigator.clipboard.writeText(t); avisar("Copiado."); } catch { avisar("Não foi possível copiar.", "erro"); }
+  }
+
+  if (erro) return <div className="wa-aba"><div className="wa-erro">{erro}</div></div>;
+  if (!c) return <div className="wa-aba"><div className="sa-loading"><div className="sa-spinner" /></div></div>;
+
+  const n = c.numero;
+  const q = QUALIDADE[n?.quality_rating] || QUALIDADE.UNKNOWN;
+  const tudoConfigurado = c.config.token && c.config.app_secret && c.config.verify_token;
+
+  return (
+    <div className="wa-aba">
+      <p className="wa-nota">
+        Aqui fica a ligação com a Meta: o número do sistema, os avisos que a Meta manda para o servidor (webhook) e um envio de teste.
+        Os segredos ficam só nas variáveis do Railway — esta tela mostra apenas se estão preenchidos.
+      </p>
+
+      <div className="wa-custos-grade">
+        <Secao icone="📱" titulo="Número do sistema">
+          {!c.config.token ? (
+            <div className="wa-vazio-mini">Falta o token (<code>WHATSAPP_TOKEN</code>) no Railway.</div>
+          ) : !n ? (
+            <div className="wa-erro">{c.erro || "Não foi possível ler o número na Meta."}</div>
+          ) : (
+            <dl className="wa-conexao-dados">
+              <div><dt>Número</dt><dd><strong>{n.display_phone_number}</strong></dd></div>
+              <div><dt>Nome exibido <Dica lado="baixo" texto="Nome que aparece no topo da conversa. A Meta revisa; enquanto estiver em análise, pode aparecer só o número." /></dt>
+                <dd>{n.verified_name} <span className={`wa-pilula ${n.name_status === "APPROVED" ? "ok" : n.name_status === "DECLINED" ? "perigo" : "atencao"}`}>{NOME_STATUS[n.name_status] || n.name_status || "—"}</span></dd></div>
+              <div><dt>Qualidade <Dica lado="baixo" texto="Nota da Meta pelas reações das pessoas (bloqueios, denúncias). Baixa pode reduzir o limite de envios." /></dt>
+                <dd><span className={`wa-pilula ${q[1]}`}>{q[0]}</span></dd></div>
+              <div><dt>Limite de conversas iniciadas <Dica lado="baixo" texto="Quantas pessoas diferentes o sistema pode chamar primeiro em 24h. Respostas a quem mandou mensagem não contam. Sobe sozinho com o uso ou com a verificação da empresa." /></dt>
+                <dd>{LIMITE_TIER[n.messaging_limit_tier] || "250 (padrão sem verificação)"} / 24h</dd></div>
+              <div><dt>ID do número</dt><dd><code>{c.config.phone_number_id}</code></dd></div>
+            </dl>
+          )}
+        </Secao>
+
+        <Secao icone="🔐" titulo="Configuração do servidor" sub="Variáveis do Railway (serviço do backend).">
+          <ul className="wa-conf-lista">
+            <ItemConfig ok={c.config.token} nome="Token permanente" variavel="WHATSAPP_TOKEN" texto="Usuário do sistema da Meta — envia as mensagens." />
+            <ItemConfig ok={c.config.app_secret} nome="Chave secreta do app" variavel="WHATSAPP_APP_SECRET" texto="Confere se o aviso veio mesmo da Meta. Sem ela, nada é recebido." />
+            <ItemConfig ok={c.config.verify_token} nome="Frase do webhook" variavel="WHATSAPP_VERIFY_TOKEN" texto="Uma frase qualquer escolhida por você; a mesma vai no painel da Meta." />
+          </ul>
+          {!tudoConfigurado && <p className="wa-nota">Depois de salvar uma variável no Railway, o servidor reinicia sozinho; volte aqui e clique em Atualizar.</p>}
+        </Secao>
+      </div>
+
+      <Secao icone="📨" titulo="Avisos da Meta (webhook)" sub="É por aqui que o sistema recebe as mensagens e sabe se as enviadas foram entregues/lidas.">
+        <div className="wa-campo">
+          <span className="wa-campo-label">URL de callback (cole no painel da Meta)</span>
+          <div className="wa-copiar">
+            <code>{c.webhook_url}</code>
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => copiar(c.webhook_url)}>Copiar</button>
+          </div>
+        </div>
+        <p className="wa-nota">Em <strong>Verificar token</strong>, no painel da Meta, use a mesma frase de <code>WHATSAPP_VERIFY_TOKEN</code>. Depois assine o campo <strong>messages</strong>.</p>
+        <div className="wa-linha">
+          <span className={`wa-pilula ${c.webhook_assinado ? "ok" : "atencao"}`}>
+            {c.webhook_assinado ? "Conta do WhatsApp enviando avisos para o app" : c.webhook_assinado === false ? "Conta ainda não envia avisos para o app" : "—"}
+          </span>
+          {pode && c.config.token && !c.webhook_assinado && (
+            <button type="button" className="sa-btn sa-btn-primary sa-btn-sm" disabled={ocupado}
+              onClick={() => acao("/conexao/assinar-webhook", null, "Pronto! A conta passa a enviar os avisos.")}>Ligar avisos desta conta</button>
+          )}
+        </div>
+      </Secao>
+
+      <Secao icone="🏪" titulo="Liberar para as lojas">
+        <label className={`wa-toggle${!pode || ocupado ? " desab" : ""}`}>
+          <input type="checkbox" checked={!!liberado} disabled={!pode || ocupado}
+            onChange={async e => { const j = await acao("/conexao/liberar", { ativo: e.target.checked }, e.target.checked ? "WhatsApp liberado para as lojas." : "WhatsApp pausado para as lojas."); if (j) onLiberado(j.ativo); }} />
+          <span className="wa-toggle-trilho"><span /></span>
+          <span>{liberado ? "Liberado: a tela das lojas mostra o serviço no ar" : "Em testes: a tela das lojas mostra \"Em breve\""}</span>
+          <Dica texto="Enquanto estiver em testes, as lojas já podem contratar e cadastrar números, mas a tela avisa que o serviço ainda está em lançamento." />
+        </label>
+      </Secao>
+
+      {pode && (
+        <Secao icone="🧪" titulo="Mensagem de teste">
+          <p className="wa-nota">
+            A Meta só deixa o sistema mandar texto livre para quem falou com ele nas últimas 24h. Antes, mande um <strong>"oi"</strong> do seu
+            WhatsApp para <strong>{n?.display_phone_number || "o número do sistema"}</strong> (o sistema vai responder sozinho) e depois teste aqui.
+          </p>
+          <div className="wa-teste">
+            <label className="wa-campo">
+              <span className="wa-campo-label">Para (DDD + número)</span>
+              <input className="sa-input" inputMode="tel" maxLength={20} placeholder="(53) 99999-9999" value={tel} onChange={e => setTel(e.target.value)} />
+            </label>
+            <label className="wa-campo wa-teste-texto">
+              <span className="wa-campo-label">Mensagem</span>
+              <input className="sa-input" maxLength={1000} value={texto} onChange={e => setTexto(e.target.value)} />
+            </label>
+            <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado || !c.config.token || !tel.trim() || !texto.trim()}
+              onClick={() => acao("/teste", { telefone: tel, texto }, "Mensagem enviada! Confira no celular.")}>Enviar teste</button>
+          </div>
+        </Secao>
+      )}
+
+      <Secao icone="🗒️" titulo="Últimas mensagens" sub="Enviadas e recebidas pelo número do sistema (as 30 mais recentes).">
+        <div className="wa-linha" style={{ marginBottom: 10 }}>
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={carregar}>↻ Atualizar</button>
+        </div>
+        {!msgs || msgs.length === 0 ? <div className="wa-vazio-mini">Nenhuma mensagem ainda.</div> : (
+          <div className="wa-tabela-rolagem">
+            <table className="wa-tabela">
+              <thead><tr><th>Quando</th><th></th><th>Número</th><th>Loja</th><th>Tipo</th><th>Situação</th></tr></thead>
+              <tbody>
+                {msgs.map(m => (
+                  <tr key={m.id}>
+                    <td className="wa-nowrap">{new Date(m.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td title={m.direcao === "entrada" ? "Recebida" : "Enviada"}>{m.direcao === "entrada" ? "↘" : "↗"}</td>
+                    <td className="wa-nowrap">{m.destino_formatado || m.destino}</td>
+                    <td>{m.loja_nome || <span className="wa-sutil-txt">—</span>}</td>
+                    <td>{TIPO_ENVIO[m.tipo] || m.tipo}</td>
+                    <td>
+                      <span className={`wa-pilula ${m.status === "falhou" ? "perigo" : m.status === "lido" || m.status === "entregue" ? "ok" : ""}`}>{STATUS_MSG[m.status] || m.status}</span>
+                      {m.status === "falhou" && <small className="wa-msg-erro">{m.erro_explicado || m.erro_mensagem || `Erro ${m.erro_codigo}`}</small>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Secao>
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════
    ABA LOJAS — planos contratados, pedidos, pacotes (29/09)
