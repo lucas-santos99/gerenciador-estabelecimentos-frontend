@@ -23,6 +23,7 @@ import Comunicados from "./pages/Administrador/Comunicados/Comunicados";
 import NotificacoesAdmin from "./pages/Administrador/Notificacoes/NotificacoesAdmin";
 import WhatsAppAdmin from "./pages/Administrador/WhatsApp/WhatsAppAdmin";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
+import Privacidade from "./pages/Privacidade/Privacidade";
 
 // Painéis
 import PainelEstabelecimento from "./pages/Estabelecimento/PainelEstabelecimento";
@@ -126,6 +127,7 @@ function App() {
       <Route path="/recuperar-senha" element={<RecuperarSenha />} />
       <Route path="/auth/callback"   element={<AuthCallback />} />
       <Route path="/nova-senha"      element={<NovaSenha />} />
+      <Route path="/privacidade"     element={<Privacidade />} /> {/* pública — exigida pela Meta (WhatsApp) */}
 
       {/* ── PAINEL ADMINISTRADOR ────────────────────────── */}
 

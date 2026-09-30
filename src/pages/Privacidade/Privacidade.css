@@ -1,0 +1,36 @@
+/* Privacidade.css — página pública da Política de Privacidade (30/09/2026).
+   Cores próprias (não dependem do painel), com tema claro e escuro. */
+.priv-root {
+  --pv-bg: #0f172a; --pv-card: #111c30; --pv-borda: rgba(148,163,184,0.18);
+  --pv-texto: #e2e8f0; --pv-suave: #94a3b8; --pv-destaque: #2dd4bf; --pv-destaque-bg: rgba(45,212,191,0.08);
+  min-height: 100vh; background: var(--pv-bg); color: var(--pv-texto);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  padding: 40px 16px 60px; box-sizing: border-box;
+}
+body.light .priv-root {
+  --pv-bg: #f1f5f9; --pv-card: #ffffff; --pv-borda: rgba(15,23,42,0.1);
+  --pv-texto: #0f172a; --pv-suave: #475569; --pv-destaque: #0d9488; --pv-destaque-bg: rgba(13,148,136,0.07);
+}
+.priv-pagina { max-width: 820px; margin: 0 auto; }
+.priv-topo { margin-bottom: 24px; }
+.priv-marca { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pv-destaque); }
+.priv-topo h1 { margin: 8px 0 6px; font-size: clamp(1.7rem, 4vw, 2.3rem); line-height: 1.15; }
+.priv-sub { margin: 0 0 16px; color: var(--pv-suave); font-size: 0.9rem; }
+.priv-resumo { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--pv-destaque-bg); border-left: 3px solid var(--pv-destaque); line-height: 1.6; font-size: 0.95rem; }
+.priv-indice { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 14px 16px; margin-bottom: 18px; border-radius: 12px; background: var(--pv-card); border: 1px solid var(--pv-borda); font-size: 0.84rem; }
+.priv-indice a { color: var(--pv-suave); text-decoration: none; }
+.priv-indice a:hover { color: var(--pv-destaque); text-decoration: underline; }
+.priv-conteudo { display: flex; flex-direction: column; gap: 14px; }
+.priv-conteudo section { padding: 20px 22px; border-radius: 14px; background: var(--pv-card); border: 1px solid var(--pv-borda); scroll-margin-top: 16px; }
+.priv-conteudo section.priv-destaque { border-color: var(--pv-destaque); box-shadow: 0 0 0 1px var(--pv-destaque) inset; }
+.priv-conteudo h2 { margin: 0 0 10px; font-size: 1.1rem; }
+.priv-conteudo p, .priv-conteudo li { font-size: 0.93rem; line-height: 1.7; }
+.priv-conteudo p { margin: 0 0 10px; }
+.priv-conteudo p:last-child { margin-bottom: 0; }
+.priv-conteudo ul, .priv-conteudo ol { margin: 0 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.priv-root a { color: var(--pv-destaque); word-break: break-word; }
+.priv-rodape { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 26px; font-size: 0.85rem; color: var(--pv-suave); }
+@media (max-width: 560px) {
+  .priv-root { padding: 24px 12px 40px; }
+  .priv-conteudo section { padding: 16px; }
+}
