@@ -1413,6 +1413,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
               <thead><tr>
                 <th>Loja</th><th>Plano</th><th>Ciclo</th>
                 <th>Saldo <Dica lado="baixo" texto="Créditos disponíveis no ciclo atual / total que entrou no ciclo (plano + pacotes + ajustes)." /></th>
+                <th>Custo real <Dica lado="baixo" texto="Custo das mensagens da loja neste ciclo (Meta + IA, pelo registro de envios), em % do preço do plano. Passou do % de aviso: você é avisado. Passou do % de ação: o assistente pausa (conforme Custos e parâmetros → teto por loja) até você retomar." /></th>
                 <th></th>
               </tr></thead>
               <tbody>
@@ -1427,7 +1428,17 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                         <span>{nf(a.saldo, a.saldo % 1 ? 1 : 0)} / {nf(a.entradas)}</span>
                         <div className={`wa-barra${pct <= 20 ? " baixa" : ""}`}><div style={{ width: `${pct}%` }} /></div>
                       </td>
+                      <td className="wa-teto-cel">
+                        {a.teto ? (<>
+                          <span>{brl(a.teto.custo)}{a.teto.pct != null && <small> · {a.teto.pct}%</small>}</span>
+                          {a.teto.pausado && <span className="wa-tag-teto pausado">⏸ pausado pelo teto</span>}
+                          {!a.teto.pausado && a.teto.liberado && <span className="wa-tag-teto liberado" title={a.teto.liberado_por ? `Retomado por ${a.teto.liberado_por}` : ""}>▶ retomado</span>}
+                          {!a.teto.pausado && !a.teto.liberado && a.teto.aviso && <span className="wa-tag-teto aviso">⚠ passou do aviso</span>}
+                        </>) : "—"}
+                      </td>
                       <td className="wa-acoes-cel">
+                        {pode && a.teto?.pausado && <button type="button" className="sa-btn sa-btn-primary sa-btn-sm" disabled={ocupado}
+                          onClick={() => setModal({ tipo: "retomar", item: a })}>Retomar</button>}
                         <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirExtrato(a)}>Extrato</button>
                         {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ajuste", item: a, quantidade: "", motivo: "" })}>Ajustar</button>}
                         {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm wa-btn-excluir" disabled={ocupado} onClick={() => setModal({ tipo: "encerrar", item: a, imediato: false, motivo: "" })}>Encerrar</button>}
@@ -1491,6 +1502,20 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                 <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
                 <button type="button" className="sa-btn sa-btn-danger" disabled={ocupado}
                   onClick={() => acao(modal.tipo === "recusar" ? `/assinaturas/${modal.item.id}/recusar` : `/pacotes/${modal.item.id}/recusar`, { motivo: modal.motivo }, "Recusado.")}>Recusar</button>
+              </div>
+            </>)}
+            {modal.tipo === "retomar" && (<>
+              <div className="sa-modal-icon">▶️</div>
+              <div className="sa-modal-title">Retomar o assistente de {modal.item.loja_nome}?</div>
+              <div className="sa-modal-subtitle">
+                Foi pausado porque o custo real deste ciclo chegou a {brl(modal.item.teto?.custo)}
+                {modal.item.teto?.pct != null ? ` (${modal.item.teto.pct}% do plano de ${brl(modal.item.preco)}/mês)` : ""}.
+                {" "}Confira antes o uso em Conexão → Últimas mensagens. Retomando, as consultas voltam na hora e não pausam de novo até o fim deste ciclo ({dataBRs(modal.item.ciclo_fim)}).
+              </div>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
+                <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/retomar`, {}, "Assistente retomado.")}>Retomar assistente</button>
               </div>
             </>)}
             {modal.tipo === "ajuste" && (<>

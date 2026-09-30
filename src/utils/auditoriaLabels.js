@@ -24,6 +24,7 @@ export const MODULO_LABEL = {
   estabelecimentos: '🏢 Estabelecimentos',
   superadmins:    '👑 SuperAdmins',
   assinatura:     '💳 Assinatura',
+  whatsapp:       '💬 WhatsApp',
 };
 
 export const MODULO_COR = {
@@ -32,7 +33,7 @@ export const MODULO_COR = {
   fornecedores: 'orange', inventario: 'cyan',
   operadores: 'pink', auth: 'blue',
   estabelecimentos: 'teal', superadmins: 'purple',
-  assinatura: 'green',
+  assinatura: 'green', whatsapp: 'green',
 };
 
 export const ACAO_LABEL = {
@@ -120,4 +121,35 @@ export const ACAO_LABEL = {
   licenca_renovada_pix:        '📱 Licença renovada (Pix)',
   licenca_pagamento_estornado: '↩️ Pagamento estornado',
   licenca_pagamento_alerta:    '⚠️ Pagamento para revisar',
+
+  // WhatsApp (planos, números, assistente — 24 a 30/09/2026)
+  whatsapp_plano_solicitado:      '💬 Plano de WhatsApp solicitado',
+  whatsapp_troca_solicitada:      '🔁 Troca de plano de WhatsApp solicitada',
+  whatsapp_solicitacao_desistiu:  '↩️ Solicitação de WhatsApp cancelada',
+  whatsapp_cancelamento_agendado: '📅 Cancelamento do WhatsApp agendado',
+  whatsapp_cancelamento_desfeito: '↩️ Cancelamento do WhatsApp desfeito',
+  whatsapp_pacote_solicitado:     '➕ Pacote extra pedido',
+  whatsapp_pacote_desistiu:       '↩️ Pacote extra cancelado',
+  whatsapp_pacote_aprovado:       '✅ Pacote extra aprovado',
+  whatsapp_pacote_recusado:       '❌ Pacote extra recusado',
+  whatsapp_numero_cadastrado:     '📱 Número de WhatsApp cadastrado',
+  whatsapp_numero_confirmado:     '✅ Número de WhatsApp confirmado',
+  whatsapp_numero_pessoa:         '👤 Pessoa do número alterada',
+  whatsapp_numero_removido:       '🗑️ Número de WhatsApp removido',
+  whatsapp_plano_ativado_loja:    '✅ Plano de WhatsApp ativado',
+  whatsapp_plano_recusado_loja:   '❌ Plano de WhatsApp recusado',
+  whatsapp_plano_encerrado_loja:  '⏹️ Plano de WhatsApp encerrado',
+  whatsapp_creditos_ajuste:       '🧮 Créditos de WhatsApp ajustados',
+  whatsapp_teto_aviso:            '⚠️ WhatsApp passou do aviso de custo',
+  whatsapp_teto_pausado:          '⏸️ Assistente pausado pelo teto de custo',
+  whatsapp_teto_retomado:         '▶️ Assistente retomado',
+  whatsapp_plano_criado:          '➕ Plano de WhatsApp criado',
+  whatsapp_plano_editado:         '✏️ Plano de WhatsApp editado',
+  whatsapp_plano_excluido:        '🗑️ Plano de WhatsApp excluído',
+  whatsapp_plano_ativado:         '✅ Plano de WhatsApp disponível para venda',
+  whatsapp_plano_desativado:      '⏸️ Plano de WhatsApp tirado de venda',
+  whatsapp_parametros:            '⚙️ Parâmetros do WhatsApp editados',
+  whatsapp_liberado:              '🔌 WhatsApp liberado/pausado para as lojas',
+  whatsapp_webhook_assinado:      '🔌 Avisos do WhatsApp ligados',
+  whatsapp_teste:                 '🧪 Mensagem de teste',
 };

@@ -135,6 +135,18 @@
 .wal-numeros li > div:first-child { flex: 1; min-width: 160px; display: flex; flex-direction: column; }
 .wal-numeros li > div:first-child span { font-size: 0.82rem; color: var(--est-text-soft); font-variant-numeric: tabular-nums; }
 .wal-numero-acoes { display: flex; gap: 12px; }
+/* Pessoa ligada ao número (30/09) */
+.wal-numero-pessoa { display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--est-text-soft); }
+.wal-numero-pessoa select,
+.wal-novo-numero select {
+  padding: 7px 10px; border-radius: 10px; border: 1px solid var(--est-border); background: var(--est-input);
+  color: var(--est-input-text, var(--est-text)); font: inherit; font-size: 0.86rem; text-transform: none; letter-spacing: 0; font-weight: 500; min-width: 0; max-width: 100%;
+}
+.wal-novo-numero select { padding: 10px 12px; }
+.wal-numero-pessoa select:focus,
+.wal-novo-numero select:focus { outline: none; border-color: var(--est-accent); box-shadow: 0 0 0 3px var(--est-accent-dim); }
+.wal-numeros li > div:first-child span.wal-perigo-txt { font-size: 0.78rem; color: var(--est-danger); font-weight: 600; }
+.wal-aviso-pausa { margin-top: 12px; }
 .wal-novo-numero {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; padding: 14px;
   border-radius: 12px; border: 1px dashed var(--est-border-accent); background: var(--est-hover);

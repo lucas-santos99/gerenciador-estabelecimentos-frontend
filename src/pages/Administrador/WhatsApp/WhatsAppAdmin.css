@@ -423,6 +423,14 @@
 .wa-nowrap { white-space: nowrap; }
 .wa-tag-encerra { display: inline-block; margin-left: 8px; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--bg-warning); color: var(--text-warning); }
 .wa-saldo-cel { min-width: 130px; }
+/* Teto de custo por loja (30/09) */
+.wa-teto-cel { min-width: 120px; }
+.wa-teto-cel > span:first-child { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wa-teto-cel small { font-weight: 500; color: var(--text-secondary); }
+.wa-tag-teto { display: inline-block; margin-top: 4px; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; white-space: nowrap; }
+.wa-tag-teto.pausado { background: var(--bg-danger); color: var(--text-danger); }
+.wa-tag-teto.aviso { background: var(--bg-warning); color: var(--text-warning); }
+.wa-tag-teto.liberado { background: var(--bg-success); color: var(--text-success); }
 .wa-saldo-cel span { display: block; margin-bottom: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .wa-barra.baixa > div { background: #ef4444; }
 .wa-acoes-cel { white-space: nowrap; text-align: right; }

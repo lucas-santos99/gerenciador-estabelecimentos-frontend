@@ -124,7 +124,7 @@ export default function WhatsAppLoja() {
   const [mostrarPlanos, setMostrarPlanos] = useState(false);
   const [planoTabela, setPlanoTabela] = useState(null);
   const [extrato, setExtrato] = useState(null);
-  const [novoNumero, setNovoNumero] = useState(null); // { apelido, telefone }
+  const [novoNumero, setNovoNumero] = useState(null); // { usuario_id, telefone }
   const [codigoGerado, setCodigoGerado] = useState(null); // { apelido, telefone_formatado, codigo }
 
   const avisar = useCallback((msg, tipo = "ok") => setToast({ msg, tipo, id: Date.now() }), []);
@@ -208,8 +208,15 @@ export default function WhatsAppLoja() {
   }
 
   async function salvarNumero() {
+    if (!novoNumero.usuario_id) { avisar("Escolha a pessoa que vai usar este número.", "erro"); return; }
     const j = await chamar("/vinculos", { method: "POST", body: JSON.stringify(novoNumero) }, "Número cadastrado.");
     if (j) { setNovoNumero(null); setCodigoGerado({ apelido: j.vinculo.apelido, telefone_formatado: j.vinculo.telefone_formatado, codigo: j.codigo }); }
+  }
+  // Troca a pessoa ligada ao número (30/09): as consultas passam a seguir
+  // as permissões dela no sistema
+  async function trocarPessoa(v, usuarioId) {
+    if (!usuarioId || usuarioId === v.usuario_id) return;
+    await chamar(`/vinculos/${v.id}`, { method: "PATCH", body: JSON.stringify({ usuario_id: usuarioId }) }, "Pessoa do número atualizada.");
   }
   async function gerarCodigo(v) {
     const j = await chamar(`/vinculos/${v.id}/codigo`, { method: "POST" });
@@ -240,6 +247,7 @@ export default function WhatsAppLoja() {
     : null;
   const usoPorPedido = ativa ? PEDIDO_USO.map(t => ({ ...t, ...(ativa.por_pedido?.[t.id] || { pedidos: 0, creditos: 0 }) })).filter(t => t.pedidos > 0 || t.creditos > 0) : [];
   const vinculos = d.vinculos || [];
+  const pessoas = d.pessoas || [];
   const podeNumeros = !!(ativa || pendente);
   const semPlanos = !d.planos.length;
 
@@ -315,6 +323,11 @@ export default function WhatsAppLoja() {
             {pct <= 20 && ativa.entradas > 0 && <span className="wal-perigo-txt">Saldo baixo — considere um pacote extra.</span>}
             <span className="wal-ao-vivo" title="Esta tela se atualiza sozinha quando você usa o WhatsApp.">● Atualiza sozinho</span>
           </div>
+          {ativa.pausado_teto && (
+            <div className="wal-aviso perigo wal-aviso-pausa">
+              ⏸ As consultas pelo WhatsApp estão <strong>pausadas</strong> por uso fora do normal neste ciclo (proteção prevista nos termos). Nossa equipe já foi avisada e vai verificar. O seu saldo continua guardado.
+            </div>
+          )}
 
           {/* ── Onde você usou neste ciclo (30/09) ────────── */}
           <div className="wal-uso">
@@ -454,21 +467,33 @@ export default function WhatsAppLoja() {
         ) : (
           <>
             <p className="wal-sutil">Só números cadastrados e confirmados conversam com o sistema. Para confirmar, a pessoa envia o código de 6 dígitos, <strong>pelo WhatsApp daquele número</strong>, para o WhatsApp do sistema.</p>
+            <p className="wal-sutil">Cada número fica ligado a uma pessoa da loja e <strong>só consulta o que ela pode ver no sistema</strong> (as mesmas permissões do painel). Depois de confirmado, é só mandar <strong>menu</strong> no WhatsApp.</p>
             {vinculos.length > 0 && (
               <ul className="wal-numeros">
                 {vinculos.map(v => (
                   <li key={v.id}>
                     <div>
-                      <strong>{v.apelido}</strong>
-                      <span>{v.telefone_formatado}</span>
+                      <strong>{v.pessoa_nome || v.apelido}</strong>
+                      <span>{v.telefone_formatado}{v.pessoa_papel ? ` · ${v.pessoa_papel}` : ""}</span>
+                      {v.pessoa_invalida && <span className="wal-perigo-txt">Pessoa inativa ou removida — escolha outra para o número voltar a funcionar.</span>}
                     </div>
+                    {pessoas.length > 1 || v.pessoa_invalida ? (
+                      <label className="wal-numero-pessoa" title="Quem usa este número">
+                        <span>Quem usa</span>
+                        <select value={v.pessoa_invalida ? "" : (v.usuario_id || "")} disabled={ocupado}
+                          onChange={e => trocarPessoa(v, e.target.value)}>
+                          {v.pessoa_invalida && <option value="">Escolha…</option>}
+                          {pessoas.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.papel})</option>)}
+                        </select>
+                      </label>
+                    ) : null}
                     <span className={`wal-chip ${v.status === "ativo" ? "aprovado" : v.codigo_expirado ? "recusado" : "aguardando"}`}>
                       {v.status === "ativo" ? "Confirmado" : v.codigo_expirado ? "Código expirado" : "Aguardando código"}
                     </span>
                     <div className="wal-numero-acoes">
                       {v.status === "pendente" && <button type="button" className="wal-link" disabled={ocupado} onClick={() => gerarCodigo(v)}>novo código</button>}
                       <button type="button" className="wal-link perigo" disabled={ocupado}
-                        onClick={() => setConfirmar({ titulo: "Remover este número?", texto: `${v.apelido} (${v.telefone_formatado}) deixa de conversar com o sistema.`, botao: "Remover", perigo: true, acao: () => chamar(`/vinculos/${v.id}`, { method: "DELETE" }, "Número removido.") })}>
+                        onClick={() => setConfirmar({ titulo: "Remover este número?", texto: `${v.pessoa_nome || v.apelido} (${v.telefone_formatado}) deixa de conversar com o sistema.`, botao: "Remover", perigo: true, acao: () => chamar(`/vinculos/${v.id}`, { method: "DELETE" }, "Número removido.") })}>
                         remover
                       </button>
                     </div>
@@ -480,9 +505,12 @@ export default function WhatsAppLoja() {
               novoNumero ? (
                 <div className="wal-novo-numero">
                   <label>
-                    <span>De quem é</span>
-                    <input value={novoNumero.apelido} maxLength={60} autoFocus placeholder="Ex.: Dono, Gerente"
-                      onChange={e => setNovoNumero(n => ({ ...n, apelido: e.target.value }))} />
+                    <span>Quem vai usar</span>
+                    <select value={novoNumero.usuario_id} autoFocus
+                      onChange={e => setNovoNumero(n => ({ ...n, usuario_id: e.target.value }))}>
+                      <option value="">Escolha a pessoa…</option>
+                      {pessoas.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.papel})</option>)}
+                    </select>
                   </label>
                   <label>
                     <span>WhatsApp (com DDD)</span>
@@ -492,11 +520,11 @@ export default function WhatsAppLoja() {
                   </label>
                   <div className="wal-acoes">
                     <button type="button" className="wal-btn wal-btn-leve" onClick={() => setNovoNumero(null)} disabled={ocupado}>Cancelar</button>
-                    <button type="button" className="wal-btn wal-btn-primario" onClick={salvarNumero} disabled={ocupado || !novoNumero.apelido.trim() || novoNumero.telefone.replace(/\D/g, "").length < 10}>Cadastrar e gerar código</button>
+                    <button type="button" className="wal-btn wal-btn-primario" onClick={salvarNumero} disabled={ocupado || !novoNumero.usuario_id || novoNumero.telefone.replace(/\D/g, "").length < 10}>Cadastrar e gerar código</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" className="wal-btn" onClick={() => setNovoNumero({ apelido: "", telefone: "" })}>+ Cadastrar número</button>
+                <button type="button" className="wal-btn" onClick={() => setNovoNumero({ usuario_id: pessoas.length === 1 ? pessoas[0].id : "", telefone: "" })}>+ Cadastrar número</button>
               )
             ) : (
               <p className="wal-sutil">Seu plano permite {d.limite_numeros} número{d.limite_numeros === 1 ? "" : "s"}. Para cadastrar outro, remova um ou troque de plano.</p>
@@ -545,6 +573,7 @@ export default function WhatsAppLoja() {
             <li>Anote o código (ele não aparece de novo).</li>
             <li>{d.servico.ativo ? "Pelo WhatsApp desse número, envie o código para o WhatsApp do sistema." : "Quando o serviço estiver no ar, envie o código, pelo WhatsApp desse número, para o WhatsApp do sistema."}</li>
             <li>O código vale 24 horas. Se expirar, é só gerar outro aqui.</li>
+            {d.servico.ativo && <li>Depois de confirmado, mande <strong>menu</strong> para ver as consultas.</li>}
           </ol>
           <div className="wal-acoes fim">
             <button type="button" className="wal-btn" onClick={() => { try { navigator.clipboard?.writeText(codigoGerado.codigo); avisar("Código copiado."); } catch { /* sem área de transferência */ } }}>Copiar</button>
