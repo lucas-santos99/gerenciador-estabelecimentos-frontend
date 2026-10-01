@@ -576,3 +576,28 @@
   .wa-subabas button { flex: 1; padding: 8px 6px; white-space: normal; }
   .wa-ul-filtros .wa-campo { flex: 1 1 100%; }
 }
+.wa-ul-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.wa-ul-periodo .wa-campo-label { margin: 0; }
+
+/* ── Pagamentos (01/10/2026) ─────────────────────────────────── */
+.wa-pg { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 14px; text-align: left; }
+.wa-pg-formas { display: flex; flex-wrap: wrap; gap: 6px; }
+.wa-pg-forma { border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font: inherit; font-size: 0.8rem; font-weight: 600; padding: 7px 12px; border-radius: 99px; cursor: pointer; }
+.wa-pg-forma:hover { border-color: var(--border-accent); }
+.wa-pg-forma.ativo { border-color: var(--text-accent); background: var(--bg-success, rgba(16,185,129,0.12)); color: var(--text-accent); box-shadow: 0 0 0 1px var(--text-accent) inset; }
+.wa-pg-forma.sem.ativo { border-color: var(--text-purple); color: var(--text-purple); background: var(--bg-purple); box-shadow: 0 0 0 1px var(--text-purple) inset; }
+.wa-pg-linha { margin: 0; }
+.wa-pg-taxa-link { align-self: flex-start; font-size: 0.78rem; }
+.wa-pg-resumo { font-size: 0.86rem; padding: 10px 12px; border-radius: 10px; background: var(--bg-success, rgba(16,185,129,0.1)); color: var(--text-primary); }
+.wa-pg-resumo strong { color: var(--text-success); font-size: 0.95rem; }
+.wa-pg-resumo.sem { background: var(--bg-purple); }
+.wa-pg-resumo.sem strong { color: var(--text-purple); }
+.wa-pg-chip { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--bg-hover); color: var(--text-primary); white-space: nowrap; }
+.wa-pg-chip.alerta { background: var(--bg-warning); color: var(--text-warning); }
+.wa-pg-cel { min-width: 150px; }
+.wa-pg-cel > * { display: block; margin-bottom: 4px; }
+.wa-pg-cel > .wa-pg-chip, .wa-pg-cel > .wa-tag-teto { display: inline-block; }
+.wa-pg-cel .sa-btn { margin-top: 2px; }
+.wa-link-sm { font-size: 0.75rem; }
+.wa-extrato-sub { margin: 14px 0 6px; font-size: 0.85rem; color: var(--text-primary); }
+.wa-ul-formas { white-space: normal; }

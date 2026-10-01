@@ -336,6 +336,12 @@ export default function WhatsAppLoja() {
             {pct <= 20 && ativa.entradas > 0 && <span className="wal-perigo-txt">Saldo baixo — considere um pacote extra.</span>}
             <span className="wal-ao-vivo" title="Esta tela se atualiza sozinha quando você usa o WhatsApp.">● Atualiza sozinho</span>
           </div>
+          {ativa.aguardando_pagamento && (
+            <div className="wal-aviso alerta wal-aviso-pausa">
+              ⏳ Seu plano renovou em <strong>{dataBR(ativa.ciclo_inicio)}</strong> e está <strong>aguardando o pagamento</strong> da mensalidade do WhatsApp ({brl(ativa.valor_mensal ?? ativa.preco)}).
+              {" "}Assim que o pagamento for confirmado, os créditos do novo ciclo entram aqui e o assistente volta a responder na hora.
+            </div>
+          )}
           {ativa.pausado_teto && (
             <div className="wal-aviso perigo wal-aviso-pausa">
               ⏸ As consultas pelo WhatsApp estão <strong>pausadas</strong> por uso fora do normal neste ciclo (proteção prevista nos termos). Nossa equipe já foi avisada e vai verificar. O seu saldo continua guardado.

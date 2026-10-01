@@ -21,6 +21,7 @@ import { useAvisosGlobais } from "../../../utils/realtimeEstab";
 import {
   TIPOS_PEDIDO, normalizarParametros, aplicarDolarAuto, piorCasoPorPedido,
   custoMaxPorCredito, calcularPlano, iaEmReais,
+  FORMAS_PAGAMENTO, FORMAS_SEM_RECEITA, taxaRecebimento,
 } from "../../../utils/whatsappCustos";
 import "../SuperAdmins/SuperAdmins.css";
 import "./WhatsAppAdmin.css";
@@ -834,6 +835,18 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
               {C("numeros.max_extras", "Máximo de extras por loja", { tipo: "inteiro", dica: "Quantos números além do plano uma loja pode ter." })}
             </div>
           </Secao>
+
+          <Secao icone="💳" titulo="Taxas de recebimento"
+            sub="Usadas no valor líquido de cada pagamento que você registra na aba Lojas (ativar plano, renovar ciclo, pacote extra). Dinheiro, transferência direta, cortesia e teste não têm taxa. Confira os valores na sua conta de cada provedor.">
+            <div className="wa-linha">
+              {C("recebimento.pix_efi_pct", "Pix (Efí)", { sufixo: "%", dica: "Tarifa da Efí por Pix recebido por cobrança (QR dinâmico / copia e cola). Página de tarifas da Efí: 1,19%." })}
+              {C("recebimento.pix_efi_fixo", "Pix (Efí) — fixo", { prefixo: "R$", dica: "Valor fixo por Pix, se o seu contrato tiver (normalmente 0)." })}
+            </div>
+            <div className="wa-linha">
+              {C("recebimento.cartao_asaas_pct", "Cartão (Asaas)", { sufixo: "%", dica: "Percentual da Asaas no cartão de crédito à vista. Tabela padrão do site: 2,99% (confira o seu contrato)." })}
+              {C("recebimento.cartao_asaas_fixo", "Cartão (Asaas) — fixo", { prefixo: "R$", dica: "Valor fixo por cobrança no cartão. Tabela padrão: R$ 0,49." })}
+            </div>
+          </Secao>
         </div>
 
         <div className="wa-custos-col">
@@ -862,7 +875,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
             sub="Preço mínimo = créditos × custo máx. por crédito × margem de segurança ÷ (1 − impostos − taxa).">
             <div className="wa-linha">
               {C("precificacao.impostos_pct", "Impostos", { sufixo: "%", dica: "Imposto sobre o que você recebe (ex.: Simples/MEI/carnê-leão). Confirme com seu contador." })}
-              {C("precificacao.taxa_gateway_pct", "Taxa do pagamento", { sufixo: "%", dica: "Taxa do meio de pagamento (Pix, cartão, boleto…)." })}
+              {C("precificacao.taxa_gateway_pct", "Taxa do pagamento", { sufixo: "%", dica: "Taxa média do meio de pagamento, usada só pra calcular o preço mínimo dos planos (planejamento). O lucro real de cada loja usa a taxa de cada pagamento registrado (Taxas de recebimento)." })}
             </div>
             <div className="wa-linha">
               {C("precificacao.margem_seguranca", "Margem de segurança", { prefixo: "×", dica: "Multiplicador de folga sobre o pior caso (1,3 = 30% a mais) pra cobrir alta do dólar ou da Meta." })}
@@ -1354,6 +1367,86 @@ const STATUS_ASSIN = { recusada: "Recusada", cancelada: "Cancelada", substituida
 const MOV_TIPO = { credito_ciclo: "Créditos do ciclo", pacote: "Pacote extra", consumo: "Uso", estorno: "Estorno", ajuste: "Ajuste", expirado: "Expirado" };
 const dataBRs = (s) => { if (!s) return ""; const [a, m, d] = String(s).slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
 
+/* ── Pagamento (01/10/2026, SQL 18) ─────────────────────────── */
+const ICONE_FORMA = { pix_efi: "⚡", cartao_asaas: "💳", dinheiro: "💵", transferencia: "🏦", cortesia: "🎁", teste: "🧪", nao_informado: "❔" };
+const hojeISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+const lerNumBR = (v) => {
+  const t = String(v ?? "").trim();
+  const n = parseFloat(t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t);
+  return Number.isFinite(n) ? n : 0;
+};
+const novoPg = (valorTabela, base = null) => ({
+  forma: base && base.forma !== "nao_informado" ? base.forma : "",
+  valor: numStr(Number(base && !FORMAS_SEM_RECEITA.includes(base.forma) ? base.valor_bruto : valorTabela).toFixed(2)),
+  taxa: base ? numStr(Number(base.taxa || 0).toFixed(2)) : "",
+  taxaManual: !!(base && base.forma !== "nao_informado" && Number(base.taxa) > 0),
+  pago_em: (base && base.pago_em) || hojeISO(),
+  observacao: (base && base.observacao) || "",
+});
+function previaPg(pg, recebimento) {
+  const sem = FORMAS_SEM_RECEITA.includes(pg.forma);
+  const bruto = sem ? 0 : lerNumBR(pg.valor);
+  const taxa = sem ? 0 : (pg.taxaManual ? lerNumBR(pg.taxa) : taxaRecebimento({ recebimento }, pg.forma, bruto));
+  return { sem, bruto, taxa, liquido: bruto - taxa };
+}
+const corpoPg = (pg, recebimento) => {
+  const pv = previaPg(pg, recebimento);
+  return { forma: pg.forma, valor: pv.bruto, ...(pg.taxaManual && !pv.sem ? { taxa: pv.taxa } : {}), pago_em: pg.pago_em, observacao: pg.observacao };
+};
+function rotuloForma(f) { return `${ICONE_FORMA[f] || ""} ${FORMAS_PAGAMENTO[f] || f}`.trim(); }
+
+function CamposPagamento({ pg, setPg, valorTabela, recebimento, rotuloValor = "Valor recebido" }) {
+  const pv = previaPg(pg, recebimento);
+  const muda = (campo, v) => setPg(x => ({ ...x, [campo]: v }));
+  const opcoes = Object.keys(FORMAS_PAGAMENTO).filter(k => k !== "nao_informado");
+  return (
+    <div className="wa-pg">
+      <span className="wa-campo-label">Como foi pago?</span>
+      <div className="wa-pg-formas" role="radiogroup" aria-label="Forma de pagamento">
+        {opcoes.map(k => (
+          <button key={k} type="button" role="radio" aria-checked={pg.forma === k}
+            className={`wa-pg-forma${pg.forma === k ? " ativo" : ""}${FORMAS_SEM_RECEITA.includes(k) ? " sem" : ""}`}
+            onClick={() => muda("forma", k)}>{rotuloForma(k)}</button>
+        ))}
+      </div>
+      {pg.forma && (
+        <div className="wa-linha wa-pg-linha">
+          {!pv.sem && <Campo label={rotuloValor} prefixo="R$" valor={pg.valor} onChange={v => muda("valor", v)} largura={150}
+            dica={`Valor de tabela: ${brl(valorTabela)}. Mude se a loja pagou outro valor (desconto, acerto).`} />}
+          {!pv.sem && (pg.forma === "pix_efi" || pg.forma === "cartao_asaas" || pg.taxaManual) && (
+            <Campo label={pg.taxaManual ? "Taxa (informada)" : "Taxa estimada"} prefixo="R$" largura={150}
+              valor={pg.taxaManual ? pg.taxa : numStr(pv.taxa.toFixed(2))} disabled={!pg.taxaManual} onChange={v => muda("taxa", v)}
+              dica={pg.taxaManual ? "Taxa que o provedor cobrou de verdade." : "Calculada pelas Taxas de recebimento (Custos e parâmetros). Se o provedor cobrou outro valor, clique em \"informar a taxa\"."} />
+          )}
+          <label className="wa-campo" style={{ maxWidth: 170 }}>
+            <span className="wa-campo-label">Data do pagamento</span>
+            <input type="date" className="sa-input" value={pg.pago_em} max={hojeISO()} onChange={e => muda("pago_em", e.target.value)} />
+          </label>
+        </div>
+      )}
+      {pg.forma && !pv.sem && (
+        <button type="button" className="wa-link wa-pg-taxa-link" onClick={() => setPg(x => ({ ...x, taxaManual: !x.taxaManual, taxa: x.taxaManual ? x.taxa : numStr(pv.taxa.toFixed(2)) }))}>
+          {pg.taxaManual ? "Usar a taxa estimada" : "Informar a taxa cobrada"}
+        </button>
+      )}
+      {pg.forma && (
+        <label className="wa-campo">
+          <span className="wa-campo-label">Observação (opcional)</span>
+          <input className="sa-input" maxLength={300} value={pg.observacao} placeholder={pv.sem ? "Ex.: período de teste, parceria" : "Ex.: comprovante 123, pago na loja"}
+            onChange={e => muda("observacao", e.target.value)} />
+        </label>
+      )}
+      {pg.forma && (
+        <div className={`wa-pg-resumo${pv.sem ? " sem" : ""}`}>
+          {pv.sem
+            ? <>Libera o ciclo <strong>sem receita</strong>. Fica registrado que você deixou de receber {brl(valorTabela)}.</>
+            : <>Vai cair na conta: <strong>{brl(Math.max(0, pv.liquido))}</strong>{pv.taxa > 0 && <> ({brl(pv.bruto)} − taxa {brl(pv.taxa)})</>}</>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
   const [d, setD] = useState(null);
   const [erro, setErro] = useState("");
@@ -1375,11 +1468,18 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
   useAvisosGlobais(["whatsapp_admin"], carregar, { atraso: 800 });
 
   const pode = !!(d?.pode_editar ?? podeEditarPagina);
+  const receb = d?.recebimento;
+  const setPg = (fn) => setModal(m => ({ ...m, pg: typeof fn === "function" ? fn(m.pg) : fn }));
+  // Valor de tabela de uma ativação (troca de plano leva os números extras)
+  const tabelaAtivacao = (p) => {
+    const atual = (d?.ativas || []).find(a => a.mercearia_id === p.mercearia_id);
+    return (Number(p.preco) || 0) + (atual ? (Number(atual.numeros_extras) || 0) * (Number(atual.numero_extra_preco) || 0) : 0);
+  };
 
-  async function acao(caminho, corpo, msg) {
+  async function acao(caminho, corpo, msg, metodo = "POST") {
     setOcupado(true);
     try {
-      const r = await apiFetch(`${API}${caminho}`, { method: "POST", body: JSON.stringify(corpo || {}) });
+      const r = await apiFetch(`${API}${caminho}`, { method: metodo, body: JSON.stringify(corpo || {}) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Não foi possível concluir.");
       avisar(msg);
@@ -1393,7 +1493,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
       const r = await apiFetch(`${API}/assinaturas/${item.id}/extrato`);
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Erro ao carregar o extrato.");
-      setExtrato({ item, movimentos: j.movimentos || [] });
+      setExtrato({ item, movimentos: j.movimentos || [], pagamentos: j.pagamentos || [] });
     } catch (e) { avisar(e.message, "erro"); }
   }
 
@@ -1405,7 +1505,8 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
   return (
     <div className="wa-aba wa-lojas-aba">
       <div className="wa-aviso-cobranca">
-        <strong>Nesta fase, a ativação é manual.</strong> A loja escolhe o plano e aceita os termos; você combina o pagamento e ativa aqui. Ao ativar, começa o ciclo de 1 mês com o saldo do plano. Troca de plano começa um ciclo novo; o saldo do plano antigo expira.
+<strong>Nesta fase, o pagamento é registrado por você.</strong> A loja escolhe o plano e aceita os termos; ao ativar, você informa como ela pagou (Pix, cartão, dinheiro, cortesia, teste…) e o ciclo de 1 mês começa com o saldo do plano.
+        Todo mês o ciclo renova na mesma data e fica <strong>aguardando pagamento</strong>: os créditos novos entram quando você clica em <strong>Registrar pagamento</strong>. Troca de plano começa um ciclo novo; o saldo do plano antigo expira.
       </div>
 
       {nada && (
@@ -1417,7 +1518,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
       )}
 
       {d.pendentes.length > 0 && (
-        <Secao icone="⏳" titulo={`Pedindo ativação (${d.pendentes.length})`} sub="Confirme o pagamento combinado antes de ativar.">
+        <Secao icone="⏳" titulo={`Pedindo ativação (${d.pendentes.length})`} sub="Ao ativar, você informa como a loja pagou (ou se é cortesia/teste).">
           <ul className="wa-pedidos">
             {d.pendentes.map(p => (
               <li key={p.id}>
@@ -1429,7 +1530,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                 {pode && (
                   <div className="wa-pedido-acoes">
                     <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "recusar", item: p, motivo: "" })}>Recusar</button>
-                    <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ativar", item: p })}>Ativar</button>
+                    <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ativar", item: p, tabela: tabelaAtivacao(p), pg: novoPg(tabelaAtivacao(p)) })}>Ativar</button>
                   </div>
                 )}
               </li>
@@ -1439,7 +1540,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
       )}
 
       {d.pacotes.length > 0 && (
-        <Secao icone="➕" titulo={`Pacotes extras pedidos (${d.pacotes.length})`} sub="Ao aprovar, os créditos entram no ciclo atual da loja.">
+        <Secao icone="➕" titulo={`Pacotes extras pedidos (${d.pacotes.length})`} sub="Ao aprovar, você informa como a loja pagou e os créditos entram no ciclo atual dela.">
           <ul className="wa-pedidos">
             {d.pacotes.map(p => (
               <li key={p.id}>
@@ -1452,7 +1553,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                   <div className="wa-pedido-acoes">
                     <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "recusar_pacote", item: p, motivo: "" })}>Recusar</button>
                     <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado}
-                      onClick={() => acao(`/pacotes/${p.id}/aprovar`, {}, `Pacote aprovado: +${nf(p.creditos)} créditos para ${p.loja_nome}.`)}>Aprovar</button>
+                      onClick={() => setModal({ tipo: "aprovar_pacote", item: p, tabela: Number(p.preco) || 0, pg: novoPg(p.preco) })}>Aprovar</button>
                   </div>
                 )}
               </li>
@@ -1495,7 +1596,8 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
               <thead><tr>
                 <th>Loja</th><th>Plano</th><th>Ciclo</th>
                 <th>Saldo <Dica lado="baixo" texto="Créditos disponíveis no ciclo atual / total que entrou no ciclo (plano + pacotes + ajustes)." /></th>
-                <th>Custo real <Dica lado="baixo" texto="Custo das mensagens da loja neste ciclo (Meta + IA, pelo registro de envios), em % do preço do plano. Passou do % de aviso: você é avisado. Passou do % de ação: o assistente pausa (conforme Custos e parâmetros → teto por loja) até você retomar." /></th>
+                <th>Pagamento do ciclo <Dica lado="baixo" texto="Como a loja pagou a mensalidade do ciclo atual e quanto caiu na conta (já sem a taxa). Ciclo renovado sem pagamento fica aguardando: os créditos só entram quando você registrar." /></th>
+                <th>Custo real <Dica lado="baixo" texto="Custo das mensagens da loja neste ciclo (Meta + IA, pelo registro de envios), em % da mensalidade (plano + números extras). Passou do % de aviso: você é avisado. Passou do % de ação: o assistente pausa (conforme Custos e parâmetros → teto por loja) até você retomar." /></th>
                 <th></th>
               </tr></thead>
               <tbody>
@@ -1514,6 +1616,20 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                       <td className="wa-saldo-cel">
                         <span>{nf(a.saldo, a.saldo % 1 ? 1 : 0)} / {nf(a.entradas)}</span>
                         <div className={`wa-barra${pct <= 20 ? " baixa" : ""}`}><div style={{ width: `${pct}%` }} /></div>
+                      </td>
+                      <td className="wa-pg-cel">
+                        {a.aguardando_pagamento ? (<>
+                          <span className="wa-tag-teto aviso">⏳ aguardando pagamento</span>
+                          <small>{brl(a.valor_mensal ?? a.preco)} · desde {dataBRs(a.ciclo_inicio)}</small>
+                          {pode && <button type="button" className="sa-btn sa-btn-primary sa-btn-sm" disabled={ocupado}
+                            onClick={() => setModal({ tipo: "pagamento", item: a, tabela: Number(a.valor_mensal ?? a.preco) || 0, pg: novoPg(a.valor_mensal ?? a.preco) })}>Registrar pagamento</button>}
+                        </>) : a.pagamento_ciclo ? (<>
+                          <span className={`wa-pg-chip${a.pagamento_ciclo.forma === "nao_informado" ? " alerta" : ""}`}>{rotuloForma(a.pagamento_ciclo.forma)}</span>
+                          <small>{FORMAS_SEM_RECEITA.includes(a.pagamento_ciclo.forma) ? `sem receita (tabela ${brl(a.pagamento_ciclo.valor_tabela)})` : `líquido ${brl(a.pagamento_ciclo.valor_liquido)}${Number(a.pagamento_ciclo.taxa) > 0 ? ` · taxa ${brl(a.pagamento_ciclo.taxa)}` : ""}`}</small>
+                          {pode && <button type="button" className="wa-link wa-link-sm" disabled={ocupado}
+                            onClick={() => setModal({ tipo: "corrigir_pag", item: a, pag: a.pagamento_ciclo, tabela: Number(a.pagamento_ciclo.valor_tabela) || Number(a.valor_mensal) || 0, pg: novoPg(a.pagamento_ciclo.valor_tabela || a.valor_mensal, a.pagamento_ciclo) })}>
+                            {a.pagamento_ciclo.forma === "nao_informado" ? "informar forma" : "corrigir"}</button>}
+                        </>) : <small>—</small>}
                       </td>
                       <td className="wa-teto-cel">
                         {a.teto ? (<>
@@ -1572,10 +1688,50 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                 {modal.item.troca_de ? <>Troca de <strong>{modal.item.troca_de}</strong> para </> : null}<strong>{modal.item.plano_nome}</strong> — {brl(modal.item.preco)}/mês, {nf(modal.item.creditos)} créditos.
                 {" "}O ciclo começa hoje e vai até a véspera do mesmo dia do mês que vem.{modal.item.troca_de ? " O saldo do plano atual expira." : ""}
               </div>
+              <CamposPagamento pg={modal.pg} setPg={setPg} valorTabela={modal.tabela} recebimento={receb} />
               <div className="sa-modal-actions">
                 <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
-                <button type="button" className="sa-btn sa-btn-success" disabled={ocupado}
-                  onClick={() => acao(`/assinaturas/${modal.item.id}/ativar`, {}, `Plano ${modal.item.plano_nome} ativado para ${modal.item.loja_nome}.`)}>Ativar agora</button>
+                <button type="button" className="sa-btn sa-btn-success" disabled={ocupado || !modal.pg.forma}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/ativar`, corpoPg(modal.pg, receb), `Plano ${modal.item.plano_nome} ativado para ${modal.item.loja_nome}.`)}>Ativar agora</button>
+              </div>
+            </>)}
+            {modal.tipo === "pagamento" && (<>
+              <div className="sa-modal-icon">💰</div>
+              <div className="sa-modal-title">Registrar pagamento de {modal.item.loja_nome}</div>
+              <div className="sa-modal-subtitle">
+                Plano <strong>{modal.item.plano_nome}</strong> · ciclo {dataBRs(modal.item.ciclo_inicio)} a {dataBRs(modal.item.ciclo_fim)} · mensalidade {brl(modal.tabela)}.
+                {" "}Ao registrar, os {nf(modal.item.creditos)} créditos do ciclo entram na hora e o assistente volta a responder.
+              </div>
+              <CamposPagamento pg={modal.pg} setPg={setPg} valorTabela={modal.tabela} recebimento={receb} />
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
+                <button type="button" className="sa-btn sa-btn-success" disabled={ocupado || !modal.pg.forma}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/pagamento`, corpoPg(modal.pg, receb), `Pagamento registrado: créditos liberados para ${modal.item.loja_nome}.`)}>Registrar e liberar créditos</button>
+              </div>
+            </>)}
+            {modal.tipo === "aprovar_pacote" && (<>
+              <div className="sa-modal-icon">➕</div>
+              <div className="sa-modal-title">Aprovar o pacote de {modal.item.loja_nome}?</div>
+              <div className="sa-modal-subtitle"><strong>{modal.item.nome}</strong> · +{nf(modal.item.creditos)} créditos · {brl(modal.item.preco)}. Os créditos entram no ciclo atual da loja.</div>
+              <CamposPagamento pg={modal.pg} setPg={setPg} valorTabela={modal.tabela} recebimento={receb} />
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
+                <button type="button" className="sa-btn sa-btn-success" disabled={ocupado || !modal.pg.forma}
+                  onClick={() => acao(`/pacotes/${modal.item.id}/aprovar`, corpoPg(modal.pg, receb), `Pacote aprovado: +${nf(modal.item.creditos)} créditos para ${modal.item.loja_nome}.`)}>Aprovar pacote</button>
+              </div>
+            </>)}
+            {modal.tipo === "corrigir_pag" && (<>
+              <div className="sa-modal-icon">✏️</div>
+              <div className="sa-modal-title">{modal.pag.forma === "nao_informado" ? "Informar como foi pago" : "Corrigir pagamento"} — {modal.item.loja_nome}</div>
+              <div className="sa-modal-subtitle">
+                {modal.pag.referencia === "pacote" ? "Pacote extra" : `Mensalidade do ciclo que começou em ${dataBRs(modal.pag.ciclo_inicio || modal.item.ciclo_inicio)}`} · valor de tabela {brl(modal.tabela)}.
+                {" "}Muda só o registro do pagamento (forma, valor, taxa, data); os créditos não mudam. Fica na auditoria.
+              </div>
+              <CamposPagamento pg={modal.pg} setPg={setPg} valorTabela={modal.tabela} recebimento={receb} />
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Cancelar</button>
+                <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado || !modal.pg.forma}
+                  onClick={() => acao(`/pagamentos/${modal.pag.id}`, corpoPg(modal.pg, receb), "Pagamento atualizado.", "PATCH")}>Salvar</button>
               </div>
             </>)}
             {(modal.tipo === "recusar" || modal.tipo === "recusar_pacote") && (<>
@@ -1681,6 +1837,28 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
               <button type="button" className="wa-x" onClick={() => setExtrato(null)} aria-label="Fechar">×</button>
             </div>
             <p className="wa-nota">Ciclo {dataBRs(extrato.item.ciclo_inicio)} a {dataBRs(extrato.item.ciclo_fim)} · saldo {nf(extrato.item.saldo, extrato.item.saldo % 1 ? 1 : 0)} de {nf(extrato.item.entradas)}</p>
+            {extrato.pagamentos?.length > 0 && (<>
+              <h4 className="wa-extrato-sub">💰 Pagamentos</h4>
+              <div className="wa-tabela-rolagem">
+                <table className="wa-tabela">
+                  <thead><tr><th>Data</th><th>Referente a</th><th>Forma</th><th>Recebido</th><th>Taxa</th><th>Líquido</th>{pode && <th></th>}</tr></thead>
+                  <tbody>
+                    {extrato.pagamentos.map(pg => (
+                      <tr key={pg.id}>
+                        <td className="wa-nowrap">{dataBRs(pg.pago_em)}</td>
+                        <td>{pg.referencia === "pacote" ? "Pacote extra" : `Ciclo de ${dataBRs(pg.ciclo_inicio)}`}{pg.observacao ? <small> — {pg.observacao}</small> : null}</td>
+                        <td className="wa-nowrap"><span className={`wa-pg-chip${pg.forma === "nao_informado" ? " alerta" : ""}`}>{rotuloForma(pg.forma)}</span></td>
+                        <td>{FORMAS_SEM_RECEITA.includes(pg.forma) ? <small>tabela {brl(pg.valor_tabela)}</small> : brl(pg.valor_bruto)}</td>
+                        <td>{Number(pg.taxa) > 0 ? brl(pg.taxa) : "—"}</td>
+                        <td><strong>{brl(pg.valor_liquido)}</strong></td>
+                        {pode && <td><button type="button" className="wa-link wa-link-sm" onClick={() => { const it = extrato.item; setExtrato(null); setModal({ tipo: "corrigir_pag", item: it, pag: pg, tabela: Number(pg.valor_tabela) || Number(pg.valor_bruto) || 0, pg: novoPg(pg.valor_tabela || pg.valor_bruto, pg) }); }}>{pg.forma === "nao_informado" ? "informar" : "corrigir"}</button></td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <h4 className="wa-extrato-sub">🧾 Créditos do ciclo atual</h4>
+            </>)}
             {extrato.movimentos.length === 0 ? <div className="wa-vazio-mini">Nenhum movimento.</div> : (
               <div className="wa-tabela-rolagem wa-extrato-rolagem">
                 <table className="wa-tabela">
@@ -1772,10 +1950,10 @@ function AbaUso() {
             </div>
             {u.receita_planos && (
               <div className="wa-cards wa-cards-receita">
-                <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Ciclos de plano iniciados no mês (preço contratado de cada loja) + pacotes extras aprovados no mês. Nesta fase o pagamento é combinado à parte — confira se foi recebido." /></span><strong>{brl(u.receita_planos.total)}</strong>
-                  <small>{nf(u.receita_planos.ciclos)} ciclo{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}</small></div>
+                <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Pagamentos registrados com data no mês (mensalidades + pacotes extras), pelo valor que a loja pagou. Cortesia e teste entram como R$ 0." /></span><strong>{brl(u.receita_planos.total)}</strong>
+                  <small>{nf(u.receita_planos.ciclos)} mensalidade{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}{u.receita_planos.taxas > 0 ? ` · taxas −${brl(u.receita_planos.taxas)}` : ""}{u.receita_planos.cortesias ? ` · ${u.receita_planos.cortesias} cortesia/teste (${brl(u.receita_planos.cortesia_valor)})` : ""}</small></div>
                 {u.lojas?.sobra != null && (
-                  <div className={`wa-card ${u.lojas.sobra >= 0 ? "ok" : "perigo"}`}><span>Sobra do serviço <Dica lado="baixo" texto="Receita dos planos − custo das lojas − chip do número. Não inclui o seu uso (cobrança da mensalidade). Ainda sem descontar impostos e taxa do pagamento." /></span><strong>{brl(u.lojas.sobra)}</strong><small>antes de impostos e taxas</small></div>
+                  <div className={`wa-card ${u.lojas.sobra >= 0 ? "ok" : "perigo"}`}><span>Sobra do serviço <Dica lado="baixo" texto="Receita dos planos − taxas de recebimento (Pix Efí, cartão Asaas) − custo das lojas − chip do número. Não inclui o seu uso (cobrança da mensalidade). Ainda sem descontar os impostos." /></span><strong>{brl(u.lojas.sobra)}</strong><small>já sem as taxas · antes dos impostos</small></div>
                 )}
               </div>
             )}
@@ -1872,6 +2050,8 @@ const SITUACOES_LOJA = [
   { id: "ativo",     label: "Com plano ativo" },
   { id: "acaba",     label: "Vai acabar antes de renovar" },
   { id: "vence7",    label: "Créditos vencem em até 7 dias" },
+  { id: "aguardando", label: "Aguardando pagamento" },
+  { id: "cortesia",  label: "Cortesia ou teste" },
   { id: "pausado",   label: "Pausadas pelo teto" },
   { id: "prejuizo",  label: "Com prejuízo no mês" },
   { id: "sem_plano", label: "Sem plano ativo" },
@@ -1888,6 +2068,13 @@ function AbaUsoLojas({ mes }) {
   const [plano, setPlano] = useState("");
   const [situacao, setSituacao] = useState("todas");
   const [ordem, setOrdem] = useState("vence_asc");
+  // (01/10) Período do resultado: o ciclo atual de cada loja (padrão: o que
+  // cada uma paga agora × o que custou desde o início do ciclo) ou o mês.
+  const [periodo, setPeriodo] = useState(() => {
+    try { return localStorage.getItem("wa-uso-lojas-periodo") === "mes" ? "mes" : "ciclo"; } catch { return "ciclo"; }
+  });
+  const trocarPeriodo = (v) => { setPeriodo(v); try { localStorage.setItem("wa-uso-lojas-periodo", v); } catch { /* sem armazenamento */ } };
+  const res = useCallback((l) => (periodo === "ciclo" ? l.ciclo : l.mes), [periodo]);
 
   useEffect(() => {
     let vivo = true;
@@ -1912,7 +2099,9 @@ function AbaUsoLojas({ mes }) {
         case "acaba": return !!c?.acaba_antes;
         case "vence7": return !!c && c.vencem_em_dias <= 7;
         case "pausado": return l.situacao === "pausado";
-        case "prejuizo": return l.mes.lucro < 0;
+        case "aguardando": return l.situacao === "aguardando";
+        case "cortesia": return !!res(l) && (res(l).formas || []).some(f => FORMAS_SEM_RECEITA.includes(f));
+        case "prejuizo": return !!res(l) && res(l).lucro < 0;
         case "sem_plano": return !c;
         default: return true;
       }
@@ -1924,18 +2113,23 @@ function AbaUsoLojas({ mes }) {
       uso_desc: (a, b) => nulo(b.creditos?.pct_usado, false) - nulo(a.creditos?.pct_usado, false),
       uso_asc: (a, b) => nulo(a.creditos?.pct_usado, true) - nulo(b.creditos?.pct_usado, true),
       saldo_asc: (a, b) => nulo(a.creditos?.saldo, true) - nulo(b.creditos?.saldo, true),
-      lucro_desc: (a, b) => b.mes.lucro - a.mes.lucro,
-      lucro_asc: (a, b) => a.mes.lucro - b.mes.lucro,
-      custo_desc: (a, b) => b.mes.custo - a.mes.custo,
+      lucro_desc: (a, b) => nulo(res(b)?.lucro, false) - nulo(res(a)?.lucro, false),
+      lucro_asc: (a, b) => nulo(res(a)?.lucro, true) - nulo(res(b)?.lucro, true),
+      custo_desc: (a, b) => nulo(res(b)?.custo, false) - nulo(res(a)?.custo, false),
       nome: () => 0,
     }[ordem] || (() => 0);
     return [...filtradas].sort((a, b) => cmp(a, b) || a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [dados, busca, tipo, plano, situacao, ordem]);
+  }, [dados, busca, tipo, plano, situacao, ordem, res]);
 
-  const tot = useMemo(() => lista.reduce((t, l) => ({
-    receita: t.receita + l.mes.receita, custo: t.custo + l.mes.custo,
-    impostos: t.impostos + l.mes.impostos_taxas, lucro: t.lucro + l.mes.lucro,
-  }), { receita: 0, custo: 0, impostos: 0, lucro: 0 }), [lista]);
+  const tot = useMemo(() => lista.reduce((t, l) => {
+    const r = res(l);
+    return r ? {
+      receita: t.receita + r.receita, custo: t.custo + r.custo,
+      impostos: t.impostos + r.impostos_taxas, lucro: t.lucro + r.lucro,
+    } : t;
+  }, { receita: 0, custo: 0, impostos: 0, lucro: 0 }), [lista, res]);
+  const ehCiclo = periodo === "ciclo";
+  const nomeMes = (() => { const [a, m] = String(dados?.mes || "").split("-"); return a && m ? `${MESES_NOME[Number(m) - 1]}/${a}` : "mês"; })();
 
   const filtrando = busca || tipo || plano || situacao !== "todas";
   const limpar = () => { setBusca(""); setTipo(""); setPlano(""); setSituacao("todas"); };
@@ -1946,19 +2140,33 @@ function AbaUsoLojas({ mes }) {
 
   return (
     <div className="wa-ul">
+      <div className="wa-ul-periodo">
+        <span className="wa-campo-label">Resultado de</span>
+        <div className="wa-subabas" role="tablist" aria-label="Período do resultado">
+          <button type="button" role="tab" aria-selected={ehCiclo} className={ehCiclo ? "ativo" : ""} onClick={() => trocarPeriodo("ciclo")}>🔄 Ciclo atual de cada loja</button>
+          <button type="button" role="tab" aria-selected={!ehCiclo} className={!ehCiclo ? "ativo" : ""} onClick={() => trocarPeriodo("mes")}>📅 Mês de {nomeMes}</button>
+        </div>
+      </div>
       <p className="wa-nota">
-        <strong>Créditos</strong> são do <strong>ciclo atual</strong> de cada loja (o saldo some no fim do ciclo, quando entram os créditos novos).
-        O <strong>resultado</strong> é do mês escolhido: receita = mensalidades dos ciclos que começaram no mês (com números extras) + pacotes aprovados no mês;
-        custo = mensagens da loja na Meta + IA, <strong>sem</strong> descontar a franquia grátis (conta conservadora); impostos e taxa = {nf(dados.impostos_taxas_pct, 1)}% da receita (Custos e parâmetros).
-        O chip e a franquia grátis são do número inteiro e ficam no Resumo.
+        {ehCiclo ? (
+          <><strong>Ciclo atual:</strong> receita = o que cada loja pagou pelo ciclo que está correndo (mensalidade + pacotes, como você registrou);
+          custo = as mensagens dela desde o início do ciclo. É o quanto você está ganhando com cada loja <strong>agora</strong>, e o lucro diminui conforme ela usa.
+          Ciclo renovado sem pagamento aparece como <strong>aguardando</strong>.</>
+        ) : (
+          <><strong>Mês de {nomeMes}:</strong> receita = pagamentos registrados com data no mês (mensalidades + pacotes);
+          custo = as mensagens dela no mês.</>
+        )}{" "}
+        Desconto = <strong>taxa real de cada pagamento</strong> (Pix Efí, cartão Asaas; dinheiro e transferência sem taxa) + impostos de {nf(dados.impostos_pct, 1)}% da receita.
+        Custo = Meta + IA, <strong>sem</strong> descontar a franquia grátis (conta conservadora).
+        O chip e a franquia grátis são do número inteiro e ficam no Resumo. <strong>Créditos</strong> são sempre do ciclo atual.
       </p>
 
       <div className="wa-cards">
         <div className="wa-card"><span>Lojas {filtrando ? "(filtradas)" : ""}</span><strong>{nf(lista.length)}</strong><small>de {nf(dados.lojas.length)}</small></div>
-        <div className="wa-card ok"><span>Receita <Dica lado="baixo" texto="Mensalidades dos ciclos iniciados no mês + pacotes aprovados no mês, das lojas da lista." /></span><strong>{brl(tot.receita)}</strong></div>
-        <div className="wa-card"><span>Custo <Dica lado="baixo" texto="Meta + IA das mensagens dessas lojas no mês (sem a franquia grátis)." /></span><strong>{brl(tot.custo)}</strong></div>
-        <div className="wa-card"><span>Impostos e taxa</span><strong>{brl(tot.impostos)}</strong></div>
-        <div className={`wa-card destaque${tot.lucro < 0 ? " perigo" : ""}`}><span>Lucro estimado <Dica lado="esq" texto="Receita − impostos e taxa − custo. Antes do chip (que é do número inteiro)." /></span><strong>{brl(tot.lucro)}</strong>
+        <div className="wa-card ok"><span>Receita <Dica lado="baixo" texto={ehCiclo ? "O que as lojas da lista pagam no ciclo atual: mensalidade com números extras + pacotes aprovados no ciclo." : "Mensalidades dos ciclos iniciados no mês + pacotes aprovados no mês, das lojas da lista."} /></span><strong>{brl(tot.receita)}</strong></div>
+        <div className="wa-card"><span>Custo <Dica lado="baixo" texto={ehCiclo ? "Meta + IA das mensagens dessas lojas desde o início do ciclo de cada uma (sem a franquia grátis)." : "Meta + IA das mensagens dessas lojas no mês (sem a franquia grátis)."} /></span><strong>{brl(tot.custo)}</strong></div>
+        <div className="wa-card"><span>Taxas + impostos <Dica lado="baixo" texto="Taxa real de cada pagamento (Pix Efí, cartão Asaas) + impostos." /></span><strong>{brl(tot.impostos)}</strong></div>
+        <div className={`wa-card destaque${tot.lucro < 0 ? " perigo" : ""}`}><span>{ehCiclo ? "Lucro no ciclo" : "Lucro no mês"} <Dica lado="esq" texto="Receita − impostos e taxa − custo. Antes do chip (que é do número inteiro)." /></span><strong>{brl(tot.lucro)}</strong>
           {tot.receita > 0 && <small>{nf((tot.lucro / tot.receita) * 100, 0)}% da receita</small>}</div>
       </div>
 
@@ -2015,7 +2223,7 @@ function AbaUsoLojas({ mes }) {
                 <th>Ritmo <Dica lado="baixo" texto="Média de créditos por dia no ciclo e se, nesse ritmo, o saldo acaba antes de renovar." /></th>
                 <th className="num">Receita</th>
                 <th className="num">Custo</th>
-                <th className="num">Impostos</th>
+                <th className="num">Taxa + impostos <Dica lado="baixo" texto="Taxa real do pagamento (Pix Efí, cartão Asaas…) + impostos sobre o que a loja pagou." /></th>
                 <th className="num">Lucro <Dica lado="esq" texto="Receita − impostos e taxa − custo, no mês escolhido." /></th>
               </tr>
             </thead>
@@ -2031,6 +2239,7 @@ function AbaUsoLojas({ mes }) {
                         {l.tipo_estabelecimento && <span className="wa-chip">{l.tipo_estabelecimento}</span>}
                         {c ? <span>{c.plano} · {brl(c.valor_mensal)}/mês{c.numeros_extras ? ` (+${c.numeros_extras} nº)` : ""}</span> : <span className="wa-ul-sem">sem plano ativo</span>}
                         {l.situacao === "pausado" && <span className="wa-selo perigo">pausado pelo teto</span>}
+                        {l.situacao === "aguardando" && <span className="wa-selo alerta">aguardando pagamento</span>}
                         {c?.cancelar_no_fim && <span className="wa-selo alerta">cancela no fim do ciclo</span>}
                       </div>
                     </td>
@@ -2062,10 +2271,27 @@ function AbaUsoLojas({ mes }) {
                         </>
                       ) : <small>—</small>}
                     </td>
-                    <td className="num" data-label="Receita"><span className="wa-ul-val">{brl(l.mes.receita)}{l.mes.receita_pacotes > 0 && <small><br />pacotes {brl(l.mes.receita_pacotes)}</small>}</span></td>
-                    <td className="num" data-label="Custo"><span className="wa-ul-val">{brl(l.mes.custo)}<small><br />{nf(l.mes.enviadas)} env.</small></span></td>
-                    <td className="num" data-label="Impostos e taxa"><span className="wa-ul-val">{brl(l.mes.impostos_taxas)}</span></td>
-                    <td className={`num${l.mes.lucro < 0 ? " neg" : ""}`} data-label="Lucro"><span className="wa-ul-val"><strong>{brl(l.mes.lucro)}</strong>{l.mes.margem_pct !== null && <small><br />{nf(l.mes.margem_pct)}%</small>}</span></td>
+                    {(() => {
+                      const r = res(l);
+                      if (!r) return (<>
+                        <td className="num" data-label="Receita"><span className="wa-ul-val"><small>—</small></span></td>
+                        <td className="num" data-label="Custo"><span className="wa-ul-val"><small>—</small></span></td>
+                        <td className="num" data-label="Taxa + impostos"><span className="wa-ul-val"><small>—</small></span></td>
+                        <td className="num" data-label="Lucro"><span className="wa-ul-val"><small>sem ciclo</small></span></td>
+                      </>);
+                      return (<>
+                        <td className="num" data-label="Receita"><span className="wa-ul-val">
+                          {r.aguardando_pagamento && r.receita === 0
+                            ? <><span className="wa-pg-chip alerta">⏳ aguardando</span><small><br />previsto {brl(r.previsto)}</small></>
+                            : <>{brl(r.receita)}{r.receita_pacotes > 0 && <small><br />pacotes {brl(r.receita_pacotes)}</small>}</>}
+                          {(r.formas || []).length > 0 && <small className="wa-ul-formas"><br />{r.formas.map(f => rotuloForma(f)).join(" · ")}</small>}
+                          {r.cortesia > 0 && <small><br />sem receita (tabela {brl(r.cortesia)})</small>}
+                        </span></td>
+                        <td className="num" data-label="Custo"><span className="wa-ul-val">{brl(r.custo)}<small><br />{nf(r.enviadas)} env.</small></span></td>
+                        <td className="num" data-label="Taxa + impostos"><span className="wa-ul-val">{brl(r.impostos_taxas)}{r.impostos_taxas > 0 && <small><br />taxa {brl(r.taxa)} · imp. {brl(r.impostos)}</small>}</span></td>
+                        <td className={`num${r.lucro < 0 ? " neg" : ""}`} data-label="Lucro"><span className="wa-ul-val"><strong>{brl(r.lucro)}</strong>{r.margem_pct !== null && <small><br />{nf(r.margem_pct)}%</small>}</span></td>
+                      </>);
+                    })()}
                   </tr>
                 );
               })}
@@ -2075,14 +2301,14 @@ function AbaUsoLojas({ mes }) {
                 <td colSpan={4} className="wa-ul-td-loja"><strong>Total {filtrando ? "(filtradas)" : ""}</strong> · {nf(lista.length)} loja{lista.length === 1 ? "" : "s"}</td>
                 <td className="num" data-label="Receita"><strong>{brl(tot.receita)}</strong></td>
                 <td className="num" data-label="Custo"><strong>{brl(tot.custo)}</strong></td>
-                <td className="num" data-label="Impostos e taxa"><strong>{brl(tot.impostos)}</strong></td>
+                <td className="num" data-label="Taxa + impostos"><strong>{brl(tot.impostos)}</strong></td>
                 <td className={`num${tot.lucro < 0 ? " neg" : ""}`} data-label="Lucro"><strong>{brl(tot.lucro)}</strong></td>
               </tr>
             </tfoot>
           </table>
         </div>
       )}
-      {dados.mes_atual && <p className="wa-nota wa-ul-rodape">Mês em andamento: a receita só entra quando o ciclo da loja começa, então uma loja pode aparecer com custo e sem receita até a renovação dela.</p>}
+      {!ehCiclo && dados.mes_atual && <p className="wa-nota wa-ul-rodape">Mês em andamento: a receita só entra quando o ciclo da loja começa, então uma loja pode aparecer com custo e sem receita até a renovação dela. Para ver o quanto cada loja está rendendo agora, use <button type="button" className="wa-link" onClick={() => trocarPeriodo("ciclo")}>Ciclo atual de cada loja</button>.</p>}
     </div>
   );
 }
@@ -2218,6 +2444,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
 const ROTULO_PARAM = {
   "meta.preco_utilidade": "Preço alerta", "meta.preco_resposta": "Preço resposta", "meta.preco_marketing": "Preço marketing",
   "meta.respostas_gratis_mes": "Respostas grátis", "pesos.conversa": "Peso conversa sem consulta", "travas.conversa_gratis_dia": "Conversas grátis por dia (loja)",
+  "recebimento.pix_efi_pct": "Taxa Pix Efí %", "recebimento.pix_efi_fixo": "Taxa Pix Efí fixa", "recebimento.cartao_asaas_pct": "Taxa cartão Asaas %", "recebimento.cartao_asaas_fixo": "Taxa cartão Asaas fixa",
   "numeros.preco_extra": "Valor por número extra", "numeros.max_extras": "Máximo de números extras", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
   "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.dolar_auto": "Dólar automático",
   "ia.dolar_folga_pct": "Folga sobre o dólar %", "ia.modelos": "Modelos de IA cadastrados", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",

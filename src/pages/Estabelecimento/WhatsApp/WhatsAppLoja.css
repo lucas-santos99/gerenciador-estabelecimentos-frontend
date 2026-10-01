@@ -35,6 +35,7 @@
 .wal-aviso.info { background: var(--est-accent-dim); color: var(--est-text); border-left: 3px solid var(--est-accent); }
 .wal-aviso.perigo { background: var(--est-danger-dim); color: var(--est-text); border-left: 3px solid var(--est-danger); }
 .wal-aviso.neutro { background: var(--est-hover); color: var(--est-text); border-left: 3px solid var(--est-border-accent); }
+.wal-aviso.alerta { background: var(--est-warning-dim); color: var(--est-text); border-left: 3px solid var(--est-warning); }
 
 /* ── Cartões ─────────────────────────────────────────────────── */
 .wal-card {
