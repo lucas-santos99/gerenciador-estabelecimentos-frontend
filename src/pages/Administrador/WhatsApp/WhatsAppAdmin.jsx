@@ -873,8 +873,8 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
           <Secao icone="🚦" titulo="Tetos de gasto"
             sub="Proteção extra além das travas: gasto real de cada loja e do sistema inteiro no mês.">
             <div className="wa-linha">
-              {C("teto_loja.aviso_pct", "Avisar em", { tipo: "inteiro", sufixo: "% do plano", dica: "Quando o custo real de uma loja chegar a essa % do valor que ela paga, você recebe um aviso." })}
-              {C("teto_loja.acao_pct", "Agir em", { tipo: "inteiro", sufixo: "% do plano", dica: "Quando chegar a essa %, o sistema toma a ação abaixo (a loja paga R$ 30 e já gastou R$ 21 → 70%)." })}
+              {C("teto_loja.aviso_pct", "Avisar em", { tipo: "inteiro", sufixo: "% do plano", dica: "Quando o custo real de uma loja no ciclo chegar a essa % da mensalidade dela (plano + números extras), você recebe um aviso." })}
+              {C("teto_loja.acao_pct", "Agir em", { tipo: "inteiro", sufixo: "% do plano", dica: "Quando chegar a essa % da mensalidade (plano + números extras), o sistema toma a ação abaixo (a loja paga R$ 30 e já gastou R$ 21 → 70%)." })}
             </div>
             <label className="wa-campo">
               <span className="wa-campo-label">Ação ao atingir o limite <Dica texto="O que o sistema faz quando o custo real de uma loja chega ao “Agir em”. É um disjuntor raro: no uso normal o saldo de créditos acaba bem antes." /></span>
@@ -883,7 +883,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
               </select>
             </label>
             <div className="wa-linha">
-              {C("teto_global.mensal_reais", "Teto global do mês", { prefixo: "R$", dica: "Gasto total máximo com a Meta + IA no mês (todas as lojas). Acima disso você é avisado. 0 = sem teto." })}
+              {C("teto_global.mensal_reais", "Teto global do mês", { prefixo: "R$", dica: "Gasto total do número no mês (Meta + IA de todas as lojas + seu uso + chip). Você recebe uma notificação ao chegar a 80% e outra ao passar do teto. Não pausa nada sozinho. 0 = sem teto." })}
               {C("custos_fixos.chip_mensal", "Chip / custo fixo", { prefixo: "R$", sufixo: "/mês", dica: "Recarga do chip do número central ou outro custo fixo. Entra no custo do mês." })}
             </div>
           </Secao>
@@ -1706,6 +1706,11 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
 
 function AbaUso() {
   const [mes, setMes] = useState(mesAtual);
+  // (01/10) Duas visões: resumo do número × por loja (créditos e lucro)
+  const [vista, setVista] = useState(() => {
+    try { return localStorage.getItem("wa-uso-vista") === "lojas" ? "lojas" : "resumo"; } catch { return "resumo"; }
+  });
+  const trocarVista = (v) => { setVista(v); try { localStorage.setItem("wa-uso-vista", v); } catch { /* sem armazenamento */ } };
   const [u, setU] = useState(null);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -1729,9 +1734,13 @@ function AbaUso() {
           <span className="wa-campo-label">Mês</span>
           <input type="month" className="sa-input" value={mes} max={mesAtual()} onChange={e => e.target.value && setMes(e.target.value)} />
         </label>
+        <div className="wa-subabas" role="tablist" aria-label="Visão do uso do mês">
+          <button type="button" role="tab" aria-selected={vista === "resumo"} className={vista === "resumo" ? "ativo" : ""} onClick={() => trocarVista("resumo")}>📊 Resumo do número</button>
+          <button type="button" role="tab" aria-selected={vista === "lojas"} className={vista === "lojas" ? "ativo" : ""} onClick={() => trocarVista("lojas")}>🏪 Por loja: créditos e lucro</button>
+        </div>
       </div>
 
-      {carregando ? <div className="sa-loading"><div className="sa-spinner" /></div> : erro ? <div className="wa-erro">{erro}</div> : u && (
+      {vista === "lojas" ? <AbaUsoLojas mes={mes} /> : carregando ? <div className="sa-loading"><div className="sa-spinner" /></div> : erro ? <div className="wa-erro">{erro}</div> : u && (
         <>
           <FranquiaMeta f={u.franquia} compacto />
 
@@ -1842,6 +1851,238 @@ function AbaUso() {
 
         </>
       )}
+    </div>
+  );
+}
+
+/* ── Uso do mês → Por loja: créditos do ciclo + lucro do mês (01/10/2026) ── */
+const ORDENS_LOJAS = [
+  { id: "vence_asc",  label: "Vencem antes" },
+  { id: "vence_desc", label: "Vencem depois" },
+  { id: "uso_desc",   label: "Mais usados (%)" },
+  { id: "uso_asc",    label: "Menos usados (%)" },
+  { id: "saldo_asc",  label: "Menor saldo" },
+  { id: "lucro_desc", label: "Maior lucro" },
+  { id: "lucro_asc",  label: "Menor lucro" },
+  { id: "custo_desc", label: "Maior custo" },
+  { id: "nome",       label: "Nome (A–Z)" },
+];
+const SITUACOES_LOJA = [
+  { id: "todas",     label: "Todas" },
+  { id: "ativo",     label: "Com plano ativo" },
+  { id: "acaba",     label: "Vai acabar antes de renovar" },
+  { id: "vence7",    label: "Créditos vencem em até 7 dias" },
+  { id: "pausado",   label: "Pausadas pelo teto" },
+  { id: "prejuizo",  label: "Com prejuízo no mês" },
+  { id: "sem_plano", label: "Sem plano ativo" },
+];
+const fmtDataBR = (s) => { const [a, m, d] = String(s || "").split("-"); return a && m && d ? `${d}/${m}/${a}` : "—"; };
+const semAcento = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+function AbaUsoLojas({ mes }) {
+  const [dados, setDados] = useState(null);
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [plano, setPlano] = useState("");
+  const [situacao, setSituacao] = useState("todas");
+  const [ordem, setOrdem] = useState("vence_asc");
+
+  useEffect(() => {
+    let vivo = true;
+    setCarregando(true); setErro("");
+    apiFetch(`${API}/uso/lojas?mes=${mes}`)
+      .then(r => r.json().then(j => { if (!r.ok) throw new Error(j.error || "Erro."); if (vivo) setDados(j); }))
+      .catch(e => vivo && setErro(e.message))
+      .finally(() => vivo && setCarregando(false));
+    return () => { vivo = false; };
+  }, [mes]);
+
+  const lista = useMemo(() => {
+    if (!dados) return [];
+    const q = semAcento(busca.trim());
+    const filtradas = dados.lojas.filter(l => {
+      if (q && !semAcento(l.nome).includes(q)) return false;
+      if (tipo && l.tipo_estabelecimento !== tipo) return false;
+      if (plano && l.creditos?.plano !== plano) return false;
+      const c = l.creditos;
+      switch (situacao) {
+        case "ativo": return !!c;
+        case "acaba": return !!c?.acaba_antes;
+        case "vence7": return !!c && c.vencem_em_dias <= 7;
+        case "pausado": return l.situacao === "pausado";
+        case "prejuizo": return l.mes.lucro < 0;
+        case "sem_plano": return !c;
+        default: return true;
+      }
+    });
+    const nulo = (v, alto) => (v === null || v === undefined ? (alto ? Infinity : -Infinity) : v);
+    const cmp = {
+      vence_asc: (a, b) => nulo(a.creditos?.vencem_em_dias, true) - nulo(b.creditos?.vencem_em_dias, true),
+      vence_desc: (a, b) => nulo(b.creditos?.vencem_em_dias, false) - nulo(a.creditos?.vencem_em_dias, false),
+      uso_desc: (a, b) => nulo(b.creditos?.pct_usado, false) - nulo(a.creditos?.pct_usado, false),
+      uso_asc: (a, b) => nulo(a.creditos?.pct_usado, true) - nulo(b.creditos?.pct_usado, true),
+      saldo_asc: (a, b) => nulo(a.creditos?.saldo, true) - nulo(b.creditos?.saldo, true),
+      lucro_desc: (a, b) => b.mes.lucro - a.mes.lucro,
+      lucro_asc: (a, b) => a.mes.lucro - b.mes.lucro,
+      custo_desc: (a, b) => b.mes.custo - a.mes.custo,
+      nome: () => 0,
+    }[ordem] || (() => 0);
+    return [...filtradas].sort((a, b) => cmp(a, b) || a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [dados, busca, tipo, plano, situacao, ordem]);
+
+  const tot = useMemo(() => lista.reduce((t, l) => ({
+    receita: t.receita + l.mes.receita, custo: t.custo + l.mes.custo,
+    impostos: t.impostos + l.mes.impostos_taxas, lucro: t.lucro + l.mes.lucro,
+  }), { receita: 0, custo: 0, impostos: 0, lucro: 0 }), [lista]);
+
+  const filtrando = busca || tipo || plano || situacao !== "todas";
+  const limpar = () => { setBusca(""); setTipo(""); setPlano(""); setSituacao("todas"); };
+
+  if (carregando) return <div className="sa-loading"><div className="sa-spinner" /></div>;
+  if (erro) return <div className="wa-erro">{erro}</div>;
+  if (!dados) return null;
+
+  return (
+    <div className="wa-ul">
+      <p className="wa-nota">
+        <strong>Créditos</strong> são do <strong>ciclo atual</strong> de cada loja (o saldo some no fim do ciclo, quando entram os créditos novos).
+        O <strong>resultado</strong> é do mês escolhido: receita = mensalidades dos ciclos que começaram no mês (com números extras) + pacotes aprovados no mês;
+        custo = mensagens da loja na Meta + IA, <strong>sem</strong> descontar a franquia grátis (conta conservadora); impostos e taxa = {nf(dados.impostos_taxas_pct, 1)}% da receita (Custos e parâmetros).
+        O chip e a franquia grátis são do número inteiro e ficam no Resumo.
+      </p>
+
+      <div className="wa-cards">
+        <div className="wa-card"><span>Lojas {filtrando ? "(filtradas)" : ""}</span><strong>{nf(lista.length)}</strong><small>de {nf(dados.lojas.length)}</small></div>
+        <div className="wa-card ok"><span>Receita <Dica lado="baixo" texto="Mensalidades dos ciclos iniciados no mês + pacotes aprovados no mês, das lojas da lista." /></span><strong>{brl(tot.receita)}</strong></div>
+        <div className="wa-card"><span>Custo <Dica lado="baixo" texto="Meta + IA das mensagens dessas lojas no mês (sem a franquia grátis)." /></span><strong>{brl(tot.custo)}</strong></div>
+        <div className="wa-card"><span>Impostos e taxa</span><strong>{brl(tot.impostos)}</strong></div>
+        <div className={`wa-card destaque${tot.lucro < 0 ? " perigo" : ""}`}><span>Lucro estimado <Dica lado="esq" texto="Receita − impostos e taxa − custo. Antes do chip (que é do número inteiro)." /></span><strong>{brl(tot.lucro)}</strong>
+          {tot.receita > 0 && <small>{nf((tot.lucro / tot.receita) * 100, 0)}% da receita</small>}</div>
+      </div>
+
+      <div className="wa-ul-filtros">
+        <label className="wa-campo wa-ul-busca">
+          <span className="wa-campo-label">Buscar</span>
+          <input className="sa-input" type="search" placeholder="Nome do estabelecimento" maxLength={100} value={busca} onChange={e => setBusca(e.target.value)} />
+        </label>
+        <label className="wa-campo">
+          <span className="wa-campo-label">Tipo</span>
+          <select className="sa-input" value={tipo} onChange={e => setTipo(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {dados.tipos.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="wa-campo">
+          <span className="wa-campo-label">Plano</span>
+          <select className="sa-input" value={plano} onChange={e => setPlano(e.target.value)}>
+            <option value="">Todos os planos</option>
+            {dados.planos.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="wa-campo">
+          <span className="wa-campo-label">Situação</span>
+          <select className="sa-input" value={situacao} onChange={e => setSituacao(e.target.value)}>
+            {SITUACOES_LOJA.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </label>
+        <label className="wa-campo">
+          <span className="wa-campo-label">Ordenar por</span>
+          <select className="sa-input" value={ordem} onChange={e => setOrdem(e.target.value)}>
+            {ORDENS_LOJAS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+        </label>
+        {filtrando && <button type="button" className="sa-btn sa-btn-ghost wa-ul-limpar" onClick={limpar}>✕ Limpar filtros</button>}
+      </div>
+
+      {dados.lojas.length === 0 ? (
+        <div className="wa-vazio">
+          <div className="wa-vazio-icone">🏪</div>
+          <h3>Nenhuma loja com plano ou uso neste mês</h3>
+          <p>Quando um estabelecimento contratar um plano de WhatsApp, ele aparece aqui com os créditos e o resultado do mês.</p>
+        </div>
+      ) : lista.length === 0 ? (
+        <div className="wa-vazio-mini">Nenhuma loja com esses filtros. <button type="button" className="wa-link" onClick={limpar}>Limpar filtros</button></div>
+      ) : (
+        <div className="wa-tabela-rolagem">
+          <table className="wa-tabela wa-ul-tabela">
+            <thead>
+              <tr>
+                <th>Estabelecimento</th>
+                <th>Créditos do ciclo <Dica lado="baixo" texto="Usados de quantos entraram no ciclo (plano + pacotes + ajustes) e o saldo que sobra." /></th>
+                <th>Vencem <Dica lado="baixo" texto="Último dia do ciclo: depois disso o saldo que sobrou expira e entram os créditos do próximo ciclo." /></th>
+                <th>Ritmo <Dica lado="baixo" texto="Média de créditos por dia no ciclo e se, nesse ritmo, o saldo acaba antes de renovar." /></th>
+                <th className="num">Receita</th>
+                <th className="num">Custo</th>
+                <th className="num">Impostos</th>
+                <th className="num">Lucro <Dica lado="esq" texto="Receita − impostos e taxa − custo, no mês escolhido." /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(l => {
+                const c = l.creditos;
+                const pct = c ? Math.min(100, c.pct_usado) : 0;
+                return (
+                  <tr key={l.mercearia_id}>
+                    <td className="wa-ul-td-loja">
+                      <div className="wa-ul-nome">{l.nome}</div>
+                      <div className="wa-ul-sub">
+                        {l.tipo_estabelecimento && <span className="wa-chip">{l.tipo_estabelecimento}</span>}
+                        {c ? <span>{c.plano} · {brl(c.valor_mensal)}/mês{c.numeros_extras ? ` (+${c.numeros_extras} nº)` : ""}</span> : <span className="wa-ul-sem">sem plano ativo</span>}
+                        {l.situacao === "pausado" && <span className="wa-selo perigo">pausado pelo teto</span>}
+                        {c?.cancelar_no_fim && <span className="wa-selo alerta">cancela no fim do ciclo</span>}
+                      </div>
+                    </td>
+                    <td data-label="Créditos do ciclo">
+                      {c ? (
+                        <div className="wa-ul-cred">
+                          <div className={`wa-barra${pct >= 90 ? " baixa" : ""}`}><div style={{ width: `${pct}%` }} /></div>
+                          <small><strong>{nf(c.usados, 1)}</strong> de {nf(c.entradas, 0)} ({nf(c.pct_usado)}%) · saldo <strong>{nf(c.saldo, 1)}</strong></small>
+                        </div>
+                      ) : <small>—</small>}
+                    </td>
+                    <td data-label="Vencem">
+                      {c ? (
+                        <>
+                          <div>{fmtDataBR(c.ciclo_fim)}</div>
+                          <small className={c.vencem_em_dias <= 3 ? "wa-ul-alerta" : ""}>
+                            {c.vencem_em_dias <= 0 ? "vence hoje" : `em ${c.vencem_em_dias} dia${c.vencem_em_dias === 1 ? "" : "s"}`}
+                          </small>
+                        </>
+                      ) : <small>—</small>}
+                    </td>
+                    <td data-label="Ritmo">
+                      {c ? (
+                        <>
+                          <div>{nf(c.ritmo_dia, 1)}/dia</div>
+                          {c.acaba_antes
+                            ? <small className="wa-ul-alerta">acaba em ~{c.acaba_em_dias} dia{c.acaba_em_dias === 1 ? "" : "s"}, antes de renovar</small>
+                            : <small>{c.usados > 0 ? "dura até renovar" : "sem uso ainda"}</small>}
+                        </>
+                      ) : <small>—</small>}
+                    </td>
+                    <td className="num" data-label="Receita"><span className="wa-ul-val">{brl(l.mes.receita)}{l.mes.receita_pacotes > 0 && <small><br />pacotes {brl(l.mes.receita_pacotes)}</small>}</span></td>
+                    <td className="num" data-label="Custo"><span className="wa-ul-val">{brl(l.mes.custo)}<small><br />{nf(l.mes.enviadas)} env.</small></span></td>
+                    <td className="num" data-label="Impostos e taxa"><span className="wa-ul-val">{brl(l.mes.impostos_taxas)}</span></td>
+                    <td className={`num${l.mes.lucro < 0 ? " neg" : ""}`} data-label="Lucro"><span className="wa-ul-val"><strong>{brl(l.mes.lucro)}</strong>{l.mes.margem_pct !== null && <small><br />{nf(l.mes.margem_pct)}%</small>}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="wa-ul-td-loja"><strong>Total {filtrando ? "(filtradas)" : ""}</strong> · {nf(lista.length)} loja{lista.length === 1 ? "" : "s"}</td>
+                <td className="num" data-label="Receita"><strong>{brl(tot.receita)}</strong></td>
+                <td className="num" data-label="Custo"><strong>{brl(tot.custo)}</strong></td>
+                <td className="num" data-label="Impostos e taxa"><strong>{brl(tot.impostos)}</strong></td>
+                <td className={`num${tot.lucro < 0 ? " neg" : ""}`} data-label="Lucro"><strong>{brl(tot.lucro)}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+      {dados.mes_atual && <p className="wa-nota wa-ul-rodape">Mês em andamento: a receita só entra quando o ciclo da loja começa, então uma loja pode aparecer com custo e sem receita até a renovação dela.</p>}
     </div>
   );
 }

@@ -532,3 +532,47 @@
 
 /* Números por loja (01/10) */
 .wa-numeros-loja { display: block; margin-top: 3px; color: var(--text-secondary); }
+
+/* ── Uso do mês: sub-abas e visão por loja (01/10/2026) ─────── */
+.wa-uso-topo { flex-wrap: wrap; align-items: flex-end; }
+.wa-subabas { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg-hover); border: 1px solid var(--border); }
+.wa-subabas button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.8rem; font-weight: 700; padding: 8px 14px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.wa-subabas button:hover { color: var(--text-primary); }
+.wa-subabas button.ativo { background: var(--bg-card, var(--bg-primary)); color: var(--text-accent); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+.wa-ul > .wa-nota { margin-bottom: 14px; }
+.wa-ul-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 4px 0 14px; }
+.wa-ul-filtros .wa-campo { min-width: 150px; flex: 0 1 190px; }
+.wa-ul-filtros .wa-ul-busca { flex: 1 1 220px; }
+.wa-ul-limpar { align-self: flex-end; }
+.wa-ul-tabela { min-width: 920px; }
+.wa-ul-tabela th.num, .wa-ul-tabela td.num { text-align: right; white-space: nowrap; }
+.wa-ul-tabela td { vertical-align: top; }
+.wa-ul-tabela tfoot td { border-top: 2px solid var(--border); border-bottom: none; padding-top: 10px; }
+.wa-ul-nome { font-weight: 700; }
+.wa-ul-sub { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 3px; font-size: 0.74rem; color: var(--text-secondary); }
+.wa-ul-sub .wa-selo { font-size: 0.66rem; padding: 2px 8px; }
+.wa-ul-sem { font-style: italic; }
+.wa-ul-cred { display: flex; flex-direction: column; gap: 5px; min-width: 170px; }
+.wa-ul-alerta { color: var(--text-warning) !important; font-weight: 700; }
+.wa-ul-rodape { margin-top: 10px; }
+.wa-link { border: 0; background: none; padding: 0; color: var(--text-accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+@media (max-width: 700px) {
+  /* tabela vira cartões no celular */
+  .wa-ul .wa-tabela-rolagem { overflow-x: visible; }
+  .wa-ul-tabela { min-width: 0; }
+  .wa-ul-tabela thead { display: none; }
+  .wa-ul-tabela, .wa-ul-tabela tbody, .wa-ul-tabela tfoot, .wa-ul-tabela tr, .wa-ul-tabela td { display: block; width: 100%; }
+  .wa-ul-tabela tr { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; background: var(--bg-card, transparent); }
+  .wa-ul-tabela td { border: 0; padding: 5px 0; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: start; text-align: right; }
+  .wa-ul-tabela td > * { grid-column: 2; justify-self: end; }
+  .wa-ul-tabela td::before { content: attr(data-label); grid-column: 1; grid-row: 1 / span 4; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); text-align: left; }
+  .wa-ul-tabela td.wa-ul-td-loja { display: block; text-align: left; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .wa-ul-tabela td.wa-ul-td-loja::before { content: none; }
+  .wa-ul-tabela td.wa-ul-td-loja > * { justify-self: stretch; }
+  .wa-ul-tabela .wa-ul-cred { min-width: 0; width: 100%; max-width: 220px; text-align: right; }
+  .wa-ul-tabela tfoot td { border-top: 0; padding-top: 4px; }
+  .wa-ul-tabela tfoot tr { border-width: 2px; }
+  .wa-subabas { width: 100%; }
+  .wa-subabas button { flex: 1; padding: 8px 6px; white-space: normal; }
+  .wa-ul-filtros .wa-campo { flex: 1 1 100%; }
+}
