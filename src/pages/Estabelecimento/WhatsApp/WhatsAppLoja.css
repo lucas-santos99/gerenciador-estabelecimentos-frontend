@@ -253,3 +253,8 @@
 /* Termos atualizados (01/10) */
 .wal-aviso-termos { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .wal-aviso-termos > div { flex: 1; min-width: 220px; }
+
+/* Números extras (01/10) */
+.wal-extras { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--est-hover); font-size: 0.85rem; color: var(--est-text); }
+.wal-extras > span:first-child { flex: 1; min-width: 200px; }
+.wal-extras-acoes { display: flex; gap: 14px; flex-wrap: wrap; }

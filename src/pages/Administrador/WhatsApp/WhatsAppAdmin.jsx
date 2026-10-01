@@ -823,7 +823,15 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
             </div>
             <div className="wa-linha">
               {C("pesos.conversa", "Conversa sem consulta", { dica: "Resposta do assistente a mensagens que não pedem dado (\"oi\", \"ok\", \"obrigado\", pedir o menu de novo, texto que ele não entende), depois das grátis do dia. Cada uma é 1 mensagem paga na Meta. Aparece na tabela de créditos e nos termos." })}
-              {C("travas.conversa_gratis_dia", "Grátis por dia (por número)", { tipo: "inteiro", dica: "Quantas dessas respostas não gastam crédito por dia, por número. A partir da seguinte, gastam o peso ao lado. 0 = todas gastam." })}
+              {C("travas.conversa_gratis_dia", "Grátis por dia (por loja)", { tipo: "inteiro", dica: "Quantas dessas respostas não gastam crédito por dia, por LOJA (somando todos os números dela). A partir da seguinte, gastam o peso ao lado. 0 = todas gastam." })}
+            </div>
+          </Secao>
+
+          <Secao icone="📱" titulo="Números extras"
+            sub="Cada plano já inclui uma quantidade de números (campo Números do plano). Aqui fica o valor de cada número a mais, que a loja pode pedir e você aprova na aba Lojas.">
+            <div className="wa-linha">
+              {C("numeros.preco_extra", "Valor por número extra/mês", { prefixo: "R$", dica: "Somado à mensalidade do WhatsApp da loja. Vale para pedidos novos; quem já tem extras mantém o valor travado (dá pra ajustar loja a loja em Lojas → Números). 0 = a loja não pode pedir extras." })}
+              {C("numeros.max_extras", "Máximo de extras por loja", { tipo: "inteiro", dica: "Quantos números além do plano uma loja pode ter." })}
             </div>
           </Secao>
         </div>
@@ -1360,7 +1368,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Erro ao carregar.");
       setD(j); setErro("");
-      onPendentes((j.pendentes?.length || 0) + (j.pacotes?.length || 0));
+      onPendentes((j.pendentes?.length || 0) + (j.pacotes?.length || 0) + (j.ativas || []).filter(a => a.numeros_extras_pedido > 0).length);
     } catch (e) { setErro(e.message); }
   }, [onPendentes]);
   useEffect(() => { carregar(); }, [carregar]);
@@ -1453,6 +1461,33 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
         </Secao>
       )}
 
+      {d.ativas.some(a => a.numeros_extras_pedido > 0) && (
+        <Secao icone="📱" titulo={`Números extras pedidos (${d.ativas.filter(a => a.numeros_extras_pedido > 0).length})`} sub="Ao aprovar, a loja já pode cadastrar os números. O valor por número fica travado pra ela e soma na mensalidade do WhatsApp.">
+          <ul className="wa-pedidos">
+            {d.ativas.filter(a => a.numeros_extras_pedido > 0).map(a => {
+              const preco = a.numero_extra_preco != null && a.numeros_extras > 0 ? Number(a.numero_extra_preco) : Number(d.numero_extra_preco_atual ?? 0);
+              return (
+                <li key={`ne-${a.id}`}>
+                  <div className="wa-pedido-info">
+                    <strong>{a.loja_nome}</strong>
+                    <span>+{a.numeros_extras_pedido} número{a.numeros_extras_pedido === 1 ? "" : "s"} · {brl(preco)} por número/mês · hoje: {a.numeros} do plano{a.numeros_extras > 0 ? ` + ${a.numeros_extras} extra${a.numeros_extras === 1 ? "" : "s"}` : ""}</span>
+                    <small>Pedido por {a.numeros_extras_pedido_por_nome || "—"} em {dataHora(a.numeros_extras_pedido_em)}</small>
+                  </div>
+                  {pode && (
+                    <div className="wa-pedido-acoes">
+                      <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado}
+                        onClick={() => acao(`/assinaturas/${a.id}/numeros-extras/recusar`, {}, "Pedido recusado.")}>Recusar</button>
+                      <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado}
+                        onClick={() => acao(`/assinaturas/${a.id}/numeros-extras/aprovar`, {}, `Aprovado: +${a.numeros_extras_pedido} número(s) para ${a.loja_nome}.`)}>Aprovar</button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Secao>
+      )}
+
       {d.ativas.length > 0 && (
         <Secao icone="✅" titulo={`Planos ativos (${d.ativas.length})`}>
           <div className="wa-tabela-rolagem">
@@ -1469,7 +1504,12 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                   return (
                     <tr key={a.id}>
                       <td><strong>{a.loja_nome}</strong>{a.cancelar_no_fim && <span className="wa-tag-encerra">encerra no fim do ciclo</span>}</td>
-                      <td>{a.plano_nome}<small> · {brl(a.preco)}/mês</small></td>
+                      <td>{a.plano_nome}<small> · {brl(a.valor_mensal ?? a.preco)}/mês</small>
+                        <small className="wa-numeros-loja">
+                          📱 {a.numeros_cadastrados ?? "?"} de {a.limite_numeros ?? a.numeros} número{(a.limite_numeros ?? a.numeros) === 1 ? "" : "s"}
+                          {a.numeros_extras > 0 ? ` (${a.numeros} do plano + ${a.numeros_extras} extra${a.numeros_extras === 1 ? "" : "s"} × ${brl(a.numero_extra_preco)})` : ""}
+                        </small>
+                      </td>
                       <td className="wa-nowrap">{dataBRs(a.ciclo_inicio)} a {dataBRs(a.ciclo_fim)}</td>
                       <td className="wa-saldo-cel">
                         <span>{nf(a.saldo, a.saldo % 1 ? 1 : 0)} / {nf(a.entradas)}</span>
@@ -1487,6 +1527,8 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                         {pode && a.teto?.pausado && <button type="button" className="sa-btn sa-btn-primary sa-btn-sm" disabled={ocupado}
                           onClick={() => setModal({ tipo: "retomar", item: a })}>Retomar</button>}
                         <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => abrirExtrato(a)}>Extrato</button>
+                        {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado}
+                          onClick={() => setModal({ tipo: "numeros", item: a, extras: String(a.numeros_extras || 0), preco: numStr(a.numero_extra_preco ?? d.numero_extra_preco_atual ?? 0) })}>Números</button>}
                         {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={() => setModal({ tipo: "ajuste", item: a, quantidade: "", motivo: "" })}>Ajustar</button>}
                         {pode && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm wa-btn-excluir" disabled={ocupado} onClick={() => setModal({ tipo: "encerrar", item: a, imediato: false, motivo: "" })}>Encerrar</button>}
                       </td>
@@ -1549,6 +1591,27 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                 <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
                 <button type="button" className="sa-btn sa-btn-danger" disabled={ocupado}
                   onClick={() => acao(modal.tipo === "recusar" ? `/assinaturas/${modal.item.id}/recusar` : `/pacotes/${modal.item.id}/recusar`, { motivo: modal.motivo }, "Recusado.")}>Recusar</button>
+              </div>
+            </>)}
+            {modal.tipo === "numeros" && (<>
+              <div className="sa-modal-icon">📱</div>
+              <div className="sa-modal-title">Números de WhatsApp de {modal.item.loja_nome}</div>
+              <div className="sa-modal-subtitle">
+                O plano {modal.item.plano_nome} inclui {modal.item.numeros} número{modal.item.numeros === 1 ? "" : "s"}. Os extras somam na mensalidade do WhatsApp da loja
+                (cadastrados hoje: {modal.item.numeros_cadastrados ?? "?"}). O valor por número fica travado só pra esta loja; o padrão de pedidos novos está em Custos e parâmetros.
+              </div>
+              <div className="wa-linha">
+                <Campo label="Números extras" tipo="inteiro" valor={modal.extras} onChange={v => setModal(m => ({ ...m, extras: v.replace(/\D/g, "") }))} largura={150} />
+                <Campo label="Valor por número/mês" prefixo="R$" valor={modal.preco} onChange={v => setModal(m => ({ ...m, preco: v }))} largura={180} />
+              </div>
+              <p className="wa-nota" style={{ marginBottom: 14 }}>
+                Mensalidade do WhatsApp: {brl(modal.item.preco)} (plano) + {parseInt(modal.extras, 10) || 0} × {brl(lerNum(modal.preco) || 0)} ={" "}
+                <strong>{brl((Number(modal.item.preco) || 0) + (parseInt(modal.extras, 10) || 0) * (lerNum(modal.preco) || 0))}/mês</strong>
+              </p>
+              <div className="sa-modal-actions">
+                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
+                <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado}
+                  onClick={() => acao(`/assinaturas/${modal.item.id}/numeros-extras/definir`, { extras: parseInt(modal.extras, 10) || 0, preco: lerNum(modal.preco) || 0 }, "Números atualizados.")}>Salvar</button>
               </div>
             </>)}
             {modal.tipo === "retomar" && (<>
@@ -1913,7 +1976,8 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
    ══════════════════════════════════════════════════════════════ */
 const ROTULO_PARAM = {
   "meta.preco_utilidade": "Preço alerta", "meta.preco_resposta": "Preço resposta", "meta.preco_marketing": "Preço marketing",
-  "meta.respostas_gratis_mes": "Respostas grátis", "pesos.conversa": "Peso conversa sem consulta", "travas.conversa_gratis_dia": "Conversas grátis por dia", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
+  "meta.respostas_gratis_mes": "Respostas grátis", "pesos.conversa": "Peso conversa sem consulta", "travas.conversa_gratis_dia": "Conversas grátis por dia (loja)",
+  "numeros.preco_extra": "Valor por número extra", "numeros.max_extras": "Máximo de números extras", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
   "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.dolar_auto": "Dólar automático",
   "ia.dolar_folga_pct": "Folga sobre o dólar %", "ia.modelos": "Modelos de IA cadastrados", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",
   "precificacao.taxa_gateway_pct": "Taxa pagamento %", "precificacao.margem_seguranca": "Margem de segurança",

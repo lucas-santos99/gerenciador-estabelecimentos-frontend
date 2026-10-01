@@ -73,7 +73,7 @@ export default function TabelaCreditos({ pesos, creditos = 150, tipos, titulo = 
                 <td className="wacr-nome"><span aria-hidden="true">💭</span> Mensagem sem consulta</td>
                 <td className="wacr-exemplo">
                   Resposta do assistente a “oi”, “ok”, “obrigado”, a pedir o menu de novo ou a algo que ele não entendeu.
-                  {nGratis > 0 ? <> As <strong>{nGratis} primeira{nGratis === 1 ? "" : "s"} de cada dia</strong> (por número) não gasta{nGratis === 1 ? "" : "m"}.</> : null}
+                  {nGratis > 0 ? <> As <strong>{nGratis} primeira{nGratis === 1 ? "" : "s"} de cada dia</strong> (somando todos os números da loja) não gasta{nGratis === 1 ? "" : "m"}.</> : null}
                   {" "}Dica: pergunte direto, ex.: “vendas hoje”.
                 </td>
                 <td className="num"><span className="wacr-peso">{rotuloCreditos(p.conversa)}</span></td>

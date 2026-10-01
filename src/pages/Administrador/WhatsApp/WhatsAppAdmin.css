@@ -529,3 +529,6 @@
 @media (max-width: 600px) {
   .wa-franquia-preco { text-align: left; }
 }
+
+/* Números por loja (01/10) */
+.wa-numeros-loja { display: block; margin-top: 3px; color: var(--text-secondary); }

@@ -314,7 +314,7 @@ export default function WhatsAppLoja() {
         <section className="wal-card wal-saldo">
           <div className="wal-saldo-topo">
             <div>
-              <span className="wal-rotulo">Plano {ativa.plano_nome} · {brl(ativa.preco)}/mês</span>
+              <span className="wal-rotulo">Plano {ativa.plano_nome} · {brl(ativa.valor_mensal ?? ativa.preco)}/mês{ativa.numeros_extras > 0 ? ` (plano ${brl(ativa.preco)} + ${ativa.numeros_extras} número${ativa.numeros_extras === 1 ? "" : "s"} extra${ativa.numeros_extras === 1 ? "" : "s"})` : ""}</span>
               <div className="wal-saldo-num"><strong>{nfAuto(ativa.saldo)}</strong> <span>de {nfAuto(ativa.entradas)} créditos</span></div>
             </div>
             <div className="wal-saldo-ciclo">
@@ -514,6 +514,40 @@ export default function WhatsAppLoja() {
                 ))}
               </ul>
             )}
+            {ativa && (ativa.numeros_extras > 0 || ativa.numeros_extras_pedido > 0 || d.numero_extra?.disponivel) && (
+              <div className="wal-extras">
+                <span>
+                  📱 Seu plano inclui <strong>{ativa.numeros}</strong> número{ativa.numeros === 1 ? "" : "s"}
+                  {ativa.numeros_extras > 0 ? <> + <strong>{ativa.numeros_extras}</strong> extra{ativa.numeros_extras === 1 ? "" : "s"} ({brl(ativa.numero_extra_preco)} cada/mês)</> : null}.
+                </span>
+                {ativa.numeros_extras_pedido > 0 ? (
+                  <span className="wal-chip aguardando">Pedido de +{ativa.numeros_extras_pedido} aguardando aprovação</span>
+                ) : null}
+                <div className="wal-extras-acoes">
+                  {ativa.numeros_extras_pedido > 0 ? (
+                    <button type="button" className="wal-link" disabled={ocupado}
+                      onClick={() => chamar("/numeros-extras/desistir", { method: "POST" }, "Pedido cancelado.")}>desistir do pedido</button>
+                  ) : d.numero_extra?.disponivel && (ativa.numeros_extras || 0) < d.numero_extra.max ? (
+                    <button type="button" className="wal-link" disabled={ocupado}
+                      onClick={() => setConfirmar({
+                        titulo: "Pedir um número extra?",
+                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês, somado à mensalidade do WhatsApp (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Todos os números usam o mesmo saldo de créditos. Nossa equipe confirma e libera.`,
+                        botao: "Pedir número extra",
+                        acao: () => chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido enviado! Avisaremos quando for liberado."),
+                      })}>+ pedir número extra ({brl(d.numero_extra.preco)}/mês)</button>
+                  ) : null}
+                  {ativa.numeros_extras > 0 && (
+                    <button type="button" className="wal-link perigo" disabled={ocupado}
+                      onClick={() => setConfirmar({
+                        titulo: "Tirar um número extra?",
+                        texto: `A mensalidade do WhatsApp cai ${brl(ativa.numero_extra_preco)}. Se todos os números estiverem em uso, remova um número antes.`,
+                        botao: "Tirar número extra", perigo: true,
+                        acao: () => chamar("/numeros-extras/remover", { method: "POST" }, "Número extra retirado."),
+                      })}>tirar 1 extra</button>
+                  )}
+                </div>
+              </div>
+            )}
             {vinculos.length < d.limite_numeros ? (
               novoNumero ? (
                 <div className="wal-novo-numero">
@@ -540,7 +574,7 @@ export default function WhatsAppLoja() {
                 <button type="button" className="wal-btn" onClick={() => setNovoNumero({ usuario_id: pessoas.length === 1 ? pessoas[0].id : "", telefone: "" })}>+ Cadastrar número</button>
               )
             ) : (
-              <p className="wal-sutil">Seu plano permite {d.limite_numeros} número{d.limite_numeros === 1 ? "" : "s"}. Para cadastrar outro, remova um ou troque de plano.</p>
+              <p className="wal-sutil">Você já usa os {d.limite_numeros} número{d.limite_numeros === 1 ? "" : "s"} do seu plano. Para cadastrar outro, remova um{d.numero_extra?.disponivel ? ", peça um número extra" : ""} ou troque de plano.</p>
             )}
           </>
         )}
