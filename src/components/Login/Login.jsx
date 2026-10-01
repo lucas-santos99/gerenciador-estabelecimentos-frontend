@@ -163,6 +163,11 @@ export default function Login() {
 
           </form>
 
+          {/* Link discreto pra política (LGPD) — 01/10/2026 */}
+          <div className="login-legal">
+            <Link to="/privacidade">Política de Privacidade</Link>
+          </div>
+
         </div>
       </div>
 

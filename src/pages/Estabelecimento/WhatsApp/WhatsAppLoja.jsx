@@ -27,7 +27,7 @@ const MOV_LABEL = {
   credito_ciclo: "Créditos do ciclo", pacote: "Pacote extra", consumo: "Uso", estorno: "Estorno",
   ajuste: "Ajuste", expirado: "Expirado",
 };
-const PEDIDO_LABEL = { consulta: "Pergunta", pdf: "Relatório PDF", cadastro: "Cadastro", foto: "Foto", alerta: "Alerta" };
+const PEDIDO_LABEL = { consulta: "Pergunta", pdf: "Relatório PDF", cadastro: "Cadastro", foto: "Foto", alerta: "Alerta", conversa: "Mensagem sem consulta" };
 // Uso do ciclo por tipo de pedido (30/09) — ordem fixa na tela
 const PEDIDO_USO = [
   { id: "consulta", icone: "💬", nome: "Perguntas" },
@@ -35,6 +35,7 @@ const PEDIDO_USO = [
   { id: "pdf",      icone: "📄", nome: "Relatórios em PDF" },
   { id: "cadastro", icone: "📝", nome: "Cadastros" },
   { id: "foto",     icone: "📷", nome: "Fotos" },
+  { id: "conversa", icone: "💭", nome: "Mensagens sem consulta" },
 ];
 const STATUS_PACOTE = { aguardando: "Aguardando aprovação", aprovado: "Aprovado", recusado: "Recusado", desistiu: "Cancelado por você" };
 
@@ -126,6 +127,8 @@ export default function WhatsAppLoja() {
   const [extrato, setExtrato] = useState(null);
   const [novoNumero, setNovoNumero] = useState(null); // { usuario_id, telefone }
   const [codigoGerado, setCodigoGerado] = useState(null); // { apelido, telefone_formatado, codigo }
+  const [termosNovos, setTermosNovos] = useState(false);  // modal "termos atualizados" (01/10)
+  const [aceiteNovo, setAceiteNovo] = useState(false);
 
   const avisar = useCallback((msg, tipo = "ok") => setToast({ msg, tipo, id: Date.now() }), []);
   useEffect(() => {
@@ -296,6 +299,16 @@ export default function WhatsAppLoja() {
         </section>
       )}
 
+      {ativa?.termos_pendentes && (
+        <div className="wal-aviso info wal-aviso-termos">
+          <div>
+            <strong>📜 Os termos do WhatsApp foram atualizados.</strong> {d.termos.novidades || "Leia a versão nova."}
+            {" "}Até você aceitar, continua valendo a versão que você aceitou antes.
+          </div>
+          <button type="button" className="wal-btn wal-btn-primario" onClick={() => { setAceiteNovo(false); setTermosNovos(true); }}>Ler e aceitar</button>
+        </div>
+      )}
+
       {/* ── Plano ativo: saldo ───────────────────────────── */}
       {ativa && (
         <section className="wal-card wal-saldo">
@@ -453,7 +466,7 @@ export default function WhatsAppLoja() {
       ) : null}
 
       {/* ── Como funcionam os créditos ───────────────────── */}
-      <TabelaCreditos pesos={d.pesos} creditos={planoRef?.creditos || 150} tipos={tiposTabela}
+      <TabelaCreditos pesos={d.pesos} conversaGratis={d.conversa_gratis_dia} creditos={planoRef?.creditos || 150} tipos={tiposTabela}
         titulo={planoRef?.nome ? `Como funcionam os créditos — plano ${planoRef.nome}` : "Como funcionam os créditos"} />
 
       {/* ── Números vinculados ───────────────────────────── */}
@@ -559,6 +572,33 @@ export default function WhatsAppLoja() {
             <button type="button" className="wal-btn wal-btn-leve" onClick={() => setContratar(null)} disabled={ocupado}>Voltar</button>
             <button type="button" className="wal-btn wal-btn-primario" onClick={solicitar} disabled={!aceite || ocupado}>
               {ocupado ? "Enviando…" : ativa ? "Solicitar troca" : "Solicitar plano"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: termos atualizados (plano ativo) ───────── */}
+      {termosNovos && (
+        <Modal titulo="Termos atualizados" onFechar={() => setTermosNovos(false)} largura={680} bloqueado={ocupado}>
+          {d.termos.novidades && <p className="wal-sutil"><strong>O que mudou:</strong> {d.termos.novidades}</p>}
+          <div className="wal-termos" tabIndex={0}>
+            <h4>{d.termos.titulo} <small>(versão {d.termos.versao})</small></h4>
+            {d.termos.secoes.map(s => (
+              <div key={s.t}>
+                <strong>{s.t}</strong>
+                {s.p.map((p, i) => <p key={i}>{p}</p>)}
+              </div>
+            ))}
+          </div>
+          <label className="wal-aceite">
+            <input type="checkbox" checked={aceiteNovo} onChange={e => setAceiteNovo(e.target.checked)} />
+            Li e concordo com a versão nova dos termos do serviço de WhatsApp.
+          </label>
+          <div className="wal-acoes fim">
+            <button type="button" className="wal-btn wal-btn-leve" onClick={() => setTermosNovos(false)} disabled={ocupado}>Agora não</button>
+            <button type="button" className="wal-btn wal-btn-primario" disabled={!aceiteNovo || ocupado}
+              onClick={async () => { const j = await chamar("/aceitar-termos", { method: "POST", body: JSON.stringify({ aceite: true, termos_versao: d.termos.versao }) }, "Termos aceitos."); if (j) setTermosNovos(false); }}>
+              {ocupado ? "Salvando…" : "Aceitar"}
             </button>
           </div>
         </Modal>

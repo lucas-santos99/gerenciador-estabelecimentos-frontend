@@ -29,10 +29,14 @@ const rotuloCreditos = (p) => `${fmt(p)} crédito${Number(p) < 2 ? "" : "s"}`; /
  * @param {number}   [props.creditos] saldo usado nos exemplos (padrão 150)
  * @param {string[]} [props.tipos]    só os tipos incluídos no plano (padrão: todos)
  * @param {string}   [props.titulo]
+ * @param {number}   [props.conversaGratis] respostas a "oi/ok/obrigado" grátis por dia (01/10/2026)
  */
-export default function TabelaCreditos({ pesos, creditos = 150, tipos, titulo = "Como funcionam os créditos" }) {
+export default function TabelaCreditos({ pesos, creditos = 150, tipos, titulo = "Como funcionam os créditos", conversaGratis = 2 }) {
   const p = pesos || {};
   const linhas = LINHAS.filter(l => !tipos || tipos.includes(l.t));
+  // Conversa sem consulta (01/10/2026): só existe onde há assistente (consultas)
+  const temConversa = (!tipos || tipos.includes("consulta")) && Number(p.conversa) > 0;
+  const nGratis = Math.max(0, Number(conversaGratis) || 0);
   return (
     <section className="wacr">
       <h3 className="wacr-titulo">{titulo}</h3>
@@ -64,6 +68,18 @@ export default function TabelaCreditos({ pesos, creditos = 150, tipos, titulo = 
                 </tr>
               );
             })}
+            {temConversa && (
+              <tr className="wacr-conversa">
+                <td className="wacr-nome"><span aria-hidden="true">💭</span> Mensagem sem consulta</td>
+                <td className="wacr-exemplo">
+                  Resposta do assistente a “oi”, “ok”, “obrigado”, a pedir o menu de novo ou a algo que ele não entendeu.
+                  {nGratis > 0 ? <> As <strong>{nGratis} primeira{nGratis === 1 ? "" : "s"} de cada dia</strong> (por número) não gasta{nGratis === 1 ? "" : "m"}.</> : null}
+                  {" "}Dica: pergunte direto, ex.: “vendas hoje”.
+                </td>
+                <td className="num"><span className="wacr-peso">{rotuloCreditos(p.conversa)}</span></td>
+                <td className="num" aria-hidden="true"></td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -73,9 +89,10 @@ export default function TabelaCreditos({ pesos, creditos = 150, tipos, titulo = 
         <div className="wacr-caixa ok">
           <strong>✅ Não gasta crédito</strong>
           <ul>
-            <li>As mensagens que você manda (texto, áudio, foto).</li>
+            <li>As mensagens que você manda (texto, áudio, foto) — o que pode gastar é a resposta.</li>
             <li>Confirmações, PIN e até 3 correções dentro do mesmo pedido.</li>
             <li>Pedido que deu erro ou mensagem que não foi entregue.</li>
+            {temConversa && <li>Ver o saldo, “não achei o produto” e “sem permissão”.</li>}
           </ul>
         </div>
         <div className="wacr-caixa aviso">

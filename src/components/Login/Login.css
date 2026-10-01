@@ -488,3 +488,20 @@ body.light .login-brand-logo {
   .login-card  { padding: 28px 20px; border-radius: 18px; }
   .login-heading { font-size: 1.7rem; }
 }
+
+/* Link da Política de Privacidade (01/10/2026) */
+.login-legal {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 0.74rem;
+}
+.login-legal a {
+  color: var(--login-text-soft);
+  opacity: 0.75;
+  text-decoration: none;
+}
+.login-legal a:hover,
+.login-legal a:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}

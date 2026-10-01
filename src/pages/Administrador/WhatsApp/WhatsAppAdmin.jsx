@@ -537,7 +537,7 @@ function AbaPlanos({ planos, params, podeEditar, recarregar, avisar }) {
             👁️ Prévia — é isto que o comerciante vai ver na tela de contratação do WhatsApp
             <Dica texto="Mesma explicação usada na tela da loja. Os números seguem os pesos salvos em Custos e parâmetros; o exemplo usa os créditos do primeiro plano mensal ativo." />
           </div>
-          <TabelaCreditos pesos={params.pesos}
+          <TabelaCreditos pesos={params.pesos} conversaGratis={params.travas?.conversa_gratis_dia}
             creditos={(mensais.find(p => p.ativo) || mensais[0])?.creditos || 150} />
         </div>
       )}
@@ -820,6 +820,10 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
               {TIPOS_PEDIDO.map(t => (
                 <React.Fragment key={t}>{C(`pesos.${t}`, TIPO_LABEL[t], { dica: TIPO_DICA[t] })}</React.Fragment>
               ))}
+            </div>
+            <div className="wa-linha">
+              {C("pesos.conversa", "Conversa sem consulta", { dica: "Resposta do assistente a mensagens que não pedem dado (\"oi\", \"ok\", \"obrigado\", pedir o menu de novo, texto que ele não entende), depois das grátis do dia. Cada uma é 1 mensagem paga na Meta. Aparece na tabela de créditos e nos termos." })}
+              {C("travas.conversa_gratis_dia", "Grátis por dia (por número)", { tipo: "inteiro", dica: "Quantas dessas respostas não gastam crédito por dia, por número. A partir da seguinte, gastam o peso ao lado. 0 = todas gastam." })}
             </div>
           </Secao>
         </div>
@@ -1909,7 +1913,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
    ══════════════════════════════════════════════════════════════ */
 const ROTULO_PARAM = {
   "meta.preco_utilidade": "Preço alerta", "meta.preco_resposta": "Preço resposta", "meta.preco_marketing": "Preço marketing",
-  "meta.respostas_gratis_mes": "Respostas grátis", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
+  "meta.respostas_gratis_mes": "Respostas grátis", "pesos.conversa": "Peso conversa sem consulta", "travas.conversa_gratis_dia": "Conversas grátis por dia", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
   "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.dolar_auto": "Dólar automático",
   "ia.dolar_folga_pct": "Folga sobre o dólar %", "ia.modelos": "Modelos de IA cadastrados", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",
   "precificacao.taxa_gateway_pct": "Taxa pagamento %", "precificacao.margem_seguranca": "Margem de segurança",

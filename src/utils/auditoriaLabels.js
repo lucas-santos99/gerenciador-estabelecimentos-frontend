@@ -134,6 +134,7 @@ export const ACAO_LABEL = {
   whatsapp_pacote_recusado:       '❌ Pacote extra recusado',
   whatsapp_numero_cadastrado:     '📱 Número de WhatsApp cadastrado',
   whatsapp_numero_confirmado:     '✅ Número de WhatsApp confirmado',
+  whatsapp_termos_aceitos:        '📜 Termos do WhatsApp aceitos',
   whatsapp_numero_pessoa:         '👤 Pessoa do número alterada',
   whatsapp_numero_removido:       '🗑️ Número de WhatsApp removido',
   whatsapp_plano_ativado_loja:    '✅ Plano de WhatsApp ativado',

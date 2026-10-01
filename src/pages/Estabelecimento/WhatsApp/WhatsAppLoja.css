@@ -249,3 +249,7 @@
 @media (max-width: 560px) {
   .wal-uso-lista li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; column-gap: 12px; }
 }
+
+/* Termos atualizados (01/10) */
+.wal-aviso-termos { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.wal-aviso-termos > div { flex: 1; min-width: 220px; }
