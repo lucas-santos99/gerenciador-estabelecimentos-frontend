@@ -144,6 +144,46 @@ function Secao({ titulo, sub, children, icone }) {
   );
 }
 
+/* ── Franquia grátis da Meta (01/10/2026) ─────────────────────
+   Só do SuperAdmin. O comerciante nunca vê isso: ele paga a mensalidade
+   fixa do plano (créditos). Aqui é o custo real do número central. */
+const MESES_NOME = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+function FranquiaMeta({ f, compacto }) {
+  if (!f) return null;
+  const pct = Math.min(100, f.pct ?? 0);
+  const acabou = f.usadas >= f.gratis;
+  const nivel = acabou ? "perigo" : pct >= 80 ? "atencao" : "ok";
+  const nomeMes = MESES_NOME[Number(f.mes.slice(5, 7)) - 1] || f.mes;
+  return (
+    <section className={`wa-franquia ${nivel}${compacto ? " compacto" : ""}`}>
+      <div className="wa-franquia-topo">
+        <div>
+          <span className="wa-franquia-rot">💰 Respostas grátis da Meta — {nomeMes}
+            <Dica lado="baixo" texto="Desde 01/10/2026 a Meta cobra cada resposta do sistema, mas cada número tem 1.000 grátis por mês. Mensagens recebidas nunca são cobradas. Isso é custo seu, do número central: o comerciante não vê, ele paga a mensalidade fixa do plano." /></span>
+          <strong>{nf(f.usadas)} <small>de {nf(f.gratis)} usadas</small></strong>
+        </div>
+        <div className="wa-franquia-preco">
+          <span>Depois da franquia</span>
+          <strong>{brl(f.preco_resposta, 3)} <small>por resposta</small></strong>
+        </div>
+      </div>
+      <div className="wa-franquia-barra"><div style={{ width: `${pct}%` }} /></div>
+      <p className="wa-franquia-txt">
+        {acabou ? (<>
+          <strong>A franquia deste mês acabou.</strong> Até o fim do mês, cada resposta custa {brl(f.preco_resposta, 3)}
+          {f.excedentes > 0 ? <> — já são {nf(f.excedentes)} além dela (≈ <strong>{brl(f.custo_excedente)}</strong>)</> : null}.
+          {" "}Sem cartão cadastrado na Meta, as respostas a mais <strong>não são enviadas</strong> (e não são cobradas).
+        </>) : (<>
+          Restam <strong>{nf(f.restantes)}</strong> respostas grátis este mês.
+          {f.mes_atual && f.dia_fim_franquia
+            ? <> No ritmo atual (~{nf(f.projecao)} no mês), a franquia acaba por volta do dia <strong>{f.dia_fim_franquia}</strong> e o mês fecha em ≈ <strong>{brl(f.custo_projetado)}</strong> de custo.</>
+            : f.mes_atual ? <> No ritmo atual (~{nf(f.projecao)} no mês), fica dentro da franquia: custo da Meta <strong>R$ 0</strong>.</> : null}
+        </>)}
+      </p>
+    </section>
+  );
+}
+
 /* ── Página ─────────────────────────────────────────────────── */
 export default function WhatsAppAdmin() {
   // ?aba=lojas (link da Central de Notificações) abre direto na aba certa
@@ -766,7 +806,7 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
               {C("meta.preco_utilidade", "Alerta / utilidade", { prefixo: "R$", dica: "Mensagem que o sistema inicia (alerta, lembrete de cobrança). Categoria utilidade." })}
             </div>
             <div className="wa-linha">
-              {C("meta.respostas_gratis_mes", "Respostas grátis por mês", { tipo: "inteiro", dica: "Franquia provável da Meta (a confirmar após 01/10). Só entra como desconto no uso real — NUNCA no preço mínimo dos planos." })}
+              {C("meta.respostas_gratis_mes", "Respostas grátis por mês", { tipo: "inteiro", dica: "Franquia da Meta: 1.000 respostas grátis por mês por número (desde 01/10/2026). Só entra como desconto no uso real — NUNCA no preço mínimo dos planos. O comerciante não vê." })}
               {C("meta.preco_marketing", "Marketing (só referência)", { prefixo: "R$", dica: "Não usamos mensagens de marketing. Fica só pra comparação." })}
             </div>
           </Secao>
@@ -1180,6 +1220,8 @@ function AbaConexao({ podeEditarPagina, avisar, liberado, onLiberado }) {
         Os segredos ficam só nas variáveis do Railway — esta tela mostra apenas se estão preenchidos.
       </p>
 
+      <FranquiaMeta f={c.franquia} />
+
       <div className="wa-custos-grade">
         <Secao icone="📱" titulo="Número do sistema">
           {!c.config.token ? (
@@ -1245,6 +1287,7 @@ function AbaConexao({ podeEditarPagina, avisar, liberado, onLiberado }) {
           <p className="wa-nota">
             A Meta só deixa o sistema mandar texto livre para quem falou com ele nas últimas 24h. Antes, mande um <strong>"oi"</strong> do seu
             WhatsApp para <strong>{n?.display_phone_number || "o número do sistema"}</strong> (o sistema vai responder sozinho) e depois teste aqui.
+            {" "}Cada teste conta na franquia grátis do mês; depois dela, {brl(c.franquia?.preco_resposta ?? 0.035, 3)} por mensagem.
           </p>
           <div className="wa-teste">
             <label className="wa-campo">
@@ -1623,6 +1666,8 @@ function AbaUso() {
 
       {carregando ? <div className="sa-loading"><div className="sa-spinner" /></div> : erro ? <div className="wa-erro">{erro}</div> : u && (
         <>
+          <FranquiaMeta f={u.franquia} compacto />
+
           <p className="wa-nota">
             O mesmo número atende duas coisas, contadas <strong>separadas</strong> abaixo: o <strong>uso dos estabelecimentos</strong> (o serviço
             que você vende nos planos) e o <strong>seu uso</strong> (cobrança automática da mensalidade e testes, que é custo seu e sai da mensalidade).
@@ -1646,7 +1691,7 @@ function AbaUso() {
               <div className="wa-card"><span>Mensagens <Dica lado="baixo" texto="Mensagens das lojas no mês: alertas enviados, respostas e mensagens recebidas." /></span><strong>{nf(u.lojas?.mensagens ?? 0)}</strong></div>
               <div className="wa-card"><span>Meta <Dica lado="baixo" texto="Custo estimado das mensagens enviadas às lojas (a Meta não cobra as recebidas)." /></span><strong>{brl(u.lojas?.custo_meta ?? 0)}</strong></div>
               <div className="wa-card"><span>IA <Dica lado="baixo" texto="Custo estimado da IA (tokens) para responder as lojas, em reais com IOF." /></span><strong>{brl(u.lojas?.custo_ia ?? 0)}</strong></div>
-              <div className="wa-card ok"><span>Franquia grátis <Dica lado="baixo" texto="Desconto estimado das respostas gratuitas do mês (se a franquia da Meta se confirmar). Respostas são sempre das lojas." /></span><strong>− {brl(u.lojas?.desconto_respostas_gratis ?? 0)}</strong></div>
+              <div className="wa-card ok"><span>Franquia grátis <Dica lado="baixo" texto="Desconto das respostas grátis da Meta no mês (1.000 por número). Respostas são sempre das lojas." /></span><strong>− {brl(u.lojas?.desconto_respostas_gratis ?? 0)}</strong></div>
               <div className="wa-card destaque"><span>Custo das lojas <Dica lado="baixo" texto="Meta + IA − franquia grátis, só do uso das lojas." /></span><strong>{brl(u.lojas?.custo_total ?? 0)}</strong></div>
             </div>
             {u.receita_planos && (

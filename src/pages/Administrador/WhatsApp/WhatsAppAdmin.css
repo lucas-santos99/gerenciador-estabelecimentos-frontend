@@ -507,3 +507,25 @@
 @media (max-width: 700px) {
   .wa-teste { grid-template-columns: 1fr; }
 }
+
+/* ── Franquia grátis da Meta (01/10/2026) ─────────────────────── */
+.wa-franquia { border: 1px solid var(--border); border-left: 4px solid var(--text-success); border-radius: 14px; background: var(--bg-card); box-shadow: var(--shadow-card); padding: 14px 18px; margin-bottom: 18px; }
+.wa-franquia.atencao { border-left-color: var(--text-warning); }
+.wa-franquia.perigo { border-left-color: var(--text-danger); }
+.wa-franquia-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.wa-franquia-topo > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wa-franquia-rot, .wa-franquia-preco > span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); }
+.wa-franquia-topo strong { font-size: 1.35rem; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.wa-franquia-topo small { font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); }
+.wa-franquia-preco { text-align: right; }
+.wa-franquia-preco strong { font-size: 1.05rem; }
+.wa-franquia-barra { height: 8px; border-radius: 99px; background: var(--bg-hover); overflow: hidden; margin: 10px 0 8px; }
+.wa-franquia-barra > div { height: 100%; border-radius: 99px; background: var(--text-success); transition: width .4s; }
+.wa-franquia.atencao .wa-franquia-barra > div { background: var(--text-warning); }
+.wa-franquia.perigo .wa-franquia-barra > div { background: var(--text-danger); }
+.wa-franquia-txt { margin: 0; font-size: 0.84rem; line-height: 1.5; color: var(--text-secondary); }
+.wa-franquia-txt strong { color: var(--text-primary); }
+.wa-franquia.compacto { padding: 12px 16px; }
+@media (max-width: 600px) {
+  .wa-franquia-preco { text-align: left; }
+}
