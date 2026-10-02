@@ -218,14 +218,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       startY: rel.y,
       head: [['Descrição', 'Valor']],
       body: [
-        ['(+) Receita Bruta Total',   fmt(dreData.receita_bruta)],
+        ['(+) Receita bruta (dinheiro que entrou)',   fmt(dreData.receita_bruta)],
         ['   Em Dinheiro',            fmt(dreData.receita_dinheiro)],
         ['   Em Pix',                 fmt(dreData.receita_pix)],
         ['   Em Cartão',              fmt(dreData.receita_cartao)],
-        ['(-) CMV',                   `- ${fmt(dreData.cmv)}`],
-        ['(=) Lucro Bruto',           fmt(dreData.lucro_bruto)],
-        ['(-) Despesas Operacionais', `- ${fmt(dreData.despesas)}`],
-        ['(=) Lucro Líquido',         fmt(dreData.lucro_liquido)],
+        ['(-) Custo do que foi vendido (CMV)',                   `- ${fmt(dreData.cmv)}`],
+        ['(=) Lucro bruto (antes das contas da loja)',           fmt(dreData.lucro_bruto)],
+        ['(-) Despesas (contas da loja)', `- ${fmt(dreData.despesas)}`],
+        ['(=) Lucro líquido (o que sobrou)',         fmt(dreData.lucro_liquido)],
         ['', ''],
         ['(informativo, não desconta do lucro) Pago a Fornecedores', fmt(dreData.total_compras_fornecedor)],
       ],
@@ -239,14 +239,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   function exportarDREExcel() {
     if (!dreData) return;
     const dados = [
-      { 'Descrição': '(+) Receita Bruta Total', 'Valor (R$)': parseFloat(dreData.receita_bruta) },
+      { 'Descrição': '(+) Receita bruta (dinheiro que entrou)', 'Valor (R$)': parseFloat(dreData.receita_bruta) },
       { 'Descrição': '   Em Dinheiro',           'Valor (R$)': parseFloat(dreData.receita_dinheiro) },
       { 'Descrição': '   Em Pix',                'Valor (R$)': parseFloat(dreData.receita_pix) },
       { 'Descrição': '   Em Cartão',             'Valor (R$)': parseFloat(dreData.receita_cartao) },
-      { 'Descrição': '(-) CMV',                  'Valor (R$)': -parseFloat(dreData.cmv) },
-      { 'Descrição': '(=) Lucro Bruto',          'Valor (R$)': parseFloat(dreData.lucro_bruto) },
-      { 'Descrição': '(-) Despesas Operacionais','Valor (R$)': -parseFloat(dreData.despesas) },
-      { 'Descrição': '(=) Lucro Líquido',        'Valor (R$)': parseFloat(dreData.lucro_liquido) },
+      { 'Descrição': '(-) Custo do que foi vendido (CMV)',                  'Valor (R$)': -parseFloat(dreData.cmv) },
+      { 'Descrição': '(=) Lucro bruto (antes das contas da loja)',          'Valor (R$)': parseFloat(dreData.lucro_bruto) },
+      { 'Descrição': '(-) Despesas (contas da loja)','Valor (R$)': -parseFloat(dreData.despesas) },
+      { 'Descrição': '(=) Lucro líquido (o que sobrou)',        'Valor (R$)': parseFloat(dreData.lucro_liquido) },
       { 'Descrição': '',                          'Valor (R$)': '' },
       { 'Descrição': '(informativo) Pago a Fornecedores', 'Valor (R$)': parseFloat(dreData.total_compras_fornecedor) },
     ];
@@ -871,7 +871,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
             {/* DRE */}
             <div className="fin-section-header">
-              <span className="fin-section-titulo">📊 Relatório DRE - Demonstração do Relatório do Exercício</span>
+              <span className="fin-section-titulo">📊 Resultado do período (DRE): quanto sobrou de lucro</span>
             </div>
 
             <form className="fin-form-filtros" onSubmit={gerarDRE}>
@@ -925,7 +925,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               <>
               <div className="fin-dre-grid">
                 <div className="fin-dre-card receita">
-                  <span className="fin-dre-card-titulo">(+) Receita Bruta Total</span>
+                  <span className="fin-dre-card-titulo">(+) Receita bruta (dinheiro que entrou)</span>
                   <span className="fin-dre-card-subtitulo">Tudo que entrou no caixa</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.receita_bruta)}</span>
                   <div className="fin-dre-sub">
@@ -935,23 +935,23 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   </div>
                 </div>
                 <div className="fin-dre-card despesa">
-                  <span className="fin-dre-card-titulo">(-) CMV</span>
-                  <span className="fin-dre-card-subtitulo">Custo da Mercadoria Vendida (o que você comprou de fornecedor e já vendeu)</span>
+                  <span className="fin-dre-card-titulo">(-) Custo do que foi vendido (CMV)</span>
+                  <span className="fin-dre-card-subtitulo">Quanto você pagou ao fornecedor pelos produtos que já vendeu</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.cmv)}</span>
                 </div>
                 <div className="fin-dre-card bruto">
-                  <span className="fin-dre-card-titulo">(=) Lucro Bruto</span>
+                  <span className="fin-dre-card-titulo">(=) Lucro bruto (antes das contas da loja)</span>
                   <span className="fin-dre-card-subtitulo">Receita menos custo dos produtos</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_bruto)}</span>
                 </div>
                 <div className="fin-dre-card despesa">
-                  <span className="fin-dre-card-titulo">(-) Despesas Operacionais</span>
+                  <span className="fin-dre-card-titulo">(-) Despesas (contas da loja)</span>
                   <span className="fin-dre-card-subtitulo">Contas manuais pagas no período (água, luz, aluguel, etc). <strong>Não inclui</strong> compra de fornecedor — já contada no CMV.</span>
                   <span className="fin-dre-card-valor">- {fmt(dreData.despesas)}</span>
                 </div>
                 <div className="fin-dre-card liquido">
-                  <span className="fin-dre-card-titulo">(=) Lucro Líquido</span>
-                  <span className="fin-dre-card-subtitulo">Resultado final do período</span>
+                  <span className="fin-dre-card-titulo">(=) Lucro líquido (o que sobrou)</span>
+                  <span className="fin-dre-card-subtitulo">Resultado final do período, depois de pagar produtos e contas</span>
                   <span className="fin-dre-card-valor">{fmt(dreData.lucro_liquido)}</span>
                 </div>
               </div>

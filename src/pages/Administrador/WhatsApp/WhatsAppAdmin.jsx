@@ -2141,7 +2141,7 @@ function AbaUso() {
             </div>
             {u.receita_planos && (
               <div className="wa-cards wa-cards-receita">
-                <div className="wa-card ok"><span>Receita dos planos <Dica lado="baixo" texto="Pagamentos registrados com data no mês (mensalidades + pacotes extras), pelo valor que a loja pagou. Cortesia e teste entram como R$ 0." /></span><strong>{brl(u.receita_planos.total)}</strong>
+                <div className="wa-card ok"><span>Receita dos planos (dinheiro que entrou) <Dica lado="baixo" texto="Pagamentos registrados com data no mês (mensalidades + pacotes extras), pelo valor que a loja pagou. Cortesia e teste entram como R$ 0." /></span><strong>{brl(u.receita_planos.total)}</strong>
                   <small>{nf(u.receita_planos.ciclos)} mensalidade{u.receita_planos.ciclos === 1 ? "" : "s"} · pacotes {brl(u.receita_planos.pacotes)}{u.receita_planos.taxas > 0 ? ` · taxas −${brl(u.receita_planos.taxas)}` : ""}{u.receita_planos.cortesias ? ` · ${u.receita_planos.cortesias} cortesia/teste (${brl(u.receita_planos.cortesia_valor)})` : ""}</small></div>
                 {u.lojas?.sobra != null && (
                   <div className={`wa-card ${u.lojas.sobra >= 0 ? "ok" : "perigo"}`}><span>Sobra do serviço <Dica lado="baixo" texto="Receita dos planos − taxas de recebimento (Pix Efí, cartão Asaas) − custo das lojas − chip do número. Não inclui o seu uso (cobrança da mensalidade). Ainda sem descontar os impostos." /></span><strong>{brl(u.lojas.sobra)}</strong><small>já sem as taxas · antes dos impostos</small></div>
@@ -2354,10 +2354,10 @@ function AbaUsoLojas({ mes }) {
 
       <div className="wa-cards">
         <div className="wa-card"><span>Lojas {filtrando ? "(filtradas)" : ""}</span><strong>{nf(lista.length)}</strong><small>de {nf(dados.lojas.length)}</small></div>
-        <div className="wa-card ok"><span>Receita <Dica lado="baixo" texto={ehCiclo ? "O que as lojas da lista pagam no ciclo atual: mensalidade com números extras + pacotes aprovados no ciclo." : "Mensalidades dos ciclos iniciados no mês + pacotes aprovados no mês, das lojas da lista."} /></span><strong>{brl(tot.receita)}</strong></div>
-        <div className="wa-card"><span>Custo <Dica lado="baixo" texto={ehCiclo ? "Meta + IA das mensagens dessas lojas desde o início do ciclo de cada uma (sem a franquia grátis)." : "Meta + IA das mensagens dessas lojas no mês (sem a franquia grátis)."} /></span><strong>{brl(tot.custo)}</strong></div>
+        <div className="wa-card ok"><span>Receita (dinheiro que entrou) <Dica lado="baixo" texto={ehCiclo ? "O que as lojas da lista pagam no ciclo atual: mensalidade com números extras + pacotes aprovados no ciclo." : "Mensalidades dos ciclos iniciados no mês + pacotes aprovados no mês, das lojas da lista."} /></span><strong>{brl(tot.receita)}</strong></div>
+        <div className="wa-card"><span>Custo (mensagens) <Dica lado="baixo" texto={ehCiclo ? "Meta + IA das mensagens dessas lojas desde o início do ciclo de cada uma (sem a franquia grátis)." : "Meta + IA das mensagens dessas lojas no mês (sem a franquia grátis)."} /></span><strong>{brl(tot.custo)}</strong></div>
         <div className="wa-card"><span>Taxas + impostos <Dica lado="baixo" texto="Taxa real de cada pagamento (Pix Efí, cartão Asaas) + impostos." /></span><strong>{brl(tot.impostos)}</strong></div>
-        <div className={`wa-card destaque${tot.lucro < 0 ? " perigo" : ""}`}><span>{ehCiclo ? "Lucro no ciclo" : "Lucro no mês"} <Dica lado="esq" texto="Receita − impostos e taxa − custo. Antes do chip (que é do número inteiro)." /></span><strong>{brl(tot.lucro)}</strong>
+        <div className={`wa-card destaque${tot.lucro < 0 ? " perigo" : ""}`}><span>{ehCiclo ? "Lucro no ciclo (o que sobra)" : "Lucro no mês (o que sobra)"} <Dica lado="esq" texto="Receita − impostos e taxa − custo. Antes do chip (que é do número inteiro)." /></span><strong>{brl(tot.lucro)}</strong>
           {tot.receita > 0 && <small>{nf((tot.lucro / tot.receita) * 100, 0)}% da receita</small>}</div>
       </div>
 
@@ -2412,8 +2412,8 @@ function AbaUsoLojas({ mes }) {
                 <th>Créditos do ciclo <Dica lado="baixo" texto="Usados de quantos entraram no ciclo (plano + pacotes + ajustes) e o saldo que sobra." /></th>
                 <th>Vencem <Dica lado="baixo" texto="Último dia do ciclo: depois disso o saldo que sobrou expira e entram os créditos do próximo ciclo." /></th>
                 <th>Ritmo <Dica lado="baixo" texto="Média de créditos por dia no ciclo e se, nesse ritmo, o saldo acaba antes de renovar." /></th>
-                <th className="num">Receita</th>
-                <th className="num">Custo</th>
+                <th className="num">Receita <small className="wa-th-sub">(entrou)</small></th>
+                <th className="num">Custo <small className="wa-th-sub">(mensagens)</small></th>
                 <th className="num">Taxa + impostos <Dica lado="baixo" texto="Taxa real do pagamento (Pix Efí, cartão Asaas…) + impostos sobre o que a loja pagou." /></th>
                 <th className="num">Lucro <Dica lado="esq" texto="Receita − impostos e taxa − custo, no mês escolhido." /></th>
               </tr>

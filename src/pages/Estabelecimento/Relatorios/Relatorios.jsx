@@ -872,11 +872,11 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                       </span>
                     </div>
                     <div className="fin-report-info">
-                      <span className="fin-report-info-label">Receita</span>
+                      <span className="fin-report-info-label">Receita (vendido)</span>
                       <span className="fin-report-info-valor receita">{fmt(prod.receita_total)}</span>
                     </div>
                     <div className="fin-report-info">
-                      <span className="fin-report-info-label">Lucro</span>
+                      <span className="fin-report-info-label">Lucro (venda − custo)</span>
                       <span className={`fin-report-info-valor ${lucro >= 0 ? 'receita' : 'negativo'}`}>
                         {fmt(lucro)} <span className="fin-report-margem">({margem}%)</span>
                       </span>
