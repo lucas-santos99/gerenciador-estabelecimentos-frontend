@@ -4,9 +4,13 @@
 // Conhecer os planos, contratar (com aceite dos termos), acompanhar o
 // saldo de créditos e o extrato, pedir pacote extra, cancelar e cadastrar
 // os números de WhatsApp que podem usar o saldo.
-// Nesta fase a contratação fica "aguardando ativação" até o SuperAdmin
-// ativar (pagamento combinado à parte). A explicação dos créditos é o
-// MESMO componente mostrado no painel do SuperAdmin (TabelaCreditos).
+// (02/10/2026) O pagamento é feito aqui mesmo: Pix (QR / copia e cola) ou
+// cartão (link seguro). Assim que o provedor confirma, o plano ativa e os
+// créditos entram sozinhos — vale para a contratação, a mensalidade de
+// cada ciclo (dá pra pagar alguns dias antes) e o pacote extra. Se o
+// pagamento pela tela estiver desligado, volta o fluxo "nossa equipe
+// combina o pagamento e ativa". A explicação dos créditos é o MESMO
+// componente mostrado no painel do SuperAdmin (TabelaCreditos).
 // Backend: /api/whatsapp/loja (routes/whatsappLojaRoutes.js).
 // ============================================================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +41,13 @@ const PEDIDO_USO = [
   { id: "foto",     icone: "📷", nome: "Fotos" },
   { id: "conversa", icone: "💭", nome: "Mensagens sem consulta" },
 ];
+const PAGO_MSG = {
+  ativacao: "Pagamento confirmado! Seu plano está ativo.",
+  mensalidade: "Pagamento confirmado! Os créditos do ciclo foram liberados.",
+  adiantado: "Pagamento confirmado! A próxima mensalidade já está paga.",
+  pacote: "Pagamento confirmado! Os créditos do pacote já estão no saldo.",
+  numero_extra: "Pagamento confirmado! O número extra já está liberado: é só cadastrar.",
+};
 const STATUS_PACOTE = { aguardando: "Aguardando aprovação", aprovado: "Aprovado", recusado: "Recusado", desistiu: "Cancelado por você" };
 
 const brl = (v) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -129,6 +140,7 @@ export default function WhatsAppLoja() {
   const [codigoGerado, setCodigoGerado] = useState(null); // { apelido, telefone_formatado, codigo }
   const [termosNovos, setTermosNovos] = useState(false);  // modal "termos atualizados" (01/10)
   const [aceiteNovo, setAceiteNovo] = useState(false);
+  const [pagar, setPagar] = useState(null);           // modal de pagamento: { carregando, erro, dados, opcoes } (02/10)
 
   const avisar = useCallback((msg, tipo = "ok") => setToast({ msg, tipo, id: Date.now() }), []);
   useEffect(() => {
@@ -187,8 +199,58 @@ export default function WhatsAppLoja() {
     }
   }
 
+  /* ── Pagamento pela tela (02/10/2026) ─────────────────────── */
+  // Gera (ou reaproveita) o Pix + link de cartão do que há pra pagar agora.
+  // opcoes: {} = plano/mensalidade; { pacote_id } = pacote extra;
+  // { numero_extra: true } = o pedido de número extra em aberto.
+  const abrirPagamento = useCallback(async (opcoes = {}) => {
+    setPagar({ carregando: true, opcoes });
+    try {
+      const r = await apiFetch(`${API}/cobranca`, { method: "POST", body: JSON.stringify(opcoes) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Não foi possível gerar o pagamento.");
+      setPagar({ dados: j, opcoes });
+    } catch (e) {
+      setPagar({ erro: e.message || "Não foi possível gerar o pagamento.", opcoes });
+    }
+  }, []);
+
+  // Enquanto o modal está aberto, pergunta ao servidor se o pagamento caiu
+  // (a cada 5 s e sempre que a pessoa volta pra esta aba, vinda do app do
+  // banco ou da página do cartão). Caiu → fecha, avisa e recarrega.
+  const grupoPg = pagar?.dados?.grupo || null;
+  const tipoPg = pagar?.dados?.tipo || null;
+  useEffect(() => {
+    if (!grupoPg) return undefined;
+    let vivo = true, ocupadoPg = false;
+    const conferir = async () => {
+      if (ocupadoPg || !vivo) return;
+      ocupadoPg = true;
+      try {
+        const r = await apiFetch(`${API}/cobranca/${grupoPg}`);
+        const j = await r.json().catch(() => ({}));
+        if (!vivo || !r.ok) return;
+        if (j.pago) {
+          setPagar(null);
+          if (j.resultado === "aplicado" || j.resultado === "adiantado") avisar(PAGO_MSG[j.resultado === "adiantado" ? "adiantado" : tipoPg] || "Pagamento confirmado!");
+          else avisar("Recebemos o pagamento, mas ele precisa de conferência. Nossa equipe vai falar com você.", "erro");
+          carregar();
+        } else if (j.aberta === false) {
+          setPagar(p => (p ? { erro: "Este pagamento venceu ou foi cancelado. Gere um novo.", opcoes: p.opcoes } : p));
+        }
+      } catch { /* tenta de novo na próxima volta */ } finally { ocupadoPg = false; }
+    };
+    const t = setInterval(conferir, 5000);
+    const aoVoltar = () => { if (document.visibilityState === "visible") conferir(); };
+    document.addEventListener("visibilitychange", aoVoltar);
+    window.addEventListener("focus", aoVoltar);
+    return () => { vivo = false; clearInterval(t); document.removeEventListener("visibilitychange", aoVoltar); window.removeEventListener("focus", aoVoltar); };
+  }, [grupoPg, tipoPg, avisar, carregar]);
+
   const ativa = d?.assinatura || null;
   const pendente = d?.pendente || null;
+  const online = !!d?.pagamento_online?.ativo;
+  const aPagar = online ? (d?.pagamento_online?.pagar || null) : null;
   const planoRef = planoTabela || (ativa && { nome: ativa.plano_nome, creditos: ativa.creditos, recursos: ativa.recursos }) || d?.planos?.find(p => p.destaque) || d?.planos?.[0] || null;
   const tiposTabela = useMemo(() => (planoRef ? tiposDoPlano(planoRef.recursos) : undefined), [planoRef]);
 
@@ -196,8 +258,8 @@ export default function WhatsAppLoja() {
     const j = await chamar("/assinar", {
       method: "POST",
       body: JSON.stringify({ plano_id: contratar.id, aceite: true, termos_versao: d.termos.versao }),
-    }, "Solicitação enviada! Nossa equipe vai entrar em contato para ativar.");
-    if (j) { setContratar(null); setAceite(false); setMostrarPlanos(false); }
+    }, online ? "Solicitação registrada! Agora é só pagar para ativar na hora." : "Solicitação enviada! Nossa equipe vai entrar em contato para ativar.");
+    if (j) { setContratar(null); setAceite(false); setMostrarPlanos(false); if (online) abrirPagamento({}); }
   }
 
   async function abrirExtrato() {
@@ -285,13 +347,21 @@ export default function WhatsAppLoja() {
         <section className="wal-card wal-pendente">
           <div className="wal-pendente-icone">⏳</div>
           <div className="wal-pendente-txt">
-            <h3>{ativa ? "Troca de plano solicitada" : "Solicitação enviada"}</h3>
+            <h3>{aPagar?.tipo === "ativacao" ? (ativa ? "Troca de plano: falta só o pagamento" : "Falta só o pagamento") : ativa ? "Troca de plano solicitada" : "Solicitação enviada"}</h3>
             <p>
               Plano <strong>{pendente.plano_nome}</strong> — {brl(pendente.preco)}/mês, {nf(pendente.creditos)} créditos.
               {" "}Pedido em {dataHora(pendente.criado_em)}.
             </p>
-            <p className="wal-sutil">Nossa equipe vai entrar em contato para combinar o pagamento e ativar. {ativa ? "Até lá, o plano atual continua valendo." : ""}</p>
+            <p className="wal-sutil">
+              {aPagar?.tipo === "ativacao"
+                ? <>Pague <strong>{brl(aPagar.valor)}</strong> por Pix ou cartão e o plano é ativado na hora, automaticamente.</>
+                : "Nossa equipe vai entrar em contato para combinar o pagamento e ativar."}
+              {ativa ? " Até lá, o plano atual continua valendo." : ""}
+            </p>
           </div>
+          {aPagar?.tipo === "ativacao" && (
+            <button type="button" className="wal-btn wal-btn-primario" disabled={ocupado} onClick={() => abrirPagamento({})}>💳 Pagar agora</button>
+          )}
           <button type="button" className="wal-btn wal-btn-leve" disabled={ocupado}
             onClick={() => setConfirmar({ titulo: "Desistir da solicitação?", texto: `O pedido do plano ${pendente.plano_nome} será cancelado.`, botao: "Desistir", perigo: true, acao: () => chamar("/desistir", { method: "POST" }, "Solicitação cancelada.") })}>
             Desistir
@@ -325,6 +395,7 @@ export default function WhatsAppLoja() {
                   ? `Encerra em ${diasRestantes} dia${diasRestantes === 1 ? "" : "s"}`
                   : `Renova em ${diasRestantes} dia${diasRestantes === 1 ? "" : "s"}`}
               </span>
+              {d.pagamento_online?.proximo_pago && !ativa.cancelar_no_fim && <span className="wal-ok-txt">✓ Próxima mensalidade já paga</span>}
             </div>
           </div>
           <div className={`wal-barra${pct <= 20 ? " baixo" : ""}`} role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}
@@ -340,6 +411,19 @@ export default function WhatsAppLoja() {
             <div className="wal-aviso alerta wal-aviso-pausa">
               ⏳ Seu plano renovou em <strong>{dataBR(ativa.ciclo_inicio)}</strong> e está <strong>aguardando o pagamento</strong> da mensalidade do WhatsApp ({brl(ativa.valor_mensal ?? ativa.preco)}).
               {" "}Assim que o pagamento for confirmado, os créditos do novo ciclo entram aqui e o assistente volta a responder na hora.
+              {aPagar?.motivo === "ciclo" && (
+                <div className="wal-aviso-acao">
+                  <button type="button" className="wal-btn wal-btn-primario" disabled={ocupado} onClick={() => abrirPagamento({})}>💳 Pagar agora por Pix ou cartão</button>
+                </div>
+              )}
+            </div>
+          )}
+          {aPagar?.motivo === "antecipado" && (
+            <div className="wal-aviso info wal-aviso-pausa wal-aviso-termos">
+              <div>
+                🔁 Seu plano renova em <strong>{dataBR(aPagar.ciclo_inicio)}</strong>. Você já pode pagar a próxima mensalidade ({brl(aPagar.valor)}): os créditos novos entram no dia da renovação, sem pausa.
+              </div>
+              <button type="button" className="wal-btn wal-btn-primario" disabled={ocupado} onClick={() => abrirPagamento({})}>Pagar renovação</button>
             </div>
           )}
           {ativa.pausado_teto && (
@@ -426,8 +510,8 @@ export default function WhatsAppLoja() {
               <div key={p.id} className="wal-pacote">
                 <div><strong>{p.nome}</strong><span>+{nf(p.creditos)} créditos · {brl(p.preco)}</span></div>
                 <button type="button" className="wal-btn" disabled={ocupado}
-                  onClick={() => setConfirmar({ titulo: `Pedir ${p.nome}?`, texto: `+${nf(p.creditos)} créditos por ${brl(p.preco)}, válidos até ${dataBR(ativa.ciclo_fim)}. Nossa equipe confirma o pagamento e libera os créditos.`, botao: "Pedir pacote", acao: () => chamar("/pacotes", { method: "POST", body: JSON.stringify({ plano_id: p.id }) }, "Pacote pedido! Assim que for aprovado, os créditos entram no saldo.") })}>
-                  Pedir
+                  onClick={() => setConfirmar({ titulo: `Pedir ${p.nome}?`, texto: `+${nf(p.creditos)} créditos por ${brl(p.preco)}, válidos até ${dataBR(ativa.ciclo_fim)}. ${online ? "Na sequência você paga por Pix ou cartão e os créditos entram na hora." : "Nossa equipe confirma o pagamento e libera os créditos."}`, botao: online ? "Pedir e pagar" : "Pedir pacote", acao: async () => { const j = await chamar("/pacotes", { method: "POST", body: JSON.stringify({ plano_id: p.id }) }, online ? "Pacote pedido! Falta só o pagamento." : "Pacote pedido! Assim que for aprovado, os créditos entram no saldo."); if (j?.id && online) abrirPagamento({ pacote_id: j.id }); } })}>
+                  {online ? "Comprar" : "Pedir"}
                 </button>
               </div>
             ))}
@@ -437,7 +521,10 @@ export default function WhatsAppLoja() {
               {d.pacotes_pedidos.slice(0, 6).map(p => (
                 <li key={p.id}>
                   <span>{p.nome} · {brl(p.preco)} · {dataHora(p.criado_em)}</span>
-                  <span className={`wal-chip ${p.status}`}>{STATUS_PACOTE[p.status] || p.status}</span>
+                  <span className={`wal-chip ${p.status}`}>{p.status === "aguardando" && online ? "Aguardando pagamento" : (STATUS_PACOTE[p.status] || p.status)}</span>
+                  {p.status === "aguardando" && online && (
+                    <button type="button" className="wal-link" disabled={ocupado} onClick={() => abrirPagamento({ pacote_id: p.id })}>pagar</button>
+                  )}
                   {p.status === "aguardando" && (
                     <button type="button" className="wal-link" disabled={ocupado} onClick={() => chamar(`/pacotes/${p.id}/desistir`, { method: "POST" }, "Pedido cancelado.")}>desistir</button>
                   )}
@@ -527,20 +614,28 @@ export default function WhatsAppLoja() {
                   {ativa.numeros_extras > 0 ? <> + <strong>{ativa.numeros_extras}</strong> extra{ativa.numeros_extras === 1 ? "" : "s"} ({brl(ativa.numero_extra_preco)} cada/mês)</> : null}.
                 </span>
                 {ativa.numeros_extras_pedido > 0 ? (
-                  <span className="wal-chip aguardando">Pedido de +{ativa.numeros_extras_pedido} aguardando aprovação</span>
+                  <span className="wal-chip aguardando">Pedido de +{ativa.numeros_extras_pedido} aguardando {online ? "pagamento" : "aprovação"}</span>
                 ) : null}
                 <div className="wal-extras-acoes">
+                  {ativa.numeros_extras_pedido > 0 && online && (
+                    <button type="button" className="wal-link" disabled={ocupado} onClick={() => abrirPagamento({ numero_extra: true })}>pagar</button>
+                  )}
                   {ativa.numeros_extras_pedido > 0 ? (
                     <button type="button" className="wal-link" disabled={ocupado}
                       onClick={() => chamar("/numeros-extras/desistir", { method: "POST" }, "Pedido cancelado.")}>desistir do pedido</button>
                   ) : d.numero_extra?.disponivel && (ativa.numeros_extras || 0) < d.numero_extra.max ? (
                     <button type="button" className="wal-link" disabled={ocupado}
-                      onClick={() => setConfirmar({
+                      onClick={() => setConfirmar(online && d.numero_extra.agora ? {
+                        titulo: "Comprar um número extra?",
+                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês. Hoje você paga só o proporcional aos ${d.numero_extra.agora.dias_restantes} dia${d.numero_extra.agora.dias_restantes === 1 ? "" : "s"} que faltam do ciclo: ${brl(d.numero_extra.agora.proporcional)}${d.numero_extra.agora.proximo > 0 ? ` + ${brl(d.numero_extra.agora.proximo)} do próximo ciclo, que já está pago (total ${brl(d.numero_extra.agora.valor)})` : ""}. A partir da próxima mensalidade entra o valor cheio (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Pagou, o número é liberado na hora${d.numero_extra.agora.valor < (d.pagamento_online?.cartao_minimo || 5) ? " (por este valor, só por Pix)" : ""}. Todos os números usam o mesmo saldo de créditos.`,
+                        botao: "Comprar e pagar",
+                        acao: async () => { const j = await chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido registrado! Falta só o pagamento."); if (j) abrirPagamento({ numero_extra: true }); },
+                      } : {
                         titulo: "Pedir um número extra?",
                         texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês, somado à mensalidade do WhatsApp (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Todos os números usam o mesmo saldo de créditos. Nossa equipe confirma e libera.`,
                         botao: "Pedir número extra",
                         acao: () => chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido enviado! Avisaremos quando for liberado."),
-                      })}>+ pedir número extra ({brl(d.numero_extra.preco)}/mês)</button>
+                      })}>{online ? "+ comprar número extra" : "+ pedir número extra"} ({brl(d.numero_extra.preco)}/mês)</button>
                   ) : null}
                   {ativa.numeros_extras > 0 && (
                     <button type="button" className="wal-link perigo" disabled={ocupado}
@@ -594,7 +689,9 @@ export default function WhatsAppLoja() {
             <div><span>Créditos por mês</span><strong>{nf(contratar.creditos)}</strong></div>
             <div><span>Números</span><strong>{contratar.numeros || 1}</strong></div>
           </div>
-          <p className="wal-sutil">Nesta fase de lançamento, a ativação e o pagamento são combinados com a nossa equipe — nada é cobrado automaticamente agora.</p>
+          <p className="wal-sutil">{online
+            ? "Depois de solicitar, você paga por Pix ou cartão aqui mesmo e o plano é ativado na hora. Nada é debitado sem você pagar."
+            : "Nesta fase de lançamento, a ativação e o pagamento são combinados com a nossa equipe — nada é cobrado automaticamente agora."}</p>
           <div className="wal-termos" tabIndex={0}>
             <h4>{d.termos.titulo} <small>(versão {d.termos.versao})</small></h4>
             {d.termos.secoes.map(s => (
@@ -611,7 +708,7 @@ export default function WhatsAppLoja() {
           <div className="wal-acoes fim">
             <button type="button" className="wal-btn wal-btn-leve" onClick={() => setContratar(null)} disabled={ocupado}>Voltar</button>
             <button type="button" className="wal-btn wal-btn-primario" onClick={solicitar} disabled={!aceite || ocupado}>
-              {ocupado ? "Enviando…" : ativa ? "Solicitar troca" : "Solicitar plano"}
+              {ocupado ? "Enviando…" : online ? (ativa ? "Solicitar troca e pagar" : "Solicitar e pagar") : ativa ? "Solicitar troca" : "Solicitar plano"}
             </button>
           </div>
         </Modal>
@@ -641,6 +738,56 @@ export default function WhatsAppLoja() {
               {ocupado ? "Salvando…" : "Aceitar"}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: pagamento por Pix ou cartão (02/10) ────── */}
+      {pagar && (
+        <Modal titulo="Pagamento" onFechar={() => setPagar(null)} largura={500}>
+          {pagar.carregando ? (
+            <div className="wal-pg-carregando"><div className="wal-spinner" />Gerando o pagamento…</div>
+          ) : pagar.erro ? (
+            <>
+              <div className="wal-aviso perigo">{pagar.erro}</div>
+              <div className="wal-acoes fim">
+                <button type="button" className="wal-btn wal-btn-leve" onClick={() => setPagar(null)}>Fechar</button>
+                <button type="button" className="wal-btn wal-btn-primario" onClick={() => abrirPagamento(pagar.opcoes)}>Tentar de novo</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="wal-pg-topo">
+                <span>{pagar.dados.descricao}</span>
+                <strong>{brl(pagar.dados.valor)}</strong>
+              </div>
+              {pagar.dados.pix && (
+                <div className="wal-pg-bloco">
+                  <h4>Pix</h4>
+                  {String(pagar.dados.pix.qr_code || "").startsWith("data:image/") && (
+                    <img className="wal-pg-qr" src={pagar.dados.pix.qr_code} alt="QR Code do Pix" />
+                  )}
+                  <div className="wal-pg-copia">
+                    <input readOnly value={pagar.dados.pix.copia_cola} aria-label="Código Pix copia e cola" onFocus={e => e.target.select()} />
+                    <button type="button" className="wal-btn wal-btn-primario"
+                      onClick={() => { try { navigator.clipboard?.writeText(pagar.dados.pix.copia_cola); avisar("Código Pix copiado."); } catch { /* sem área de transferência */ } }}>Copiar</button>
+                  </div>
+                  <small>No app do seu banco: Pix → ler QR Code, ou Pix copia e cola.{pagar.dados.pix.expira_em ? ` Vale até ${dataHora(pagar.dados.pix.expira_em)}.` : ""}</small>
+                </div>
+              )}
+              {pagar.dados.cartao && (
+                <div className="wal-pg-bloco">
+                  <h4>Cartão de crédito</h4>
+                  <a className="wal-btn" href={pagar.dados.cartao.url} target="_blank" rel="noopener noreferrer">Pagar com cartão ↗</a>
+                  <small>Abre a página segura de pagamento em outra aba. Depois de pagar, volte para cá.</small>
+                </div>
+              )}
+              {(pagar.dados.avisos || []).map((a, i) => <p key={i} className="wal-sutil">{a}</p>)}
+              <div className="wal-pg-espera" role="status">
+                <div className="wal-spinner" />
+                <span>Aguardando o pagamento… A liberação é automática: assim que for confirmado, esta tela atualiza sozinha.</span>
+              </div>
+            </>
+          )}
         </Modal>
       )}
 

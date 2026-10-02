@@ -847,6 +847,20 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
               {C("recebimento.cartao_asaas_fixo", "Cartão (Asaas) — fixo", { prefixo: "R$", dica: "Valor fixo por cobrança no cartão. Tabela padrão: R$ 0,49." })}
             </div>
           </Secao>
+
+          <Secao icone="⚡" titulo="Pagamento pela tela da loja"
+            sub="A loja paga o plano, a mensalidade de cada ciclo, o pacote extra e o número extra por Pix (Efí) ou cartão (Asaas) na própria tela do WhatsApp. O pagamento confirmado ativa o plano, libera os créditos e já entra aqui com a taxa — sem você fazer nada. Você continua podendo ativar e registrar pagamento na mão (dinheiro, cortesia, teste).">
+            <label className={`wa-toggle${d ? " desab" : ""}`}>
+              <input type="checkbox" checked={pegar(rasc, "pagamento_online.ativo") !== false} disabled={d} onChange={e => setP("pagamento_online.ativo", e.target.checked)} />
+              <span className="wa-toggle-trilho"><span /></span>
+              <span>Pagamento automático por Pix e cartão</span>
+              <Dica texto="Ligado: aparece o botão “Pagar agora” pra loja e tudo libera sozinho quando o pagamento cai. Desligado: volta o fluxo antigo — a loja pede, você combina o pagamento e ativa na mão." />
+            </label>
+            <div className="wa-linha">
+              {C("pagamento_online.dias_antecipar", "Pagar a renovação antes", { tipo: "inteiro", sufixo: "dias", dica: "Quantos dias antes do fim do ciclo a loja já pode pagar a próxima mensalidade. Pagando antes, os créditos novos entram no dia da renovação, sem pausa. 0 = só depois que o ciclo renovar." })}
+            </div>
+            <p className="wa-nota">Número extra: a loja compra a qualquer hora e paga só o proporcional aos dias que faltam do ciclo; o valor cheio entra na mensalidade seguinte. O cartão só aparece para valores a partir de R$ 5,00 (mínimo do Asaas). Estorno, devolução ou pagamento em dobro não mexem nos créditos sozinhos: viram um aviso pra você na central de notificações.</p>
+          </Secao>
         </div>
 
         <div className="wa-custos-col">
@@ -1724,7 +1738,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
               <div className="sa-modal-icon">✏️</div>
               <div className="sa-modal-title">{modal.pag.forma === "nao_informado" ? "Informar como foi pago" : "Corrigir pagamento"} — {modal.item.loja_nome}</div>
               <div className="sa-modal-subtitle">
-                {modal.pag.referencia === "pacote" ? "Pacote extra" : `Mensalidade do ciclo que começou em ${dataBRs(modal.pag.ciclo_inicio || modal.item.ciclo_inicio)}`} · valor de tabela {brl(modal.tabela)}.
+                {modal.pag.referencia === "pacote" ? "Pacote extra" : modal.pag.referencia === "numero_extra" ? "Número extra (proporcional ao ciclo)" : `Mensalidade do ciclo que começou em ${dataBRs(modal.pag.ciclo_inicio || modal.item.ciclo_inicio)}`} · valor de tabela {brl(modal.tabela)}.
                 {" "}Muda só o registro do pagamento (forma, valor, taxa, data); os créditos não mudam. Fica na auditoria.
               </div>
               <CamposPagamento pg={modal.pg} setPg={setPg} valorTabela={modal.tabela} recebimento={receb} />
@@ -1846,7 +1860,7 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                     {extrato.pagamentos.map(pg => (
                       <tr key={pg.id}>
                         <td className="wa-nowrap">{dataBRs(pg.pago_em)}</td>
-                        <td>{pg.referencia === "pacote" ? "Pacote extra" : `Ciclo de ${dataBRs(pg.ciclo_inicio)}`}{pg.observacao ? <small> — {pg.observacao}</small> : null}</td>
+                        <td>{pg.referencia === "pacote" ? "Pacote extra" : pg.referencia === "numero_extra" ? "Número extra" : `Ciclo de ${dataBRs(pg.ciclo_inicio)}`}{pg.observacao ? <small> — {pg.observacao}</small> : null}</td>
                         <td className="wa-nowrap"><span className={`wa-pg-chip${pg.forma === "nao_informado" ? " alerta" : ""}`}>{rotuloForma(pg.forma)}</span></td>
                         <td>{FORMAS_SEM_RECEITA.includes(pg.forma) ? <small>tabela {brl(pg.valor_tabela)}</small> : brl(pg.valor_bruto)}</td>
                         <td>{Number(pg.taxa) > 0 ? brl(pg.taxa) : "—"}</td>
@@ -2454,6 +2468,7 @@ const ROTULO_PARAM = {
   "cobranca_auto.ativo": "Cobrança automática", "cobranca_auto.dias_antes": "Cobrança: dias antes",
   "cobranca_auto.dias_depois": "Cobrança: dias depois", "cobranca_auto.lojas_desligadas": "Cobrança: lojas fora",
   "integracao.ativo": "Integração ativa",
+  "pagamento_online.ativo": "Pagamento pela tela (Pix/cartão)", "pagamento_online.dias_antecipar": "Pagar renovação antes (dias)",
 };
 function achatar(o, pre = "", out = {}) {
   if (o && typeof o === "object" && !Array.isArray(o)) {

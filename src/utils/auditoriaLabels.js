@@ -133,6 +133,8 @@ export const ACAO_LABEL = {
   whatsapp_pacote_aprovado:       '✅ Pacote extra aprovado',
   whatsapp_pagamento_registrado:  '💰 Pagamento do WhatsApp registrado',
   whatsapp_pagamento_corrigido:   '✏️ Pagamento do WhatsApp corrigido',
+  whatsapp_pagamento_automatico:  '⚡ WhatsApp pago por Pix/cartão',
+  whatsapp_pagamento_alerta:      '⚠️ Pagamento do WhatsApp para revisar',
   whatsapp_pacote_recusado:       '❌ Pacote extra recusado',
   whatsapp_numero_cadastrado:     '📱 Número de WhatsApp cadastrado',
   whatsapp_numero_confirmado:     '✅ Número de WhatsApp confirmado',

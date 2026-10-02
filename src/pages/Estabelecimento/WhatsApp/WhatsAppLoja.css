@@ -259,3 +259,25 @@
 .wal-extras { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--est-hover); font-size: 0.85rem; color: var(--est-text); }
 .wal-extras > span:first-child { flex: 1; min-width: 200px; }
 .wal-extras-acoes { display: flex; gap: 14px; flex-wrap: wrap; }
+
+/* ── Pagamento por Pix ou cartão (02/10/2026) ────────────────── */
+.wal-ok-txt { color: var(--est-success, #16a34a); font-weight: 700; font-size: 0.8rem; }
+.wal-aviso-acao { margin-top: 10px; }
+.wal-pg-carregando { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 12px; color: var(--est-text-soft); font-size: 0.9rem; }
+.wal-pg-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--est-hover); margin-bottom: 12px; }
+.wal-pg-topo span { font-size: 0.86rem; line-height: 1.4; }
+.wal-pg-topo strong { font-size: 1.25rem; white-space: nowrap; }
+.wal-pg-bloco { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px; border: 1px solid var(--est-border); border-radius: 12px; margin-bottom: 12px; text-align: center; }
+.wal-pg-bloco h4 { margin: 0; align-self: flex-start; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--est-text-soft); }
+.wal-pg-bloco small { color: var(--est-text-soft); font-size: 0.78rem; line-height: 1.45; }
+.wal-pg-bloco a.wal-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.wal-pg-qr { width: 208px; height: 208px; max-width: 100%; padding: 8px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
+.wal-pg-copia { display: flex; gap: 8px; width: 100%; }
+.wal-pg-copia input { flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--est-border); background: var(--est-hover); color: var(--est-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.76rem; }
+.wal-pg-espera { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--est-accent-dim); font-size: 0.84rem; line-height: 1.45; }
+.wal-pg-espera .wal-spinner { width: 20px; height: 20px; flex-shrink: 0; border-width: 2px; }
+@media (max-width: 560px) {
+  .wal-pg-topo { flex-direction: column; align-items: flex-start; }
+  .wal-pg-copia { flex-direction: column; }
+  .wal-pg-copia .wal-btn { justify-content: center; text-align: center; }
+}
