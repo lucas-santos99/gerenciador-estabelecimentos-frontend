@@ -62,15 +62,15 @@
 }
 .wa-dica:focus { outline: 2px solid var(--border-focus, #14b8a6); outline-offset: 1px; }
 .wa-dica-balao {
-  display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  display: none; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(calc(-50% + var(--wa-dx, 0px)));
   width: max-content; max-width: 260px; padding: 9px 11px; border-radius: 9px; z-index: 50;
   background: #0f172a; color: #f1f5f9; font-size: 0.76rem; font-weight: 500; line-height: 1.45;
   text-align: left; white-space: normal; box-shadow: 0 8px 24px rgba(0,0,0,0.25); pointer-events: none;
   border: 1px solid rgba(255,255,255,0.14);
 }
 .wa-dica:hover .wa-dica-balao, .wa-dica:focus .wa-dica-balao { display: block; }
-.wa-dica.baixo .wa-dica-balao { bottom: auto; top: calc(100% + 8px); }
-.wa-dica.esq .wa-dica-balao { left: auto; right: -6px; transform: none; }
+.wa-dica.baixo .wa-dica-balao, .wa-dica.auto-baixo .wa-dica-balao { bottom: auto; top: calc(100% + 8px); }
+.wa-dica.esq .wa-dica-balao { left: auto; right: -6px; transform: translateX(var(--wa-dx, 0px)); }
 .wa-seg-linha { display: flex; align-items: center; gap: 8px; }
 
 /* ── Faixa de info + planos ──────────────────────────────────── */
@@ -227,7 +227,14 @@
   padding: 18px; border-radius: 16px; background: var(--bg-card); border: 1px solid var(--border);
   box-shadow: var(--shadow-card); min-width: 0;
 }
-.wa-secao-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.wa-secao-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; cursor: pointer; user-select: none; border-radius: 10px; }
+.wa-secao-head > div { flex: 1; min-width: 0; }
+.wa-secao-head:focus-visible { outline: 2px solid var(--border-focus, #14b8a6); outline-offset: 4px; }
+.wa-secao-head:hover .wa-secao-seta { color: var(--text-primary); background: var(--bg-hover); }
+.wa-secao-seta { flex-shrink: 0; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.95rem; color: var(--text-secondary); transition: transform .18s ease; }
+.wa-secao.fechada .wa-secao-seta { transform: rotate(-90deg); }
+.wa-secao.fechada .wa-secao-head { margin-bottom: 0; align-items: center; }
+.wa-secao-corpo[hidden] { display: none; }
 .wa-secao-head h3 { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
 .wa-secao-head p { margin: 3px 0 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; }
 .wa-secao-icone {
@@ -601,3 +608,72 @@
 .wa-link-sm { font-size: 0.75rem; }
 .wa-extrato-sub { margin: 14px 0 6px; font-size: 0.85rem; color: var(--text-primary); }
 .wa-ul-formas { white-space: normal; }
+
+/* ── Ferramentas do topo: recolher/expandir tudo + zoom (02/10/2026) ── */
+.wa-ferramentas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wa-zoom { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg-card); }
+.wa-zoom button { border: none; background: transparent; color: var(--text-primary); font-weight: 800; font-size: 0.8rem; padding: 7px 11px; cursor: pointer; font-family: inherit; }
+.wa-zoom button:hover:not(:disabled) { background: var(--bg-hover); }
+.wa-zoom button:disabled { opacity: 0.4; cursor: not-allowed; }
+.wa-zoom .wa-zoom-valor { min-width: 54px; font-variant-numeric: tabular-nums; color: var(--text-secondary); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+
+/* ── Últimas mensagens por estabelecimento (02/10/2026) ── */
+.wa-msgs-barra { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
+.wa-msgs-espaco { flex: 1; }
+.wa-msgs-grupos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wa-msgs-grupos > li { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-card); }
+.wa-msgs-grupos > li.aberto { border-color: var(--border-accent, var(--border)); }
+.wa-msgs-cab { width: 100%; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; padding: 11px 14px; border: none; background: transparent; color: var(--text-primary); font-family: inherit; text-align: left; cursor: pointer; }
+.wa-msgs-cab:hover { background: var(--bg-hover); }
+.wa-msgs-seta { color: var(--text-secondary); transition: transform .18s ease; transform: rotate(-90deg); }
+.wa-msgs-grupos > li.aberto .wa-msgs-seta { transform: none; }
+.wa-msgs-nome { display: flex; flex-direction: column; min-width: 160px; flex: 1; }
+.wa-msgs-nome strong { font-size: 0.9rem; }
+.wa-msgs-nome small { font-size: 0.74rem; color: var(--text-secondary); }
+.wa-msgs-resumo { display: flex; gap: 6px; flex-wrap: wrap; }
+.wa-msgs-ultima { font-size: 0.76rem; color: var(--text-secondary); white-space: nowrap; }
+.wa-msgs-corpo { border-top: 1px solid var(--border); padding: 6px 10px 10px; }
+.wa-msgs-mais { margin-top: 8px; border: none; background: transparent; color: var(--text-accent); font-weight: 700; font-size: 0.8rem; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
+/* ── Lojas do lembrete: filtro por tipo e seleção em lote (02/10/2026) ── */
+.wa-lojas-filtro { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.wa-lojas-filtro select.sa-input { width: auto; min-width: 190px; }
+.wa-lojas-lote { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-secondary); }
+.wa-lojas-lote > span { margin-right: auto; }
+.wa-loja-tipo { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border); white-space: nowrap; }
+
+/* ── Histórico: filtro por período (02/10/2026) ── */
+.wa-hist-filtro { display: flex; align-items: flex-end; gap: 10px 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.wa-hist-filtro label { display: flex; flex-direction: column; gap: 4px; }
+.wa-hist-filtro label > span { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); }
+.wa-hist-filtro .sa-input { width: auto; min-width: 150px; }
+.wa-hist-atalhos { display: flex; gap: 6px; flex-wrap: wrap; }
+.wa-hist-filtro + .wa-nota { margin: 0 0 12px; }
+
+/* ── Modal de números extras (02/10/2026) ── */
+.wa-num-resumo { display: flex; align-items: stretch; gap: 8px; margin: 14px 0 12px; }
+.wa-num-resumo > div:not(.mais) { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 12px; background: var(--bg-hover); border: 1px solid var(--border); text-align: center; }
+.wa-num-resumo span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); }
+.wa-num-resumo strong { font-size: 1.6rem; line-height: 1.1; color: var(--text-primary); }
+.wa-num-resumo small { font-size: 0.72rem; color: var(--text-secondary); }
+.wa-num-resumo .mais { align-self: center; font-size: 1.2rem; font-weight: 800; color: var(--text-secondary); }
+.wa-num-resumo .editavel { border-color: var(--border-focus, #14b8a6); background: var(--bg-card); }
+.wa-num-resumo .total strong { color: var(--text-accent); }
+.wa-num-resumo .perigo { border-color: var(--text-danger); }
+.wa-num-resumo .perigo strong { color: var(--text-danger); }
+.wa-num-passo { display: inline-flex; align-items: center; gap: 4px; }
+.wa-num-passo button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 1.05rem; font-weight: 800; cursor: pointer; }
+.wa-num-passo button:disabled { opacity: 0.4; cursor: not-allowed; }
+.wa-num-passo input { width: 46px; text-align: center; font-size: 1.4rem; font-weight: 800; border: none; background: transparent; color: var(--text-primary); font-family: inherit; }
+.wa-num-passo input:focus { outline: 2px solid var(--border-focus, #14b8a6); border-radius: 8px; }
+.wa-num-alerta { margin: 0 0 12px; padding: 9px 12px; border-radius: 10px; font-size: 0.82rem; background: var(--bg-danger, rgba(239,68,68,0.1)); color: var(--text-danger); }
+.wa-num-conta { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; margin: 12px 0 8px; padding: 11px 14px; border-radius: 12px; background: var(--bg-hover); font-size: 0.84rem; color: var(--text-secondary); }
+.wa-num-conta > span:first-child { font-weight: 700; color: var(--text-primary); margin-right: auto; }
+.wa-num-conta strong { font-size: 1.05rem; color: var(--text-primary); }
+@media (max-width: 560px) {
+  .wa-num-resumo { flex-wrap: wrap; }
+  .wa-num-resumo .mais { display: none; }
+  .wa-num-resumo > div:not(.mais) { flex: 1 1 100%; }
+  .wa-msgs-ultima { width: 100%; }
+  .wa-ferramentas { width: 100%; }
+}

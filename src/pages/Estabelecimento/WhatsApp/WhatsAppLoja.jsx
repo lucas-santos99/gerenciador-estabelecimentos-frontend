@@ -140,6 +140,13 @@ export default function WhatsAppLoja() {
   const [codigoGerado, setCodigoGerado] = useState(null); // { apelido, telefone_formatado, codigo }
   const [termosNovos, setTermosNovos] = useState(false);  // modal "termos atualizados" (01/10)
   const [aceiteNovo, setAceiteNovo] = useState(false);
+  // Zoom da tela (02/10): 80% a 160%, lembrado no navegador
+  const [zoom, setZoom] = useState(() => { try { const z = parseFloat(localStorage.getItem("wa-loja-zoom")); return z >= 0.8 && z <= 1.6 ? z : 1; } catch { return 1; } });
+  const mudarZoom = (delta) => setZoom(z => {
+    const n = delta === 0 ? 1 : Math.min(1.6, Math.max(0.8, Math.round((z + delta) * 10) / 10));
+    try { localStorage.setItem("wa-loja-zoom", String(n)); } catch { /* sem armazenamento */ }
+    return n;
+  });
   const [pagar, setPagar] = useState(null);           // modal de pagamento: { carregando, erro, dados, opcoes } (02/10)
 
   const avisar = useCallback((msg, tipo = "ok") => setToast({ msg, tipo, id: Date.now() }), []);
@@ -317,15 +324,22 @@ export default function WhatsAppLoja() {
   const semPlanos = !d.planos.length;
 
   return (
-    <div className="wal-root">
+    <div className="wal-root" style={{ zoom }}>
       <header className="wal-cabecalho">
         <div>
           <h2>💬 WhatsApp do sistema</h2>
           <p>Receba alertas e consulte o seu estabelecimento direto pelo WhatsApp. Atendimento automático — o saldo de créditos é seu, use como quiser.</p>
         </div>
-        <span className={`wal-status ${d.servico.ativo ? "on" : "off"}`}>
-          {d.servico.ativo ? "● No ar" : "● Em breve"}
-        </span>
+        <div className="wal-cabecalho-lado">
+          <span className={`wal-status ${d.servico.ativo ? "on" : "off"}`}>
+            {d.servico.ativo ? "● No ar" : "● Em breve"}
+          </span>
+          <div className="wal-zoom" role="group" aria-label="Zoom da tela">
+            <button type="button" onClick={() => mudarZoom(-0.1)} disabled={zoom <= 0.8} aria-label="Diminuir zoom">A−</button>
+            <button type="button" className="wal-zoom-valor" onClick={() => mudarZoom(0)} title="Voltar para 100%">{Math.round(zoom * 100)}%</button>
+            <button type="button" onClick={() => mudarZoom(0.1)} disabled={zoom >= 1.6} aria-label="Aumentar zoom">A+</button>
+          </div>
+        </div>
       </header>
 
       {!d.servico.ativo && (
@@ -574,6 +588,56 @@ export default function WhatsAppLoja() {
           <>
             <p className="wal-sutil">Só números cadastrados e confirmados conversam com o sistema. Para confirmar, a pessoa envia o código de 6 dígitos, <strong>pelo WhatsApp daquele número</strong>, para o WhatsApp do sistema.</p>
             <p className="wal-sutil">Cada número fica ligado a uma pessoa da loja e <strong>só consulta o que ela pode ver no sistema</strong> (as mesmas permissões do painel). Depois de confirmado, é só mandar <strong>menu</strong> no WhatsApp.</p>
+            {ativa && (
+              <div className="wal-extras">
+                <div className="wal-extras-conta" aria-label="Quantos números você pode cadastrar">
+                  <div><span>Do plano</span><strong>{ativa.numeros}</strong></div>
+                  <i aria-hidden="true">+</i>
+                  <div><span>Extras</span><strong>{ativa.numeros_extras || 0}</strong>{ativa.numeros_extras > 0 && <small>{brl(ativa.numero_extra_preco)} cada/mês</small>}</div>
+                  <i aria-hidden="true">=</i>
+                  <div className="total"><span>Pode cadastrar</span><strong>{d.limite_numeros}</strong><small>em uso: {vinculos.length}</small></div>
+                </div>
+                {(ativa.numeros_extras > 0 || ativa.numeros_extras_pedido > 0 || d.numero_extra?.disponivel) && (
+                  <div className="wal-extras-lado">
+                    {ativa.numeros_extras_pedido > 0 ? (
+                      <div className="wal-extras-pedido">
+                        <span>⏳ Pedido de <strong>+{ativa.numeros_extras_pedido} número{ativa.numeros_extras_pedido === 1 ? "" : "s"} extra{ativa.numeros_extras_pedido === 1 ? "" : "s"}</strong> aguardando {online ? "o pagamento" : "aprovação"}.</span>
+                        <div className="wal-extras-acoes">
+                          {online && <button type="button" className="wal-btn wal-btn-primario" disabled={ocupado} onClick={() => abrirPagamento({ numero_extra: true })}>💳 Pagar agora</button>}
+                          <button type="button" className="wal-btn wal-btn-leve" disabled={ocupado}
+                            onClick={() => chamar("/numeros-extras/desistir", { method: "POST" }, "Pedido cancelado.")}>Desistir</button>
+                        </div>
+                      </div>
+                    ) : d.numero_extra?.disponivel && (ativa.numeros_extras || 0) < d.numero_extra.max ? (
+                      <div className="wal-extras-comprar">
+                        <span>Precisa de mais um número? <strong>{brl(d.numero_extra.preco)}/mês</strong> cada{online && d.numero_extra.agora ? <> · hoje você paga só {brl(d.numero_extra.agora.valor)}</> : null}.</span>
+                        <button type="button" className="wal-btn" disabled={ocupado}
+                          onClick={() => setConfirmar(online && d.numero_extra.agora ? {
+                        titulo: "Comprar um número extra?",
+                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês. Hoje você paga só o proporcional aos ${d.numero_extra.agora.dias_restantes} dia${d.numero_extra.agora.dias_restantes === 1 ? "" : "s"} que faltam do ciclo: ${brl(d.numero_extra.agora.proporcional)}${d.numero_extra.agora.proximo > 0 ? ` + ${brl(d.numero_extra.agora.proximo)} do próximo ciclo, que já está pago (total ${brl(d.numero_extra.agora.valor)})` : ""}. A partir da próxima mensalidade entra o valor cheio (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Pagou, o número é liberado na hora${d.numero_extra.agora.valor < (d.pagamento_online?.cartao_minimo || 5) ? " (por este valor, só por Pix)" : ""}. Todos os números usam o mesmo saldo de créditos.`,
+                        botao: "Comprar e pagar",
+                        acao: async () => { const j = await chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido registrado! Falta só o pagamento."); if (j) abrirPagamento({ numero_extra: true }); },
+                      } : {
+                        titulo: "Pedir um número extra?",
+                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês, somado à mensalidade do WhatsApp (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Todos os números usam o mesmo saldo de créditos. Nossa equipe confirma e libera.`,
+                        botao: "Pedir número extra",
+                        acao: () => chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido enviado! Avisaremos quando for liberado."),
+                      })}>＋ {online ? "Comprar número extra" : "Pedir número extra"}</button>
+                      </div>
+                    ) : null}
+                    {ativa.numeros_extras > 0 && (
+                      <button type="button" className="wal-link perigo" disabled={ocupado}
+                        onClick={() => setConfirmar({
+                        titulo: "Tirar um número extra?",
+                        texto: `A mensalidade do WhatsApp cai ${brl(ativa.numero_extra_preco)}. Se todos os números estiverem em uso, remova um número antes.`,
+                        botao: "Tirar número extra", perigo: true,
+                        acao: () => chamar("/numeros-extras/remover", { method: "POST" }, "Número extra retirado."),
+                      })}>tirar 1 número extra</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             {vinculos.length > 0 && (
               <ul className="wal-numeros">
                 {vinculos.map(v => (
@@ -606,48 +670,6 @@ export default function WhatsAppLoja() {
                   </li>
                 ))}
               </ul>
-            )}
-            {ativa && (ativa.numeros_extras > 0 || ativa.numeros_extras_pedido > 0 || d.numero_extra?.disponivel) && (
-              <div className="wal-extras">
-                <span>
-                  📱 Seu plano inclui <strong>{ativa.numeros}</strong> número{ativa.numeros === 1 ? "" : "s"}
-                  {ativa.numeros_extras > 0 ? <> + <strong>{ativa.numeros_extras}</strong> extra{ativa.numeros_extras === 1 ? "" : "s"} ({brl(ativa.numero_extra_preco)} cada/mês)</> : null}.
-                </span>
-                {ativa.numeros_extras_pedido > 0 ? (
-                  <span className="wal-chip aguardando">Pedido de +{ativa.numeros_extras_pedido} aguardando {online ? "pagamento" : "aprovação"}</span>
-                ) : null}
-                <div className="wal-extras-acoes">
-                  {ativa.numeros_extras_pedido > 0 && online && (
-                    <button type="button" className="wal-link" disabled={ocupado} onClick={() => abrirPagamento({ numero_extra: true })}>pagar</button>
-                  )}
-                  {ativa.numeros_extras_pedido > 0 ? (
-                    <button type="button" className="wal-link" disabled={ocupado}
-                      onClick={() => chamar("/numeros-extras/desistir", { method: "POST" }, "Pedido cancelado.")}>desistir do pedido</button>
-                  ) : d.numero_extra?.disponivel && (ativa.numeros_extras || 0) < d.numero_extra.max ? (
-                    <button type="button" className="wal-link" disabled={ocupado}
-                      onClick={() => setConfirmar(online && d.numero_extra.agora ? {
-                        titulo: "Comprar um número extra?",
-                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês. Hoje você paga só o proporcional aos ${d.numero_extra.agora.dias_restantes} dia${d.numero_extra.agora.dias_restantes === 1 ? "" : "s"} que faltam do ciclo: ${brl(d.numero_extra.agora.proporcional)}${d.numero_extra.agora.proximo > 0 ? ` + ${brl(d.numero_extra.agora.proximo)} do próximo ciclo, que já está pago (total ${brl(d.numero_extra.agora.valor)})` : ""}. A partir da próxima mensalidade entra o valor cheio (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Pagou, o número é liberado na hora${d.numero_extra.agora.valor < (d.pagamento_online?.cartao_minimo || 5) ? " (por este valor, só por Pix)" : ""}. Todos os números usam o mesmo saldo de créditos.`,
-                        botao: "Comprar e pagar",
-                        acao: async () => { const j = await chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido registrado! Falta só o pagamento."); if (j) abrirPagamento({ numero_extra: true }); },
-                      } : {
-                        titulo: "Pedir um número extra?",
-                        texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês, somado à mensalidade do WhatsApp (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Todos os números usam o mesmo saldo de créditos. Nossa equipe confirma e libera.`,
-                        botao: "Pedir número extra",
-                        acao: () => chamar("/numeros-extras", { method: "POST", body: JSON.stringify({ quantidade: 1 }) }, "Pedido enviado! Avisaremos quando for liberado."),
-                      })}>{online ? "+ comprar número extra" : "+ pedir número extra"} ({brl(d.numero_extra.preco)}/mês)</button>
-                  ) : null}
-                  {ativa.numeros_extras > 0 && (
-                    <button type="button" className="wal-link perigo" disabled={ocupado}
-                      onClick={() => setConfirmar({
-                        titulo: "Tirar um número extra?",
-                        texto: `A mensalidade do WhatsApp cai ${brl(ativa.numero_extra_preco)}. Se todos os números estiverem em uso, remova um número antes.`,
-                        botao: "Tirar número extra", perigo: true,
-                        acao: () => chamar("/numeros-extras/remover", { method: "POST" }, "Número extra retirado."),
-                      })}>tirar 1 extra</button>
-                  )}
-                </div>
-              </div>
             )}
             {vinculos.length < d.limite_numeros ? (
               novoNumero ? (

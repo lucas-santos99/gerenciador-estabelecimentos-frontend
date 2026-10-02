@@ -256,7 +256,20 @@
 .wal-aviso-termos > div { flex: 1; min-width: 220px; }
 
 /* Números extras (01/10) */
-.wal-extras { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--est-hover); font-size: 0.85rem; color: var(--est-text); }
+.wal-extras { display: flex; align-items: center; gap: 14px 22px; flex-wrap: wrap; margin: 0 0 14px; padding: 14px 16px; border-radius: 14px; background: var(--est-hover); font-size: 0.85rem; color: var(--est-text); }
+/* (02/10) Conta dos números: do plano + extras = pode cadastrar */
+.wal-extras-conta { display: flex; align-items: stretch; gap: 8px; }
+.wal-extras-conta > div { min-width: 92px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 12px; border-radius: 12px; background: var(--est-card, var(--est-bg)); border: 1px solid var(--est-border); text-align: center; }
+.wal-extras-conta span { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--est-text-soft); }
+.wal-extras-conta strong { font-size: 1.45rem; line-height: 1.1; }
+.wal-extras-conta small { font-size: 0.7rem; color: var(--est-text-soft); }
+.wal-extras-conta i { align-self: center; font-style: normal; font-weight: 800; font-size: 1.05rem; color: var(--est-text-soft); }
+.wal-extras-conta .total { border-color: var(--est-accent); }
+.wal-extras-conta .total strong { color: var(--est-accent); }
+.wal-extras-lado { flex: 1; min-width: 240px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.wal-extras-comprar, .wal-extras-pedido { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; line-height: 1.45; }
+.wal-extras-pedido { padding: 9px 12px; border-radius: 10px; background: var(--est-warning-dim); border-left: 3px solid var(--est-warning); width: 100%; }
+.wal-extras-pedido > span { flex: 1; min-width: 180px; }
 .wal-extras > span:first-child { flex: 1; min-width: 200px; }
 .wal-extras-acoes { display: flex; gap: 14px; flex-wrap: wrap; }
 
@@ -280,4 +293,17 @@
   .wal-pg-topo { flex-direction: column; align-items: flex-start; }
   .wal-pg-copia { flex-direction: column; }
   .wal-pg-copia .wal-btn { justify-content: center; text-align: center; }
+}
+
+/* ── Zoom da tela (02/10/2026) ───────────────────────────────── */
+.wal-cabecalho-lado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wal-zoom { display: inline-flex; align-items: stretch; border: 1px solid var(--est-border); border-radius: 10px; overflow: hidden; }
+.wal-zoom button { border: none; background: transparent; color: var(--est-text); font-weight: 800; font-size: 0.78rem; padding: 6px 10px; cursor: pointer; font-family: inherit; }
+.wal-zoom button:hover:not(:disabled) { background: var(--est-hover); }
+.wal-zoom button:disabled { opacity: 0.4; cursor: not-allowed; }
+.wal-zoom .wal-zoom-valor { min-width: 50px; color: var(--est-text-soft); border-left: 1px solid var(--est-border); border-right: 1px solid var(--est-border); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .wal-extras-conta { width: 100%; }
+  .wal-extras-conta > div { flex: 1; min-width: 0; padding: 8px 6px; }
+  .wal-extras-conta span { font-size: 0.58rem; letter-spacing: 0; overflow-wrap: anywhere; }
 }

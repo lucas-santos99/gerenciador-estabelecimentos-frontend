@@ -13,7 +13,7 @@
 // As contas usam src/utils/whatsappCustos.js (espelho do backend).
 // Detalhes e decisões: doc do Projeto claude/whatsapp-planos-2026-09-24.md
 // ============================================================
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import { apiFetch } from "../../../utils/api";
@@ -98,10 +98,38 @@ const pegar = (obj, caminho) => caminho.split(".").reduce((o, k) => (o == null ?
 
 /* ── Componentes pequenos (fora do principal pra não perder o foco) ── */
 // lado: "cima" (padrão) | "baixo" (dentro de tabela com rolagem) | "esq" (perto da borda direita)
+// (02/10/2026) O balão nunca sai da área visível: ao aparecer, mede onde
+// caiu e se desloca pra dentro (da página, do modal ou da tabela com
+// rolagem). Sem espaço em cima, abre pra baixo.
+const zoomDe = (el) => { try { return parseFloat(getComputedStyle(el.closest(".wa-zoomavel") || el).zoom) || 1; } catch { return 1; } };
 function Dica({ texto, lado }) {
+  const ref = useRef(null);
   if (!texto) return null;
+  const ajustar = () => {
+    const el = ref.current;
+    const balao = el && el.querySelector(".wa-dica-balao");
+    if (!balao) return;
+    balao.style.setProperty("--wa-dx", "0px");
+    el.classList.remove("auto-baixo");
+    requestAnimationFrame(() => {
+      const r = balao.getBoundingClientRect();
+      if (!r.width) return;
+      let esq = 8, dir = window.innerWidth - 8, topo = 8;
+      [".wa-root", ".sa-modal", ".wa-tabela-rolagem"].forEach(sel => {
+        const c = el.closest(sel);
+        if (!c) return;
+        const cr = c.getBoundingClientRect();
+        esq = Math.max(esq, cr.left + 6); dir = Math.min(dir, cr.right - 6);
+        if (sel !== ".wa-root") topo = Math.max(topo, cr.top + 4);
+      });
+      const dx = r.left < esq ? esq - r.left : r.right > dir ? dir - r.right : 0;
+      if (dx) balao.style.setProperty("--wa-dx", `${dx / zoomDe(el)}px`);
+      if (r.top < topo) el.classList.add("auto-baixo");
+    });
+  };
   return (
-    <span className={`wa-dica${lado ? ` ${lado}` : ""}`} tabIndex={0} aria-label={texto}
+    <span ref={ref} className={`wa-dica${lado ? ` ${lado}` : ""}`} tabIndex={0} aria-label={texto}
+      onMouseEnter={ajustar} onFocus={ajustar}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
       ?<span className="wa-dica-balao" role="tooltip">{texto}</span>
     </span>
@@ -130,17 +158,36 @@ function Selo({ situacao }) {
   return <span className={`wa-selo ${s.cls}`}>{s.txt}</span>;
 }
 
-function Secao({ titulo, sub, children, icone }) {
+// (02/10/2026) Cada quadro recolhe e expande (clique no título). O que
+// ficou recolhido é lembrado no navegador; os botões do topo da página
+// recolhem/expandem todos de uma vez (evento "wa-secoes").
+const SECOES_KEY = "wa-admin-secoes-fechadas";
+const lerFechadas = () => { try { return new Set(JSON.parse(localStorage.getItem(SECOES_KEY) || "[]")); } catch { return new Set(); } };
+const gravarFechada = (chave, fechada) => {
+  try { const st = lerFechadas(); if (fechada) st.add(chave); else st.delete(chave); localStorage.setItem(SECOES_KEY, JSON.stringify([...st])); } catch { /* sem armazenamento */ }
+};
+function Secao({ titulo, sub, children, icone, id }) {
+  const chave = id || String(titulo).replace(/\s*\(\d+\)\s*$/, "");
+  const [fechada, setFechada] = useState(() => lerFechadas().has(chave));
+  useEffect(() => {
+    const todos = (e) => { const f = e.detail === "recolher"; gravarFechada(chave, f); setFechada(f); };
+    window.addEventListener("wa-secoes", todos);
+    return () => window.removeEventListener("wa-secoes", todos);
+  }, [chave]);
+  const alternar = () => setFechada(f => { gravarFechada(chave, !f); return !f; });
   return (
-    <section className="wa-secao">
-      <header className="wa-secao-head">
+    <section className={`wa-secao${fechada ? " fechada" : ""}`}>
+      <header className="wa-secao-head" role="button" tabIndex={0} aria-expanded={!fechada}
+        title={fechada ? "Expandir" : "Recolher"} onClick={alternar}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); alternar(); } }}>
         {icone && <span className="wa-secao-icone">{icone}</span>}
         <div>
           <h3>{titulo}</h3>
-          {sub && <p>{sub}</p>}
+          {sub && !fechada && <p>{sub}</p>}
         </div>
+        <span className="wa-secao-seta" aria-hidden="true">▾</span>
       </header>
-      <div className="wa-secao-corpo">{children}</div>
+      <div className="wa-secao-corpo" hidden={fechada}>{children}</div>
     </section>
   );
 }
@@ -197,6 +244,14 @@ export default function WhatsAppAdmin() {
   const [erro, setErro] = useState("");
   const [toast, setToast] = useState(null);
   const [podeEditar, setPodeEditar] = useState(false);
+  // Zoom da página (02/10): 80% a 160%, lembrado no navegador
+  const [zoom, setZoom] = useState(() => { try { const z = parseFloat(localStorage.getItem("wa-admin-zoom")); return z >= 0.8 && z <= 1.6 ? z : 1; } catch { return 1; } });
+  const mudarZoom = (delta) => setZoom(z => {
+    const n = delta === 0 ? 1 : Math.min(1.6, Math.max(0.8, Math.round((z + delta) * 10) / 10));
+    try { localStorage.setItem("wa-admin-zoom", String(n)); } catch { /* sem armazenamento */ }
+    return n;
+  });
+  const todasSecoes = (acao) => window.dispatchEvent(new CustomEvent("wa-secoes", { detail: acao }));
 
   const [salvo, setSalvo] = useState(null);   // parâmetros como estão no banco (normalizados)
   const [rasc, setRasc] = useState(null);     // rascunho em edição (pode ter texto)
@@ -225,8 +280,11 @@ export default function WhatsAppAdmin() {
     setPodeEditar(!!j.pode_editar);
   }, []);
 
-  const carregarHistorico = useCallback(async () => {
-    const r = await apiFetch(`${API}/historico`);
+  const carregarHistorico = useCallback(async (de, ate) => {
+    const qs = new URLSearchParams();
+    if (de) qs.set("de", de);
+    if (ate) qs.set("ate", ate);
+    const r = await apiFetch(`${API}/historico${qs.toString() ? `?${qs}` : ""}`);
     const j = await r.json();
     if (r.ok) setHistorico(Array.isArray(j) ? j : []);
   }, []);
@@ -348,6 +406,15 @@ export default function WhatsAppAdmin() {
             <span className="sa-breadcrumb">SuperAdmin · Serviço adicional</span>
             <h1 className="sa-page-title">WhatsApp <span>planos e custos</span></h1>
           </div>
+          <div className="wa-ferramentas">
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => todasSecoes("recolher")} title="Recolhe todos os quadros desta aba">▴ Recolher tudo</button>
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => todasSecoes("expandir")} title="Expande todos os quadros desta aba">▾ Expandir tudo</button>
+            <div className="wa-zoom" role="group" aria-label="Zoom da página">
+              <button type="button" onClick={() => mudarZoom(-0.1)} disabled={zoom <= 0.8} aria-label="Diminuir zoom">A−</button>
+              <button type="button" className="wa-zoom-valor" onClick={() => mudarZoom(0)} title="Voltar para 100%">{Math.round(zoom * 100)}%</button>
+              <button type="button" onClick={() => mudarZoom(0.1)} disabled={zoom >= 1.6} aria-label="Aumentar zoom">A+</button>
+            </div>
+          </div>
         </div>
 
         {carregando ? (
@@ -359,7 +426,7 @@ export default function WhatsAppAdmin() {
             <small>Se acabou de atualizar o sistema, confira se o SQL 11 (tabelas do WhatsApp) já foi rodado no Supabase.</small>
           </div>
         ) : (
-          <>
+          <div className="wa-zoomavel" style={{ zoom }}>
             <div className={`wa-status ${pSalvo?.integracao?.ativo ? "on" : numeroMeta ? "teste" : "off"}`}>
               <span className="wa-status-bola" />
               <div>
@@ -410,7 +477,7 @@ export default function WhatsAppAdmin() {
             {aba === "cobranca" && (
               <AbaCobranca rasc={rasc} p={pRasc} setP={setP} podeEditar={podeEditar} lojas={lojas} />
             )}
-            {aba === "historico" && <AbaHistorico itens={historico} />}
+            {aba === "historico" && <AbaHistorico itens={historico} onPeriodo={carregarHistorico} />}
 
             {sujo && podeEditar && (aba === "custos" || aba === "cobranca") && (
               <div className="wa-barra-salvar">
@@ -423,7 +490,7 @@ export default function WhatsAppAdmin() {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {toast && <div key={toast.id} className={`wa-toast ${toast.tipo}`} role="status">{toast.msg}</div>}
@@ -723,8 +790,8 @@ function ModalPlano({ plano, params, onFechar, onSalvo }) {
             <div className="wa-linha wa-linha-baixo">
               <label className="wa-check"><input type="checkbox" checked={f.destaque} onChange={e => set("destaque", e.target.checked)} /> Destacar (“mais escolhido”) <Dica texto="Marca o plano com uma estrela e um selo de destaque na tela de contratação, pra chamar atenção." /></label>
               <label className="wa-check"><input type="checkbox" checked={f.ativo} onChange={e => set("ativo", e.target.checked)} /> Ativo (oferecido às lojas) <Dica texto="Desmarcado, o plano fica salvo mas não aparece pra contratar. Quem já assinou continua com ele." /></label>
-              <Campo label="Ordem" tipo="inteiro" valor={f.ordem} onChange={v => set("ordem", v.replace(/[^\d-]/g, ""))} largura={90}
-                dica="Posição na lista (menor aparece primeiro)." />
+              <Campo label="Ordem na lista" tipo="inteiro" valor={f.ordem} onChange={v => set("ordem", v.replace(/[^\d-]/g, ""))} largura={130}
+                dica="Em que posição este plano aparece para a loja escolher e aqui no painel. Número menor aparece primeiro (0, 1, 2…). Com o mesmo número, vem primeiro o mais barato. Não muda preço nem créditos, é só a ordem de exibição." />
             </div>
           </div>
 
@@ -1221,7 +1288,7 @@ function AbaConexao({ podeEditarPagina, avisar, liberado, onLiberado }) {
 
   const carregar = useCallback(async () => {
     try {
-      const [r1, r2] = await Promise.all([apiFetch(`${API}/conexao`), apiFetch(`${API}/mensagens?limite=30`)]);
+      const [r1, r2] = await Promise.all([apiFetch(`${API}/conexao`), apiFetch(`${API}/mensagens?limite=200`)]);
       const j1 = await r1.json(); const j2 = await r2.json();
       if (!r1.ok) throw new Error(j1.error || "Erro ao carregar.");
       setC(j1); setErro("");
@@ -1347,34 +1414,116 @@ function AbaConexao({ podeEditarPagina, avisar, liberado, onLiberado }) {
         </Secao>
       )}
 
-      <Secao icone="🗒️" titulo="Últimas mensagens" sub="Enviadas e recebidas pelo número do sistema (as 30 mais recentes).">
-        <div className="wa-linha" style={{ marginBottom: 10 }}>
-          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={carregar}>↻ Atualizar</button>
-        </div>
-        {!msgs || msgs.length === 0 ? <div className="wa-vazio-mini">Nenhuma mensagem ainda.</div> : (
-          <div className="wa-tabela-rolagem">
-            <table className="wa-tabela">
-              <thead><tr><th>Quando</th><th></th><th>Número</th><th>Loja</th><th>Tipo</th><th>Situação</th></tr></thead>
-              <tbody>
-                {msgs.map(m => (
-                  <tr key={m.id}>
-                    <td className="wa-nowrap">{new Date(m.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
-                    <td title={m.direcao === "entrada" ? "Recebida" : "Enviada"}>{m.direcao === "entrada" ? "↘" : "↗"}</td>
-                    <td className="wa-nowrap">{m.destino_formatado || m.destino}</td>
-                    <td>{m.loja_nome || <span className="wa-sutil-txt">—</span>}</td>
-                    <td>{TIPO_ENVIO[m.tipo] || m.tipo}</td>
-                    <td>
-                      <span className={`wa-pilula ${m.status === "falhou" ? "perigo" : m.status === "lido" || m.status === "entregue" ? "ok" : ""}`}>{STATUS_MSG[m.status] || m.status}</span>
-                      {m.status === "falhou" && <small className="wa-msg-erro">{m.erro_explicado || m.erro_mensagem || `Erro ${m.erro_codigo}`}</small>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <Secao icone="🗒️" titulo="Últimas mensagens" sub="As 200 mais recentes do número do sistema, separadas por estabelecimento. Clique no estabelecimento para abrir.">
+        <MensagensPorLoja msgs={msgs} ocupado={ocupado} onAtualizar={carregar} />
       </Secao>
     </div>
+  );
+}
+
+// (02/10/2026) Últimas mensagens agrupadas por estabelecimento, com
+// expandir/recolher, busca e filtro de falhas.
+function MensagensPorLoja({ msgs, ocupado, onAtualizar }) {
+  const [abertos, setAbertos] = useState(() => new Set());
+  const [busca, setBusca] = useState("");
+  const [soFalhas, setSoFalhas] = useState(false);
+  const [inteiros, setInteiros] = useState(() => new Set()); // grupos mostrando todas as linhas
+  const POR_GRUPO = 12;
+
+  const grupos = useMemo(() => {
+    const mapa = new Map();
+    (msgs || []).forEach(m => {
+      const k = m.mercearia_id || "__sem";
+      if (!mapa.has(k)) mapa.set(k, { chave: k, nome: m.mercearia_id ? (m.loja_nome || "Estabelecimento") : "Sem estabelecimento", semLoja: !m.mercearia_id, itens: [], enviadas: 0, recebidas: 0, falhas: 0, custo: 0, ultima: m.criado_em });
+      const g = mapa.get(k);
+      g.itens.push(m);
+      if (m.direcao === "entrada") g.recebidas++; else g.enviadas++;
+      if (m.status === "falhou") g.falhas++; else g.custo += Number(m.custo_meta_estimado) || 0;
+      if (m.criado_em > g.ultima) g.ultima = m.criado_em;
+    });
+    return [...mapa.values()].sort((a, b) => (a.ultima < b.ultima ? 1 : -1));
+  }, [msgs]);
+
+  const t = busca.trim().toLowerCase();
+  const digitos = t.replace(/\D/g, "");
+  const visiveis = grupos.map(g => {
+    let itens = soFalhas ? g.itens.filter(m => m.status === "falhou") : g.itens;
+    if (t && !g.nome.toLowerCase().includes(t)) {
+      itens = itens.filter(m => (digitos && String(m.destino || "").includes(digitos)) || String(m.destino_formatado || "").toLowerCase().includes(t));
+    }
+    return { ...g, itensVis: itens };
+  }).filter(g => g.itensVis.length > 0);
+
+  const alternar = (k) => setAbertos(a => { const n = new Set(a); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const aberto = (g) => abertos.has(g.chave) || visiveis.length === 1 || (!!t && visiveis.length <= 3);
+  const quando = (iso) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+  return (
+    <>
+      <div className="wa-msgs-barra">
+        <input className="sa-input wa-busca" placeholder="Buscar estabelecimento ou número…" value={busca} onChange={e => setBusca(e.target.value)} />
+        <label className="wa-check"><input type="checkbox" checked={soFalhas} onChange={e => setSoFalhas(e.target.checked)} /> Só as que falharam</label>
+        <span className="wa-msgs-espaco" />
+        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAbertos(new Set(visiveis.map(g => g.chave)))}>▾ Abrir todos</button>
+        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAbertos(new Set())}>▴ Fechar todos</button>
+        <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado} onClick={onAtualizar}>↻ Atualizar</button>
+      </div>
+      {!msgs || msgs.length === 0 ? <div className="wa-vazio-mini">Nenhuma mensagem ainda.</div>
+        : visiveis.length === 0 ? <div className="wa-vazio-mini">Nenhuma mensagem com esse filtro.</div> : (
+        <ul className="wa-msgs-grupos">
+          {visiveis.map(g => {
+            const ab = aberto(g);
+            const linhas = inteiros.has(g.chave) ? g.itensVis : g.itensVis.slice(0, POR_GRUPO);
+            return (
+              <li key={g.chave} className={ab ? "aberto" : ""}>
+                <button type="button" className="wa-msgs-cab" aria-expanded={ab} onClick={() => alternar(g.chave)}>
+                  <span className="wa-msgs-seta" aria-hidden="true">▾</span>
+                  <span className="wa-msgs-nome">
+                    <strong>{g.semLoja ? "👤 Sem estabelecimento" : `🏪 ${g.nome}`}</strong>
+                    {g.semLoja && <small>testes, cobrança da mensalidade e números ainda não cadastrados</small>}
+                  </span>
+                  <span className="wa-msgs-resumo">
+                    <span className="wa-pilula">{g.itens.length} mensage{g.itens.length === 1 ? "m" : "ns"}</span>
+                    <span className="wa-pilula" title="Enviadas pelo sistema">↗ {g.enviadas}</span>
+                    <span className="wa-pilula" title="Recebidas">↘ {g.recebidas}</span>
+                    {g.falhas > 0 && <span className="wa-pilula perigo">{g.falhas} falh{g.falhas === 1 ? "ou" : "aram"}</span>}
+                    {g.custo > 0 && <span className="wa-pilula" title="Custo estimado da Meta nestas mensagens">{brl(g.custo, 3)}</span>}
+                  </span>
+                  <span className="wa-msgs-ultima">última: {quando(g.ultima)}</span>
+                </button>
+                {ab && (
+                  <div className="wa-tabela-rolagem wa-msgs-corpo">
+                    <table className="wa-tabela">
+                      <thead><tr><th>Quando</th><th></th><th>Número</th><th>Tipo</th><th>Situação</th></tr></thead>
+                      <tbody>
+                        {linhas.map(m => (
+                          <tr key={m.id}>
+                            <td className="wa-nowrap">{quando(m.criado_em)}</td>
+                            <td title={m.direcao === "entrada" ? "Recebida" : "Enviada"}>{m.direcao === "entrada" ? "↘" : "↗"}</td>
+                            <td className="wa-nowrap">{m.destino_formatado || m.destino}</td>
+                            <td>{TIPO_ENVIO[m.tipo] || m.tipo}{m.pedido_tipo ? <span className="wa-sutil-txt"> · {m.pedido_tipo}</span> : null}</td>
+                            <td>
+                              <span className={`wa-pilula ${m.status === "falhou" ? "perigo" : m.status === "lido" || m.status === "entregue" ? "ok" : ""}`}>{STATUS_MSG[m.status] || m.status}</span>
+                              {m.status === "falhou" && <small className="wa-msg-erro">{m.erro_explicado || m.erro_mensagem || `Erro ${m.erro_codigo}`}</small>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {g.itensVis.length > POR_GRUPO && (
+                      <button type="button" className="wa-msgs-mais"
+                        onClick={() => setInteiros(x => { const n = new Set(x); if (n.has(g.chave)) n.delete(g.chave); else n.add(g.chave); return n; })}>
+                        {inteiros.has(g.chave) ? "Mostrar só as mais recentes" : `Mostrar todas as ${g.itensVis.length}`}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }
 
@@ -1770,23 +1919,47 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
             {modal.tipo === "numeros" && (<>
               <div className="sa-modal-icon">📱</div>
               <div className="sa-modal-title">Números de WhatsApp de {modal.item.loja_nome}</div>
-              <div className="sa-modal-subtitle">
-                O plano {modal.item.plano_nome} inclui {modal.item.numeros} número{modal.item.numeros === 1 ? "" : "s"}. Os extras somam na mensalidade do WhatsApp da loja
-                (cadastrados hoje: {modal.item.numeros_cadastrados ?? "?"}). O valor por número fica travado só pra esta loja; o padrão de pedidos novos está em Custos e parâmetros.
-              </div>
-              <div className="wa-linha">
-                <Campo label="Números extras" tipo="inteiro" valor={modal.extras} onChange={v => setModal(m => ({ ...m, extras: v.replace(/\D/g, "") }))} largura={150} />
-                <Campo label="Valor por número/mês" prefixo="R$" valor={modal.preco} onChange={v => setModal(m => ({ ...m, preco: v }))} largura={180} />
-              </div>
-              <p className="wa-nota" style={{ marginBottom: 14 }}>
-                Mensalidade do WhatsApp: {brl(modal.item.preco)} (plano) + {parseInt(modal.extras, 10) || 0} × {brl(lerNum(modal.preco) || 0)} ={" "}
-                <strong>{brl((Number(modal.item.preco) || 0) + (parseInt(modal.extras, 10) || 0) * (lerNum(modal.preco) || 0))}/mês</strong>
-              </p>
-              <div className="sa-modal-actions">
-                <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
-                <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado}
-                  onClick={() => acao(`/assinaturas/${modal.item.id}/numeros-extras/definir`, { extras: parseInt(modal.extras, 10) || 0, preco: lerNum(modal.preco) || 0 }, "Números atualizados.")}>Salvar</button>
-              </div>
+              <div className="sa-modal-subtitle">Quantos números esta loja pode cadastrar: os do plano mais os extras. Todos usam o mesmo saldo de créditos.</div>
+              {(() => {
+                const doPlano = Number(modal.item.numeros) || 1;
+                const extras = parseInt(modal.extras, 10) || 0;
+                const cadastrados = modal.item.numeros_cadastrados;
+                const total = doPlano + extras;
+                const preco = lerNum(modal.preco) || 0;
+                const falta = cadastrados != null && total < cadastrados;
+                const mudar = (n) => setModal(m => ({ ...m, extras: String(Math.min(50, Math.max(0, n))) }));
+                return (<>
+                  <div className="wa-num-resumo">
+                    <div><span>Do plano {modal.item.plano_nome}</span><strong>{doPlano}</strong><small>já incluído{doPlano === 1 ? "" : "s"} na mensalidade</small></div>
+                    <div className="mais">+</div>
+                    <div className="editavel"><span>Extras</span>
+                      <div className="wa-num-passo">
+                        <button type="button" onClick={() => mudar(extras - 1)} disabled={ocupado || extras <= 0} aria-label="Tirar um extra">−</button>
+                        <input value={modal.extras} inputMode="numeric" aria-label="Números extras" onChange={e => setModal(m => ({ ...m, extras: e.target.value.replace(/\D/g, "").slice(0, 2) }))} />
+                        <button type="button" onClick={() => mudar(extras + 1)} disabled={ocupado || extras >= 50} aria-label="Somar um extra">+</button>
+                      </div>
+                      <small>antes: {modal.item.numeros_extras || 0}</small></div>
+                    <div className="mais">=</div>
+                    <div className={falta ? "perigo" : "total"}><span>Pode cadastrar</span><strong>{total}</strong><small>em uso hoje: {cadastrados ?? "?"}</small></div>
+                  </div>
+                  {falta && <p className="wa-num-alerta">A loja já tem {cadastrados} números cadastrados. Para baixar para {total}, ela precisa remover {cadastrados - total} antes.</p>}
+                  <div className="wa-linha">
+                    <Campo label="Valor de cada extra por mês" prefixo="R$" valor={modal.preco} onChange={v => setModal(m => ({ ...m, preco: v }))} largura={300}
+                      dica="Fica travado só para esta loja. O valor padrão para pedidos novos está em Custos e parâmetros → Números extras." />
+                  </div>
+                  <div className="wa-num-conta">
+                    <span>Mensalidade do WhatsApp desta loja</span>
+                    <span>{brl(modal.item.preco)} do plano + {extras} × {brl(preco)}</span>
+                    <strong>{brl((Number(modal.item.preco) || 0) + extras * preco)}/mês</strong>
+                  </div>
+                  <p className="wa-nota" style={{ marginBottom: 14 }}>Salvar aqui libera na hora, sem cobrança pela tela. A loja também pode comprar o extra sozinha e pagar por Pix ou cartão.</p>
+                  <div className="sa-modal-actions">
+                    <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setModal(null)} disabled={ocupado}>Voltar</button>
+                    <button type="button" className="sa-btn sa-btn-primary" disabled={ocupado || falta}
+                      onClick={() => acao(`/assinaturas/${modal.item.id}/numeros-extras/definir`, { extras, preco }, "Números atualizados.")}>Salvar</button>
+                  </div>
+                </>);
+              })()}
             </>)}
             {modal.tipo === "retomar" && (<>
               <div className="sa-modal-icon">▶️</div>
@@ -2018,7 +2191,7 @@ function AbaUso() {
             {(u.seu?.mensagens ?? 0) === 0 ? (
               <div className="wa-vazio-mini">Nenhuma mensagem sua neste mês.</div>
             ) : (
-              <Secao icone="🗂️" titulo="Por tipo">
+              <Secao icone="🗂️" titulo="Por tipo" id="Seu uso: por tipo">
                 <TabelaTipos porTipo={u.seu.por_tipo} />
               </Secao>
             )}
@@ -2385,9 +2558,20 @@ function ListaDias({ titulo, dica, lista, onChange, disabled, sufixo }) {
 function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
   const d = !podeEditar;
   const [busca, setBusca] = useState("");
+  const [tipoF, setTipoF] = useState("");      // filtro por tipo de estabelecimento (02/10)
+  const [soFora, setSoFora] = useState(false);
   const desligadas = new Set(p.cobranca_auto.lojas_desligadas);
   const ativo = pegar(rasc, "cobranca_auto.ativo") === true;
-  const lista = (lojas || []).filter(l => !busca.trim() || (l.nome_fantasia || "").toLowerCase().includes(busca.trim().toLowerCase()));
+  const tipoDe = (l) => (l.tipo_estabelecimento || "").trim() || "Sem tipo";
+  const tipos = [...new Set((lojas || []).map(tipoDe))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const lista = (lojas || []).filter(l => (!busca.trim() || (l.nome_fantasia || "").toLowerCase().includes(busca.trim().toLowerCase()))
+    && (!tipoF || tipoDe(l) === tipoF) && (!soFora || desligadas.has(l.id)));
+  // Marca/desmarca de uma vez todas as lojas que estão aparecendo (filtro atual)
+  function marcarLista(recebe) {
+    const st = new Set(p.cobranca_auto.lojas_desligadas);
+    lista.forEach(l => { if (recebe) st.delete(l.id); else st.add(l.id); });
+    setP("cobranca_auto.lojas_desligadas", [...st]);
+  }
   const envios = p.cobranca_auto.dias_antes.length + p.cobranca_auto.dias_depois.length;
   const nLojas = lojas ? lojas.filter(l => !desligadas.has(l.id)).length : null;
 
@@ -2429,9 +2613,23 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
       <Secao icone="🏪" titulo="Lojas que NÃO recebem o lembrete automático"
         sub="Ex.: quem paga por outro canal, combinou diferente ou pediu pra não receber.">
         <p className="wa-nota">Desmarque a loja pra ela não receber o lembrete automático. <Dica texto="Marcada = recebe. A loja desmarcada continua podendo ser cobrada manualmente pela tela Cobranças." /></p>
-        <input className="sa-input wa-busca" placeholder="Buscar loja…" value={busca} onChange={e => setBusca(e.target.value)} />
+        <div className="wa-lojas-filtro">
+          <input className="sa-input wa-busca" placeholder="Buscar loja…" value={busca} onChange={e => setBusca(e.target.value)} />
+          <select className="sa-input" value={tipoF} onChange={e => setTipoF(e.target.value)} aria-label="Tipo de estabelecimento">
+            <option value="">Todos os tipos</option>
+            {tipos.map(t => <option key={t} value={t}>{t} ({(lojas || []).filter(l => tipoDe(l) === t).length})</option>)}
+          </select>
+          <label className="wa-check"><input type="checkbox" checked={soFora} onChange={e => setSoFora(e.target.checked)} /> Só as que não recebem</label>
+        </div>
+        {lojas !== null && lista.length > 0 && (
+          <div className="wa-lojas-lote">
+            <span>{lista.length} loja{lista.length === 1 ? "" : "s"} {tipoF || busca || soFora ? "no filtro" : "no total"} · {lista.filter(l => !desligadas.has(l.id)).length} recebendo</span>
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={d} onClick={() => marcarLista(true)}>✓ Marcar {tipoF ? `todas de “${tipoF}”` : "todas da lista"}</button>
+            <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={d} onClick={() => marcarLista(false)}>✕ Desmarcar {tipoF ? `todas de “${tipoF}”` : "todas da lista"}</button>
+          </div>
+        )}
         {lojas === null ? <div className="sa-loading"><div className="sa-spinner" /></div> : lista.length === 0 ? (
-          <div className="wa-vazio-mini">{busca ? "Nenhuma loja encontrada." : "Nenhum estabelecimento cadastrado."}</div>
+          <div className="wa-vazio-mini">{busca || tipoF || soFora ? "Nenhuma loja encontrada com esse filtro." : "Nenhum estabelecimento cadastrado."}</div>
         ) : (
           <ul className="wa-lojas">
             {lista.map(l => {
@@ -2441,6 +2639,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
                   <label>
                     <input type="checkbox" checked={!off} disabled={d} onChange={() => alternarLoja(l.id)} />
                     <span className="wa-loja-nome">{l.nome_fantasia || "Sem nome"}</span>
+                    <span className="wa-loja-tipo">{tipoDe(l)}</span>
                   </label>
                   <span className="wa-loja-info">
                     {l.data_vencimento ? `vence ${new Date(`${String(l.data_vencimento).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR")}` : "sem vencimento"}
@@ -2505,14 +2704,48 @@ function mudancas(item) {
   return [];
 }
 
-function AbaHistorico({ itens }) {
-  if (!itens.length) {
-    return <div className="wa-vazio"><div className="wa-vazio-icone">🕘</div><h3>Nada alterado ainda</h3><p>Cada mudança em planos e parâmetros aparece aqui, com quem fez e quando.</p></div>;
-  }
+const isoLocal = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+function AbaHistorico({ itens, onPeriodo }) {
+  // (02/10) Filtro por período: busca no servidor (até 500 do período)
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [acaoF, setAcaoF] = useState("");
+  const invertido = de && ate && de > ate;
+  const aplicar = (d1, d2) => { setDe(d1); setAte(d2); if (!(d1 && d2 && d1 > d2)) onPeriodo(d1 || undefined, d2 || undefined); };
+  const ultimos = (n) => { const h = new Date(); const i = new Date(); i.setDate(i.getDate() - (n - 1)); aplicar(isoLocal(i), isoLocal(h)); };
+  const filtrando = !!(de || ate);
+  const acoes = [...new Set(itens.map(h => h.acao))];
+  const lista = acaoF ? itens.filter(h => h.acao === acaoF) : itens;
   return (
     <div className="wa-aba">
+      <div className="wa-hist-filtro">
+        <label><span>De</span><input type="date" className="sa-input" value={de} max={ate || undefined} onChange={e => aplicar(e.target.value, ate)} /></label>
+        <label><span>Até</span><input type="date" className="sa-input" value={ate} min={de || undefined} onChange={e => aplicar(de, e.target.value)} /></label>
+        <label><span>O que mudou</span>
+          <select className="sa-input" value={acaoF} onChange={e => setAcaoF(e.target.value)}>
+            <option value="">Tudo</option>
+            {acoes.map(a => <option key={a} value={a}>{ACAO_HIST[a] || a}</option>)}
+          </select>
+        </label>
+        <div className="wa-hist-atalhos">
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => ultimos(1)}>Hoje</button>
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => ultimos(7)}>7 dias</button>
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => ultimos(30)}>30 dias</button>
+          {(filtrando || acaoF) && <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => { setAcaoF(""); aplicar("", ""); }}>✕ Limpar</button>}
+        </div>
+      </div>
+      <p className="wa-nota">
+        {invertido ? "A data inicial é depois da final." : filtrando
+          ? `${lista.length} alteraç${lista.length === 1 ? "ão" : "ões"} no período${itens.length >= 500 ? " (mostrando as 500 mais recentes; diminua o período pra ver o resto)" : ""}.`
+          : `Mostrando as ${lista.length} alterações mais recentes. Escolha um período pra ver as mais antigas.`}
+      </p>
+      {lista.length === 0 ? (
+        <div className="wa-vazio"><div className="wa-vazio-icone">🕘</div>
+          <h3>{filtrando || acaoF ? "Nada alterado nesse filtro" : "Nada alterado ainda"}</h3>
+          <p>Cada mudança em planos e parâmetros aparece aqui, com quem fez e quando.</p></div>
+      ) : (
       <ul className="wa-hist">
-        {itens.map(h => {
+        {lista.map(h => {
           const m = mudancas(h);
           return (
             <li key={h.id}>
@@ -2526,6 +2759,7 @@ function AbaHistorico({ itens }) {
           );
         })}
       </ul>
+      )}
     </div>
   );
 }
