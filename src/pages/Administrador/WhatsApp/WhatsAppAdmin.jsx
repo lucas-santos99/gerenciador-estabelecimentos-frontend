@@ -837,14 +837,18 @@ function AbaCustos({ rasc, p, setP, setRasc, podeEditar, planos, pSalvo, cotacao
           </Secao>
 
           <Secao icone="💳" titulo="Taxas de recebimento"
-            sub="Usadas no valor líquido de cada pagamento que você registra na aba Lojas (ativar plano, renovar ciclo, pacote extra). Dinheiro, transferência direta, cortesia e teste não têm taxa. Confira os valores na sua conta de cada provedor.">
+            sub="Usadas no valor líquido dos pagamentos que você registra na mão na aba Lojas e no Pix pago pela tela da loja. No cartão pago pela tela (crédito ou débito), o sistema grava a taxa real que o Asaas descontou. Dinheiro, transferência direta, cortesia e teste não têm taxa. Confira os valores na sua conta de cada provedor.">
             <div className="wa-linha">
               {C("recebimento.pix_efi_pct", "Pix (Efí)", { sufixo: "%", dica: "Tarifa da Efí por Pix recebido por cobrança (QR dinâmico / copia e cola). Página de tarifas da Efí: 1,19%." })}
               {C("recebimento.pix_efi_fixo", "Pix (Efí) — fixo", { prefixo: "R$", dica: "Valor fixo por Pix, se o seu contrato tiver (normalmente 0)." })}
             </div>
             <div className="wa-linha">
-              {C("recebimento.cartao_asaas_pct", "Cartão (Asaas)", { sufixo: "%", dica: "Percentual da Asaas no cartão de crédito à vista. Tabela padrão do site: 2,99% (confira o seu contrato)." })}
-              {C("recebimento.cartao_asaas_fixo", "Cartão (Asaas) — fixo", { prefixo: "R$", dica: "Valor fixo por cobrança no cartão. Tabela padrão: R$ 0,49." })}
+              {C("recebimento.cartao_asaas_pct", "Cartão de crédito (Asaas)", { sufixo: "%", dica: "Percentual da Asaas no cartão de crédito à vista. Tabela padrão do site: 2,99% (confira o seu contrato)." })}
+              {C("recebimento.cartao_asaas_fixo", "Cartão de crédito (Asaas) — fixo", { prefixo: "R$", dica: "Valor fixo por cobrança no cartão de crédito. Tabela padrão: R$ 0,49." })}
+            </div>
+            <div className="wa-linha">
+              {C("recebimento.debito_asaas_pct", "Cartão de débito (Asaas)", { sufixo: "%", dica: "Percentual da Asaas no cartão de débito (a página de pagamento do cartão também aceita débito, Visa e Mastercard). Tabela padrão do site: 1,89%." })}
+              {C("recebimento.debito_asaas_fixo", "Cartão de débito (Asaas) — fixo", { prefixo: "R$", dica: "Valor fixo por cobrança no débito. Tabela padrão: R$ 0,35." })}
             </div>
           </Secao>
 
@@ -1382,7 +1386,7 @@ const MOV_TIPO = { credito_ciclo: "Créditos do ciclo", pacote: "Pacote extra", 
 const dataBRs = (s) => { if (!s) return ""; const [a, m, d] = String(s).slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
 
 /* ── Pagamento (01/10/2026, SQL 18) ─────────────────────────── */
-const ICONE_FORMA = { pix_efi: "⚡", cartao_asaas: "💳", dinheiro: "💵", transferencia: "🏦", cortesia: "🎁", teste: "🧪", nao_informado: "❔" };
+const ICONE_FORMA = { pix_efi: "⚡", cartao_asaas: "💳", debito_asaas: "🏧", dinheiro: "💵", transferencia: "🏦", cortesia: "🎁", teste: "🧪", nao_informado: "❔" };
 const hojeISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 const lerNumBR = (v) => {
   const t = String(v ?? "").trim();
@@ -1427,7 +1431,7 @@ function CamposPagamento({ pg, setPg, valorTabela, recebimento, rotuloValor = "V
         <div className="wa-linha wa-pg-linha">
           {!pv.sem && <Campo label={rotuloValor} prefixo="R$" valor={pg.valor} onChange={v => muda("valor", v)} largura={150}
             dica={`Valor de tabela: ${brl(valorTabela)}. Mude se a loja pagou outro valor (desconto, acerto).`} />}
-          {!pv.sem && (pg.forma === "pix_efi" || pg.forma === "cartao_asaas" || pg.taxaManual) && (
+          {!pv.sem && (pg.forma === "pix_efi" || pg.forma === "cartao_asaas" || pg.forma === "debito_asaas" || pg.taxaManual) && (
             <Campo label={pg.taxaManual ? "Taxa (informada)" : "Taxa estimada"} prefixo="R$" largura={150}
               valor={pg.taxaManual ? pg.taxa : numStr(pv.taxa.toFixed(2))} disabled={!pg.taxaManual} onChange={v => muda("taxa", v)}
               dica={pg.taxaManual ? "Taxa que o provedor cobrou de verdade." : "Calculada pelas Taxas de recebimento (Custos e parâmetros). Se o provedor cobrou outro valor, clique em \"informar a taxa\"."} />
@@ -2458,7 +2462,7 @@ function AbaCobranca({ rasc, p, setP, podeEditar, lojas }) {
 const ROTULO_PARAM = {
   "meta.preco_utilidade": "Preço alerta", "meta.preco_resposta": "Preço resposta", "meta.preco_marketing": "Preço marketing",
   "meta.respostas_gratis_mes": "Respostas grátis", "pesos.conversa": "Peso conversa sem consulta", "travas.conversa_gratis_dia": "Conversas grátis por dia (loja)",
-  "recebimento.pix_efi_pct": "Taxa Pix Efí %", "recebimento.pix_efi_fixo": "Taxa Pix Efí fixa", "recebimento.cartao_asaas_pct": "Taxa cartão Asaas %", "recebimento.cartao_asaas_fixo": "Taxa cartão Asaas fixa",
+  "recebimento.pix_efi_pct": "Taxa Pix Efí %", "recebimento.pix_efi_fixo": "Taxa Pix Efí fixa", "recebimento.debito_asaas_pct": "Taxa débito Asaas %", "recebimento.debito_asaas_fixo": "Taxa débito Asaas fixa", "recebimento.cartao_asaas_pct": "Taxa cartão Asaas %", "recebimento.cartao_asaas_fixo": "Taxa cartão Asaas fixa",
   "numeros.preco_extra": "Valor por número extra", "numeros.max_extras": "Máximo de números extras", "ia.modelo": "Modelo de IA", "ia.usd_por_interpretacao": "IA por interpretação (US$)",
   "ia.usd_por_imagem": "IA por foto (US$)", "ia.dolar": "Dólar", "ia.dolar_auto": "Dólar automático",
   "ia.dolar_folga_pct": "Folga sobre o dólar %", "ia.modelos": "Modelos de IA cadastrados", "ia.iof_pct": "IOF %", "precificacao.impostos_pct": "Impostos %",
