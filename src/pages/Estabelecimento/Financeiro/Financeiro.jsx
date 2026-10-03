@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { novoPdfRelatorio, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Financeiro.css';
 
 
@@ -22,6 +23,14 @@ function formatarData(s) {
   try { return new Date(s).toLocaleDateString('pt-BR', { timeZone: 'UTC' }); }
   catch { return '—'; }
 }
+
+// Textos do filtro de situação das contas (só apresentação)
+const FILTRO_CONTA_LABEL = { pendente: 'Pendentes (a vencer)', paga: 'Pagas', atrasada: 'Atrasadas' };
+const FILTRO_CONTA_TITLE = {
+  pendente: 'Contas em aberto que ainda não venceram',
+  paga:     'Contas que já foram pagas',
+  atrasada: 'Contas em aberto com o vencimento já passado',
+};
 
 /* ════════════════════════════════════════════════════════════ */
 export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia }) {
@@ -799,14 +808,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             </div>
             <div className="fin-resumo-grid">
               {[
-                { key: 'total_entradas_dia',  label: 'Total Entradas',    destaque: true },
+                { key: 'total_entradas_dia',  label: 'Total Entradas',    destaque: true, dica: 'Tudo que entrou no caixa hoje: as vendas pagas na hora mais o fiado que os clientes quitaram hoje.' },
                 { key: 'total_vendas_dia',    label: '🛒 Vendas',         info: 'Vendas pagas no ato' },
                 { key: 'total_fiado_recebido',label: '📋 Fiado Recebido', info: 'Quitação de dívidas' },
-                { key: 'total_dinheiro',      label: '💵 Dinheiro' },
-                { key: 'total_pix',           label: '📱 Pix' },
+                { key: 'total_dinheiro',      label: '💵 Dinheiro', dica: 'Tudo que entrou em dinheiro hoje. Conta também o fiado que foi quitado em dinheiro.' },
+                { key: 'total_pix',           label: '📱 Pix', dica: 'Tudo que entrou por Pix hoje. Conta também o fiado que foi quitado por Pix.' },
               ].map(c => (
                 <div key={c.key} className={`fin-resumo-card${c.destaque ? ' destaque' : ''}`}>
-                  <span className="fin-resumo-card-titulo">{c.label}</span>
+                  <span className="fin-resumo-card-titulo">{c.label}{c.dica && <Dica texto={c.dica} />}</span>
                   {c.info && <span className="fin-resumo-card-info">{c.info}</span>}
                   {loadingResumo
                     ? <div className="fin-card-spinner" />
@@ -817,7 +826,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
               {/* Card Cartão com breakdown débito/crédito */}
               <div className="fin-resumo-card fin-resumo-card--cartao">
-                <span className="fin-resumo-card-titulo">💳 Cartão</span>
+                <span className="fin-resumo-card-titulo">💳 Cartão <Dica texto="Tudo que entrou no cartão hoje (débito + crédito). Conta também o fiado que foi quitado no cartão." /></span>
                 {loadingResumo
                   ? <div className="fin-card-spinner" />
                   : <>
@@ -988,6 +997,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                     key={s}
                     className={`fin-status-btn ${s}${filtroStatus === s ? ' ativo' : ''}`}
                     onClick={() => setFiltroStatus(s)}
+                    title={FILTRO_CONTA_TITLE[s]}
                   >
                     {s === 'pendente' ? '⏳ Pendente'
                       : s === 'paga' ? '✅ Paga'
@@ -1079,7 +1089,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                   <div className="fin-vazio">
                     <span className="fin-vazio-icon">📋</span>
                     <p>Nenhuma conta encontrada</p>
-                    <small>Filtro: {filtroStatus}{(filtroContaDe || filtroContaAte) ? ' · período selecionado' : ''}</small>
+                    <small>Filtro: {FILTRO_CONTA_LABEL[filtroStatus] || filtroStatus}{(filtroContaDe || filtroContaAte) ? ' · período selecionado' : ''}</small>
                   </div>
                 ) : (
                   contasFiltradas.map(conta => (
@@ -1108,8 +1118,8 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
                       {(conta.status === 'pendente' || conta.status === 'atrasada') && (
                         <div className="fin-conta-acoes">
                           <button className="fin-conta-btn editar" onClick={e => { e.stopPropagation(); abrirFormEditar(conta); }}>✏️ Editar</button>
-                          <button className="fin-conta-btn excluir" onClick={e => { e.stopPropagation(); excluirConta(conta.id); }}>🗑</button>
-                          <button className="fin-conta-btn pagar" onClick={e => { e.stopPropagation(); marcarPaga(conta.id); }} disabled={salvandoConta}>
+                          <button className="fin-conta-btn excluir" title="Excluir esta conta" aria-label="Excluir esta conta" onClick={e => { e.stopPropagation(); excluirConta(conta.id); }}>🗑</button>
+                          <button className="fin-conta-btn pagar" title="Marcar esta conta como paga" onClick={e => { e.stopPropagation(); marcarPaga(conta.id); }} disabled={salvandoConta}>
                             ✅ Pagar
                           </button>
                         </div>

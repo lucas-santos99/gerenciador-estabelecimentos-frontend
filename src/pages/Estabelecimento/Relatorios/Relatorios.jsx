@@ -4,6 +4,7 @@ import { apiFetch } from '../../../utils/api';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { novoPdfRelatorio, htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
+import Dica from '../../../components/Notificacoes/Dica';
 import './Relatorios.css';
 // As classes .fin-badge-meio/.fin-historico-*/.fin-relop-* usadas nessa
 // aba (Histórico de Vendas / Resumo por operador) vivem em Financeiro.css
@@ -28,8 +29,12 @@ const meioLabelCurto = {
 // Rótulo do badge de forma de pagamento — 'Dividido (N formas)' no lugar
 // do texto cru quando a venda tem mais de uma fatia (backlog item 19,
 // passo 6). Sem pagamentos carregados ainda, cai pro texto simples.
+// O banco guarda 'Debito'/'Credito' sem acento — aqui é só o texto que
+// aparece na tela e nos arquivos exportados.
+const meioTexto = { Debito: 'Débito', Credito: 'Crédito' };
+
 function labelMeioPagamento(venda) {
-  if (venda.meio_pagamento !== 'Dividido') return venda.meio_pagamento;
+  if (venda.meio_pagamento !== 'Dividido') return meioTexto[venda.meio_pagamento] || venda.meio_pagamento;
   const n = venda.pagamentos?.length;
   return n ? `➗ Dividido (${n} formas)` : '➗ Dividido';
 }
@@ -227,7 +232,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   function descreverFatias(venda) {
     if (venda.meio_pagamento !== 'Dividido') return '';
     return (venda.pagamentos || [])
-      .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
+      .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${meioTexto[p.meio_pagamento] || p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
       .join(' | ');
   }
 
@@ -498,7 +503,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     const dados = estoqueFiltrado.map(p => ({
       'Produto': p.nome, 'Marca': p.marca || '', 'Categoria': p.nome_categoria || 'Sem categoria',
       'Unidade': p.unidade_medida, 'Estoque Atual': parseFloat(p.estoque_atual),
-      'Estoque Mín.': parseFloat(p.estoque_minimo), 'Status': estoqueStatus(p),
+      'Estoque Mín.': parseFloat(p.estoque_minimo), 'Status': ({ critico: 'Crítico', baixo: 'Baixo', ok: 'Normal' })[estoqueStatus(p)],
       'Custo Unit.': parseFloat(p.preco_custo || 0), 'Venda Unit.': parseFloat(p.preco_venda || 0),
       'Total Custo': parseFloat(p.preco_custo || 0) * parseFloat(p.estoque_atual || 0),
       'Total Venda': parseFloat(p.preco_venda || 0) * parseFloat(p.estoque_atual || 0),
@@ -601,7 +606,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               <select className="fin-form-select" value={histOperador} onChange={e => setHistOperador(e.target.value)}>
                 <option value="">Todos</option>
                 {operadoresNoPeriodo.map(op => (
-                  <option key={op.id} value={op.id}>{op.id === 'merchant' ? `${op.nome} (admin)` : op.nome}</option>
+                  <option key={op.id} value={op.id}>{op.id === 'merchant' ? `${op.nome} (administrador)` : op.nome}</option>
                 ))}
               </select>
             </div>
@@ -618,7 +623,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               <label className="fin-form-label">Status</label>
               <select className="fin-form-select" value={histStatus} onChange={e => setHistStatus(e.target.value)}>
                 <option value="">Todas</option>
-                <option value="ativa">Só ativas</option>
+                <option value="ativa">Só válidas (não canceladas)</option>
                 <option value="cancelada">Só canceladas</option>
               </select>
             </div>
@@ -636,7 +641,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               {!histOperador && histStatus !== 'cancelada' && resumoPorOperador.length > 1 && (
                 <>
                   <div className="fin-section-header" style={{ marginTop: 4 }}>
-                    <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador</span>
+                    <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador <Dica texto="Quanto cada pessoa vendeu no período e a parte dela no total (%). Vendas canceladas não entram. Clique num cartão para ver só as vendas daquela pessoa." /></span>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="fin-btn-excel" onClick={exportarResumoOperadorExcel}>📥 Excel</button>
                       <button className="fin-btn-pdf" onClick={() => baixarPDFResumoOperador('baixar')}>📄 PDF</button>
@@ -763,7 +768,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                               </div>
                               <span className="fin-hist-item-nome">{item.produto_nome}{item.produto_marca && <span className="rel-produto-marca"> · {item.produto_marca}</span>}</span>
                               <span className="fin-hist-item-qtd">{qtdLabel}</span>
-                              <span className="fin-hist-item-val">{fmt(item.preco_unitario)}</span>
+                              <span className="fin-hist-item-val" title="Preço de cada unidade (ou do quilo)">{fmt(item.preco_unitario)}/{unidade === 'kg' ? 'kg' : 'un'}</span>
                             </div>
                           );
                         })}
@@ -876,7 +881,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                       <span className="fin-report-info-valor receita">{fmt(prod.receita_total)}</span>
                     </div>
                     <div className="fin-report-info">
-                      <span className="fin-report-info-label">Lucro (venda − custo)</span>
+                      <span className="fin-report-info-label">Lucro (venda − custo) <Dica texto="Receita menos o custo do que foi vendido. A porcentagem ao lado é a margem: de tudo que foi vendido desse produto, quanto ficou de lucro." /></span>
                       <span className={`fin-report-info-valor ${lucro >= 0 ? 'receita' : 'negativo'}`}>
                         {fmt(lucro)} <span className="fin-report-margem">({margem}%)</span>
                       </span>
@@ -904,19 +909,19 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
           </div>
           <div className="fin-estoque-resumo">
             <div className="fin-estoque-resumo-card">
-              <span className="fin-estoque-resumo-label">Valor em Custo</span>
+              <span className="fin-estoque-resumo-label">Valor em Custo <Dica texto="Quanto vale todo o estoque de hoje pelo preço de custo (quantidade de cada produto × preço de custo)." /></span>
               <span className="fin-estoque-resumo-valor">{fmt(totalEstoqueCusto)}</span>
             </div>
             <div className="fin-estoque-resumo-card destaque">
-              <span className="fin-estoque-resumo-label">Valor em Venda</span>
+              <span className="fin-estoque-resumo-label">Valor em Venda <Dica texto="Quanto entraria se todo o estoque de hoje fosse vendido pelo preço de venda cadastrado." /></span>
               <span className="fin-estoque-resumo-valor">{fmt(totalEstoqueVenda)}</span>
             </div>
             <div className="fin-estoque-resumo-card alerta">
-              <span className="fin-estoque-resumo-label">⚠️ Estoque Baixo</span>
+              <span className="fin-estoque-resumo-label">⚠️ Estoque Baixo <Dica texto="Produtos que ainda têm estoque, mas já estão no mínimo cadastrado ou abaixo dele." /></span>
               <span className="fin-estoque-resumo-valor">{qtdBaixo} produtos</span>
             </div>
             <div className="fin-estoque-resumo-card critico">
-              <span className="fin-estoque-resumo-label">🔴 Estoque Crítico</span>
+              <span className="fin-estoque-resumo-label">🔴 Estoque Crítico <Dica texto="Produtos com estoque zerado (ou negativo)." /></span>
               <span className="fin-estoque-resumo-valor">{qtdCritico} produtos</span>
             </div>
           </div>
@@ -990,8 +995,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                     </div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Estoque</span><span className="fin-estoque-info-valor">{unidade}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Mínimo</span><span className="fin-estoque-info-valor">{p.estoque_minimo} {p.unidade_medida}</span></div>
-                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Venda</span><span className="fin-estoque-info-valor accent">{fmt(p.preco_venda)}</span></div>
-                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Total estoque</span><span className="fin-estoque-info-valor">{fmt(parseFloat(p.preco_venda) * estAtual)}</span></div>
+                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Preço de venda</span><span className="fin-estoque-info-valor accent">{fmt(p.preco_venda)}</span></div>
+                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Total a preço de venda</span><span className="fin-estoque-info-valor">{fmt(parseFloat(p.preco_venda) * estAtual)}</span></div>
                   </div>
                 );
               })}

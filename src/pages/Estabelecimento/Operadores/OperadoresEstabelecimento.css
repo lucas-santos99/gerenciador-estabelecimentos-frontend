@@ -55,6 +55,8 @@
 }
 
 /* Badge de limite */
+.opest-limite-badge .ntf-dica-q { align-self: center; margin-left: 6px; }
+
 .opest-limite-badge {
   display: flex;
   align-items: baseline;
@@ -796,9 +798,9 @@
 .opest-perm-somente-view {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--est-warning);
+  background: var(--est-warning-dim);
+  border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 7px;
   padding: 5px 12px;
   margin: 0 12px 4px;

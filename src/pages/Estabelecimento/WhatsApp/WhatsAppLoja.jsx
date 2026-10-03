@@ -61,6 +61,7 @@ const dataBR = (s) => {
 const dataHora = (iso) => {
   try { return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }); } catch { return ""; }
 };
+const somarUmDia = (s) => { const dt = new Date(`${String(s).slice(0, 10)}T12:00:00Z`); dt.setUTCDate(dt.getUTCDate() + 1); return dt.toISOString().slice(0, 10); };
 const diasAte = (hoje, fim) => Math.round((Date.parse(`${fim}T12:00:00Z`) - Date.parse(`${hoje}T12:00:00Z`)) / 86400000);
 
 // Máscara de telefone: (53) 99123-4567
@@ -611,7 +612,7 @@ export default function WhatsAppLoja() {
                     ) : d.numero_extra?.disponivel && (ativa.numeros_extras || 0) < d.numero_extra.max ? (
                       <div className="wal-extras-comprar">
                         <span>Precisa de mais um número? <strong>{brl(d.numero_extra.preco)}/mês</strong> cada{online && d.numero_extra.agora ? <> · hoje você paga só {brl(d.numero_extra.agora.valor)}</> : null}.</span>
-                        <button type="button" className="wal-btn" disabled={ocupado}
+                        <button type="button" className="wal-btn wal-btn-primario" disabled={ocupado}
                           onClick={() => setConfirmar(online && d.numero_extra.agora ? {
                         titulo: "Comprar um número extra?",
                         texto: `Mais 1 número de WhatsApp por ${brl(d.numero_extra.preco)}/mês. Hoje você paga só o proporcional aos ${d.numero_extra.agora.dias_restantes} dia${d.numero_extra.agora.dias_restantes === 1 ? "" : "s"} que faltam do ciclo: ${brl(d.numero_extra.agora.proporcional)}${d.numero_extra.agora.proximo > 0 ? ` + ${brl(d.numero_extra.agora.proximo)} do próximo ciclo, que já está pago (total ${brl(d.numero_extra.agora.valor)})` : ""}. A partir da próxima mensalidade entra o valor cheio (vai para ${brl((ativa.valor_mensal ?? ativa.preco) + d.numero_extra.preco)}/mês). Pagou, o número é liberado na hora${d.numero_extra.agora.valor < (d.pagamento_online?.cartao_minimo || 5) ? " (por este valor, só por Pix)" : ""}. Todos os números usam o mesmo saldo de créditos.`,
@@ -626,13 +627,29 @@ export default function WhatsAppLoja() {
                       </div>
                     ) : null}
                     {ativa.numeros_extras > 0 && (
-                      <button type="button" className="wal-link perigo" disabled={ocupado}
+                      <button type="button" className="wal-btn wal-btn-tirar" disabled={ocupado}
                         onClick={() => setConfirmar({
+                        icone: "📱", largura: 520,
                         titulo: "Tirar um número extra?",
-                        texto: `A mensalidade do WhatsApp cai ${brl(ativa.numero_extra_preco)}. Se todos os números estiverem em uso, remova um número antes.`,
+                        texto: (
+                          <>
+                            <span className="wal-conf-resumo">
+                              <span><small>Números extras</small><strong>{ativa.numeros_extras} → {ativa.numeros_extras - 1}</strong></span>
+                              <span><small>Pode cadastrar</small><strong>{d.limite_numeros} → {d.limite_numeros - 1}</strong></span>
+                              <span><small>Mensalidade</small><strong>{brl(ativa.valor_mensal ?? ativa.preco)} → {brl((ativa.valor_mensal ?? ativa.preco) - Number(ativa.numero_extra_preco || 0))}</strong></span>
+                            </span>
+                            <ul className="wal-conf-lista">
+                              <li>Vale na hora: você passa a poder cadastrar {d.limite_numeros - 1} número{d.limite_numeros - 1 === 1 ? "" : "s"}.</li>
+                              <li><strong>Não há devolução</strong> do que já foi pago por este número no ciclo atual.</li>
+                              <li>A mensalidade do WhatsApp cai {brl(ativa.numero_extra_preco)} a partir da próxima renovação ({dataBR(somarUmDia(ativa.ciclo_fim))}).</li>
+                              {vinculos.length >= d.limite_numeros && <li className="alerta">Todos os números estão em uso: remova um número da lista antes de tirar o extra.</li>}
+                              <li>Se precisar de novo depois, é só comprar outro.</li>
+                            </ul>
+                          </>
+                        ),
                         botao: "Tirar número extra", perigo: true,
                         acao: () => chamar("/numeros-extras/remover", { method: "POST" }, "Número extra retirado."),
-                      })}>tirar 1 número extra</button>
+                      })}><span aria-hidden="true">−</span> Tirar 1 número extra</button>
                     )}
                   </div>
                 )}
@@ -833,8 +850,9 @@ export default function WhatsAppLoja() {
 
       {/* ── Modal: confirmação genérica ──────────────────── */}
       {confirmar && (
-        <Modal titulo={confirmar.titulo} onFechar={() => setConfirmar(null)} largura={440} bloqueado={ocupado}>
-          <p className="wal-confirmar-txt">{confirmar.texto}</p>
+        <Modal titulo={confirmar.titulo} onFechar={() => setConfirmar(null)} largura={confirmar.largura || 440} bloqueado={ocupado}>
+          {confirmar.icone && <div className={`wal-conf-icone${confirmar.perigo ? " perigo" : ""}`} aria-hidden="true">{confirmar.icone}</div>}
+          <div className="wal-confirmar-txt">{confirmar.texto}</div>
           <div className="wal-acoes fim">
             <button type="button" className="wal-btn wal-btn-leve" onClick={() => setConfirmar(null)} disabled={ocupado}>Voltar</button>
             <button type="button" className={`wal-btn ${confirmar.perigo ? "wal-btn-perigo" : "wal-btn-primario"}`} disabled={ocupado}

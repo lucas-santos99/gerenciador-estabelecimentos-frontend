@@ -307,3 +307,19 @@
   .wal-extras-conta > div { flex: 1; min-width: 0; padding: 8px 6px; }
   .wal-extras-conta span { font-size: 0.58rem; letter-spacing: 0; overflow-wrap: anywhere; }
 }
+
+/* ── Tirar número extra: botão e confirmação (02/10/2026) ─────── */
+.wal-btn-tirar { padding: 7px 13px; font-size: 0.8rem; color: var(--est-danger); border-color: var(--est-danger); background: var(--est-danger-dim); }
+.wal-btn-tirar > span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--est-danger); color: #fff; font-weight: 800; line-height: 1; }
+.wal-btn-tirar:hover:not(:disabled) { background: var(--est-danger); color: #fff; }
+.wal-btn-tirar:hover:not(:disabled) > span { background: #fff; color: var(--est-danger); }
+.wal-conf-icone { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; background: var(--est-accent-dim); margin-bottom: 12px; }
+.wal-conf-icone.perigo { background: var(--est-danger-dim); }
+.wal-conf-resumo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.7fr); gap: 8px; margin-bottom: 12px; }
+.wal-conf-resumo > span { display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; border-radius: 12px; background: var(--est-hover); }
+.wal-conf-resumo small { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--est-text-soft); }
+.wal-conf-resumo strong { font-size: 0.92rem; color: var(--est-text); overflow-wrap: anywhere; }
+.wal-conf-lista { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.wal-conf-lista strong { color: var(--est-text); }
+.wal-conf-lista li.alerta { color: var(--est-danger); font-weight: 600; }
+@media (max-width: 480px) { .wal-conf-resumo { grid-template-columns: minmax(0, 1fr); } }

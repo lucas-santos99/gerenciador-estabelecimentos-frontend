@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Fornecedores/LancarCompraModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Clientes.css';
 import './Fornecedores.css';
 
@@ -240,7 +241,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
             <input className="cli-form-input" type="date" value={dataCompra} onChange={e => setDataCompra(e.target.value)} />
           </div>
           <div className="cli-form-group forn-full">
-            <label className="cli-form-label">Forma de pagamento</label>
+            <label className="cli-form-label">Forma de pagamento <Dica texto="À vista não gera conta nenhuma. A prazo cria uma conta a pagar só, no valor total da compra, que aparece na aba Contas a Pagar aqui de Fornecedores." /></label>
             <div className="forn-forma-pgto-toggle">
               <button type="button" className={`forn-forma-pgto-btn${formaPgto === 'a_vista' ? ' ativo' : ''}`} onClick={() => setFormaPgto('a_vista')}>À vista</button>
               <button type="button" className={`forn-forma-pgto-btn${formaPgto === 'a_prazo' ? ' ativo' : ''}`} onClick={() => setFormaPgto('a_prazo')}>A prazo (gera conta a pagar)</button>
@@ -248,7 +249,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
           </div>
           {formaPgto === 'a_prazo' && (
             <div className="cli-form-group forn-full">
-              <label className="cli-form-label">Data de vencimento *</label>
+              <label className="cli-form-label">Data de vencimento * <Dica texto="Dia em que a compra inteira vence. Se passar desse dia sem você marcar como paga, a conta aparece como Atrasada." /></label>
               <input className="cli-form-input" type="date" value={dataVenc} onChange={e => setDataVenc(e.target.value)} min={hojeISO()} />
             </div>
           )}
@@ -256,7 +257,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
 
         {/* Produtos */}
         <div className="cli-form-group" style={{ marginTop: 14, position: 'relative' }}>
-          <label className="cli-form-label">Adicionar produto</label>
+          <label className="cli-form-label">Adicionar produto <Dica texto="Só dá para lançar produto que já está cadastrado no Estoque. Se for produto novo, cadastre lá primeiro." /></label>
           <input maxLength={100}
             ref={inputProdutoRef}
             className="cli-form-input"
@@ -286,8 +287,8 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
               <div className="forn-itens-header">
                 <span>Produto</span>
                 <span>Qtd.</span>
-                <span>Custo unit.</span>
-                <span>Estoque (atual → após)</span>
+                <span>Custo unit. <Dica texto="Quanto você pagou por unidade (ou por kg) nesta compra. Ao lançar, esse valor passa a ser o preço de custo do produto no Estoque." /></span>
+                <span>Estoque (atual → após) <Dica texto="Quanto tem hoje e quanto vai ficar. A quantidade entra no estoque na hora em que você lança a compra." /></span>
                 <span>Subtotal</span>
                 <span></span>
               </div>

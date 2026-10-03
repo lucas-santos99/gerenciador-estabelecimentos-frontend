@@ -1166,7 +1166,60 @@
 .prod-ajuste-hint {
   font-size: calc(0.72rem * var(--prod-modal-font-scale, 1));
   color: var(--est-text-muted);
+  line-height: 1.45;
 }
+
+/* Explicação do tipo de ajuste escolhido (Entrada, Saída, Perda…) */
+.prod-ajuste-tipo-desc {
+  font-size: calc(0.74rem * var(--prod-modal-font-scale, 1));
+  color: var(--est-text-soft);
+  line-height: 1.45;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+}
+
+/* Aviso "marca parecida já existe" (campo Marca) */
+.prod-sugestao-marca {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--est-warning-dim);
+  border: 1px solid rgba(245,158,11,0.3);
+}
+.prod-sugestao-marca-texto {
+  flex: 1;
+  min-width: 160px;
+  font-size: calc(0.78rem * var(--prod-modal-font-scale, 1));
+  line-height: 1.4;
+  color: var(--est-text-soft);
+}
+.prod-sugestao-marca-texto strong { color: var(--est-text); }
+.prod-sugestao-marca-btn {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: calc(0.75rem * var(--prod-modal-font-scale, 1));
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--est-border);
+  background: transparent;
+  color: var(--est-text-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.prod-sugestao-marca-btn:hover { border-color: var(--est-border-accent); color: var(--est-text); }
+.prod-sugestao-marca-btn.usar {
+  font-weight: 700;
+  border-color: transparent;
+  background: #f59e0b;
+  color: #fff;
+}
+.prod-sugestao-marca-btn.usar:hover { background: #d97706; border-color: transparent; color: #fff; }
 
 /* Toggle de unidade */
 .prod-unidade-toggle {
@@ -2719,13 +2772,13 @@
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(180,83,9,0.10);
-  border: 1px solid rgba(180,83,9,0.30);
-  color: #b45309;
+  background: var(--est-warning-dim);
+  border: 1px solid rgba(245,158,11,0.30);
+  color: var(--est-text-soft);
   font-size: calc(0.8rem * var(--prod-modal-font-scale, 1));
   line-height: 1.5;
 }
-.prod-granel-aviso strong { color: #92400e; }
+.prod-granel-aviso strong { color: var(--est-warning); }
 .prod-granel-aviso-icone { font-size: calc(1.1rem * var(--prod-modal-font-scale, 1)); line-height: 1.2; }
 
 /* Atalho F2 no botão "+ Produto" */

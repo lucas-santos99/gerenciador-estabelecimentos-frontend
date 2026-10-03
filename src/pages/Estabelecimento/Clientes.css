@@ -1454,3 +1454,94 @@ body.light .cli-alerta-item.proximo {
 .cli-detalhes-body > * {
   flex-shrink: 0;
 }
+
+/* ════════════════════════════════════════════════════════════
+   Aba "Pagamentos" do detalhe do fiado (DividasList.jsx) — as classes
+   cli-pagamento-* eram usadas na tela mas não tinham regra nenhuma.
+   ════════════════════════════════════════════════════════════ */
+.cli-pagamento-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--est-card);
+  border: 1px solid var(--est-border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.cli-pagamento-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cli-pagamento-data {
+  font-size: calc(0.76rem * var(--cli-font-scale, 1));
+  font-weight: 600;
+  color: var(--est-text-soft);
+}
+.cli-pagamento-meio {
+  font-size: calc(0.72rem * var(--cli-font-scale, 1));
+  font-weight: 700;
+  color: var(--est-text-muted);
+}
+.cli-pagamento-valor {
+  font-size: calc(0.95rem * var(--cli-font-scale, 1));
+  font-weight: 800;
+  color: var(--est-success);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Recebimento de fiado — Pix pelo sistema (ModalRecebimento.jsx).
+   Antes eram estilos inline com branco/cor fixa, que sumiam no tema escuro.
+   ════════════════════════════════════════════════════════════ */
+.cli-rcb-btn {
+  padding: calc(9px * var(--pdv-pag-zoom, 1)) calc(20px * var(--pdv-pag-zoom, 1));
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.95rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cli-rcb-btn:hover,
+.cli-rcb-btn:focus-visible {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  outline: none;
+}
+.cli-rcb-btn-copiar { margin-top: 14px; }
+.cli-rcb-pix-erro {
+  padding: 12px 0;
+  color: var(--est-danger);
+  font-size: calc(1rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+}
+.cli-rcb-link {
+  margin-top: 18px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.9rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cli-rcb-link:hover { color: var(--est-text); }
+
+/* Avisos em âmbar: o marrom (#b45309) fica apagado no fundo escuro. */
+body.dark .cli-rcb-parcial,
+body.dark .cli-hist-aviso-limite {
+  color: #fcd34d;
+  border-color: rgba(245,158,11,0.35);
+}

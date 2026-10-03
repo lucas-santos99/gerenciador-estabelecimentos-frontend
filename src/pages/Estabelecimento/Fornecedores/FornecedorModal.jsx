@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Fornecedores/FornecedorModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Clientes.css';
 import './Fornecedores.css';
 
@@ -172,12 +173,12 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
             </div>
 
             <div className="cli-form-group">
-              <label className="cli-form-label">Razão social</label>
+              <label className="cli-form-label">Razão social <Dica texto="Nome oficial da empresa, como vem escrito na nota fiscal. Não é obrigatório." /></label>
               <input maxLength={150} className="cli-form-input" name="razao_social" value={form.razao_social} onChange={atualizar} />
             </div>
 
             <div className="cli-form-group">
-              <label className="cli-form-label">CNPJ/CPF</label>
+              <label className="cli-form-label">CNPJ/CPF (opcional)</label>
               <input maxLength={18} className="cli-form-input" name="cnpj_cpf" value={form.cnpj_cpf} onChange={atualizar} />
             </div>
 
@@ -207,7 +208,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
             </div>
 
             <div className="cli-form-group">
-              <label className="cli-form-label">Condição de pagamento padrão</label>
+              <label className="cli-form-label">Condição de pagamento padrão <Dica texto="Como você costuma pagar este fornecedor. Fica só como lembrete no cadastro: ao lançar cada compra, é você quem escolhe a forma e o vencimento." /></label>
               <select className="cli-form-input" name="condicao_pagamento" value={condicaoSelect} onChange={alterarCondicaoSelect}>
                 {CONDICOES_PAGAMENTO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -222,7 +223,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
             )}
 
             <div className="cli-form-group">
-              <label className="cli-form-label">Prazo médio de entrega (dias)</label>
+              <label className="cli-form-label">Prazo médio de entrega (dias) <Dica texto="Quantos dias o fornecedor costuma levar para entregar. É só uma anotação do cadastro." /></label>
               <input className="cli-form-input" type="number" min="0" name="prazo_entrega_dias"
                 value={form.prazo_entrega_dias} onChange={atualizar} placeholder="Ex: 3" />
             </div>
@@ -231,6 +232,7 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
               <label className="cli-form-label">
                 Categorias de produto que fornece
                 <span className="forn-label-hint"> (opcional — usa as categorias já cadastradas no Estoque)</span>
+                <Dica texto="Marque o que este fornecedor vende. Depois dá para filtrar a lista de fornecedores por categoria." />
               </label>
               {categoriasCarregando ? (
                 <div className="forn-categorias-carregando">Carregando categorias…</div>

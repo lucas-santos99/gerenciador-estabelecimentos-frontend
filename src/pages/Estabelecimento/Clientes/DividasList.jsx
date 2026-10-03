@@ -23,8 +23,11 @@ const meioLabelCurto = {
 
 // 'Dividido (N formas)' no lugar do texto cru quando a venda tem mais de
 // uma fatia (backlog item 19, passo 6).
+// Nome da forma de pagamento com acento (o banco guarda 'Debito'/'Credito').
+const meioTexto = { Debito: 'Débito', Credito: 'Crédito' };
+
 function labelMeioPagamento(venda) {
-  if (venda.meio_pagamento !== 'Dividido') return venda.meio_pagamento;
+  if (venda.meio_pagamento !== 'Dividido') return meioTexto[venda.meio_pagamento] || venda.meio_pagamento;
   const n = venda.pagamentos?.length;
   return n ? `➗ Dividido (${n} formas)` : '➗ Dividido';
 }
@@ -35,7 +38,7 @@ function labelMeioPagamento(venda) {
 function descreverFatias(venda) {
   if (venda.meio_pagamento !== 'Dividido') return '';
   return (venda.pagamentos || [])
-    .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
+    .map((p, i) => `${p.pessoa_label || `Pessoa ${i + 1}`}: ${fmt(p.valor)} ${meioTexto[p.meio_pagamento] || p.meio_pagamento}${p.cliente_nome ? ` (${p.cliente_nome})` : ''}`)
     .join(' | ');
 }
 
@@ -126,7 +129,7 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
           className={`cli-detalhes-tab${abaDetalhe === 'compras' ? ' ativo' : ''}`}
           onClick={() => setAbaDetalhe('compras')}
         >
-          🛒 Compras
+          🛒 Compras em aberto
         </button>
         <button
           className={`cli-detalhes-tab${abaDetalhe === 'pagamentos' ? ' ativo' : ''}`}
@@ -151,7 +154,7 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
             {vendas.length === 0 ? (
               <div className="cli-vazio">
                 <span className="cli-vazio-icon">📋</span>
-                <p>Sem vendas fiadas pendentes</p>
+                <p>Nenhuma compra fiada em aberto</p>
               </div>
             ) : (
               vendas.map(venda => (
@@ -222,7 +225,7 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
                 <div key={i} className="cli-pagamento-card">
                   <div className="cli-pagamento-info">
                     <span className="cli-pagamento-data">📅 {fmtDataHora(p.data_transacao, timezone)}</span>
-                    <span className={`cli-pagamento-meio ${p.meio_pagamento?.toLowerCase()}`}>{p.meio_pagamento}</span>
+                    <span className={`cli-pagamento-meio ${p.meio_pagamento?.toLowerCase()}`}>{meioLabelCurto[p.meio_pagamento] || p.meio_pagamento}</span>
                   </div>
                   <span className="cli-pagamento-valor">- {fmt(p.valor)}</span>
                 </div>
@@ -727,7 +730,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
                   {termoBusca
                     ? `Sem resultados para "${termoBusca}"`
                     : viewMode === 'devedores'
-                      ? 'Sem contas a receber pendentes'
+                      ? 'Ninguém devendo fiado no momento'
                       : 'Cadastre seu primeiro cliente'}
                 </small>
               </div>
@@ -848,7 +851,7 @@ function ClienteCard({ cliente, modo = 'clientes', emFoco = false, onEditar, onH
       {ehFiado && (
         <div className="cli-card-corpo" onClick={abrirDetalhe} style={{ cursor: "pointer" }}>
           {limiteExcedido && (
-            <span className="cli-badge-limite">⚠️ Limite excedido</span>
+            <span className="cli-badge-limite" title="A dívida passou do limite combinado com esse cliente. É só um alerta: o sistema não impede novas vendas fiadas.">⚠️ Limite excedido</span>
           )}
           <span className="cli-divida-label">Dívida atual</span>
           <span className="cli-divida-valor">{fmt(cliente.saldo_devedor)}</span>
@@ -982,7 +985,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
           'Status':    v.status === 'cancelada' ? 'Cancelada' : 'Ativa',
           'Produto':   item ? item.produto_nome + (item.produto_marca ? ` · ${item.produto_marca}` : '') : '—',
           'Quantidade': item ? parseFloat(item.quantidade) || 0 : '',
-          'Custo Unit. (R$)': item ? parseFloat(item.preco_unitario) || 0 : '',
+          'Preço Unit. (R$)': item ? parseFloat(item.preco_unitario) || 0 : '',
           'Subtotal (R$)':    item ? (parseFloat(item.quantidade) * parseFloat(item.preco_unitario)) || 0 : '',
           'Total da Venda (R$)': parseFloat(v.valor_total),
         });
@@ -1072,7 +1075,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
             <thead><tr><th>Data</th><th>Vendedor</th><th>Pagamento</th><th>Status</th><th>Valor</th></tr></thead>
             <tbody>${linhasHtml}</tbody>
           </table>
-          <div class="hp-total"><span>TOTAL (ativas)</span><span>${fmt(totalGeral)}</span></div>
+          <div class="hp-total"><span>TOTAL (sem as canceladas)</span><span>${fmt(totalGeral)}</span></div>
           ${idr.rodape}
         </body>
       </html>
@@ -1083,7 +1086,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
 
   async function cancelarVenda(venda) {
     const motivo = window.prompt(
-      `Cancelar a compra de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado — em venda dividida, de cada fatia).\n\nMotivo (opcional):`
+      `Cancelar a compra de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado — em venda dividida, de cada parte).\n\nMotivo (opcional):`
     );
     if (motivo === null) return; // desistiu no prompt
     setCancelandoId(venda.id);

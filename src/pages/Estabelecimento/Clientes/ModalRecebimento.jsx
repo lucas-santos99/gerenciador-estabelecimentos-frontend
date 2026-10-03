@@ -15,6 +15,7 @@
 // onde a classe vem). Classes próprias desta tela usam o prefixo cli-rcb-.
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import { identidadeRecibo } from '../../../utils/relatorioIdentidade';
 import { TIMEZONE_PADRAO } from '../../../utils/fusoHorario';
 import '../PDV/PDV.css';
@@ -492,7 +493,7 @@ export default function ModalRecebimento({
                 <>
                   {!ehVenda && (
                     <>
-                      <span className="pdv-troco-input-label">Valor a receber (R$) — Enter ↵</span>
+                      <span className="pdv-troco-input-label">Valor a receber (R$) — Enter ↵ <Dica texto="Já vem com a dívida inteira. Se o cliente for pagar só uma parte, digite o valor: o resto continua anotado no fiado dele." /></span>
                       <input
                         ref={valorRef}
                         maxLength={15}
@@ -564,18 +565,17 @@ export default function ModalRecebimento({
                       <div style={{ width: '100%', textAlign: 'center' }}>
                         {gerandoPix && <div style={{ padding: 'calc(28px * var(--pdv-pag-zoom, 1))', fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))' }}>⏳ Gerando QR Code…</div>}
                         {pixErro && (
-                          <div style={{ color: '#dc2626', fontSize: 'calc(1rem * var(--pdv-pag-zoom, 1))', padding: '12px 0' }}>
+                          <div className="cli-rcb-pix-erro">
                             ⚠️ {pixErro}
                             <div style={{ marginTop: 10 }}>
-                              <button type="button" onClick={gerarPixSistema} style={{ fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '8px 18px', borderRadius: 8, cursor: 'pointer' }}>Tentar de novo</button>
+                              <button type="button" className="cli-rcb-btn" onClick={gerarPixSistema}>↻ Tentar de novo</button>
                             </div>
                           </div>
                         )}
                         {pixDados && !gerandoPix && (
                           <>
                             <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 'calc(260px * var(--pdv-pag-zoom, 1))', height: 'calc(260px * var(--pdv-pag-zoom, 1))', margin: '0 auto', display: 'block', borderRadius: 10 }} />
-                            <button type="button" onClick={copiarPixCopiaECola}
-                              style={{ marginTop: 14, fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '9px 20px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                            <button type="button" className="cli-rcb-btn cli-rcb-btn-copiar" onClick={copiarPixCopiaECola}>
                               {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
                             </button>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 22, fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))', cursor: 'pointer' }}>
@@ -597,6 +597,7 @@ export default function ModalRecebimento({
                                 }}
                               />
                               Confirmo que o Pix caiu na conta
+                              <Dica texto="O sistema não enxerga a sua conta do banco. Confira no aplicativo do banco se o valor entrou e só então marque aqui." />
                             </label>
                           </>
                         )}
@@ -606,7 +607,7 @@ export default function ModalRecebimento({
                       <button
                         type="button"
                         onClick={() => { setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema'); setTimeout(() => btnConfirmarRef.current?.focus(), 0); }}
-                        style={{ marginTop: 18, fontSize: 'calc(0.9rem * var(--pdv-pag-zoom, 1))', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                        className="cli-rcb-link"
                       >
                         {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
                       </button>

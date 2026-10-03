@@ -72,18 +72,18 @@ function fmtQ(v, u) {
 
 const MOTIVOS_SUGERIDOS_PRODUTO = {
   entrada:   ['Compra de fornecedor', 'Reposição de estoque', 'Transferência entre lojas'],
-  saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas'],
+  saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas', 'Devolução ao fornecedor'],
   perda:     ['Produto vencido', 'Produto danificado', 'Produto extraviado', 'Furto/roubo'],
-  devolucao: ['Devolução de cliente insatisfeito', 'Devolução ao fornecedor'],
+  devolucao: ['Devolução de cliente insatisfeito', 'Troca de produto'],
   correcao:  ['Acerto de contagem manual', 'Corrigir erro de cadastro'],
 };
 
 const TIPOS_AJUSTE = [
-  { key: 'entrada',   label: '📦 Entrada',   cor: 'verde',    desc: 'Reposição de mercadoria, compra de fornecedor.' },
-  { key: 'saida',     label: '📤 Saída',      cor: 'azul',     desc: 'Saída não registrada como venda.' },
-  { key: 'perda',     label: '🗑️ Perda',      cor: 'vermelho', desc: 'Produto vencido, danificado ou extraviado.' },
-  { key: 'devolucao', label: '↩️ Devolução',  cor: 'roxo',     desc: 'Devolução de cliente ou ao fornecedor.' },
-  { key: 'correcao',  label: '✏️ Correção',   cor: 'amarelo',  desc: 'Define o estoque exatamente no valor informado.' },
+  { key: 'entrada',   label: '📦 Entrada',   cor: 'verde',    desc: 'Chegou mercadoria (compra, reposição). Soma ao estoque.' },
+  { key: 'saida',     label: '📤 Saída',      cor: 'azul',     desc: 'Saiu sem ser venda (uso interno, amostra, devolução ao fornecedor). Diminui o estoque.' },
+  { key: 'perda',     label: '🗑️ Perda',      cor: 'vermelho', desc: 'Venceu, estragou ou sumiu. Diminui o estoque.' },
+  { key: 'devolucao', label: '↩️ Devolução',  cor: 'roxo',     desc: 'O cliente devolveu o produto. Soma de volta ao estoque. (Devolveu ao fornecedor? Use Saída.)' },
+  { key: 'correcao',  label: '✏️ Correção',   cor: 'amarelo',  desc: 'Troca o estoque pelo número exato que você digitar (não soma nem diminui).' },
 ];
 
 function digitarValorMascarado(valorBruto, casasDecimais) {
@@ -1493,7 +1493,7 @@ export default function ProdutoModal({
               ) : etapaAtiva === 'etiqueta' ? (
                 <>
                   <p className="prod-etapa-pergunta">⚖️ Esse produto tem etiqueta de balança com código de barras?</p>
-                  <p className="prod-etapa-sub">A balança imprime uma etiqueta EAN-13 e o caixa bipa no PDV — o peso entra sozinho. Use as setas e Enter — ou clique.</p>
+                  <p className="prod-etapa-sub">A balança imprime uma etiqueta com código de barras e o caixa bipa no PDV — o peso entra sozinho. Use as setas e Enter — ou clique.</p>
                   <div className="prod-unidade-toggle prod-unidade-toggle--compacta" style={{ marginTop: 14 }}>
                     <button
                       type="button"
@@ -1598,7 +1598,7 @@ export default function ProdutoModal({
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
                     Imagem do produto
-                    <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida (Open Food Facts ou catálogo colaborativo) já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas." />
+                    <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas." />
                   </label>
                   <div className="prod-imagem-row">
                     <div className="prod-imagem-preview">
@@ -1676,8 +1676,8 @@ export default function ProdutoModal({
                     Código de barras
                     {granelSemEtiqueta && <span className="prod-label-unit"> (opcional)</span>}
                     <CampoAjuda texto={granelSemEtiqueta
-                      ? "Produto pesado sem etiqueta de balança geralmente não tem código de barras — no PDV ele é encontrado pela busca por nome, não por scan. Só preencha se esse produto tiver mesmo um código de fábrica (ex: saco fechado do fornecedor)."
-                      : "Bipa com o leitor ou digita o EAN/UPC aqui. Assim que sair do campo, o sistema já tenta puxar nome e marca automaticamente (catálogo interno ou Open Food Facts)."} />
+                      ? "Produto pesado sem etiqueta de balança geralmente não tem código de barras — no PDV ele é encontrado pela busca por nome, não pelo leitor. Só preencha se esse produto tiver mesmo um código de fábrica (ex: saco fechado do fornecedor)."
+                      : "Passe o leitor ou digite os números que ficam embaixo das barrinhas na embalagem. Em produto novo, o sistema tenta preencher nome, marca e foto sozinho — confira antes de salvar."} />
                   </label>
                   <div className="prod-codigo-row">
                     <input maxLength={50}
@@ -1707,7 +1707,7 @@ export default function ProdutoModal({
                         className="prod-btn-gerar-codigo"
                         onClick={gerarCodigoInterno}
                         disabled={gerandoCodigo}
-                        title="Gera um código de barras próprio pra esse produto, pra imprimir e colar na peça (faixa reservada 20-29, não colide com nenhum código de fabricante)"
+                        title="Gera um código de barras próprio pra esse produto, pra imprimir e colar na peça (não se confunde com código de fábrica)"
                       >
                         {gerandoCodigo ? '…' : '🏷️ Gerar código'}
                       </button>
@@ -1729,7 +1729,7 @@ export default function ProdutoModal({
                     </small>
                   )}
                   {!buscandoCodigo && autoPreenchido && (
-                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: nomeTraduzido ? 'var(--est-text-warning, #b45309)' : 'var(--est-success, #16a34a)' }}>
+                    <small style={{ display: 'block', marginTop: 6, fontSize: '0.78rem', color: nomeTraduzido ? 'var(--est-warning, #d97706)' : 'var(--est-success, #16a34a)' }}>
                       {nomeTraduzido ? '🌐 Nome traduzido automaticamente' : '✓ Preenchido automaticamente'} {
                         autoPreenchido === 'catalogo' ? '(catálogo interno)' :
                         autoPreenchido === 'openproductsfacts' ? '(Open Products Facts)' :
@@ -1802,24 +1802,17 @@ export default function ProdutoModal({
                     {marcasExistentes.map(m => <option key={m} value={m} />)}
                   </datalist>
                   {sugestaoMarca && (
-                    <div className="prod-sugestao-marca" style={{
-                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
-                      padding: '6px 10px', borderRadius: 8,
-                      background: 'var(--est-bg-warning, rgba(245,158,11,0.1))',
-                      border: '1px solid var(--est-border-warning, rgba(245,158,11,0.3))',
-                    }}>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--est-text-warning, #b45309)' }}>
+                    <div className="prod-sugestao-marca">
+                      <span className="prod-sugestao-marca-texto">
                         {sugestaoMarca.exata
                           ? <>Essa marca já existe como <strong>"{sugestaoMarca.marca}"</strong> — usar essa grafia?</>
                           : <>Marca parecida encontrada: <strong>"{sugestaoMarca.marca}"</strong>. Era essa?</>
                         }
                       </span>
-                      <button type="button" onClick={usarMarcaSugerida}
-                        style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: '#f59e0b', color: '#fff' }}>
+                      <button type="button" className="prod-sugestao-marca-btn usar" onClick={usarMarcaSugerida}>
                         Usar
                       </button>
-                      <button type="button" onClick={() => setSugestaoMarca(null)}
-                        style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: 6, border: '1px solid var(--est-border, #ddd)', background: 'transparent', cursor: 'pointer' }}>
+                      <button type="button" className="prod-sugestao-marca-btn" onClick={() => setSugestaoMarca(null)}>
                         Não, é nova
                       </button>
                     </div>
@@ -1971,7 +1964,7 @@ export default function ProdutoModal({
                       <span>
                         <strong>⚖️ Produto pesável com etiqueta de balança <CampoAjuda texto="Marque se a balança da loja imprime uma etiqueta com código de barras próprio pra esse produto. No PDV, basta bipar a etiqueta que o preço já é calculado pelo peso automaticamente — sem digitar nada na mão." /></strong>
                         <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
-                          A balança imprime etiqueta com código EAN-13. O caixa bipa e o preço é calculado pelo peso automaticamente.
+                          A balança imprime etiqueta com código de barras. O caixa bipa e o preço é calculado pelo peso automaticamente.
                         </span>
                       </span>
                     </label>
@@ -2018,7 +2011,7 @@ export default function ProdutoModal({
                           <div className="prod-balanca-info">
                             <div>
                               No campo "Código de barras" acima, informe o{' '}
-                              <strong>código interno</strong> do produto (dígitos 2–6 do EAN-13 da etiqueta).
+                              <strong>código interno</strong> do produto (do 2º ao 6º número do código da etiqueta).
                               Exemplo: se a balança gera <code>2 00123 01350 X</code>, o código interno é{' '}
                               <code>00123</code>. O campo PLU (logo abaixo do código de barras, no topo) é
                               apenas referência para o atendente saber qual número digitar na balança.
@@ -2114,7 +2107,7 @@ export default function ProdutoModal({
                 <div className="prod-form-group">
                   <label className="prod-label">
                     Estoque mínimo <span className="prod-label-unit">({form.unidade_medida})</span>
-                    <CampoAjuda texto="Quando o estoque cair abaixo desse valor, o produto passa a aparecer com alerta de estoque baixo na lista. Ajuste conforme a velocidade de venda de cada produto." />
+                    <CampoAjuda texto="Quando o estoque chegar nesse número (ou menos), o produto fica marcado em amarelo como estoque baixo na lista — é o sinal de que está na hora de repor. Ajuste conforme a saída de cada produto." />
                   </label>
                   <input maxLength={15}
                     className="prod-input"
@@ -2145,6 +2138,10 @@ export default function ProdutoModal({
                         ))}
                       </div>
 
+                      <div className="prod-ajuste-tipo-desc">
+                        {TIPOS_AJUSTE.find(t => t.key === ajusteTipo)?.desc}
+                      </div>
+
                       <div className="prod-ajuste-linha">
                         {isKg && (
                           <div className="prod-unidade-toggle">
@@ -2170,7 +2167,7 @@ export default function ProdutoModal({
                         </div>
                         <input maxLength={300}
                           className="prod-input prod-ajuste-motivo"
-                          placeholder="Motivo…"
+                          placeholder="Motivo (obrigatório)…"
                           value={ajusteMotivo}
                           onChange={e => setAjusteMotivo(e.target.value)}
                           list="motivos-ajuste-produto"
@@ -2191,7 +2188,7 @@ export default function ProdutoModal({
                         </div>
                       )}
 
-                      <span className="prod-ajuste-hint">Preenchendo aqui, é registrado como movimentação — igual ao Ajuste Rápido do Inventário.</span>
+                      <span className="prod-ajuste-hint">O ajuste só é aplicado quando você clicar em "Atualizar produto" e fica registrado em Inventário → Movimentações, com o motivo e quem fez.</span>
                     </div>
                   </div>
                 )}
@@ -2220,9 +2217,12 @@ export default function ProdutoModal({
                     const margem = ((lucro / venda) * 100).toFixed(1);
                     return (
                       <>
-                        <span>Lucro: <strong>R$ {lucro.toFixed(2).replace('.', ',')}</strong></span>
+                        <span>
+                          Lucro por {isKg ? 'kg' : 'unidade'}: <strong>R$ {lucro.toFixed(2).replace('.', ',')}</strong>
+                          <CampoAjuda texto="Lucro = preço de venda menos preço de custo. Margem = quanto do preço de venda sobra como lucro (ex.: custo R$ 6 e venda R$ 10 dão lucro de R$ 4 e margem de 40%). Fica amarela abaixo de 20% e vermelha quando a venda está abaixo do custo." />
+                        </span>
                         <span className={`prod-margem-badge ${margem < 0 ? 'negativo' : margem < 20 ? 'baixo' : 'bom'}`}>
-                          Margem {margem}%
+                          Margem {String(margem).replace('.', ',')}%
                         </span>
                       </>
                     );
@@ -2234,7 +2234,7 @@ export default function ProdutoModal({
                 <div className="prod-form-group">
                   <label className="prod-label">
                     {labelCusto}
-                    <CampoAjuda texto="Quanto você pagou pelo produto (com frete/impostos incluídos, se quiser ser exato). Usado só pra calcular a margem de lucro mostrada acima — opcional, mas ajuda a saber se está vendendo com prejuízo." />
+                    <CampoAjuda texto="Quanto você pagou pelo produto (com frete/impostos incluídos, se quiser ser exato). Serve pra calcular seu lucro e a margem mostrada acima, e o valor do estoque nos relatórios — opcional, mas ajuda a saber se está vendendo com prejuízo." />
                   </label>
                   <div className="prod-input-moeda-wrap">
                     <span className="prod-moeda-prefixo">R$</span>

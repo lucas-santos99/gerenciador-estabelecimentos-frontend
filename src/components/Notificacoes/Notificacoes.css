@@ -1095,7 +1095,7 @@ body.dark .ntf-input[type="time"] { color-scheme: dark; }
 .ntf-dica-q:focus-visible { background: var(--text-accent, #14b8a6); color: #fff; outline: none; }
 .ntf-dica-balao {
   position: fixed;
-  z-index: 1300;
+  z-index: 5000; /* acima dos modais (3000) e da foto ampliada (4000) */
   box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 10px;

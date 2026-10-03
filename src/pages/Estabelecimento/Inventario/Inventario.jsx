@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import './Inventario.css';
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -21,18 +22,18 @@ const STATUS_CLASSE = { em_andamento: 'inv-badge-andamento', finalizado: 'inv-ba
 const TIPO_LABEL    = { completo: 'Estoque completo', por_categoria: 'Por categoria' };
 
 const TIPOS_AJUSTE = [
-  { key: 'entrada',   label: '📦 Entrada',    cor: 'verde',    desc: 'Reposição de mercadoria, compra de fornecedor. Soma ao estoque atual.' },
-  { key: 'saida',     label: '📤 Saída',       cor: 'azul',     desc: 'Saída não registrada como venda. Subtrai do estoque atual.' },
-  { key: 'perda',     label: '🗑️ Perda',       cor: 'vermelho', desc: 'Produto vencido, danificado ou extraviado. Subtrai do estoque.' },
-  { key: 'devolucao', label: '↩️ Devolução',   cor: 'roxo',     desc: 'Devolução de cliente ou ao fornecedor. Soma ao estoque atual.' },
-  { key: 'correcao',  label: '✏️ Correção',    cor: 'amarelo',  desc: 'Define o estoque como o valor exato informado, substituindo o atual.' },
+  { key: 'entrada',   label: '📦 Entrada',    cor: 'verde',    desc: 'Chegou mercadoria (compra, reposição). Soma ao estoque atual.' },
+  { key: 'saida',     label: '📤 Saída',       cor: 'azul',     desc: 'Saiu sem ser venda (uso interno, amostra, devolução ao fornecedor). Diminui o estoque atual.' },
+  { key: 'perda',     label: '🗑️ Perda',       cor: 'vermelho', desc: 'Venceu, estragou ou sumiu. Diminui o estoque atual.' },
+  { key: 'devolucao', label: '↩️ Devolução',   cor: 'roxo',     desc: 'O cliente devolveu o produto. Soma de volta ao estoque. (Devolveu ao fornecedor? Use Saída.)' },
+  { key: 'correcao',  label: '✏️ Correção',    cor: 'amarelo',  desc: 'Troca o estoque pelo número exato que você digitar (não soma nem diminui).' },
 ];
 
 const MOTIVOS_SUGERIDOS = {
   entrada:   ['Compra de fornecedor', 'Reposição de estoque', 'Transferência entre lojas', 'Bonificação de fornecedor'],
-  saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas', 'Erro de sistema'],
+  saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas', 'Devolução ao fornecedor', 'Erro de sistema'],
   perda:     ['Produto vencido', 'Produto danificado', 'Produto extraviado', 'Furto/roubo', 'Avaria no transporte'],
-  devolucao: ['Devolução de cliente insatisfeito', 'Troca de produto', 'Devolução ao fornecedor'],
+  devolucao: ['Devolução de cliente insatisfeito', 'Troca de produto'],
   correcao:  ['Acerto de contagem manual', 'Divergência com nota fiscal', 'Corrigir erro de cadastro'],
 };
 
@@ -75,7 +76,7 @@ function ModalNovoInventario({ estabelecimentoId, categorias, onCriado, onFechar
       <div className="inv-modal" onClick={e => e.stopPropagation()}>
         <div className="inv-modal-titulo">📋 Novo Inventário</div>
         <div className="inv-modal-desc">
-          Um inventário cria um <strong>snapshot</strong> do estoque atual e permite registrar a contagem física dos produtos.
+          Ao iniciar, o sistema <strong>guarda a quantidade</strong> que cada produto tem agora. Depois você conta os produtos na loja, digita o que encontrou e o sistema mostra o que sobrou ou faltou. Se puder, conte com a loja fechada: ao finalizar, o estoque passa a ser exatamente a quantidade contada.
         </div>
         {erro && <div className="inv-modal-erro">⚠️ {erro}</div>}
         <form onSubmit={criar}>
@@ -85,7 +86,7 @@ function ModalNovoInventario({ estabelecimentoId, categorias, onCriado, onFechar
             <span className="inv-hint">Identifique o inventário com data ou motivo para consulta futura.</span>
           </div>
           <div className="inv-form-group">
-            <label className="inv-label">Escopo *</label>
+            <label className="inv-label">O que vai ser contado *</label>
             <div className="inv-tipo-toggle">
               {[
                 { v: 'completo',       label: '📦 Estoque Completo',  desc: 'Todos os produtos do estabelecimento' },
@@ -300,7 +301,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
             <button className="inv-btn-outline" onClick={exportarExcel} title="Exportar como Excel">📊 Excel</button>
             <button className="inv-btn-outline" onClick={exportarPDF} title="Exportar como PDF">🖨️ PDF</button>
             <button className="inv-btn-outline inv-btn-perigo" onClick={() => setConfirmCancel(true)}>✕ Cancelar</button>
-            <button className="inv-btn-finalizar" onClick={() => setConfirmarFin(true)} disabled={contadores.contados === 0}>
+            <button className="inv-btn-finalizar" onClick={() => setConfirmarFin(true)} disabled={contadores.contados === 0} title={contadores.contados === 0 ? 'Conte pelo menos um produto para poder finalizar' : 'Corrigir o estoque com as quantidades contadas e encerrar'}>
               ✓ Finalizar inventário
             </button>
           </div>
@@ -314,7 +315,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
           <div className="inv-progresso-info">
             <span className="inv-progresso-num">{contadores.contados} <span>/ {inventario.total_produtos}</span> contados</span>
             <span className={`inv-progresso-div${contadores.divergencias > 0 ? ' tem-div' : ''}`}>
-              {contadores.divergencias > 0 ? `⚠️ ${contadores.divergencias} divergência(s)` : '✓ Sem divergências'}
+              {contadores.divergencias > 0 ? `⚠️ ${contadores.divergencias} com diferença` : '✓ Sem diferenças'}
             </span>
             <span className="inv-progresso-pct">{progresso}%</span>
           </div>
@@ -340,17 +341,17 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
       {/* Legenda */}
       <div className="inv-legenda">
         <span className="inv-legenda-item inv-dif-ok">■ OK (sem diferença)</span>
-        <span className="inv-legenda-item inv-dif-mais">■ Sobra (contado &gt; sistema)</span>
-        <span className="inv-legenda-item inv-dif-menos">■ Falta (contado &lt; sistema)</span>
+        <span className="inv-legenda-item inv-dif-mais">■ Sobra (contou mais do que o sistema tinha)</span>
+        <span className="inv-legenda-item inv-dif-menos">■ Falta (contou menos do que o sistema tinha)</span>
         <span className="inv-legenda-item">□ Não contado</span>
       </div>
 
       {/* Cabeçalho da tabela */}
       <div className="inv-tabela-header">
         <span className="inv-col-produto">Produto</span>
-        <span className="inv-col-sistema">Estoque sistema</span>
-        <span className="inv-col-contado">Qtd. contada</span>
-        <span className="inv-col-diferenca">Diferença</span>
+        <span className="inv-col-sistema">No sistema <Dica texto="Quantidade que o sistema tinha deste produto no momento em que o inventário foi iniciado." /></span>
+        <span className="inv-col-contado">Qtd. contada <Dica texto="Digite o que você contou na prateleira. Salva sozinho ao sair do campo; apertando Enter, salva e já pula para o próximo produto." /></span>
+        <span className="inv-col-diferenca">Diferença <Dica texto="Quantidade contada menos a do sistema. Com sinal de + sobrou produto; com sinal de − está faltando." /></span>
       </div>
 
       {/* Lista de itens */}
@@ -422,26 +423,29 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
         <div className="inv-modal-overlay" onClick={() => setConfirmarFin(false)}>
           <div className="inv-modal" onClick={e => e.stopPropagation()}>
             <div className="inv-modal-titulo">✓ Finalizar inventário</div>
+            <div className="inv-modal-desc">
+              Ao confirmar, o estoque dos produtos escolhidos abaixo passa a ser a <strong>quantidade contada</strong>, cada correção fica registrada em Movimentações e o inventário é encerrado — depois disso não dá mais para cancelar.
+            </div>
             {contadores.contados < inventario.total_produtos && (
               <div className="inv-modal-aviso">
                 ⚠️ Atenção: <strong>{inventario.total_produtos - contadores.contados} produto(s)</strong> ainda não foram contados. Eles não serão ajustados no estoque.
               </div>
             )}
             <div className="inv-form-group" style={{ marginTop: 16 }}>
-              <label className="inv-label">O que aplicar ao estoque?</label>
+              <label className="inv-label">Quais produtos corrigir no estoque?</label>
               <div className="inv-radio-group">
                 <label className={`inv-radio-option${aplicarOp === 'divergencias' ? ' ativo' : ''}`}>
                   <input type="radio" checked={aplicarOp === 'divergencias'} onChange={() => setAplicarOp('divergencias')} />
                   <div>
-                    <div className="inv-radio-label">Somente divergências ({contadores.divergencias})</div>
-                    <div className="inv-radio-desc">Ajusta apenas produtos onde a quantidade contada é diferente do sistema. Recomendado.</div>
+                    <div className="inv-radio-label">Somente os que deram diferença ({contadores.divergencias})</div>
+                    <div className="inv-radio-desc">Corrige só os produtos em que a contagem deu diferente do sistema. Recomendado.</div>
                   </div>
                 </label>
                 <label className={`inv-radio-option${aplicarOp === 'todos' ? ' ativo' : ''}`}>
                   <input type="radio" checked={aplicarOp === 'todos'} onChange={() => setAplicarOp('todos')} />
                   <div>
                     <div className="inv-radio-label">Todos os contados ({contadores.contados})</div>
-                    <div className="inv-radio-desc">Aplica o valor contado para todos os produtos, incluindo os sem divergência.</div>
+                    <div className="inv-radio-desc">Grava a quantidade contada em todos os produtos que você contou, mesmo nos que bateram com o sistema.</div>
                   </div>
                 </label>
               </div>
@@ -450,7 +454,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
             <div className="inv-modal-acoes">
               <button className="inv-btn-cancelar" onClick={() => setConfirmarFin(false)}>Voltar</button>
               <button className="inv-btn-confirmar" onClick={finalizar} disabled={loading}>
-                {loading ? '⏳ Aplicando…' : '✓ Confirmar e finalizar'}
+                {loading ? '⏳ Corrigindo estoque…' : '✓ Corrigir estoque e finalizar'}
               </button>
             </div>
           </div>
@@ -536,7 +540,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
 
   function handleFinalizado(resultado) {
     setInventarioAtivo(null);
-    setSucesso(`✓ Inventário finalizado! ${resultado.ajustes} produto(s) ajustado(s). ${resultado.valor_divergencia > 0 ? `Valor da divergência: ${fmt(resultado.valor_divergencia)}` : ''}`);
+    setSucesso(`✓ Inventário finalizado! ${resultado.ajustes} produto(s) ajustado(s). ${resultado.valor_divergencia > 0 ? `Valor das diferenças (a preço de custo): ${fmt(resultado.valor_divergencia)}` : ''}`);
     setTimeout(() => setSucesso(''), 6000);
     carregar();
   }
@@ -650,7 +654,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
       <div className="inv-aba-header">
         <div>
           <div className="inv-aba-titulo">📋 Contagens de Inventário</div>
-          <div className="inv-aba-desc">Crie sessões de contagem física e compare com o estoque do sistema.</div>
+          <div className="inv-aba-desc">Conte os produtos da loja, compare com o que o sistema diz que tem e corrija o estoque de uma vez.</div>
         </div>
         <button
           className="inv-btn-primary"
@@ -729,28 +733,29 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
               </div>
               <div className="inv-card-nome">{inv.nome}</div>
               <div className="inv-card-meta">
-                <span>👤 {inv.usuario_nome}</span>
-                <span>📅 {fmtData(inv.iniciado_em)}</span>
-                {inv.finalizado_em && <span>✓ {fmtData(inv.finalizado_em)}</span>}
+                <span title="Quem iniciou">👤 {inv.usuario_nome}</span>
+                <span title="Iniciado em">📅 {fmtData(inv.iniciado_em)}</span>
+                {inv.finalizado_em && <span title="Finalizado em">✓ Finalizado em {fmtData(inv.finalizado_em)}</span>}
                 {inv.tipo === 'por_categoria' && nomeCat(inv.categoria_id) && (
                   <span>🗂️ {nomeCat(inv.categoria_id)}</span>
                 )}
               </div>
               <div className="inv-card-stats">
-                <div className="inv-stat inv-stat-clicavel" onClick={() => setModalDetalhes({ inv, filtroInicial: 'todos' })}>
+                <div className="inv-stat inv-stat-clicavel" title="Clique para ver a lista de produtos" onClick={() => setModalDetalhes({ inv, filtroInicial: 'todos' })}>
                   <span className="inv-stat-val">{inv.total_produtos}</span>
                   <span className="inv-stat-label">Produtos</span>
                 </div>
-                <div className="inv-stat inv-stat-clicavel" onClick={() => setModalDetalhes({ inv, filtroInicial: 'contados' })}>
+                <div className="inv-stat inv-stat-clicavel" title="Clique para ver os produtos já contados" onClick={() => setModalDetalhes({ inv, filtroInicial: 'contados' })}>
                   <span className="inv-stat-val">{inv.produtos_contados}</span>
                   <span className="inv-stat-label">Contados</span>
                 </div>
                 <div
                   className={`inv-stat inv-stat-clicavel${inv.total_divergencias > 0 ? ' inv-stat-alerta' : ''}`}
+                  title="Produtos em que a quantidade contada ficou diferente da do sistema — clique para ver quais"
                   onClick={() => setModalDetalhes({ inv, filtroInicial: 'divergencias' })}
                 >
                   <span className="inv-stat-val">{inv.total_divergencias}</span>
-                  <span className="inv-stat-label">Divergências</span>
+                  <span className="inv-stat-label">Com diferença</span>
                 </div>
                 {inv.status === 'em_andamento' && (
                   <div className="inv-stat">
@@ -843,7 +848,7 @@ function ModalDetalhesContagem({ inv, filtroInicial = 'todos', onFechar }) {
     { k: 'todos',         label: `Todos (${itens.length})` },
     { k: 'contados',      label: `✓ Contados (${itens.filter(i => i.estoque_contado !== null).length})` },
     { k: 'nao_contados',  label: `⬜ Não contados (${itens.filter(i => i.estoque_contado === null).length})` },
-    { k: 'divergencias',  label: `⚠️ Divergências (${itens.filter(i => i.diferenca !== null && i.diferenca !== 0).length})` },
+    { k: 'divergencias',  label: `⚠️ Com diferença (${itens.filter(i => i.diferenca !== null && i.diferenca !== 0).length})` },
   ];
 
   function difClasse(d) {
@@ -1063,11 +1068,11 @@ function AbaMovimentacoes({ estabelecimentoId, categorias }) {
                 <span className="inv-mov-col-produto">Produto</span>
                 <span className="inv-mov-col-cat">Categoria</span>
                 <span className="inv-mov-col-tipo">Tipo</span>
-                <span className="inv-mov-col-antes">Antes</span>
+                <span className="inv-mov-col-antes">Antes <Dica texto="Antes: estoque do produto antes da operação. Movimentação: quanto entrou (+) ou saiu (−). Depois: como o estoque ficou." /></span>
                 <span className="inv-mov-col-mov">Movimentação</span>
                 <span className="inv-mov-col-depois">Depois</span>
                 <span className="inv-mov-col-motivo">Motivo</span>
-                <span className="inv-mov-col-user">Usuário</span>
+                <span className="inv-mov-col-user">Quem fez</span>
               </div>
               <div className="inv-mov-lista">
                 {movs.map(m => (
@@ -1333,7 +1338,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
               <datalist id={`motivos-${tipo}`}>
                 {(MOTIVOS_SUGERIDOS[tipo] || []).map(m => <option key={m} value={m} />)}
               </datalist>
-              <span className="inv-hint">Sugestões aparecem enquanto você digita. Obrigatório para auditoria.</span>
+              <span className="inv-hint">Sugestões aparecem enquanto você digita. Obrigatório — fica guardado no histórico de movimentações.</span>
             </div>
 
             <button type="submit" className="inv-btn-primary inv-btn-full" disabled={salvando || !produto}>

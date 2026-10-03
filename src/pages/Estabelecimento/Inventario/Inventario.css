@@ -782,6 +782,21 @@
 .inv-tipo-ajuste-btn.inv-cor-amarelo.ativo { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); color: var(--est-warning); }
 
 .inv-tipo-desc { font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-soft); padding: 8px 12px; background: var(--est-input); border-radius: 8px; border: 1px solid var(--est-border); line-height: 1.5; }
+/* A regra acima é da explicação do tipo de ajuste (Ajuste Rápido). A mesma
+   classe é usada dentro dos botões "Estoque Completo / Por Categoria" do
+   modal de novo inventário — lá ela não pode ganhar caixa/borda. */
+.inv-tipo-btn .inv-tipo-desc { font-size: calc(0.68rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); padding: 0; background: none; border: none; border-radius: 0; line-height: 1.35; }
+
+/* Ícone "?" (Dica) dentro dos cabeçalhos de tabela — os cabeçalhos estilizam
+   todo <span> filho, então o "?" precisa recuperar o próprio visual. */
+.inv-tabela-header span.ntf-dica-q,
+.inv-mov-tabela-header span.ntf-dica-q { display: inline-flex; font-size: 0.66rem; letter-spacing: 0; color: var(--est-accent); margin-left: 5px; }
+.inv-tabela-header span.ntf-dica-q:hover,
+.inv-tabela-header span.ntf-dica-q:focus-visible,
+.inv-mov-tabela-header span.ntf-dica-q:hover,
+.inv-mov-tabela-header span.ntf-dica-q:focus-visible { color: #fff; }
+.inv-tabela-header .inv-col-sistema,
+.inv-tabela-header .inv-col-diferenca { justify-content: flex-end; }
 
 /* Preview */
 .inv-ajuste-preview-col { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; }

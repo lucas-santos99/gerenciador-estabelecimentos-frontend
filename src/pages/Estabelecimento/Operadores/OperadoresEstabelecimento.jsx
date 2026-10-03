@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
 import { erroSenhaFraca } from '../../../utils/senha';
+import Dica from '../../../components/Notificacoes/Dica';
 
 /* ── Módulos disponíveis com ações granulares ────────────── */
 // ⚠️ FONTE DA VERDADE: ao adicionar módulos ou ações no sistema,
@@ -11,9 +12,9 @@ const MODULOS = [
   {
     id: 'pdv', label: 'PDV (Caixa)', icone: '🖥️', desc: 'Realizar vendas e operar o caixa',
     acoes: [
-      { id: 'pdv_realizar_venda', label: 'Realizar vendas' },
-      { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
-      { id: 'pdv_fiado',          label: 'Vender no fiado' },
+      { id: 'pdv_realizar_venda', label: 'Realizar vendas', dica: 'Libera o botão de finalizar a venda. Sem esta opção, o funcionário entra na tela do caixa mas não consegue concluir a venda.' },
+      { id: 'pdv_cancelar_venda', label: 'Cancelar vendas', dica: 'Deixa cancelar uma venda já finalizada. O cancelamento devolve os itens ao estoque e desfaz o pagamento.' },
+      { id: 'pdv_fiado',          label: 'Vender no fiado', dica: 'Deixa escolher Fiado como forma de pagamento no caixa. Sem esta opção, o Fiado aparece bloqueado para o funcionário.' },
       { id: 'pdv_desconto',       label: 'Aplicar desconto' },
     ],
   },
@@ -31,7 +32,7 @@ const MODULOS = [
       { id: 'clientes_adicionar', label: 'Adicionar clientes' },
       { id: 'clientes_editar',    label: 'Editar clientes' },
       { id: 'clientes_excluir',   label: 'Excluir clientes' },
-      { id: 'clientes_receber',   label: 'Registrar recebimentos' },
+      { id: 'clientes_receber',   label: 'Registrar recebimentos', dica: 'Deixa dar baixa no fiado: registrar que o cliente pagou uma compra ou quitou a dívida.' },
     ],
   },
   {
@@ -39,7 +40,7 @@ const MODULOS = [
     id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e contas a pagar',
     acoes: [
       { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa' },
-      { id: 'financeiro_ver_dre',      label: 'Ver DRE' },
+      { id: 'financeiro_ver_dre',      label: 'Ver DRE (resultado do período)' },
       { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar' },
     ],
   },
@@ -57,9 +58,9 @@ const MODULOS = [
   {
     id: 'inventario', label: 'Inventário', icone: '📋', desc: 'Contagem física e movimentações de estoque',
     acoes: [
-      { id: 'inventario_contar',    label: 'Realizar contagens (inventário físico)' },
-      { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque' },
-      { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque' },
+      { id: 'inventario_contar',    label: 'Realizar contagens (inventário físico)', dica: 'Deixa abrir uma contagem e lançar as quantidades contadas. Só contar ainda não muda o estoque.' },
+      { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque', dica: 'Deixa encerrar a contagem. É nessa hora que o estoque do sistema é corrigido para a quantidade contada.' },
+      { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque', dica: 'Deixa mudar a quantidade de um produto direto, sem fazer contagem: entrada, saída, perda, devolução ou correção. Sempre pede o motivo.' },
     ],
   },
   {
@@ -241,6 +242,7 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
             <span className="opest-limite-sep">/</span>
             <span className="opest-limite-max">{limite.limite}</span>
             <span className="opest-limite-label">operadores</span>
+            <Dica texto="Quantos operadores você já cadastrou e o máximo liberado para a sua loja. Os inativos contam; os excluídos não. Para aumentar o limite, fale com o administrador." />
           </div>
           <button
             className="opest-btn-novo"
@@ -430,7 +432,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
               onChange={atualizar} required disabled={salvando} />
           </div>
           <div className="opest-form-group">
-            <label className="opest-form-label">E-mail de login *</label>
+            <label className="opest-form-label">E-mail de login * <Dica texto="É com este e-mail e a senha que o funcionário entra no sistema. Use um e-mail só dele." /></label>
             <input maxLength={150} className="opest-form-input" name="email" type="email"
               placeholder="email@exemplo.com" value={form.email}
               onChange={atualizar} required disabled={salvando || isEdit} />
@@ -553,7 +555,7 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
           🔑 Permissões — {operador.nome}
         </div>
         <p className="opest-perm-subtitulo">
-          Ative os módulos e as ações específicas que este operador pode executar.
+          Ligue as áreas do sistema que este funcionário pode usar e, dentro de cada uma, marque o que ele pode fazer.
         </p>
 
         {erro && <div className="opest-modal-erro">⚠️ {erro}</div>}
@@ -621,6 +623,7 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
                               onChange={() => toggleAcao(acao.id, mod.id)}
                             />
                             <span>{acao.label}</span>
+                            {acao.dica && <Dica texto={acao.dica} />}
                           </label>
                         );
                       })}

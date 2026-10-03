@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx-js-style';
 import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relatorioIdentidade';
 import ProdutoModal from './ProdutoModal';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Estoque.css';
 
 
@@ -349,7 +350,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     const headerProdutos = [
       'Categoria', 'Produto', 'Marca', 'Cód. Barras', 'Tipo',
       'Estoque Total', 'Unid.', 'Custo (R$)', 'Venda (R$)',
-      'Margem (%)', 'Valor em Estoque (R$)', 'Status',
+      'Margem de lucro (%)', 'Valor em Estoque a Custo (R$)', 'Situação',
     ];
 
     const linhasProdutos = produtos.map(p => {
@@ -396,7 +397,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     // ── Aba 2: Variações (detalhe, 1 linha por tamanho/cor) ────
     const headerVariacoes = [
       'Produto', 'Marca', 'Tamanho', 'Cor', 'Gênero', 'Estoque', 'Unid.',
-      'Custo (R$)', 'Venda (R$)', 'Valor em Estoque (R$)',
+      'Custo (R$)', 'Venda (R$)', 'Valor em Estoque a Custo (R$)',
     ];
     const linhasVariacoes = [];
     produtos.forEach(p => {
@@ -684,6 +685,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
             <div className="estoque-sidebar-titulo">
               Categorias
               {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
+              <Dica texto="Ao lado de cada categoria: o número com bolinha vermelha mostra quantos produtos estão sem estoque, o com bolinha amarela quantos estão com estoque baixo (no mínimo cadastrado ou abaixo dele), e o último é o total de produtos." />
             </div>
             <button
               className="estoque-cat-btn-nova"
@@ -858,7 +860,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                             </span>
                           )}
                           {baixos > 0 && (
-                            <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${baixos} baixo`}>
+                            <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${baixos} com estoque baixo`}>
                               <span className="estoque-cat-dot-ponto" />{baixos}
                             </span>
                           )}
@@ -930,7 +932,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                                       </span>
                                     )}
                                     {subBaixos > 0 && (
-                                      <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${subBaixos} baixo`}>
+                                      <span className="estoque-cat-dot estoque-cat-dot--baixo" title={`${subBaixos} com estoque baixo`}>
                                         <span className="estoque-cat-dot-ponto" />{subBaixos}
                                       </span>
                                     )}
@@ -1016,7 +1018,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               disabled={fontScale >= 1.6}
               title="Aumentar fonte"
             >A+</button>
-            <button className="estoque-btn verde" onClick={exportarExcel} title="Exportar Excel">
+            <button className="estoque-btn verde" onClick={exportarExcel} title="Baixar planilha com todos os produtos (inclui margem de lucro e valor do estoque)">
               📥 Excel
             </button>
             <button className="estoque-btn" onClick={imprimirLista} title="Imprimir lista (com a identidade dos relatórios)">
@@ -1135,7 +1137,10 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
         <div className="prod-card-corpo-info">
           <div className="prod-card-topo-linha">
             {!modoGrade && imagem}
-            <span className={`prod-badge-estoque ${status}`}>
+            <span
+              className={`prod-badge-estoque ${status}`}
+              title={status === 'critico' ? 'Sem estoque' : status === 'baixo' ? 'Estoque baixo — chegou no estoque mínimo cadastrado' : 'Quantidade em estoque'}
+            >
               {formatarEstoque(produto.estoque_atual, produto.unidade_medida)}
             </span>
           </div>

@@ -302,6 +302,15 @@
   color: var(--est-success);
 }
 
+.cfg-alert.info {
+  background: var(--est-accent-dim);
+  border: 1px solid var(--est-border-accent);
+  color: var(--est-text-soft);
+  font-weight: 500;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+
 /* ========================= */
 /*  FOOTER DE AÇÕES           */
 /* ========================= */
@@ -980,7 +989,111 @@
 }
 
 @media (max-width: 600px) {
-  .cfg-tabs { gap: 4px; }
+  .cfg-tabs { gap: 4px; flex-wrap: wrap; }
   .cfg-tab  { padding: 8px 12px; font-size: 0.75rem; }
   .cfg-logo-preview--grande { width: 160px !important; height: 160px !important; max-width: 160px !important; }
+}
+
+/* ========================= */
+/*  CARTÕES DE ESCOLHA        */
+/*  (Pix e Fiado)             */
+/* ========================= */
+
+.cfg-radio-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1.5px solid var(--est-border);
+  border-radius: 12px;
+  background: var(--est-input);
+  color: var(--est-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cfg-radio-card:hover {
+  border-color: var(--est-border-accent);
+}
+.cfg-radio-card.ativo {
+  border-color: var(--est-accent);
+  background: var(--est-accent-dim);
+}
+.cfg-radio-card input[type="radio"],
+.cfg-radio-card input[type="checkbox"] {
+  accent-color: var(--est-accent);
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  flex-shrink: 0;
+  cursor: inherit;
+}
+.cfg-radio-card strong {
+  font-weight: 700;
+  color: var(--est-text);
+}
+.cfg-radio-card-desc {
+  font-size: 0.78rem;
+  color: var(--est-text-soft);
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+/* Texto de apoio embaixo de um campo */
+.cfg-label-hint {
+  font-size: 0.72rem;
+  color: var(--est-text-soft);
+  line-height: 1.45;
+}
+
+/* ========================= */
+/*  MODAL — CAMPOS A ALTERAR  */
+/* ========================= */
+
+.cfg-modal-campos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--est-input);
+  border: 1px solid var(--est-border);
+  border-radius: 10px;
+}
+
+.cfg-modal-troca {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 6px 0 10px 25px;
+}
+.cfg-modal-troca > .cfg-input { flex: 1; }
+.cfg-modal-troca-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cfg-modal-troca-col .cfg-campo-valor { word-break: break-word; }
+.cfg-modal-troca-seta {
+  color: var(--est-text-soft);
+  padding-bottom: 11px;
+  flex-shrink: 0;
+}
+
+.cfg-mini-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--est-text-soft);
+}
+
+.cfg-modal-aviso {
+  font-size: 0.75rem;
+  color: var(--est-text-soft);
+  margin: -4px 0 8px;
+}
+
+@media (max-width: 600px) {
+  .cfg-modal-troca { flex-direction: column; align-items: stretch; margin-left: 0; }
+  .cfg-modal-troca-seta { display: none; }
 }

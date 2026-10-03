@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../utils/supabaseClient';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Configuracoes.css';
 
 /* ════════════════════════════════════════════════════════════
@@ -187,18 +188,18 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
                   </label>
 
                   {selecionado && c.key !== 'outro' && c.key !== 'logo' && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0 10px 24px" }}>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-muted, #888)", display: "block" }}>Atual</span>
+                    <div className="cfg-modal-troca">
+                      <div className="cfg-modal-troca-col">
+                        <span className="cfg-mini-label">Atual</span>
                         <div className="cfg-campo-valor" style={{ opacity: 0.7 }}>
                           {atual || <span className="cfg-campo-vazio">Não informado</span>}
                         </div>
                       </div>
-                      <span style={{ color: "var(--text-muted, #888)" }}>→</span>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 11, color: "var(--text-muted, #888)", display: "block" }}>Novo valor</span>
+                      <span className="cfg-modal-troca-seta">→</span>
+                      <div className="cfg-modal-troca-col">
+                        <span className="cfg-mini-label">Novo valor</span>
                         <input maxLength={150}
-                          className="est-input"
+                          className="cfg-input"
                           value={valoresNovos[c.key]}
                           onChange={e => atualizarValorNovo(c.key, e.target.value)}
                           placeholder="Digite o novo valor…"
@@ -208,9 +209,9 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
                   )}
 
                   {selecionado && (c.key === 'outro' || c.key === 'logo') && (
-                    <div style={{ margin: "6px 0 10px 24px" }}>
+                    <div className="cfg-modal-troca">
                       <input maxLength={150}
-                        className="est-input"
+                        className="cfg-input"
                         value={valoresNovos[c.key]}
                         onChange={e => atualizarValorNovo(c.key, e.target.value)}
                         placeholder={c.key === 'logo' ? 'Alguma observação sobre a nova logo? (opcional)' : 'Descreva o que precisa mudar…'}
@@ -243,7 +244,7 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
         )}
 
         {!podeEnviar && (
-          <div style={{ fontSize: 12, color: "var(--text-muted, #888)", marginTop: -4, marginBottom: 8 }}>
+          <div className="cfg-modal-aviso">
             {camposSelecionados.length > 0
               ? "Preencha o novo valor de cada campo selecionado pra poder enviar."
               : "Selecione um campo ou escreva os detalhes pra poder enviar."}
@@ -646,25 +647,23 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               </p>
 
               <div className="cfg-form-grid" style={{ marginBottom: 18 }}>
-                <label className={`cfg-radio-card${pixForm.pix_modo === 'maquininha' ? ' ativo' : ''}`}
-                  style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: 'pointer' }}>
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'maquininha' ? ' ativo' : ''}`}>
                   <input type="radio" checked={pixForm.pix_modo === 'maquininha'}
-                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'maquininha' }))} style={{ marginTop: 3 }} />
+                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'maquininha' }))} />
                   <div>
                     <strong>📟 Pela maquininha</strong>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)' }}>
+                    <div className="cfg-radio-card-desc">
                       O caixa seleciona Pix e cobra na própria máquina de cartão. Nada muda no sistema.
                     </div>
                   </div>
                 </label>
 
-                <label className={`cfg-radio-card${pixForm.pix_modo === 'sistema' ? ' ativo' : ''}`}
-                  style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: 'pointer' }}>
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'sistema' ? ' ativo' : ''}`}>
                   <input type="radio" checked={pixForm.pix_modo === 'sistema'}
-                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'sistema' }))} style={{ marginTop: 3 }} />
+                    onChange={() => setPixForm(p => ({ ...p, pix_modo: 'sistema' }))} />
                   <div>
                     <strong>🖥️ Pela tela do sistema</strong>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)' }}>
+                    <div className="cfg-radio-card-desc">
                       O PDV gera um QR Code na hora, com o valor já preenchido. O caixa confirma manualmente
                       quando o dinheiro cair na conta.
                     </div>
@@ -687,7 +686,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                       </select>
                     </div>
                     <div className="cfg-form-group">
-                      <span className="cfg-label">Chave Pix</span>
+                      <span className="cfg-label">Chave Pix <Dica texto="É a chave cadastrada no seu banco para receber Pix. O sistema usa ela para montar o QR Code que o cliente paga no caixa." /></span>
                       <input maxLength={100} className="cfg-input" value={pixForm.pix_chave}
                         placeholder={
                           pixForm.pix_tipo_chave === 'telefone' ? '+5553999999999' :
@@ -704,22 +703,22 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                         }}
                       />
                       {pixForm.pix_tipo_chave === 'telefone' && (
-                        <span className="cfg-label-hint" style={{ fontSize: '0.75rem', color: 'var(--est-text-muted, #94a3b8)' }}>
+                        <span className="cfg-label-hint">
                           Precisa do código do país (+55) na frente — se você digitar só o DDD e o número, a gente completa sozinho ao sair do campo.
                         </span>
                       )}
                     </div>
                     <div className="cfg-form-group">
-                      <span className="cfg-label">Cidade (do beneficiário)</span>
+                      <span className="cfg-label">Cidade de quem recebe <Dica texto="A cidade da sua loja. Ela vai dentro do QR Code do Pix junto com o nome do estabelecimento — sem ela o QR Code não é gerado." /></span>
                       <input className="cfg-input" value={pixForm.pix_cidade}
                         placeholder="Ex: PORTO ALEGRE" maxLength={15}
                         onChange={e => setPixForm(p => ({ ...p, pix_cidade: e.target.value.toUpperCase() }))} />
-                      <span className="cfg-label-hint" style={{ fontSize: '0.75rem', color: 'var(--est-text-muted, #94a3b8)' }}>
+                      <span className="cfg-label-hint">
                         Exigido pelo padrão do Banco Central, máx. 15 caracteres
                       </span>
                     </div>
                   </div>
-                  <div className="cfg-alert" style={{ background: 'rgba(59,130,246,0.08)', color: '#1d4ed8', border: '1px solid rgba(59,130,246,0.2)', marginTop: 12 }}>
+                  <div className="cfg-alert info" style={{ marginTop: 12 }}>
                     ℹ️ Essa chave é sua — o dinheiro cai direto na sua conta. O sistema só gera o código do
                     QR, nunca recebe nem intermedia o valor.
                   </div>
@@ -727,7 +726,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               )}
 
               {pixErro    && <div className="cfg-alert erro" style={{ marginTop: 12 }}>⚠️ {pixErro}</div>}
-              {pixSucesso && <div className="cfg-alert" style={{ marginTop: 12, background: 'rgba(34,197,94,0.1)', color: '#15803d' }}>✓ {pixSucesso}</div>}
+              {pixSucesso && <div className="cfg-alert sucesso" style={{ marginTop: 12 }}>✓ {pixSucesso}</div>}
 
               <button className="cfg-btn-solicitar" style={{ marginTop: 16 }} onClick={salvarPix} disabled={salvandoPix}>
                 {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
@@ -742,18 +741,18 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
             <div className="cfg-section">
               <span className="cfg-section-titulo">💰 Fiado</span>
               <p className="cfg-guia-intro">
-                Nem toda loja trabalha com crédito informal — ligue só se fizer sentido pro seu negócio.
+                Nem toda loja vende fiado (o cliente leva e paga depois) — ligue só se fizer sentido pro seu negócio.
               </p>
 
               <label
                 className={`cfg-radio-card${fiadoAtivo ? ' ativo' : ''}`}
-                style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, border: '1.5px solid var(--est-border, #e2e8f0)', borderRadius: 10, cursor: salvandoFiado ? 'not-allowed' : 'pointer', opacity: salvandoFiado ? 0.6 : 1 }}
+                style={{ cursor: salvandoFiado ? 'not-allowed' : 'pointer', opacity: salvandoFiado ? 0.6 : 1 }}
                 onClick={() => !salvandoFiado && salvarFiado(!fiadoAtivo)}
               >
-                <input type="checkbox" checked={fiadoAtivo} readOnly style={{ marginTop: 3 }} disabled={salvandoFiado} />
+                <input type="checkbox" checked={fiadoAtivo} readOnly disabled={salvandoFiado} />
                 <div>
-                  <strong>💰 Fiado (crédito informal pra cliente)</strong>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--est-text-muted, #64748b)', marginTop: 2 }}>
+                  <strong>💰 Fiado (cliente leva agora e paga depois)</strong>
+                  <div className="cfg-radio-card-desc">
                     Quando ativo, o menu mostra "Clientes / Fiado" e o PDV permite vender fiado pra clientes habilitados.
                     Desligando, o menu volta a ser só "Clientes" e não dá mais pra vender fiado novo — mas dívidas antigas
                     continuam podendo ser cobradas e quitadas normalmente, sem trava nenhuma.
@@ -762,7 +761,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               </label>
 
               {fiadoErro    && <div className="cfg-alert erro" style={{ marginTop: 12 }}>⚠️ {fiadoErro}</div>}
-              {fiadoSucesso && <div className="cfg-alert" style={{ marginTop: 12, background: 'rgba(34,197,94,0.1)', color: '#15803d' }}>✓ {fiadoSucesso}</div>}
+              {fiadoSucesso && <div className="cfg-alert sucesso" style={{ marginTop: 12 }}>✓ {fiadoSucesso}</div>}
             </div>
           </div>
         )}
@@ -778,9 +777,9 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
             >
               <p className="cfg-guia-intro">Configure sua impressora para imprimir recibos de 80mm diretamente do navegador.</p>
               <SubAbas abas={[{ key: 'windows', label: '🖥️ Windows' },{ key: 'android', label: '📱 Android' },{ key: 'dicas', label: '💡 Dicas' }]} ativa={abaImpressora} onChange={setAbaImpressora} />
-              {abaImpressora === 'windows' && <GuiaSteps steps={[{ titulo: 'Instale o driver', desc: 'Conecte via USB. O Windows detecta automaticamente. Se não, baixe no site do fabricante (Elgin, Epson, Bematech).' },{ titulo: 'Defina como padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → botão direito → "Definir como impressora padrão".' },{ titulo: 'Configure papel 80mm', desc: 'Botão direito → Preferências → Tamanho: "Receipt 80mm" ou crie tamanho personalizado 80mm.' },{ titulo: 'Ajuste no Chrome', desc: 'Ao imprimir: selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, escala: 100%.' }]} dica="💡 Atalho: Win + I → Bluetooth e dispositivos → Impressoras e scanners" />}
+              {abaImpressora === 'windows' && <GuiaSteps steps={[{ titulo: 'Instale a impressora', desc: 'Conecte o cabo USB. O Windows costuma reconhecer sozinho. Se não reconhecer, baixe o programa de instalação (driver) no site do fabricante (Elgin, Epson, Bematech).' },{ titulo: 'Defina como padrão', desc: 'Painel de Controle → Dispositivos e Impressoras → botão direito → "Definir como impressora padrão".' },{ titulo: 'Configure papel 80mm', desc: 'Botão direito → Preferências → Tamanho: "Receipt 80mm" ou crie tamanho personalizado 80mm.' },{ titulo: 'Ajuste no Chrome', desc: 'Ao imprimir: selecione a impressora, desative cabeçalho/rodapé, margens: Nenhuma, escala: 100%.' }]} dica="💡 Atalho: Win + I → Bluetooth e dispositivos → Impressoras e scanners" />}
               {abaImpressora === 'android' && <GuiaSteps steps={[{ titulo: 'Conecte via Bluetooth', desc: 'Ligue a impressora, ative Bluetooth e pareie (nome começa com "POS-" ou modelo).' },{ titulo: 'Instale o RawBT', desc: 'Baixe "RawBT" (gratuito) na Play Store. Funciona como serviço de impressão para o Chrome.' },{ titulo: 'Configure o RawBT', desc: 'Abra o RawBT → selecione a impressora → papel: 80mm. Fica em segundo plano.' },{ titulo: 'Imprima pelo Chrome', desc: 'Ao clicar em "Imprimir recibo", selecione "RawBT" como destino.' }]} dica="💡 Impressoras WiFi são mais fáceis — conecte na mesma rede e o Chrome detecta automaticamente." />}
-              {abaImpressora === 'dicas' && <GuiaDicas dicas={[{ icone: '⚡', titulo: 'Teste antes de usar', desc: 'Faça uma venda de R$ 0,01 e clique em Imprimir para conferir o layout.' },{ icone: '📐', titulo: 'Papel 80mm é o padrão', desc: 'Se o recibo sair cortado, verifique o tamanho nas preferências de impressão.' },{ icone: '🌐', titulo: 'Use Google Chrome', desc: 'Chrome tem o melhor suporte. Evite Firefox e Safari para impressoras térmicas.' },{ icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos como Elgin i9 ou Epson TM-T20 funcionam sem fio no celular e computador.' }]} />}
+              {abaImpressora === 'dicas' && <GuiaDicas dicas={[{ icone: '⚡', titulo: 'Teste antes de usar', desc: 'Faça uma venda de R$ 0,01 e clique em Imprimir para conferir como o recibo sai.' },{ icone: '📐', titulo: 'Papel 80mm é o padrão', desc: 'Se o recibo sair cortado, verifique o tamanho nas preferências de impressão.' },{ icone: '🌐', titulo: 'Use Google Chrome', desc: 'Chrome tem o melhor suporte. Evite Firefox e Safari para impressoras térmicas.' },{ icone: '🔋', titulo: 'Impressoras WiFi são melhores', desc: 'Modelos como Elgin i9 ou Epson TM-T20 funcionam sem fio no celular e computador.' }]} />}
             </AccordionGuia>
 
             <AccordionGuia
@@ -795,13 +794,13 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 <div className="cfg-guia-conteudo">
                   <div className="cfg-guia-destaque">
                     <span className="cfg-guia-destaque-icone">🎯</span>
-                    <div><div className="cfg-guia-destaque-titulo">Plug & Play — só conectar e usar</div><div className="cfg-guia-destaque-desc">O bipador se comporta como teclado USB. Quando você bipa, ele "digita" o código no campo de busca do PDV automaticamente.</div></div>
+                    <div><div className="cfg-guia-destaque-titulo">É só conectar e usar</div><div className="cfg-guia-destaque-desc">O bipador se comporta como teclado USB. Quando você bipa, ele "digita" o código no campo de busca do PDV automaticamente.</div></div>
                   </div>
-                  <GuiaSteps steps={[{ titulo: 'Conecte o bipador USB', desc: 'O SO reconhece como teclado automaticamente. Nenhum driver necessário na maioria dos modelos.' },{ titulo: 'Abra o PDV (Caixa)', desc: 'O cursor já estará no campo de busca. O PDV sempre retorna o foco para esse campo após cada ação.' },{ titulo: 'Aponte e bipe o produto', desc: 'O bipador digita o código e pressiona Enter. O sistema detecta a velocidade e busca automaticamente.' },{ titulo: 'Produto selecionado', desc: 'Se 1 resultado: adicionado ao carrinho automaticamente. Se múltiplos: lista exibida para escolha.' }]} />
+                  <GuiaSteps steps={[{ titulo: 'Conecte o bipador USB', desc: 'O computador reconhece o leitor sozinho, como se fosse um teclado. Na maioria dos modelos não precisa instalar nada.' },{ titulo: 'Abra o PDV (Caixa)', desc: 'O cursor já estará no campo de busca. O PDV sempre volta o cursor para esse campo depois de cada ação.' },{ titulo: 'Aponte e bipe o produto', desc: 'O bipador digita o código e aperta Enter sozinho. O sistema percebe que foi uma leitura e já busca o produto.' },{ titulo: 'Produto selecionado', desc: 'Se achar um só produto, ele já entra no carrinho. Se achar mais de um, aparece a lista para você escolher.' }]} />
                 </div>
               )}
               {abaBipador === 'configurar' && <GuiaSteps steps={[{ titulo: 'Cadastre o código de barras', desc: 'Estoque → edite o produto → "Código de barras". Digite, bipe direto no campo, ou use 📷 para escanear pela câmera.' },{ titulo: 'Teste no PDV', desc: 'Com o PDV aberto, bipe o produto. Se cadastrado, o produto aparece. Se não, verifique se o código foi salvo.' },{ titulo: 'Bipador não funciona?', desc: 'Alguns modelos precisam de configuração para enviar Enter. Consulte o manual — geralmente é bipar um QR Code especial.' }]} dica="💡 O campo de código de barras no Estoque também aceita leitura direta do bipador — basta clicar no campo e bipar." />}
-              {abaBipador === 'dicas' && <GuiaDicas dicas={[{ icone: '🔌', titulo: 'USB é o mais confiável', desc: 'Funciona em qualquer computador sem configuração. Bluetooth pode ter latência.' },{ icone: '📏', titulo: 'Distância ideal: 5–20cm', desc: 'Muito perto ou longe dificulta a leitura. Ajuste conforme o modelo.' },{ icone: '🏷️', titulo: 'Código não encontrado', desc: 'PDV mostrará "Código não encontrado". Cadastre o produto no Estoque com aquele código.' },{ icone: '⚡', titulo: 'Leitura instantânea', desc: 'O sistema detecta o bipador pela velocidade de digitação (< 50ms entre teclas).' },{ icone: '🔁', titulo: 'Mesmo produto várias vezes', desc: 'Bipe várias vezes para adicionar múltiplas unidades — cada bipada soma +1.' }]} />}
+              {abaBipador === 'dicas' && <GuiaDicas dicas={[{ icone: '🔌', titulo: 'USB é o mais confiável', desc: 'Funciona em qualquer computador sem configuração. Leitor Bluetooth pode ter um pequeno atraso.' },{ icone: '📏', titulo: 'Distância ideal: 5–20cm', desc: 'Muito perto ou longe dificulta a leitura. Ajuste conforme o modelo.' },{ icone: '🏷️', titulo: 'Código não encontrado', desc: 'PDV mostrará "Código não encontrado". Cadastre o produto no Estoque com aquele código.' },{ icone: '⚡', titulo: 'Leitura instantânea', desc: 'O sistema percebe sozinho quando o código veio do bipador (e não de alguém digitando) e busca na hora.' },{ icone: '🔁', titulo: 'Mesmo produto várias vezes', desc: 'Bipe várias vezes para adicionar múltiplas unidades — cada bipada soma +1.' }]} />}
             </AccordionGuia>
 
             <AccordionGuia
@@ -818,10 +817,10 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     <span className="cfg-guia-destaque-icone">📷</span>
                     <div><div className="cfg-guia-destaque-titulo">Botão 📷 ao lado do campo de busca</div><div className="cfg-guia-destaque-desc">No PDV, clique no botão de câmera ao lado do campo de busca para abrir o leitor.</div></div>
                   </div>
-                  <GuiaSteps steps={[{ titulo: 'Clique no botão 📷 no PDV', desc: 'Fica ao lado direito do campo de busca. Uma janela com o feed da câmera será aberta.' },{ titulo: 'Permita o acesso à câmera', desc: 'O navegador pedirá permissão na primeira vez. Clique em "Permitir" — fica salva para as próximas.' },{ titulo: 'Aponte para o código', desc: 'Centralize na área de mira (cantos verdes). A câmera detecta e fecha o modal automaticamente.' },{ titulo: 'Produto buscado', desc: 'O sistema busca pelo código detectado — mesmo fluxo do bipador USB.' }]} dica="💡 Boa iluminação e código centralizado. Distância ideal: 15–30cm." />
+                  <GuiaSteps steps={[{ titulo: 'Clique no botão 📷 no PDV', desc: 'Fica ao lado direito do campo de busca. Uma janela com a imagem da câmera será aberta.' },{ titulo: 'Permita o acesso à câmera', desc: 'O navegador pedirá permissão na primeira vez. Clique em "Permitir" — fica salva para as próximas.' },{ titulo: 'Aponte para o código', desc: 'Centralize na área de mira (cantos verdes). A câmera lê o código e a janela fecha sozinha.' },{ titulo: 'Produto buscado', desc: 'O sistema busca o produto pelo código lido — igual ao bipador USB.' }]} dica="💡 Boa iluminação e código centralizado. Distância ideal: 15–30cm." />
                 </div>
               )}
-              {abaCamera === 'estoque' && <GuiaSteps steps={[{ titulo: 'Edite ou crie um produto', desc: 'Vá em Estoque → + Novo produto ou edite um existente.' },{ titulo: 'Campo "Código de barras"', desc: 'O campo tem um botão 📷 ao lado.' },{ titulo: 'Clique em 📷 e escaneie', desc: 'O modal abre. Aponte para o código do produto físico — preenchido automaticamente.' },{ titulo: 'Salve o produto', desc: 'Com o código preenchido, clique em Salvar. Produto disponível para busca no PDV.' }]} dica="💡 Forma mais rápida de cadastrar código de barras — sem digitar nada." />}
+              {abaCamera === 'estoque' && <GuiaSteps steps={[{ titulo: 'Edite ou crie um produto', desc: 'Vá em Estoque → + Novo produto ou edite um existente.' },{ titulo: 'Campo "Código de barras"', desc: 'O campo tem um botão 📷 ao lado.' },{ titulo: 'Clique em 📷 e escaneie', desc: 'A janela da câmera abre. Aponte para o código na embalagem do produto — o campo é preenchido sozinho.' },{ titulo: 'Salve o produto', desc: 'Com o código preenchido, clique em Salvar. Produto disponível para busca no PDV.' }]} dica="💡 Forma mais rápida de cadastrar código de barras — sem digitar nada." />}
               {abaCamera === 'dicas' && <GuiaDicas dicas={[{ icone: '💡', titulo: 'Iluminação é essencial', desc: 'Câmeras de notebook leem melhor com boa luz. Evite reflexos no código.' },{ icone: '📐', titulo: 'Distância: 15–30cm', desc: 'Muito perto desenfoca. Muito longe perde detalhes.' },{ icone: '🔄', titulo: 'Trocar câmera', desc: 'Se tiver mais de uma câmera, o botão 🔄 alterna entre elas.' },{ icone: '❌', titulo: 'Câmera não abre?', desc: 'Ícone de cadeado na barra → Câmera → Permitir.' },{ icone: '🔌', titulo: 'Para uso intenso: bipador', desc: 'Para alto volume, bipador USB é mais rápido e confiável.' }]} />}
             </AccordionGuia>
           </div>

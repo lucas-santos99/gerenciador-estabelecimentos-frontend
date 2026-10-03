@@ -1,6 +1,7 @@
 // src/pages/Estabelecimento/Clientes/ClienteModal.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Clientes.css';
 
 
@@ -210,7 +211,7 @@ export default function ClienteModal({
               </label>
               <span className="cli-form-small">
                 {permiteFiado
-                  ? 'Vai aparecer na busca de fiado do PDV, com limite de crédito e vencimento configuráveis abaixo.'
+                  ? 'Vai aparecer na busca de fiado do PDV, com o limite e o vencimento que você definir abaixo.'
                   : 'Cliente cadastrado só pra identificação e histórico — não vai aparecer na busca de fiado do PDV.'}
               </span>
             </div>
@@ -218,7 +219,7 @@ export default function ClienteModal({
             {permiteFiado && (
             <>
             <div className="cli-form-group">
-              <label className="cli-form-label">Limite de crédito</label>
+              <label className="cli-form-label">Limite de crédito <Dica texto="Até quanto esse cliente pode ficar devendo no fiado. Serve de alerta, não de trava: o sistema não impede a venda. Numa venda fiada comum, o PDV avisa que o limite foi passado e pergunta se quer continuar." /></label>
               <div className="cli-limite-toggle">
                 <button
                   type="button"
@@ -249,7 +250,7 @@ export default function ClienteModal({
                 />
               )}
               {semLimite && (
-                <span className="cli-form-small">Cliente pode comprar fiado sem restrição de valor.</span>
+                <span className="cli-form-small">Cliente pode comprar fiado sem limite de valor — o PDV não mostra aviso nenhum.</span>
               )}
             </div>
 
@@ -263,7 +264,7 @@ export default function ClienteModal({
                 disabled={salvando}
               />
               <span className="cli-form-small">
-                O sistema exibirá alertas quando o fiado vencer.
+                Dia combinado pra esse cliente pagar o fiado. Perto dessa data e depois dela, o sistema avisa nesta tela e nas notificações, enquanto houver dívida.
               </span>
             </div>
             </>
@@ -286,6 +287,8 @@ export default function ClienteModal({
                 className="cli-modal-btn-excluir"
                 onClick={excluir}
                 disabled={salvando}
+                title="Excluir cliente"
+                aria-label="Excluir cliente"
               >
                 🗑
               </button>

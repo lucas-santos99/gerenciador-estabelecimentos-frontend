@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
+import Dica from '../../../components/Notificacoes/Dica';
 import FornecedorModal from './FornecedorModal';
 import LancarCompraModal from './LancarCompraModal';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
@@ -35,7 +36,9 @@ function formatarCondicao(valor) {
   return m ? `${m[1]} dias` : valor;
 }
 
-const FORMA_PGTO_LABEL = { a_vista: 'À vista', a_prazo: 'Parcelado' };
+const FORMA_PGTO_LABEL = { a_vista: 'À vista', a_prazo: 'A prazo' };
+// Status da conta a pagar vem cru do backend — rótulo legível pro comerciante
+const STATUS_CONTA_LABEL = { pendente: 'Pendente', atrasada: 'Atrasada', paga: 'Paga' };
 
 /* ════════════════════════════════════════════════════════════ */
 export default function Fornecedores({ estabelecimentoId, permissoes = null, isMerchant = true }) {
@@ -116,7 +119,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   }
 
   return (
-    <div className="cli-wrapper">
+    <div className="forn-wrapper">
 
       <div className="forn-tabs-topo">
         <button className={`forn-tab-topo${tela === 'fornecedores' ? ' ativo' : ''}`} onClick={() => setTela('fornecedores')}>
@@ -160,14 +163,14 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
             <button className="cli-btn verde" onClick={() => setModalCompra(true)}>🧾 Lançar Compra</button>
           )}
           {pode('fornecedores') && (
-            <button className="cli-btn azul" onClick={() => setModalForm('novo')}>+ Novo Fornecedor</button>
+            <button className="cli-btn primary" onClick={() => setModalForm('novo')}>+ Novo Fornecedor</button>
           )}
         </div>
       </div>
 
       <div className="forn-zoom-scope" style={{ '--forn-font-scale': fontScale }}>
       {loading ? (
-        <div className="cli-loading"><div className="cli-spinner" /> Carregando fornecedores…</div>
+        <div className="forn-loading"><div className="forn-spinner" /> Carregando fornecedores…</div>
       ) : lista.length === 0 ? (
         <div className="cli-vazio">
           <span className="cli-vazio-icon">🚚</span>
@@ -176,7 +179,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           ) : (
             <>
               <p>Nenhum fornecedor cadastrado ainda.</p>
-              {pode('fornecedores') && <button className="cli-btn azul" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
+              {pode('fornecedores') && <button className="cli-btn primary" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
             </>
           )}
         </div>
@@ -186,7 +189,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
             <div key={f.id} className="forn-card">
               <div className="forn-card-header" onClick={() => setDetalhesId(f.id)}>
                 <span className="forn-card-nome">{f.nome}</span>
-                <div className="forn-card-selos">
+                <div className="forn-card-selos" title={f.formas_pagamento && f.formas_pagamento.length > 0 ? 'Formas de pagamento já usadas nas compras deste fornecedor' : 'Condição de pagamento do cadastro'}>
                   {f.formas_pagamento && f.formas_pagamento.length > 0 ? (
                     f.formas_pagamento.map(fp => (
                       <span
@@ -217,7 +220,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
               )}
               <div className="forn-card-stats" onClick={() => setDetalhesId(f.id)}>
                 <div className="forn-card-stat">
-                  <span className="forn-card-stat-label">Gasto este mês</span>
+                  <span className="forn-card-stat-label">Gasto este mês <Dica texto="Soma das compras lançadas deste fornecedor do dia 1º deste mês até hoje. Compras canceladas não entram." /></span>
                   <span className="forn-card-stat-valor">{fmt(f.gasto_mes)}</span>
                 </div>
                 <div className="forn-card-stat">
@@ -366,9 +369,9 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
           ))}
         </div>
         <div className="forn-contapag-filtro-data">
-          <span className="cli-form-label">De</span>
+          <span className="cli-form-label">Vencimento de</span>
           <input className="cli-form-input" type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)} />
-          <span className="cli-form-label">Até</span>
+          <span className="cli-form-label">até</span>
           <input className="cli-form-input" type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)} />
           {(filtroDataDe || filtroDataAte) && (
             <button className="forn-historico-limpar" onClick={() => { setFiltroDataDe(''); setFiltroDataAte(''); }}>✕ Limpar</button>
@@ -399,7 +402,7 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
           </div>
         )}
         {loading ? (
-        <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
+        <div className="forn-loading"><div className="forn-spinner" /> Carregando…</div>
       ) : listaFiltrada.length === 0 ? (
         <div className="cli-vazio">
           <span className="cli-vazio-icon">✅</span>
@@ -412,7 +415,7 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
               className={`forn-contapag-card ${c.status}${c.conta_a_pagar_id === destaqueId ? ' ntf-destaque' : ''}`}>
               <div className="forn-contapag-card-header">
                 <span className="forn-contapag-nome">{c.fornecedor_nome}</span>
-                <span className={`forn-contapag-badge ${c.status}`}>{c.status}</span>
+                <span className={`forn-contapag-badge ${c.status}`}>{STATUS_CONTA_LABEL[c.status] || c.status}</span>
               </div>
               {c.numero_nota && <span className="forn-compra-nota">Nota {c.numero_nota}</span>}
               <div className="forn-contapag-card-body">
@@ -644,7 +647,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
       <div className="cli-modal forn-modal-detalhes forn-zoom-scope" style={{ '--forn-font-scale': fontScale }} onClick={e => e.stopPropagation()}>
 
         {loading ? (
-          <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
+          <div className="forn-loading"><div className="forn-spinner" /> Carregando…</div>
         ) : !dados ? (
           <div className="cli-vazio"><p>Fornecedor não encontrado.</p></div>
         ) : (
@@ -660,8 +663,8 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
             </div>
 
             <div className="forn-detalhes-resumo">
-              <div><span>Total gasto (histórico)</span><strong>{fmt(dados.total_gasto_historico)}</strong></div>
-              <div><span>Total de compras</span><strong>{dados.total_compras}</strong></div>
+              <div><span>Total gasto (histórico) <Dica texto="Soma de todas as compras já lançadas deste fornecedor, desde a primeira. Compras canceladas não entram." /></span><strong>{fmt(dados.total_gasto_historico)}</strong></div>
+              <div><span>Compras feitas</span><strong>{dados.total_compras}</strong></div>
             </div>
 
             <div className="forn-abas-linha">
@@ -762,6 +765,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                           )}
                           <button
                             className="forn-compra-cancelar"
+                            title="Cancela a compra: tira do estoque o que entrou e apaga a conta a pagar dela"
                             disabled={cancelando === c.id}
                             onClick={() => cancelarCompra(c.id)}
                           >
@@ -783,7 +787,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                       <span className="forn-produto-nome">{p.produto_nome}{p.produto_marca && <small> · {p.produto_marca}</small>}</span>
                       <div className="forn-produto-info">
                         <span className="forn-produto-qtd">Última compra: {fmtQ(p.ultima_quantidade, p.unidade_medida)}</span>
-                        <span className="forn-produto-preco">{fmt(p.ultimo_preco)}{p.unidade_medida === 'kg' ? '/kg' : '/un'}</span>
+                        <span className="forn-produto-preco"><small className="forn-produto-preco-rotulo">Último custo </small>{fmt(p.ultimo_preco)}{p.unidade_medida === 'kg' ? '/kg' : '/un'}</span>
                       </div>
                     </div>
                   ))
@@ -860,7 +864,7 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
       <div className="cli-modal forn-modal-compra-detalhe forn-zoom-scope" style={{ '--forn-font-scale': fontScale }} onClick={e => e.stopPropagation()}>
 
         {loading ? (
-          <div className="cli-loading"><div className="cli-spinner" /> Carregando…</div>
+          <div className="forn-loading"><div className="forn-spinner" /> Carregando…</div>
         ) : !compra ? (
           <div className="cli-vazio"><p>Compra não encontrada.</p></div>
         ) : (

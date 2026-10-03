@@ -62,7 +62,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
 
   async function remover(opt) {
-    if (!window.confirm(`Remover "${opt.valor}" da lista de ${LABEL_ABA[aba].toLowerCase()}?\n\nProdutos que já usam esse valor não são afetados — isso só tira ele da sugestão do autocomplete.`)) return;
+    if (!window.confirm(`Remover "${opt.valor}" da lista de ${LABEL_ABA[aba].toLowerCase()}?\n\nProdutos que já usam esse valor não mudam — ele só deixa de aparecer na lista de sugestões.`)) return;
     try {
       await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao/${opt.id}`, { method: 'DELETE' });
       await carregar();
@@ -96,8 +96,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
       <div className="prod-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
 
         <div className="prod-modal-titulo">⚙️ Gerenciar tamanhos, cores e gênero</div>
-        <p className="prod-label-hint" style={{ display: 'block', marginBottom: 14, lineHeight: 1.5 }}>
-          São as opções sugeridas no autocomplete ao cadastrar uma variação de produto. Remover um valor daqui não afeta produtos que já usam ele.
+        <p className="prod-label-hint" style={{ display: 'block', marginBottom: 14, lineHeight: 1.5, color: 'var(--est-text-soft)' }}>
+          Variação é cada versão do mesmo produto — por exemplo, uma camiseta nos tamanhos P, M e G ou nas cores azul e preta. O que você cadastrar aqui aparece como sugestão na hora de preencher tamanho, cor ou gênero, pra não precisar digitar tudo de novo. Remover um valor daqui não muda os produtos que já usam ele.
         </p>
 
         <div className="prod-unidade-toggle" style={{ marginBottom: 14, gridTemplateColumns: '1fr 1fr 1fr' }}>
@@ -126,7 +126,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
             disabled={salvando}
             autoFocus
           />
-          <button type="submit" className="prod-btn-scan" disabled={salvando || !novoValor.trim()} title="Adicionar">
+          <button type="submit" className="prod-btn-scan" disabled={salvando || !novoValor.trim()} title="Adicionar à lista (ou aperte Enter)">
             {salvando ? '…' : '+'}
           </button>
         </form>
