@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import Dica from '../../../components/Notificacoes/Dica';
 
 export default function EditarOperador() {
   const { id }   = useParams();
@@ -105,7 +106,7 @@ export default function EditarOperador() {
                 />
               </div>
               <div className="op-form-group">
-                <label className="op-label">E-mail *</label>
+                <label className="op-label">E-mail * <Dica texto="Trocar aqui muda só o e-mail do cadastro. O operador continua entrando no sistema com o e-mail de login antigo." /></label>
                 <input maxLength={150}
                   className="op-input"
                   name="email"
@@ -125,7 +126,7 @@ export default function EditarOperador() {
                 />
               </div>
               <div className="op-form-group">
-                <label className="op-label">Status</label>
+                <label className="op-label">Status <Dica texto="Inativo não consegue usar o sistema, mas continua ocupando vaga no limite de operadores. Para liberar a vaga, exclua o operador." /></label>
                 <select className="op-select" name="status" value={form.status} onChange={change}>
                   <option value="ativo">Ativo</option>
                   <option value="inativo">Inativo</option>

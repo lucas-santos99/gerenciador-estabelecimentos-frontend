@@ -1,9 +1,11 @@
 // src/pages/Administrador/Estabelecimentos/Excluidas.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
+import Dica from '../../../components/Notificacoes/Dica';
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -39,12 +41,12 @@ export default function Excluidas() {
   useEffect(() => { carregar(); }, []);
 
   async function restaurar(id, nome) {
-    if (!window.confirm(`Restaurar "${nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Restaurar estabelecimento?', texto: `"${nome}"`, botao: 'Restaurar' }))) return;
     try {
       const resp = await apiFetch(`/admin/estabelecimentos/${id}/restaurar`, { method: "PUT" });
       if (resp.ok) carregar();
-      else { const j = await resp.json(); alert("Erro: " + j.error); }
-    } catch { alert("Erro ao restaurar."); }
+      else { const j = await resp.json(); avisar("Erro: " + j.error); }
+    } catch { avisar("Erro ao restaurar."); }
   }
 
   function abrirModal(id, nome) {
@@ -88,8 +90,8 @@ export default function Excluidas() {
         { method: "DELETE" }
       );
       if (resp.ok) { setModalAtivo(false); carregar(); }
-      else { const j = await resp.json(); alert("Erro: " + j.error); }
-    } catch { alert("Erro ao excluir definitivamente."); }
+      else { const j = await resp.json(); avisar("Erro: " + j.error); }
+    } catch { avisar("Erro ao excluir definitivamente."); }
   }
 
   /* ════════════════════════════════════════════════════════ */
@@ -103,6 +105,7 @@ export default function Excluidas() {
             <span className="est-breadcrumb">🏢 Estabelecimentos</span>
             <h1 className="est-page-title">
               Estabelecimentos <span>Excluídos</span>
+              <Dica texto="Excluir só tira o estabelecimento das listas do painel: os dados ficam guardados e o login da loja não é bloqueado por isso (para impedir o uso, bloqueie o acesso). Restaurar devolve à lista com status Ativa. Excluir definitivamente apaga o cadastro e não tem volta." />
             </h1>
           </div>
           <div className="est-page-actions">

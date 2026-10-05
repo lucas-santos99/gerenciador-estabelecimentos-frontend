@@ -25,6 +25,8 @@ export const MODULO_LABEL = {
   superadmins:    '👑 SuperAdmins',
   assinatura:     '💳 Assinatura',
   whatsapp:       '💬 WhatsApp',
+  comunicados:    '📣 Comunicados',
+  notificacoes:   '🔔 Lembretes',
 };
 
 export const MODULO_COR = {
@@ -46,12 +48,29 @@ export const ACAO_LABEL = {
   produto_editado:  '✏️ Produto editado',
   produto_excluido: '🗑️ Produto excluído',
   produto_bloqueado_palavra: '🚫 Nome/marca bloqueado (palavra proibida)',
+  produto_imagem_enviada:    '🖼️ Foto do produto enviada',
+  produto_imagem_removida:   '🗑️ Foto do produto removida',
+  variacao_imagem_enviada:   '🖼️ Foto da variação enviada',
+  variacao_imagem_removida:  '🗑️ Foto da variação removida',
+  opcao_variacao_criada:     '➕ Opção de variação criada',
+  opcao_variacao_removida:   '🗑️ Opção de variação removida',
 
   // Clientes / fiado
   cliente_criado:   '👤 Cliente criado',
   cliente_editado:  '✏️ Cliente editado',
   cliente_excluido: '🗑️ Cliente excluído',
   fiado_recebido:   '💰 Fiado recebido',
+
+  // Financeiro — contas a pagar
+  conta_criada:     '➕ Conta a pagar criada',
+  conta_editada:    '✏️ Conta a pagar editada',
+  conta_excluida:   '🗑️ Conta a pagar excluída',
+  conta_paga:       '✅ Conta paga',
+
+  // Lembretes (central de notificações)
+  lembrete_criado:   '➕ Lembrete criado',
+  lembrete_editado:  '✏️ Lembrete editado',
+  lembrete_excluido: '🗑️ Lembrete excluído',
 
   // Configurações (estabelecimento e globais)
   config_atualizada:      '⚙️ Config atualizada',
@@ -115,6 +134,14 @@ export const ACAO_LABEL = {
   desativar_superadmin:     '⛔ SuperAdmin desativado',
   alterar_senha_superadmin: '🔑 Senha do SuperAdmin alterada',
   tornar_master:            '👑 Definido como master',
+  personificar_usuario:     '🔑 Entrou como outro usuário',
+
+  // Painel admin — comunicados
+  comunicado_criado:      '📣 Comunicado criado',
+  comunicado_editado:     '✏️ Comunicado editado',
+  comunicado_ativado:     '✅ Comunicado ativado',
+  comunicado_desativado:  '⏸️ Comunicado desativado',
+  comunicado_excluido:    '🗑️ Comunicado excluído',
 
   // Assinatura (pagamento da licença — webhooks Asaas/Efí)
   licenca_renovada_cartao:     '💳 Licença renovada (cartão)',

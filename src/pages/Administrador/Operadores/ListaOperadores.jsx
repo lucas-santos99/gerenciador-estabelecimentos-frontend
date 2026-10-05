@@ -1,9 +1,11 @@
 // src/pages/Administrador/Operadores/ListaOperadores.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import Dica from '../../../components/Notificacoes/Dica';
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -60,19 +62,19 @@ export default function ListaOperadores() {
         setEstabelecimento(prev => ({ ...prev, limite_operadores: parseInt(limiteVal) }));
         setLimiteEdit(false);
       } else {
-        alert("Erro ao salvar limite.");
+        avisar("Erro ao salvar limite.");
       }
-    } catch { alert("Erro interno."); }
+    } catch { avisar("Erro interno."); }
     setLimiteSaving(false);
   }
 
   async function excluir(id, nome) {
-    if (!window.confirm(`Excluir operador "${nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir operador?', texto: `"${nome}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/admin/operadores/${id}`, { method: "DELETE" });
       if (resp.ok) carregar();
-      else alert("Erro ao excluir operador.");
-    } catch { alert("Erro interno."); }
+      else avisar("Erro ao excluir operador.");
+    } catch { avisar("Erro interno."); }
   }
 
   function handleTabelaKeyDown(e) {
@@ -138,7 +140,7 @@ export default function ListaOperadores() {
         {estabelecimento && (
           <div className="op-limite-box">
             <div className="op-limite-box-info">
-              <span className="op-limite-box-label">🔢 Limite de operadores</span>
+              <span className="op-limite-box-label">🔢 Limite de operadores <Dica texto="Quantos operadores este estabelecimento pode ter cadastrados. Contam os ativos e os inativos; os excluídos não. No limite, nem você nem o dono conseguem cadastrar outro." /></span>
               <span className="op-limite-box-sub">
                 {operadores.length} de {estabelecimento.limite_operadores ?? 3} em uso
               </span>

@@ -1,8 +1,10 @@
 // src/pages/Administrador/SuperAdmins/ConfiguracoesGlobais.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
+import Dica from '../../../components/Notificacoes/Dica';
 import "./SuperAdmins.css";
 
 async function getToken() {
@@ -172,14 +174,14 @@ export default function ConfiguracoesGlobais() {
   }
 
   async function removerContato(id) {
-    if (!window.confirm("Remover esse contato?")) return;
+    if (!(await confirmar({ titulo: 'Remover esse contato?', perigo: true, botao: 'Remover' }))) return;
     try {
       const token = await getToken();
       await fetch(`${API_URL}/superadmin/contatos-suporte/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
       setContatos(prev => prev.filter(c => c.id !== id));
-    } catch { alert("Erro ao remover contato."); }
+    } catch { avisar("Erro ao remover contato."); }
   }
 
   function iniciarEdicao(c) {
@@ -288,7 +290,7 @@ export default function ConfiguracoesGlobais() {
                   <span className="sa-config-icon">⚙️</span>
                   <div>
                     <div className="sa-config-title">Padrões do Sistema</div>
-                    <div className="sa-config-subtitle">Valem pra novos estabelecimentos — cada um pode ser sobrescrito individualmente.</div>
+                    <div className="sa-config-subtitle">Valores usados quando o estabelecimento não tem um ajuste próprio.</div>
                   </div>
                 </div>
               </div>
@@ -296,7 +298,7 @@ export default function ConfiguracoesGlobais() {
                 <div className="sa-config-item">
                   <div className="sa-config-item-info">
                     <span className="sa-config-item-label">👥 Limite padrão de operadores</span>
-                    <span className="sa-config-item-desc">Aplicado em novos estabelecimentos.</span>
+                    <span className="sa-config-item-desc">Vem preenchido ao cadastrar um novo estabelecimento. Não muda o limite dos que já existem.</span>
                   </div>
                   <div className="sa-config-item-control">
                     <input className="sa-config-input" type="number" min={0} max={50}
@@ -306,8 +308,8 @@ export default function ConfiguracoesGlobais() {
                 </div>
                 <div className="sa-config-item">
                   <div className="sa-config-item-info">
-                    <span className="sa-config-item-label">💰 Valor padrão da mensalidade</span>
-                    <span className="sa-config-item-desc">Pode ser diferente por estabelecimento.</span>
+                    <span className="sa-config-item-label">💰 Valor padrão da mensalidade <Dica texto="O plano anual é calculado em cima deste valor: 12 meses com 20% de desconto." /></span>
+                    <span className="sa-config-item-desc">Vale para todo estabelecimento sem valor individual, inclusive os já cadastrados.</span>
                   </div>
                   <div className="sa-config-item-control">
                     <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>R$</span>
@@ -332,13 +334,13 @@ export default function ConfiguracoesGlobais() {
                   <span className="sa-config-icon">🔒</span>
                   <div>
                     <div className="sa-config-title">Tela de Bloqueio</div>
-                    <div className="sa-config-subtitle">Textos exibidos quando a licença de um estabelecimento vence.</div>
+                    <div className="sa-config-subtitle">Textos que o dono vê quando o acesso do estabelecimento está bloqueado (licença vencida ou bloqueio manual).</div>
                   </div>
                 </div>
               </div>
               <div className="sa-config-body">
                 <div className="sa-config-hint">
-                  Use <code>**texto**</code> para negrito.
+                  Use <code>**texto**</code> para negrito — funciona só na Mensagem principal. Campo em branco usa o texto padrão do sistema.
                 </div>
                 <div className="sa-config-field">
                   <span className="sa-config-item-label">Título</span>
@@ -355,7 +357,7 @@ export default function ConfiguracoesGlobais() {
 
                 <div className="sa-config-field sa-config-field--promo">
                   <div className="sa-config-promo-linha">
-                    <span className="sa-config-item-label">🎉 Banner de promoção</span>
+                    <span className="sa-config-item-label">🎉 Banner de promoção <Dica texto="Mostra uma faixa com este texto na tela de bloqueio enquanto estiver Ativo. É só um aviso: não muda preço nem dias da licença." /></span>
                     <label className="sa-config-switch">
                       <input type="checkbox" checked={cfgPromoAtiva} onChange={e => setCfgPromoAtiva(e.target.checked)} />
                       <span className="sa-config-switch-texto">{cfgPromoAtiva ? "Ativo" : "Inativo"}</span>
@@ -366,7 +368,7 @@ export default function ConfiguracoesGlobais() {
                       <input maxLength={200} className="sa-config-textfield" value={cfgPromoTexto} onChange={e => setCfgPromoTexto(e.target.value)}
                         placeholder="Ex: Assine agora e ganhe 7 dias grátis!" />
                       <input className="sa-config-textfield" type="date" value={cfgPromoValidade} onChange={e => setCfgPromoValidade(e.target.value)} />
-                      <span className="sa-config-item-desc">Validade da promoção (opcional)</span>
+                      <span className="sa-config-item-desc">Validade da promoção (opcional). É só uma anotação: o banner não some sozinho nessa data, desligue-o quando a promoção acabar.</span>
                     </>
                   )}
                 </div>
@@ -386,7 +388,7 @@ export default function ConfiguracoesGlobais() {
                 <div className="sa-config-header-left">
                   <span className="sa-config-icon">💬</span>
                   <div>
-                    <div className="sa-config-title">Contatos de Suporte</div>
+                    <div className="sa-config-title">Contatos de Suporte <Dica texto="WhatsApp: informe 55 + DDD + número (ex.: 5553999998888), pois o botão abre a conversa direto nesse número. O rótulo é o texto que o comerciante vê no botão." /></div>
                     <div className="sa-config-subtitle">Aparecem no "Fale Conosco" (barra lateral do estabelecimento) e na tela de bloqueio. Pode cadastrar quantos quiser.</div>
                   </div>
                 </div>

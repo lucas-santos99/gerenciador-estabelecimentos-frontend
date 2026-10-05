@@ -156,6 +156,17 @@
   color: var(--text-secondary);
 }
 
+/* Seletor de telefone (loja com mais de um número) — segue o tema */
+.cob-select-telefone {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+.cob-select-telefone option { background: var(--bg-card-solid); color: var(--text-primary); }
+
 .cob-item-acoes { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 
 .cob-btn {

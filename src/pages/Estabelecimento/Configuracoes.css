@@ -1097,3 +1097,22 @@
   .cfg-modal-troca { flex-direction: column; align-items: stretch; margin-left: 0; }
   .cfg-modal-troca-seta { display: none; }
 }
+/* Funcionário sem permissão para alterar (05/10/2026): o controle fica
+   visível, mas apagado e sem clique. */
+.cfg-btn-solicitar.cfg-sem-permissao,
+.cfg-btn-upload.cfg-sem-permissao {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.cfg-radio-card.cfg-sem-permissao,
+.cfg-radio-card.cfg-sem-permissao input {
+  cursor: not-allowed;
+}
+.cfg-radio-card.cfg-sem-permissao:not(.ativo) {
+  opacity: 0.6;
+}
+.cfg-radio-card.cfg-sem-permissao:not(.ativo):hover {
+  border-color: var(--est-border);
+}

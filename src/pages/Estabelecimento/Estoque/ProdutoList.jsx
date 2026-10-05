@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Estoque/ProdutoList.jsx
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import React, { useState, useEffect, useRef } from 'react';
@@ -267,7 +268,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     if ((e.key === 'Delete' || e.key === 'Backspace') && produtoNavId) {
       e.preventDefault();
       const alvo = produtosFiltrados.find(p => p.id === produtoNavId);
-      // window.confirm() já responde nativamente a Enter (OK)/Esc (cancelar)
+      // a janela de confirmação do sistema responde a Enter (confirmar)/Esc (cancelar)
       if (alvo && podeExcluir) deletarProduto(alvo);
       return;
     }
@@ -279,7 +280,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   async function deletarProduto(produto) {
     const nome  = produto.nome  || 'este produto';
     const marca = produto.marca ? ` · ${produto.marca}` : '';
-    const ok = window.confirm(`Excluir "${nome}${marca}"?\n\nEssa ação não pode ser desfeita.`);
+    const ok = await confirmar({ titulo: 'Excluir produto?', texto: `"${nome}${marca}" será excluído. Essa ação não pode ser desfeita.`, perigo: true, botao: 'Excluir' });
     if (!ok) return;
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produto.id}`,
@@ -600,9 +601,9 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     if (count > 0)   partes.push(`${count} produto(s) (ficam sem categoria)`);
     if (numSubs > 0) partes.push(`${numSubs} subcategoria(s) (viram categoria principal)`);
     const msg = partes.length > 0
-      ? `A categoria "${nome}" tem ${partes.join(' e ')}. Confirmar exclusão?`
-      : `Excluir a categoria "${nome}"?`;
-    if (!window.confirm(msg)) return;
+      ? `"${nome}" tem ${partes.join(' e ')}.`
+      : `"${nome}" será excluída.`;
+    if (!(await confirmar({ titulo: 'Excluir categoria?', texto: msg, perigo: true, botao: 'Excluir' }))) return;
     setCatErro('');
     try {
       const resp = await apiFetch(`/api/categorias/${id}`, { method: 'DELETE' });
@@ -687,11 +688,14 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
               {categoriasRaiz.length > 0 && <span className="estoque-sidebar-titulo-total">{categoriasRaiz.length}</span>}
               <Dica texto="Ao lado de cada categoria: o número com bolinha vermelha mostra quantos produtos estão sem estoque, o com bolinha amarela quantos estão com estoque baixo (no mínimo cadastrado ou abaixo dele), e o último é o total de produtos." />
             </div>
+            {/* Categorias seguem as mesmas ações do Estoque: criar = adicionar, renomear = editar, excluir = excluir */}
+            {podeAdicionar && (
             <button
               className="estoque-cat-btn-nova"
               onClick={() => { setCatNovaAberta(p => !p); setCatNovaPaiId(''); setCatEditandoId(null); setCatErro(''); }}
               title="Nova categoria"
             >+</button>
+            )}
           </div>
           <div className="estoque-sidebar-header-zoom">
             <button className="estoque-cat-zoom-btn" onClick={() => changeCatFontScale(-0.1)} disabled={catFontScale <= 0.8} title="Diminuir fonte">A−</button>
@@ -868,21 +872,27 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                         </div>
                       </button>
                       <div className="estoque-cat-acoes">
+                        {podeAdicionar && (
                         <button
                           className="estoque-cat-acao subcategoria"
                           title="Nova subcategoria"
                           onClick={() => abrirNovaSubcategoria(cat.id)}
                         >➕</button>
+                        )}
+                        {podeEditar && (
                         <button
                           className="estoque-cat-acao editar"
                           title="Renomear"
                           onClick={() => { setCatEditandoId(cat.id); setCatEditandoNome(cat.nome); setCatNovaAberta(false); setCatErro(''); }}
                         >✏️</button>
+                        )}
+                        {podeExcluir && (
                         <button
                           className="estoque-cat-acao excluir"
                           title="Excluir"
                           onClick={() => excluirCategoria(cat.id, cat.nome)}
                         >🗑</button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -940,16 +950,20 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                                   </div>
                                 </button>
                                 <div className="estoque-cat-acoes">
+                                  {podeEditar && (
                                   <button
                                     className="estoque-cat-acao editar"
                                     title="Renomear"
                                     onClick={() => { setCatEditandoId(sub.id); setCatEditandoNome(sub.nome); setCatNovaAberta(false); setCatErro(''); }}
                                   >✏️</button>
+                                  )}
+                                  {podeExcluir && (
                                   <button
                                     className="estoque-cat-acao excluir"
                                     title="Excluir"
                                     onClick={() => excluirCategoria(sub.id, sub.nome)}
                                   >🗑</button>
+                                  )}
                                 </div>
                               </div>
                             )}

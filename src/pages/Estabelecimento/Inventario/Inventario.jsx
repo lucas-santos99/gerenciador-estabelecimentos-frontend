@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Inventario/Inventario.jsx
+import { avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
@@ -76,7 +77,7 @@ function ModalNovoInventario({ estabelecimentoId, categorias, onCriado, onFechar
       <div className="inv-modal" onClick={e => e.stopPropagation()}>
         <div className="inv-modal-titulo">📋 Novo Inventário</div>
         <div className="inv-modal-desc">
-          Ao iniciar, o sistema <strong>guarda a quantidade</strong> que cada produto tem agora. Depois você conta os produtos na loja, digita o que encontrou e o sistema mostra o que sobrou ou faltou. Se puder, conte com a loja fechada: ao finalizar, o estoque passa a ser exatamente a quantidade contada.
+          Ao iniciar, o sistema <strong>guarda a quantidade</strong> que cada produto tem agora. Depois você conta os produtos na loja, digita o que encontrou e o sistema mostra o que sobrou ou faltou. <strong>Enquanto o inventário estiver aberto, os produtos em contagem ficam travados</strong>: não dá para vender, ajustar o estoque, lançar ou cancelar compra deles (no inventário completo, as vendas da loja ficam pausadas). Ao finalizar, o estoque passa a ser exatamente a quantidade contada; ao cancelar, nada muda.
         </div>
         {erro && <div className="inv-modal-erro">⚠️ {erro}</div>}
         <form onSubmit={criar}>
@@ -585,7 +586,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
         subtitulo: `${STATUS_LABEL[inv.status] || ''} · Iniciado por ${inv.usuario_nome} em ${fmtData(inv.iniciado_em)} · ${linhas.length} produto(s)`,
       });
     } catch (err) {
-      alert(err.message || 'Erro ao exportar Excel.');
+      avisar(err.message || 'Erro ao exportar Excel.');
     }
     setExportando(null);
   }
@@ -633,7 +634,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
       win.focus();
       setTimeout(() => win.print(), 300);
     } catch (err) {
-      alert(err.message || 'Erro ao exportar PDF.');
+      avisar(err.message || 'Erro ao exportar PDF.');
     }
     setExportando(null);
   }

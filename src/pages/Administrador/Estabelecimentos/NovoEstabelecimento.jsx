@@ -6,6 +6,7 @@ import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import { erroSenhaFraca } from '../../../utils/senha';
+import Dica from '../../../components/Notificacoes/Dica';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -288,7 +289,7 @@ export default function NovoEstabelecimento() {
               </div>
 
               <div className="est-form-group">
-                <label className="est-label">Tipo de Estabelecimento</label>
+                <label className="est-label">Tipo de Estabelecimento <Dica texto="Serve para separar e filtrar as lojas no painel (lista, cobranças, solicitações) e para mandar comunicados só para um tipo. Não muda as funções do sistema para a loja." /></label>
                 <select
                   className="est-select"
                   name="tipo_estabelecimento"
@@ -400,7 +401,7 @@ export default function NovoEstabelecimento() {
               </div>
 
               <div className="est-form-group">
-                <label className="est-label">E-mail de Contato</label>
+                <label className="est-label">E-mail de Contato (login do proprietário) <Dica texto="É com este e-mail e a senha inicial que o dono entra no sistema, então ele é necessário e não pode já estar em uso por outro usuário. Também é usado nas cobranças por e-mail." /></label>
                 <input maxLength={150}
                   className="est-input"
                   name="email_contato"
@@ -488,7 +489,7 @@ export default function NovoEstabelecimento() {
 
               {/* Toggle período de teste */}
               <div className="est-form-group est-form-full">
-                <label className="est-label">Modo de ativação</label>
+                <label className="est-label">Modo de ativação <Dica texto="Os dois modos só definem a data de vencimento: no teste você escolhe a quantidade de dias; na assinatura, a data. Quando a data passa, a loja é bloqueada do mesmo jeito." /></label>
                 <div className="est-periodo-toggle">
                   <button
                     type="button"
@@ -549,7 +550,7 @@ export default function NovoEstabelecimento() {
                   </div>
 
                   <div className="est-form-group est-form-full">
-                    <label className="est-label">Motivo do período de teste (opcional)</label>
+                    <label className="est-label">Motivo do período de teste (opcional) <Dica texto="Anotação sua: fica guardada no cadastro e na auditoria da criação." /></label>
                     <input maxLength={300}
                       className="est-input"
                       placeholder="Ex: indicação de parceiro, negociação em andamento…"
@@ -561,7 +562,7 @@ export default function NovoEstabelecimento() {
               ) : (
                 <>
                   <div className="est-form-group">
-                    <label className="est-label">Status da Assinatura</label>
+                    <label className="est-label">Status da Assinatura <Dica texto="Só Bloqueada impede o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Inativa é apenas uma marcação no painel, a loja continua usando normalmente. Ativa exige data de vencimento." /></label>
                     <select
                       className="est-select"
                       name="status_assinatura"
@@ -576,7 +577,7 @@ export default function NovoEstabelecimento() {
 
                   {form.status_assinatura === "ativa" && (
                     <div className="est-form-group">
-                      <label className="est-label">Data de Vencimento *</label>
+                      <label className="est-label">Data de Vencimento * <Dica texto="A loja usa o sistema até o fim deste dia, no fuso dela. No dia seguinte o status passa sozinho para Bloqueada." /></label>
                       <input
                         className="est-input"
                         type="date"
@@ -609,7 +610,7 @@ export default function NovoEstabelecimento() {
                     onChange={atualizar}
                   />
                   <span className="op-limite-hint">
-                    Máximo de operadores ativos (0–50). Pré-preenchido com o padrão global.
+                    Máximo de operadores cadastrados (0–50): contam os ativos e os inativos, os excluídos não. Pré-preenchido com o padrão global.
                   </span>
                 </div>
               </div>

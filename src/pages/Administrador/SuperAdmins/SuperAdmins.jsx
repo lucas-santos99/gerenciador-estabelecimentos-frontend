@@ -1,4 +1,5 @@
 // src/pages/Administrador/SuperAdmins/SuperAdmins.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -7,6 +8,7 @@ import { useAuth } from "../../../contexts/AuthProvider";
 import PersonificarModal from "../../../components/PersonificarModal";
 import "./SuperAdmins.css";
 import { erroSenhaFraca } from '../../../utils/senha';
+import Dica from '../../../components/Notificacoes/Dica';
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -87,14 +89,14 @@ export default function SuperAdmins() {
   }
 
   async function excluir(id, nome) {
-    if (!window.confirm(`Excluir "${nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir SuperAdmin?', texto: `"${nome}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const token = await getToken();
       await fetch(`${API_URL}/superadmin/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
       carregarLista();
-    } catch { alert("Erro ao excluir."); }
+    } catch { avisar("Erro ao excluir."); }
   }
 
   async function toggleAtivo(id) {
@@ -104,20 +106,20 @@ export default function SuperAdmins() {
         method: "PATCH", headers: { Authorization: `Bearer ${token}` },
       });
       carregarLista();
-    } catch { alert("Erro ao alterar status."); }
+    } catch { avisar("Erro ao alterar status."); }
   }
 
   async function tornarMaster(id, nome) {
-    if (!window.confirm(`Tornar "${nome}" um MASTER?`)) return;
+    if (!(await confirmar({ titulo: 'Tornar master?', texto: `"${nome}" passa a ser um SuperAdmin MASTER.`, botao: 'Tornar master' }))) return;
     try {
       const token = await getToken();
       const resp  = await fetch(`${API_URL}/superadmin/${id}/master`, {
         method: "PATCH", headers: { Authorization: `Bearer ${token}` },
       });
       const data = await resp.json();
-      if (!resp.ok) { alert(data.error || "Erro."); return; }
+      if (!resp.ok) { avisar(data.error || "Erro."); return; }
       carregarLista();
-    } catch { alert("Erro interno."); }
+    } catch { avisar("Erro interno."); }
   }
 
   async function alterarSenha() {
@@ -204,7 +206,10 @@ export default function SuperAdmins() {
           onKeyDown={handleListaKeyDown}
         >
           <div className="sa-list-header">
-            <span className="sa-list-title">Usuários com acesso administrativo</span>
+            <span className="sa-list-title">
+              Usuários com acesso administrativo
+              <Dica texto={'Só o master gerencia os SuperAdmins (esta tela), altera as Configurações Globais, os textos e a imagem de cobrança e os contatos de suporte, e usa "Entrar como". O SuperAdmin comum cuida do resto: lojas, operadores, comunicados, solicitações e auditoria. Tornar Master não tem volta por aqui: um master não pode ser desativado nem excluído.'} />
+            </span>
             <span className="sa-count-badge">{lista.length}</span>
           </div>
 
@@ -256,7 +261,7 @@ export default function SuperAdmins() {
                           </button>
                         )}
                         {!user.is_master && isAtivo && (
-                          <button className="sa-btn sa-btn-sm" onClick={() => setUserPersonif(user)}>
+                          <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setUserPersonif(user)}>
                             🔑 Entrar como
                           </button>
                         )}
@@ -278,7 +283,7 @@ export default function SuperAdmins() {
             <div className="sa-modal" onClick={e => e.stopPropagation()}>
               <div className="sa-modal-icon">👑</div>
               <div className="sa-modal-title">Novo SuperAdmin</div>
-              <div className="sa-modal-subtitle">Crie um novo usuário com acesso administrativo ao sistema.</div>
+              <div className="sa-modal-subtitle">Crie um novo usuário com acesso administrativo ao sistema. Ele começa como SuperAdmin comum, sem os poderes de master.</div>
               {erroCriar && (
                 <div style={{ background:"var(--bg-danger)", color:"var(--text-danger)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:10, padding:"10px 14px", fontSize:"0.85rem", fontWeight:500, marginBottom:16 }}>
                   ⚠️ {erroCriar}

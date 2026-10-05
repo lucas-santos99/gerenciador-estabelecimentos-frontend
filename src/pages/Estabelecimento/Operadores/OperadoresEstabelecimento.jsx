@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Operadores/OperadoresEstabelecimento.jsx
+import { confirmar as confirmarDialogo } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
@@ -15,7 +16,6 @@ const MODULOS = [
       { id: 'pdv_realizar_venda', label: 'Realizar vendas', dica: 'Libera o botão de finalizar a venda. Sem esta opção, o funcionário entra na tela do caixa mas não consegue concluir a venda.' },
       { id: 'pdv_cancelar_venda', label: 'Cancelar vendas', dica: 'Deixa cancelar uma venda já finalizada. O cancelamento devolve os itens ao estoque e desfaz o pagamento.' },
       { id: 'pdv_fiado',          label: 'Vender no fiado', dica: 'Deixa escolher Fiado como forma de pagamento no caixa. Sem esta opção, o Fiado aparece bloqueado para o funcionário.' },
-      { id: 'pdv_desconto',       label: 'Aplicar desconto' },
     ],
   },
   {
@@ -38,19 +38,24 @@ const MODULOS = [
   {
     // Financeiro agora é só fluxo de caixa e contas a pagar
     id: 'financeiro', label: 'Financeiro', icone: '💰', desc: 'Fluxo de caixa e contas a pagar',
+    // Aqui as ações são "ver tal coisa": sem nenhuma marcada, o funcionário
+    // abre o Financeiro e não enxerga nada.
+    avisoSemAcoes: '⚠️ Nada liberado ainda — marque abaixo o que este funcionário pode ver',
     acoes: [
-      { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa' },
-      { id: 'financeiro_ver_dre',      label: 'Ver DRE (resultado do período)' },
-      { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar' },
+      { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa', dica: 'Mostra o resumo do dia no Financeiro: quanto entrou hoje (dinheiro, Pix, cartão), o fiado a receber e as contas a pagar. Sem esta opção, o funcionário não vê esses valores.' },
+      { id: 'financeiro_ver_dre',      label: 'Ver DRE (resultado do período)', dica: 'Mostra quanto a loja vendeu, quanto custou e quanto sobrou de lucro no período. Marque só para quem pode ver o lucro da loja.' },
+      { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar', dica: 'Libera a aba Contas a Pagar do Financeiro: ver, cadastrar, editar, excluir e marcar como pagas as contas da loja (água, luz, aluguel…).' },
     ],
   },
   {
     // Módulo Relatórios: histórico, vendas por operador, produtos, estoque
     // (a Auditoria virou um módulo próprio — veja o id 'auditoria' abaixo)
     id: 'relatorios', label: 'Relatórios', icone: '📊', desc: 'Histórico de vendas, estoque e produtos',
+    // Mesma regra do Financeiro: sem nenhuma ação marcada, não aparece nada.
+    avisoSemAcoes: '⚠️ Nada liberado ainda — marque abaixo o que este funcionário pode ver',
     acoes: [
       { id: 'relatorios_historico',  label: 'Ver histórico de vendas' },
-      { id: 'relatorios_operadores', label: 'Ver vendas por operador' },
+      { id: 'relatorios_operadores', label: 'Ver vendas por operador', dica: 'Dentro do histórico de vendas, mostra o resumo de quanto cada pessoa vendeu e o filtro por operador. Só funciona junto com "Ver histórico de vendas".' },
       { id: 'relatorios_produtos',   label: 'Ver produtos mais vendidos' },
       { id: 'relatorios_estoque',    label: 'Ver relatório de estoque' },
     ],
@@ -69,8 +74,8 @@ const MODULOS = [
       { id: 'fornecedores_adicionar', label: 'Adicionar fornecedores' },
       { id: 'fornecedores_editar',    label: 'Editar fornecedores' },
       { id: 'fornecedores_excluir',   label: 'Excluir fornecedores' },
-      { id: 'fornecedores_comprar',   label: 'Lançar compras' },
-      { id: 'fornecedores_cancelar',  label: 'Cancelar compras' },
+      { id: 'fornecedores_comprar',   label: 'Lançar compras', dica: 'Deixa lançar compras de fornecedor (os produtos entram no estoque) e também marcar como paga uma compra feita a prazo.' },
+      { id: 'fornecedores_cancelar',  label: 'Cancelar compras', dica: 'Deixa cancelar uma compra já lançada. O cancelamento tira do estoque o que entrou e apaga a conta a pagar dela.' },
     ],
   },
   {
@@ -81,10 +86,11 @@ const MODULOS = [
     acoes: [],
   },
   {
-    id: 'config', label: 'Configurações', icone: '⚙️', desc: 'Editar dados do estabelecimento',
+    id: 'config', label: 'Configurações', icone: '⚙️', desc: 'Ver os dados da loja e os tutoriais. Chave Pix e fiado só o dono altera',
+    avisoSemAcoes: '👁️ Somente visualização — o funcionário vê as configurações, mas não altera nada',
     acoes: [
-      { id: 'config_editar_dados', label: 'Editar dados' },
-      { id: 'config_editar_logo',  label: 'Alterar logo' },
+      { id: 'config_editar_dados', label: 'Pedir alteração dos dados', dica: 'Deixa enviar ao administrador do sistema um pedido para mudar os dados da loja (nome, telefone, endereço…). Os dados não mudam na hora: quem altera é o administrador.' },
+      { id: 'config_editar_logo',  label: 'Alterar logo', dica: 'Deixa trocar a logo da loja na tela de Configurações. A chave Pix e o fiado continuam sendo só do dono.' },
     ],
   },
 ];
@@ -156,7 +162,7 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
   }
 
   async function excluir(op) {
-    if (!window.confirm(`Excluir "${op.nome}"? Esta ação desativa o acesso permanentemente.`)) return;
+    if (!(await confirmarDialogo({ titulo: 'Excluir operador?', texto: `"${op.nome}" será excluído. Esta ação desativa o acesso permanentemente.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/api/operadores/${op.id}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error((await resp.json()).error);
@@ -493,7 +499,10 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
     try {
       const resp = await apiFetch(`/api/operadores/${operador.id}/permissoes`);
       if (!resp.ok) throw new Error('Erro ao carregar permissões');
-      setSelecionadas(await resp.json());
+      // 'pdv_desconto' saiu da tela (não existe desconto no PDV). Se ainda
+      // estiver gravado para este funcionário, é ignorado aqui e some ao salvar.
+      const salvas = await resp.json();
+      setSelecionadas(Array.isArray(salvas) ? salvas.filter(p => p !== 'pdv_desconto') : []);
     } catch (err) {
       setErro(err.message);
     } finally {
@@ -587,7 +596,7 @@ function ModalPermissoes({ operador, onClose, onSalvo }) {
                   {/* Hint: módulo ativo sem ações = somente visualização */}
                   {moduloAtivo && mod.acoes.length > 0 && !mod.acoes.some(a => selecionadas.includes(a.id)) && (
                     <div className="opest-perm-somente-view">
-                      👁️ Somente visualização — marque ações abaixo para liberar edição
+                      {mod.avisoSemAcoes || '👁️ Somente visualização — marque ações abaixo para liberar edição'}
                     </div>
                   )}
 

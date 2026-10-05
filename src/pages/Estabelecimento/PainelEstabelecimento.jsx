@@ -213,6 +213,8 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             onLogoAtualizada={handleLogoAtualizada}
             logoUrl={logoUrl}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 
@@ -241,6 +243,8 @@ export default function PainelEstabelecimento() {
             estabelecimentoId={estabelecimentoId}
             nomeEstabelecimento={nomeEstabelecimento}
             logoUrl={logoUrl}
+            permissoes={permsParaModulo}
+            isMerchant={isMerchant}
           />
         );
 

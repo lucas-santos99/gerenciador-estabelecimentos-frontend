@@ -1,6 +1,5 @@
 // src/pages/Estabelecimento/Configuracoes/Configuracoes.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../../utils/supabaseClient';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import '../Configuracoes.css';
@@ -287,7 +286,16 @@ function ModalSolicitarAlteracao({ nomeEstabelecimento, dadosAtuais, estabelecim
 /* ════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ════════════════════════════════════════════════════════════ */
-export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, logoUrl: logoUrlProp }) {
+export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, logoUrl: logoUrlProp, permissoes = null, isMerchant = true }) {
+
+  // Permissões (05/10/2026): o dono (permissoes === null) altera tudo.
+  // O funcionário vê tudo, mas só troca a logo ou pede alteração dos dados
+  // se isso foi marcado para ele. Chave Pix e fiado são só do dono.
+  const ehDono = isMerchant || !permissoes;
+  const pode = (p) => ehDono || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
+  const podeEditarLogo  = pode('config_editar_logo');
+  const podeEditarDados = pode('config_editar_dados');
 
   const [dados,          setDados]          = useState(null);
   const [loading,        setLoading]        = useState(true);
@@ -352,6 +360,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
 
   /* ── Salvar liga/desliga do Fiado ───────────────────────────── */
   async function salvarFiado(novoValor) {
+    if (!ehDono) return;
     setFiadoErro('');
     setFiadoSucesso('');
     setSalvandoFiado(true);
@@ -376,6 +385,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
 
   /* ── Salvar configuração de Pix ────────────────────────────── */
   async function salvarPix() {
+    if (!ehDono) return;
     setPixErro('');
     setPixSucesso('');
 
@@ -403,8 +413,9 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
     }
   }
 
-  /* ── Upload de logo com deleção do arquivo antigo ──────── */
+  /* ── Upload de logo (pelo servidor) ─────────────────────── */
   async function handleUploadLogo(e) {
+    if (!podeEditarLogo) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -428,46 +439,22 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
     setUploadSucesso('');
 
     try {
-      // 1. Deletar logo antiga do storage (se existir)
-      const logoAtual = dados?.logo_url;
-      if (logoAtual) {
-        // Extrair o path relativo dentro do bucket "logos"
-        // URL formato: .../storage/v1/object/public/logos/CAMINHO
-        const match = logoAtual.match(/\/logos\/(.+)$/);
-        if (match?.[1]) {
-          await supabase.storage.from('logos').remove([match[1]]);
-        }
-      }
-
-      // 2. Upload do novo arquivo
-      const ext      = file.name.split('.').pop().toLowerCase();
-      const filePath = `public/${estabelecimentoId}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // 3. Obter URL pública
-      const { data: publicData } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath);
-
-      if (!publicData?.publicUrl) throw new Error('Falha ao obter URL pública.');
-
-      const novaUrl = `${publicData.publicUrl}?t=${Date.now()}`; // cache-bust
-
-      // 4. Salvar no banco via API
-      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`, {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ...dados, logo_url: novaUrl }),
+      // A logo vai pelo servidor, que confere a permissão (dono, ou
+      // funcionário com "Alterar logo"), guarda o arquivo e apaga o antigo.
+      const imagem_base64 = await new Promise((resolve, reject) => {
+        const leitor = new FileReader();
+        leitor.onload = () => resolve(leitor.result);
+        leitor.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+        leitor.readAsDataURL(file);
       });
-      if (!resp.ok) {
-        const r = await resp.json();
-        throw new Error(r.error || 'Erro ao salvar logo.');
-      }
+      const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}/logo`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ imagem_base64 }),
+      });
+      const r = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(r.error || 'Erro ao salvar logo.');
+      const novaUrl = `${r.logo_url}?t=${Date.now()}`; // evita mostrar a imagem antiga guardada pelo navegador
 
       // 5. Atualizar estado local
       setDados(prev => ({ ...prev, logo_url: novaUrl }));
@@ -507,7 +494,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   return (
     <div className="cfg-container">
 
-      {showSolicitar && dados && (
+      {showSolicitar && dados && podeEditarDados && (
         <ModalSolicitarAlteracao
           nomeEstabelecimento={dados.nome_fantasia}
           dadosAtuais={dados}
@@ -549,10 +536,19 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               <div>
                 <div className="cfg-banner-titulo">Dados gerenciados pelo administrador</div>
                 <div className="cfg-banner-desc">
-                  Para alterar qualquer informação, clique em <strong>Solicitar Alteração</strong> e envie a solicitação ao administrador do sistema.
+                  {podeEditarDados ? (
+                    <>Para alterar qualquer informação, clique em <strong>Solicitar Alteração</strong> e envie a solicitação ao administrador do sistema.</>
+                  ) : (
+                    <>Você pode ver os dados da loja, mas não pedir alteração. Se algo estiver errado, avise o dono da loja.</>
+                  )}
                 </div>
               </div>
-              <button className="cfg-btn-solicitar" onClick={() => setShowSolicitar(true)}>
+              <button
+                className={`cfg-btn-solicitar${!podeEditarDados ? ' cfg-sem-permissao' : ''}`}
+                onClick={podeEditarDados ? () => setShowSolicitar(true) : undefined}
+                disabled={!podeEditarDados}
+                title={!podeEditarDados ? SEM_PERM : undefined}
+              >
                 📨 Solicitar Alteração
               </button>
             </div>
@@ -591,9 +587,13 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
           <div className="cfg-aba-logo-centrada">
             <div className="cfg-logo-card">
               <span className="cfg-section-titulo">🖼️ Logo do Estabelecimento</span>
-              <p className="cfg-guia-intro">
-                Você pode alterar a logo diretamente. A imagem anterior é removida automaticamente do sistema para não ocupar espaço desnecessário.
-              </p>
+              {podeEditarLogo ? (
+                <p className="cfg-guia-intro">
+                  Você pode alterar a logo diretamente. A imagem anterior é removida automaticamente do sistema para não ocupar espaço desnecessário.
+                </p>
+              ) : (
+                <div className="cfg-alert info">🔒 Você pode ver a logo, mas não trocar. Peça ao dono da loja para liberar.</div>
+              )}
 
               <div className="cfg-logo-preview cfg-logo-preview--grande">
                 {(dados?.logo_url || logoUrlProp) ? (
@@ -611,13 +611,14 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 type="file"
                 className="cfg-logo-file-input"
                 accept="image/png,image/jpeg,image/webp"
-                disabled={uploading}
+                disabled={uploading || !podeEditarLogo}
                 onChange={handleUploadLogo}
               />
 
               <label
-                className={`cfg-btn-upload cfg-btn-upload--grande${uploading ? ' uploading' : ''}`}
-                onClick={() => !uploading && fileInputRef.current?.click()}
+                className={`cfg-btn-upload cfg-btn-upload--grande${uploading ? ' uploading' : ''}${!podeEditarLogo ? ' cfg-sem-permissao' : ''}`}
+                onClick={() => podeEditarLogo && !uploading && fileInputRef.current?.click()}
+                title={!podeEditarLogo ? SEM_PERM : undefined}
               >
                 {uploading ? '⏳ Enviando…' : '📸 Escolher nova logo'}
               </label>
@@ -640,6 +641,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
           <div className="cfg-aba-maxwidth">
             <div className="cfg-section">
               <span className="cfg-section-titulo">💳 Pix — como receber</span>
+              {!ehDono && <div className="cfg-alert info" style={{ marginBottom: 12 }}>🔒 Só o dono da loja altera a chave Pix e o fiado.</div>}
               <p className="cfg-guia-intro">
                 Escolha o padrão de recebimento de Pix do seu estabelecimento. Isso vale tanto pro PDV quanto
                 pro recebimento de fiado — o caixa ainda pode trocar na hora se precisar, isso aqui só define
@@ -647,8 +649,8 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               </p>
 
               <div className="cfg-form-grid" style={{ marginBottom: 18 }}>
-                <label className={`cfg-radio-card${pixForm.pix_modo === 'maquininha' ? ' ativo' : ''}`}>
-                  <input type="radio" checked={pixForm.pix_modo === 'maquininha'}
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'maquininha' ? ' ativo' : ''}${!ehDono ? ' cfg-sem-permissao' : ''}`}>
+                  <input type="radio" checked={pixForm.pix_modo === 'maquininha'} disabled={!ehDono}
                     onChange={() => setPixForm(p => ({ ...p, pix_modo: 'maquininha' }))} />
                   <div>
                     <strong>📟 Pela maquininha</strong>
@@ -658,8 +660,8 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                   </div>
                 </label>
 
-                <label className={`cfg-radio-card${pixForm.pix_modo === 'sistema' ? ' ativo' : ''}`}>
-                  <input type="radio" checked={pixForm.pix_modo === 'sistema'}
+                <label className={`cfg-radio-card${pixForm.pix_modo === 'sistema' ? ' ativo' : ''}${!ehDono ? ' cfg-sem-permissao' : ''}`}>
+                  <input type="radio" checked={pixForm.pix_modo === 'sistema'} disabled={!ehDono}
                     onChange={() => setPixForm(p => ({ ...p, pix_modo: 'sistema' }))} />
                   <div>
                     <strong>🖥️ Pela tela do sistema</strong>
@@ -676,7 +678,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                   <div className="cfg-form-grid">
                     <div className="cfg-form-group">
                       <span className="cfg-label">Tipo de chave Pix</span>
-                      <select className="cfg-input" value={pixForm.pix_tipo_chave}
+                      <select className="cfg-input" value={pixForm.pix_tipo_chave} disabled={!ehDono}
                         onChange={e => setPixForm(p => ({ ...p, pix_tipo_chave: e.target.value }))}>
                         <option value="cpf">CPF</option>
                         <option value="cnpj">CNPJ</option>
@@ -687,7 +689,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     </div>
                     <div className="cfg-form-group">
                       <span className="cfg-label">Chave Pix <Dica texto="É a chave cadastrada no seu banco para receber Pix. O sistema usa ela para montar o QR Code que o cliente paga no caixa." /></span>
-                      <input maxLength={100} className="cfg-input" value={pixForm.pix_chave}
+                      <input maxLength={100} className="cfg-input" value={pixForm.pix_chave} disabled={!ehDono}
                         placeholder={
                           pixForm.pix_tipo_chave === 'telefone' ? '+5553999999999' :
                           pixForm.pix_tipo_chave === 'cpf'       ? '12345678900' :
@@ -710,7 +712,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     </div>
                     <div className="cfg-form-group">
                       <span className="cfg-label">Cidade de quem recebe <Dica texto="A cidade da sua loja. Ela vai dentro do QR Code do Pix junto com o nome do estabelecimento — sem ela o QR Code não é gerado." /></span>
-                      <input className="cfg-input" value={pixForm.pix_cidade}
+                      <input className="cfg-input" value={pixForm.pix_cidade} disabled={!ehDono}
                         placeholder="Ex: PORTO ALEGRE" maxLength={15}
                         onChange={e => setPixForm(p => ({ ...p, pix_cidade: e.target.value.toUpperCase() }))} />
                       <span className="cfg-label-hint">
@@ -728,9 +730,11 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               {pixErro    && <div className="cfg-alert erro" style={{ marginTop: 12 }}>⚠️ {pixErro}</div>}
               {pixSucesso && <div className="cfg-alert sucesso" style={{ marginTop: 12 }}>✓ {pixSucesso}</div>}
 
+              {ehDono && (
               <button className="cfg-btn-solicitar" style={{ marginTop: 16 }} onClick={salvarPix} disabled={salvandoPix}>
                 {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
               </button>
+              )}
             </div>
           </div>
         )}
@@ -743,13 +747,14 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               <p className="cfg-guia-intro">
                 Nem toda loja vende fiado (o cliente leva e paga depois) — ligue só se fizer sentido pro seu negócio.
               </p>
+              {!ehDono && <div className="cfg-alert info" style={{ marginBottom: 12 }}>🔒 Só o dono da loja altera a chave Pix e o fiado.</div>}
 
               <label
-                className={`cfg-radio-card${fiadoAtivo ? ' ativo' : ''}`}
-                style={{ cursor: salvandoFiado ? 'not-allowed' : 'pointer', opacity: salvandoFiado ? 0.6 : 1 }}
-                onClick={() => !salvandoFiado && salvarFiado(!fiadoAtivo)}
+                className={`cfg-radio-card${fiadoAtivo ? ' ativo' : ''}${!ehDono ? ' cfg-sem-permissao' : ''}`}
+                style={ehDono ? { cursor: salvandoFiado ? 'not-allowed' : 'pointer', opacity: salvandoFiado ? 0.6 : 1 } : undefined}
+                onClick={() => ehDono && !salvandoFiado && salvarFiado(!fiadoAtivo)}
               >
-                <input type="checkbox" checked={fiadoAtivo} readOnly disabled={salvandoFiado} />
+                <input type="checkbox" checked={fiadoAtivo} readOnly disabled={salvandoFiado || !ehDono} />
                 <div>
                   <strong>💰 Fiado (cliente leva agora e paga depois)</strong>
                   <div className="cfg-radio-card-desc">

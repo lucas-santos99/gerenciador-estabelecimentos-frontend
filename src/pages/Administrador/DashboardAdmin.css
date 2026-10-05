@@ -662,6 +662,8 @@ body.light {
 .badge-inativa   { background: var(--bg-danger);   color: var(--text-danger); }
 .badge-bloqueada { background: var(--bg-warning);  color: var(--text-warning); }
 .badge-excluida  { background: var(--bg-danger);   color: var(--text-danger); }
+/* O status vem do banco em minúsculo ("ativa") — só a inicial maiúscula na tela */
+.badge-ativa, .badge-inativa, .badge-bloqueada, .badge-excluida { text-transform: capitalize; }
 
 /* Tipo */
 .badge-tipo {

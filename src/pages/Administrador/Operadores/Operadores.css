@@ -345,6 +345,8 @@
 .op-badge-ativo    { background: var(--bg-success); color: var(--text-success); }
 .op-badge-inativo  { background: var(--bg-danger);  color: var(--text-danger); }
 .op-badge-excluido { background: var(--bg-danger);  color: var(--text-danger); }
+/* O status vem do banco em minúsculo ("ativo") — só a inicial maiúscula na tela */
+.op-badge-ativo, .op-badge-inativo, .op-badge-excluido { text-transform: capitalize; }
 
 /* ========================= */
 /*  CARD DE DETALHES          */

@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Estoque/GerenciarOpcoesVariacao.jsx
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
 import '../Estoque.css';
@@ -62,7 +63,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
 
   async function remover(opt) {
-    if (!window.confirm(`Remover "${opt.valor}" da lista de ${LABEL_ABA[aba].toLowerCase()}?\n\nProdutos que já usam esse valor não mudam — ele só deixa de aparecer na lista de sugestões.`)) return;
+    if (!(await confirmar({ titulo: `Remover "${opt.valor}"?`, texto: `Ele sai da lista de ${LABEL_ABA[aba].toLowerCase()}. Produtos que já usam esse valor não mudam — ele só deixa de aparecer na lista de sugestões.`, perigo: true, botao: 'Remover' }))) return;
     try {
       await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao/${opt.id}`, { method: 'DELETE' });
       await carregar();

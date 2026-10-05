@@ -28,12 +28,14 @@
 //   validação de tamanho. Colar sempre entra como texto puro (sem manter
 //   formatação de origem), pra não abrir brecha de HTML arbitrário vindo
 //   da área de transferência.
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import "../SuperAdmins/SuperAdmins.css";
+import Dica from '../../../components/Notificacoes/Dica';
 import "./Comunicados.css";
 
 // Formatos suportados hoje. Adicionar um formato novo no futuro (faixa no
@@ -541,17 +543,17 @@ export default function Comunicados() {
       if (!resp.ok) throw new Error();
       const json = await resp.json();
       setLista(prev => prev.map(x => (x.id === c.id ? { ...x, ativo: json.ativo } : x)));
-    } catch { alert("Erro ao atualizar o comunicado."); }
+    } catch { avisar("Erro ao atualizar o comunicado."); }
   }
 
   async function excluir(id, titulo) {
-    if (!window.confirm(`Excluir o comunicado "${titulo}"? Essa ação não pode ser desfeita.`)) return;
+    if (!(await confirmar({ titulo: 'Excluir comunicado?', texto: `"${titulo}" será excluído. Essa ação não pode ser desfeita.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/api/comunicados/admin/${id}`, { method: "DELETE" });
       if (!resp.ok) throw new Error();
       setLista(prev => prev.filter(c => c.id !== id));
       if (comNavId === id) setComNavId(null);
-    } catch { alert("Erro ao excluir o comunicado."); }
+    } catch { avisar("Erro ao excluir o comunicado."); }
   }
 
   // Vigente = ativo E dentro da janela de agendamento (se houver). É
@@ -730,6 +732,7 @@ export default function Comunicados() {
           <div className="sa-list-header">
             <span className="sa-list-title">
               {abaAtiva === "ativos" ? "Comunicados vigentes" : "Todos os comunicados já criados"}
+              {abaAtiva === "ativos" && <Dica texto="Só os que estão aparecendo para as lojas neste momento. Os agendados para depois, os expirados e os desativados ficam em Histórico completo." />}
             </span>
             <span className="sa-count-badge">{listaExibida.length}</span>
           </div>
@@ -826,7 +829,7 @@ export default function Comunicados() {
               <div className="sa-modal-title">{editandoId ? "Editar Comunicado" : "Novo Comunicado"}</div>
               <div className="sa-modal-subtitle">
                 Escolha pelo menos um formato de exibição pra este comunicado — pode combinar mais de um.
-                Clique fora não fecha mais o modal — use "Cancelar" ou Esc.
+                Clicar fora não fecha esta janela — use "Cancelar" ou Esc.
               </div>
               {editandoId && (
                 <div className="com-meta-modal">
@@ -1057,7 +1060,7 @@ export default function Comunicados() {
                 </div>
 
                 <div className="sa-form-group">
-                  <label className="sa-label">Com que frequência aparece pro mesmo comerciante/operador</label>
+                  <label className="sa-label">Com que frequência aparece pra mesma loja <Dica texto="A contagem é por loja, não por pessoa: se um operador fechar o aviso, ele conta como visto para a loja toda, e o dono pode nem chegar a ver. Cada formato tem a sua contagem. Editar o comunicado não zera a contagem de quem já viu." /></label>
                   <div className="com-formatos-opcoes">
                     {FREQUENCIA_OPCOES.map(f => (
                       <label key={f.tipo} className={`com-formato-opcao${form.frequencia_tipo === f.tipo ? " selecionado" : ""}`}>
@@ -1200,6 +1203,7 @@ export default function Comunicados() {
                       onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))}
                     />
                     <span className="sa-config-switch-texto">{form.ativo ? "Ativo" : "Inativo"}</span>
+                    <Dica texto="Inativo fica guardado no histórico e não aparece para ninguém, mesmo dentro das datas do agendamento." />
                   </label>
                 </div>
               </div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
+import Dica from '../../../components/Notificacoes/Dica';
 import "./SolicitacoesAdmin.css";
 
 function formatarDataHora(iso) {
@@ -160,6 +161,7 @@ export default function SolicitacoesAdmin() {
             <h1 className="sol-title">Solicitações de <span>Alteração</span></h1>
             <p className="sol-subtitle">
               Pedidos de mudança de dados enviados pelos estabelecimentos.
+              <Dica texto="Atender grava os valores novos direto no cadastro da loja (nome, CPF/CNPJ, telefones, e-mail de contato e endereços). Pedidos de logo ou de outro tipo não são aplicados sozinhos: faça à mão. Recusar não muda nada. Nos dois casos a loja é avisada e vê a sua observação." />
             </p>
           </div>
           <div className="sol-header-actions">
@@ -182,7 +184,7 @@ export default function SolicitacoesAdmin() {
 
         <div className="sol-filtros">
           <div className="sol-filtro-group">
-            <label className="sol-filtro-label">Tipo</label>
+            <label className="sol-filtro-label">Tipo de loja</label>
             <select className="sol-filtro-select" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
               <option value="">Todos</option>
               {tiposDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
@@ -211,7 +213,7 @@ export default function SolicitacoesAdmin() {
         ) : lista.length === 0 ? (
           <div className="sol-vazio">
             <span className="sol-vazio-icone">📭</span>
-            <p>Nenhuma solicitação {aba === "pendente" ? "pendente" : aba ? `"${aba}"` : ""} no momento.</p>
+            <p>Nenhuma solicitação {aba} no momento.</p>
           </div>
         ) : (
           <div

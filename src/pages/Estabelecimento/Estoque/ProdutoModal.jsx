@@ -3,6 +3,7 @@ import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
+import { perguntar } from '../../../components/Dialogo/dialogo';
 import '../Estoque.css';
 
 /* ── Comparação "inteligente" de marcas ──────────────────────
@@ -683,7 +684,7 @@ export default function ProdutoModal({
     categoria_id:    '',
     unidade_medida:  preferenciaUnidade || 'un',
     estoque_atual:   '',
-    estoque_minimo:  '10',
+    estoque_minimo:  '',   // opcional: em branco = sem alerta de estoque baixo
     preco_custo:     '',
     preco_venda:     '',
     // ── Campos balança — se a unidade E a etiqueta já vieram de uma
@@ -810,7 +811,8 @@ export default function ProdutoModal({
         categoria_id:     produtoEditar.categoria_id     || '',
         unidade_medida:   produtoEditar.unidade_medida   || 'un',
         estoque_atual:    formatarValorBR(produtoEditar.estoque_atual,  produtoEditar.unidade_medida === 'kg' ? 3 : 0),
-        estoque_minimo:   formatarValorBR(produtoEditar.estoque_minimo, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
+        // 0 no banco = sem estoque mínimo → o campo aparece em branco
+        estoque_minimo:   parseFloat(produtoEditar.estoque_minimo) > 0 ? formatarValorBR(produtoEditar.estoque_minimo, produtoEditar.unidade_medida === 'kg' ? 3 : 0) : '',
         preco_custo:      formatarValorBR(produtoEditar.preco_custo, 2),
         preco_venda:      formatarValorBR(produtoEditar.preco_venda, 2),
         vendido_por_peso: produtoEditar.vendido_por_peso || false,
@@ -1318,6 +1320,26 @@ export default function ProdutoModal({
       }
     }
 
+    // Estoque de variação que já existia e foi alterado aqui: pede o
+    // motivo — a mudança vai pro histórico de movimentações com ele.
+    let motivoEstoque = '';
+    if (isEdit && form.tem_variacoes) {
+      const estoqueOriginal = new Map((produtoEditar.variacoes || []).map(v => [v.id, parseFloat(v.estoque_atual) || 0]));
+      const alteradas = variacoes.filter(v => v.id && estoqueOriginal.has(v.id)
+        && Math.abs((paraFloatBR(v.estoque_atual) || 0) - estoqueOriginal.get(v.id)) > 0.0005);
+      if (alteradas.length > 0) {
+        const resposta = await perguntar({
+          titulo: alteradas.length === 1 ? 'Você alterou o estoque de 1 variação' : `Você alterou o estoque de ${alteradas.length} variações`,
+          texto: 'Estoque não muda sem registro: informe o motivo. Ele fica guardado em Inventário → Movimentações, com o seu nome.',
+          rotulo: 'Motivo (obrigatório)', placeholder: 'Ex.: contagem, chegou mercadoria, peça com defeito…',
+          botao: 'Salvar com este motivo', botaoCancelar: 'Voltar', maximo: 200,
+        });
+        if (resposta === null) return;
+        if (!resposta) { setErro('Informe o motivo da alteração de estoque das variações.'); return; }
+        motivoEstoque = resposta;
+      }
+    }
+
     setSalvando(true);
 
     const url = isEdit
@@ -1331,6 +1353,7 @@ export default function ProdutoModal({
         estoque_minimo: paraFloatBR(form.estoque_minimo) || 0,
         preco_custo:    paraFloatBR(form.preco_custo)    || 0,
         preco_venda:    paraFloatBR(form.preco_venda)    || 0,
+        ...(motivoEstoque ? { motivo_estoque: motivoEstoque } : {}),
         variacoes: form.tem_variacoes
           ? variacoes.map(v => ({
               ...(v.id ? { id: v.id } : {}),
@@ -2102,12 +2125,13 @@ export default function ProdutoModal({
                       required
                     />
                   )}
+                  {!isEdit && <span className="prod-label-hint">Fica registrado no histórico de movimentações como "Estoque inicial".</span>}
                 </div>
 
                 <div className="prod-form-group">
                   <label className="prod-label">
-                    Estoque mínimo <span className="prod-label-unit">({form.unidade_medida})</span>
-                    <CampoAjuda texto="Quando o estoque chegar nesse número (ou menos), o produto fica marcado em amarelo como estoque baixo na lista — é o sinal de que está na hora de repor. Ajuste conforme a saída de cada produto." />
+                    Estoque mínimo <span className="prod-label-unit">({form.unidade_medida}) · opcional</span>
+                    <CampoAjuda texto="Quando o estoque chegar nesse número (ou menos), o produto fica marcado em amarelo como estoque baixo na lista e entra no aviso de estoque baixo — é o sinal de que está na hora de repor. Não quer esse aviso para este produto? Deixe em branco." />
                   </label>
                   <input maxLength={15}
                     className="prod-input"
@@ -2117,8 +2141,9 @@ export default function ProdutoModal({
                     readOnly={somenteLeitura}
                     value={form.estoque_minimo}
                     onChange={atualizar}
+                    placeholder="Sem mínimo"
                   />
-                  <span className="prod-label-hint">Alerta de estoque baixo</span>
+                  <span className="prod-label-hint">Em branco ou 0 = sem alerta de estoque baixo</span>
                 </div>
 
                 {isEdit && !somenteLeitura && (

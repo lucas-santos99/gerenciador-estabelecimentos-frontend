@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Clientes/DividasList.jsx
+import { confirmar, avisar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
@@ -411,10 +412,10 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   /* ── Excluir cliente ─────────────────────────────────────── */
   async function excluirCliente(cliente) {
     if (parseFloat(cliente.saldo_devedor) > 0.01) {
-      alert('Não é possível excluir cliente com dívida pendente.');
+      avisar({ titulo: 'Cliente com fiado em aberto', texto: 'Não é possível excluir cliente com dívida pendente.', tom: 'info' });
       return;
     }
-    if (!window.confirm(`Excluir o cliente "${cliente.nome}"? Esta ação é irreversível.`)) return;
+    if (!(await confirmar({ titulo: 'Excluir cliente?', texto: `"${cliente.nome}" será excluído. Esta ação é irreversível.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/api/clientes/deletar/${cliente.id}`,
         { method: 'DELETE' }
@@ -430,8 +431,8 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
 
   /* ── Navegação por teclado na lista (item 22) ────────────────
      Setas navegam entre os clientes filtrados; Delete abre a exclusão do
-     cliente selecionado — window.confirm() já responde nativamente a
-     Enter (OK) / Esc (cancelar), sem precisar de mais nada aqui. */
+     cliente selecionado — a janela de confirmação do sistema responde a
+     Enter (confirmar) / Esc (cancelar), sem precisar de mais nada aqui. */
   function handleBuscaKeyDown(e) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       if (listaFiltrada.length === 0) return;
@@ -459,7 +460,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
   function enviarWhatsApp(cliente) {
     const tel = (cliente.telefone || '').replace(/\D/g, '');
     if (!tel) {
-      alert('Este cliente não tem telefone cadastrado.');
+      avisar({ titulo: 'Sem telefone', texto: 'Este cliente não tem telefone cadastrado.', tom: 'info' });
       return;
     }
     const valor = parseFloat(cliente.saldo_devedor || 0)
@@ -1085,10 +1086,13 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
   }
 
   async function cancelarVenda(venda) {
-    const motivo = window.prompt(
-      `Cancelar a compra de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso devolve os itens pro estoque e estorna o pagamento (caixa ou dívida de fiado — em venda dividida, de cada parte).\n\nMotivo (opcional):`
-    );
-    if (motivo === null) return; // desistiu no prompt
+    const motivo = await perguntar({
+      titulo: `Cancelar a compra de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?`,
+      texto: 'Os itens voltam pro estoque e o pagamento é estornado (caixa ou dívida de fiado — em venda dividida, de cada parte).',
+      rotulo: 'Motivo (opcional)', placeholder: 'Ex.: cliente desistiu, lançado errado…',
+      perigo: true, botao: 'Cancelar a compra', botaoCancelar: 'Voltar',
+    });
+    if (motivo === null) return; // desistiu
     setCancelandoId(venda.id);
     try {
       const resp = await apiFetch(`/api/vendas/${venda.id}/cancelar`, {
@@ -1100,7 +1104,7 @@ function HistoricoComprasCliente({ cliente, onFechar, onAtualizar, nomeEstabelec
       carregar();
       onAtualizar?.();
     } catch (err) {
-      alert(err.message);
+      avisar(err.message);
     } finally {
       setCancelandoId(null);
     }

@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Relatorios/Relatorios.jsx
+import { avisar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
 import autoTable from 'jspdf-autotable';
@@ -69,9 +70,23 @@ function IconePacote({ className }) {
 }
 
 /* ════════════════════════════════════════════════════════════ */
-export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, logoUrl }) {
+export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, logoUrl, permissoes = null, isMerchant = true }) {
 
-  const [abaAtiva, setAbaAtiva] = useState('historico');
+  // Permissões (05/10/2026): o dono (permissoes === null) vê tudo. O
+  // funcionário só vê as abas marcadas para ele — e a tela nem chama o
+  // servidor para o que não foi liberado.
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
+  const podeHistorico  = pode('relatorios_historico');
+  const podeOperadores = pode('relatorios_operadores');
+  const podeProdutos   = pode('relatorios_produtos');
+  const podeEstoque    = pode('relatorios_estoque');
+  const podeCancelarVenda = pode('pdv_cancelar_venda');
+  const abaPermitida = { historico: podeHistorico, produtos: podeProdutos, estoque: podeEstoque };
+  const primeiraAbaPermitida = podeHistorico ? 'historico' : podeProdutos ? 'produtos' : podeEstoque ? 'estoque' : null;
+  const nadaLiberado = !primeiraAbaPermitida;
+
+  const [abaAtiva, setAbaAtiva] = useState(() => primeiraAbaPermitida || 'historico');
   const [categorias, setCategorias] = useState([]);
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
   const [fontScale, setFontScale] = useState(() => {
@@ -121,9 +136,14 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   }, []);
 
   useEffect(() => {
-    if (abaAtiva === 'historico' && estabelecimentoId) carregarHistorico();
-    if (abaAtiva === 'estoque'   && estabelecimentoId) carregarEstoque();
-  }, [abaAtiva, estabelecimentoId]);
+    if (abaAtiva === 'historico' && podeHistorico && estabelecimentoId) carregarHistorico();
+    if (abaAtiva === 'estoque'   && podeEstoque   && estabelecimentoId) carregarEstoque();
+  }, [abaAtiva, estabelecimentoId, podeHistorico, podeEstoque]);
+
+  // Se a aba aberta deixou de ser permitida, vai para a primeira que é.
+  useEffect(() => {
+    if (!abaPermitida[abaAtiva] && primeiraAbaPermitida) setAbaAtiva(primeiraAbaPermitida);
+  }, [abaAtiva, primeiraAbaPermitida]);
 
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
   useEffect(() => {
@@ -135,6 +155,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
 
   /* ── Histórico ── */
   async function carregarHistorico() {
+    if (!podeHistorico) return;
     setLoadingHistorico(true);
     setErroHistorico('');
     try {
@@ -147,10 +168,14 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   }
 
   async function cancelarVenda(venda) {
-    const motivo = window.prompt(
-      `Cancelar a venda de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?\n\nIsso vai devolver os itens pro estoque e estornar o pagamento (caixa ou dívida de fiado — em venda dividida, de cada fatia).\n\nMotivo (opcional):`
-    );
-    if (motivo === null) return; // clicou em Cancelar do prompt, desiste
+    if (!podeCancelarVenda) return;
+    const motivo = await perguntar({
+      titulo: `Cancelar a venda de ${fmt(venda.valor_total)} (${labelMeioPagamento(venda)})?`,
+      texto: 'Os itens voltam pro estoque e o pagamento é estornado (caixa ou dívida de fiado — em venda dividida, de cada parte).',
+      rotulo: 'Motivo (opcional)', placeholder: 'Ex.: cliente desistiu, lançado errado…',
+      perigo: true, botao: 'Cancelar a venda', botaoCancelar: 'Voltar',
+    });
+    if (motivo === null) return; // desistiu
     setCancelandoVendaId(venda.id);
     try {
       const resp = await apiFetch(`/api/vendas/${venda.id}/cancelar`, {
@@ -161,7 +186,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       if (!resp.ok) throw new Error(data.error || 'Erro ao cancelar venda.');
       carregarHistorico();
     } catch (err) {
-      alert(err.message);
+      avisar(err.message);
     } finally {
       setCancelandoVendaId(null);
     }
@@ -249,7 +274,8 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
     if (!historicoFiltrado.length) return;
     const dados = historicoFiltrado.map(v => ({
       'Data':        new Date(v.data_venda).toLocaleString('pt-BR'),
-      'Operador':    v.operador_nome,
+      // quem vendeu só aparece para quem pode "Ver vendas por operador"
+      ...(podeOperadores ? { 'Operador': v.operador_nome } : {}),
       'Cliente':     v.cliente_nome || '',
       'Meio Pagto':  labelMeioPagamento(v),
       'Detalhe do pagamento dividido': descreverFatias(v),
@@ -292,7 +318,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       return `
         <tr class="hp-venda-row">
           <td>${new Date(v.data_venda).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-          <td>${v.operador_nome || ''}</td>
+          <td>${podeOperadores ? (v.operador_nome || '') : '—'}</td>
           <td>${v.cliente_nome || '—'}</td>
           <td>${labelMeioPagamento(v)}</td>
           <td>${v.status === 'cancelada' ? 'Cancelada' : 'Ativa'}</td>
@@ -350,6 +376,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
   /* ── Relatório Produtos ── */
   async function gerarReportProdutos(e) {
     e.preventDefault();
+    if (!podeProdutos) return;
     setLoadingReport(true); setErroReport(''); setReportProd([]);
     try {
       const params = new URLSearchParams({ data_inicio: reportInicio, data_fim: reportFim });
@@ -462,6 +489,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
 
   /* ── Estoque ── */
   async function carregarEstoque() {
+    if (!podeEstoque) return;
     setLoadingEstoque(true); setErroEstoque('');
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos`);
@@ -566,7 +594,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             { key: 'historico',  label: '🧾 Histórico de Vendas' },
             { key: 'produtos',   label: '📊 Produtos Vendidos' },
             { key: 'estoque',    label: '📦 Estoque' },
-          ].map(t => (
+          ].filter(t => abaPermitida[t.key]).map(t => (
             <button
               key={t.key}
               className={`rel-tab${abaAtiva === t.key ? ' ativo' : ''}`}
@@ -580,8 +608,19 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
         </div>
       </div>
 
+      {/* Funcionário sem nada marcado dentro de Relatórios */}
+      {nadaLiberado && (
+        <div className="rel-body">
+          <div className="fin-vazio">
+            <span className="fin-vazio-icon">🔒</span>
+            <p>Nada liberado para você aqui ainda</p>
+            <small>Peça ao dono da loja para liberar os relatórios que você pode ver (histórico de vendas, produtos vendidos ou estoque).</small>
+          </div>
+        </div>
+      )}
+
       {/* ══ ABA: HISTÓRICO DE VENDAS (com filtro por operador embutido) ══ */}
-      {abaAtiva === 'historico' && (
+      {abaAtiva === 'historico' && podeHistorico && (
         <div className="rel-body">
           <div className="fin-section-header">
             <span className="fin-section-titulo">🧾 Histórico de Vendas</span>
@@ -601,6 +640,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
               <label className="fin-form-label">Data fim</label>
               <input className="fin-form-input" type="date" value={histFim} onChange={e => setHistFim(e.target.value)} />
             </div>
+            {podeOperadores && (
             <div className="fin-form-group">
               <label className="fin-form-label">Operador</label>
               <select className="fin-form-select" value={histOperador} onChange={e => setHistOperador(e.target.value)}>
@@ -610,6 +650,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                 ))}
               </select>
             </div>
+            )}
             <div className="fin-form-group">
               <label className="fin-form-label">Cliente</label>
               <select className="fin-form-select" value={histCliente} onChange={e => setHistCliente(e.target.value)}>
@@ -638,7 +679,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
             <>
               {/* Resumo comparativo entre operadores — só aparece com "Todos"
                   selecionado e mais de um operador tendo vendido no período */}
-              {!histOperador && histStatus !== 'cancelada' && resumoPorOperador.length > 1 && (
+              {podeOperadores && !histOperador && histStatus !== 'cancelada' && resumoPorOperador.length > 1 && (
                 <>
                   <div className="fin-section-header" style={{ marginTop: 4 }}>
                     <span className="fin-section-titulo" style={{ fontSize: '0.85rem' }}>👤 Resumo por operador <Dica texto="Quanto cada pessoa vendeu no período e a parte dela no total (%). Vendas canceladas não entram. Clique num cartão para ver só as vendas daquela pessoa." /></span>
@@ -703,7 +744,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                         </span>
                         <span className={`fin-badge-meio ${venda.meio_pagamento?.toLowerCase()}`}>{labelMeioPagamento(venda)}</span>
                         {venda.cliente_nome && <span className="fin-historico-cliente">👤 {venda.cliente_nome}</span>}
-                        {venda.operador_nome && (
+                        {podeOperadores && venda.operador_nome && (
                           <span className="fin-historico-operador">🧑‍💼 {venda.operador_nome}</span>
                         )}
                         {venda.status === 'cancelada' && (
@@ -778,8 +819,9 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                       <div className="fin-historico-acoes-extra">
                         <button
                           className="fin-historico-btn-cancelar"
-                          disabled={cancelandoVendaId === venda.id}
-                          onClick={(e) => { e.stopPropagation(); cancelarVenda(venda); }}
+                          disabled={!podeCancelarVenda || cancelandoVendaId === venda.id}
+                          title={!podeCancelarVenda ? SEM_PERM : undefined}
+                          onClick={(e) => { e.stopPropagation(); if (podeCancelarVenda) cancelarVenda(venda); }}
                         >
                           {cancelandoVendaId === venda.id ? '⏳ Cancelando…' : '🗑 Cancelar essa venda'}
                         </button>
@@ -794,7 +836,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       )}
 
       {/* ══ ABA: PRODUTOS MAIS VENDIDOS ══ */}
-      {abaAtiva === 'produtos' && (
+      {abaAtiva === 'produtos' && podeProdutos && (
         <div className="rel-body">
           <div className="fin-section-header">
             <span className="fin-section-titulo">📊 Produtos mais vendidos</span>
@@ -895,7 +937,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
       )}
 
       {/* ══ ABA: ESTOQUE ══ */}
-      {abaAtiva === 'estoque' && (
+      {abaAtiva === 'estoque' && podeEstoque && (
         <div className="rel-body">
           <div className="fin-section-header">
             <span className="fin-section-titulo">📦 Relatório de Estoque</span>
@@ -994,7 +1036,7 @@ export default function Relatorios({ estabelecimentoId, nomeEstabelecimento, log
                       </div>
                     </div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Estoque</span><span className="fin-estoque-info-valor">{unidade}</span></div>
-                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Mínimo</span><span className="fin-estoque-info-valor">{p.estoque_minimo} {p.unidade_medida}</span></div>
+                    <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Mínimo</span><span className="fin-estoque-info-valor">{parseFloat(p.estoque_minimo) > 0 ? `${p.estoque_minimo} ${p.unidade_medida}` : 'sem mínimo'}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Preço de venda</span><span className="fin-estoque-info-valor accent">{fmt(p.preco_venda)}</span></div>
                     <div className="fin-estoque-info-row"><span className="fin-estoque-info-label">Total a preço de venda</span><span className="fin-estoque-info-valor">{fmt(parseFloat(p.preco_venda) * estAtual)}</span></div>
                   </div>

@@ -1715,7 +1715,10 @@
 }
 
 .mod-aviso-pdv {
-  padding: 8px 16px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(251,191,36,0.25);
+  border-radius: 10px;
 }
 
 /* Botão desabilitado por permissão — visual diferenciado */
@@ -3041,3 +3044,66 @@ button:disabled[title*="Sem permissão"] {
 .pdv-item-aviso--preco { color: #d97706; }
 .pdv-item-aviso--erro  { color: #ef4444; font-weight: 600; }
 .pdv-item-aviso-btn { padding: 2px 8px; font-size: calc(0.72rem * var(--pdv-font-scale, 1)); }
+
+/* ════════════════════════════════════════════════════════════
+   Pix pelo sistema (modal de pagamento) — antes eram estilos inline
+   com branco/cor fixa, que não acompanhavam o tema escuro.
+   ════════════════════════════════════════════════════════════ */
+.pdv-pix-btn {
+  padding: calc(9px * var(--pdv-pag-zoom, 1)) calc(20px * var(--pdv-pag-zoom, 1));
+  border-radius: 10px;
+  border: 1px solid var(--est-border);
+  background: var(--est-input);
+  color: var(--est-text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.95rem * var(--pdv-pag-zoom, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pdv-pix-btn:hover,
+.pdv-pix-btn:focus-visible {
+  border-color: var(--est-border-accent);
+  color: var(--est-accent);
+  background: var(--est-accent-dim);
+  outline: none;
+}
+.pdv-pix-btn-copiar { margin-top: 14px; }
+.pdv-pix-erro {
+  padding: 12px 0;
+  color: var(--est-danger);
+  font-size: calc(1rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+}
+.pdv-pix-erro .pdv-pix-btn { margin-top: 10px; }
+.pdv-pix-link {
+  margin-top: 18px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--est-accent);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: calc(0.9rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.pdv-pix-link:hover { color: var(--est-text); }
+
+/* Aviso em âmbar: o marrom (#b45309) fica apagado no fundo escuro. */
+body.dark .pdv-pagamento-digital-aviso { color: #fcd34d; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.12); }
+body.dark .pdv-pagamento-digital-aviso strong { color: #fde68a; }
+body.dark .pdv-dividido-fatia-pix-erro { color: #f87171; }
+
+/* Venda dividida: dívida e limite do cliente da parte no Fiado */
+.pdv-dividido-fiado-info {
+  margin: 2px 0 8px;
+  font-size: calc(0.76rem * var(--pdv-pag-zoom, 1));
+  font-weight: 600;
+  color: var(--est-text-muted);
+}
+.pdv-dividido-fiado-info.passou { color: var(--est-danger); }
+
+/* Inventário em andamento: produtos em contagem travados para venda */
+.pdv-aviso-inventario { line-height: 1.45; align-items: flex-start; }
+.pdv-aviso-inventario strong { color: var(--est-text); }

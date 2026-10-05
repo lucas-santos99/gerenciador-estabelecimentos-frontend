@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
@@ -33,9 +34,19 @@ const FILTRO_CONTA_TITLE = {
 };
 
 /* ════════════════════════════════════════════════════════════ */
-export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia }) {
+export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, permissoes = null, isMerchant = true }) {
 
-  const [abaAtiva, setAbaAtiva] = useState('fluxo');
+  // Permissões (05/10/2026): o dono (permissoes === null) vê tudo. O
+  // funcionário só vê o que foi marcado para ele — e a tela nem chama o
+  // servidor para o que não foi liberado.
+  const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
+  const podeResumo = pode('financeiro_ver_resumo');
+  const podeDre    = pode('financeiro_ver_dre');
+  const podeContas = pode('financeiro_contas_pagar');
+  const podeFluxo  = podeResumo || podeDre;
+  const nadaLiberado = !podeFluxo && !podeContas;
+
+  const [abaAtiva, setAbaAtiva] = useState(() => (!podeFluxo && podeContas ? 'contas' : 'fluxo'));
   const [fontScale, setFontScale] = useState(() => {
     const saved = localStorage.getItem('fin-font-scale');
     return saved ? parseFloat(saved) : 1;
@@ -99,6 +110,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   // no filtro certo e destaca a conta.
   const [contaDestino, setContaDestino] = useState(null);
   useDestinoNotificacao('financeiro', (d) => {
+    if (!podeContas) return;
     setAbaAtiva('contas');
     setFiltroContaDe(''); setFiltroContaAte('');
     if (['pendente', 'atrasada', 'paga'].includes(d?.status)) setFiltroStatus(d.status);
@@ -154,13 +166,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   /* ── Carga inicial ───────────────────────────────────────── */
   useEffect(() => {
     if (!estabelecimentoId) return;
-    carregarResumo();
+    if (podeResumo) carregarResumo();
     carregarCategorias();
-  }, [estabelecimentoId]);
+  }, [estabelecimentoId, podeResumo]);
 
   useEffect(() => {
-    if (abaAtiva === 'contas' && estabelecimentoId) carregarContas(filtroStatus);
-  }, [abaAtiva, filtroStatus, estabelecimentoId]);
+    if (abaAtiva === 'contas' && podeContas && estabelecimentoId) carregarContas(filtroStatus);
+  }, [abaAtiva, filtroStatus, estabelecimentoId, podeContas]);
+
+  // Se a aba aberta deixou de ser permitida, vai para a que é.
+  useEffect(() => {
+    if (abaAtiva === 'contas' && !podeContas && podeFluxo) setAbaAtiva('fluxo');
+    else if (abaAtiva === 'fluxo' && !podeFluxo && podeContas) setAbaAtiva('contas');
+  }, [abaAtiva, podeContas, podeFluxo]);
 
   /* ── Tempo real (22/09/2026) ─────────────────────────────────
      - Contas a Pagar: lista atualiza sozinha, em silêncio, quando alguém
@@ -170,22 +188,23 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
        movimentações novas" com um botão pra atualizar. */
   const [dadosNovos, setDadosNovos] = useState(false);
   useAvisosEstabelecimento(estabelecimentoId, ['financeiro', 'vendas'], (resumoAviso) => {
-    if (abaAtiva === 'contas') carregarContas(filtroStatus, { silencioso: true });
+    if (abaAtiva === 'contas' && podeContas) carregarContas(filtroStatus, { silencioso: true });
     const soReconexao = resumoAviso?.tipos && resumoAviso.tipos.size === 1 && resumoAviso.tipos.has('*');
-    if (!soReconexao) setDadosNovos(true);
+    if (!soReconexao && podeFluxo) setDadosNovos(true);
   });
 
   function atualizarDadosNovos() {
     setDadosNovos(false);
-    carregarResumo();
-    if (dreData) gerarDRE({ preventDefault() {} });
-    if (abaAtiva === 'contas') carregarContas(filtroStatus, { silencioso: true });
+    if (podeResumo) carregarResumo();
+    if (dreData && podeDre) gerarDRE({ preventDefault() {} });
+    if (abaAtiva === 'contas' && podeContas) carregarContas(filtroStatus, { silencioso: true });
   }
 
   /* ════════════════════════════════════════════════════════
      FLUXO DE CAIXA
   ════════════════════════════════════════════════════════ */
   async function carregarResumo() {
+    if (!podeResumo) return;
     setLoadingResumo(true);
     setErroResumo('');
     try {
@@ -199,6 +218,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   /* ── Gerar DRE ───────────────────────────────────────────── */
   async function gerarDRE(e) {
     e.preventDefault();
+    if (!podeDre) return;
     setLoadingDre(true);
     setErroDre('');
     setDreData(null);
@@ -322,6 +342,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
      CONTAS A PAGAR
   ════════════════════════════════════════════════════════ */
   async function carregarContas(status, { silencioso = false } = {}) {
+    if (!podeContas) return;
     if (!silencioso) {
       setLoadingContas(true);
       setErroContas('');
@@ -359,6 +380,13 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
 
   async function salvarConta(e) {
     e.preventDefault();
+    // "1.234,56" → 1234.56 (antes só a vírgula era trocada e o valor ia errado)
+    const txtValor = String(formData.valor || '').trim().replace(/[R$\s]/g, '');
+    const valorNum = parseFloat(txtValor.includes(',') ? txtValor.replace(/\./g, '').replace(',', '.') : txtValor);
+    if (!Number.isFinite(valorNum) || valorNum <= 0) {
+      setErroContas('Informe um valor válido, maior que zero (ex.: 1.234,56).');
+      return;
+    }
     setSalvandoConta(true);
     setErroContas('');
     try {
@@ -373,7 +401,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
         body: JSON.stringify({
           estabelecimentoId,
           descricao:       formData.descricao,
-          valor:           formData.valor.replace(',', '.'),
+          valor:           valorNum,
           data_vencimento: formData.data_vencimento,
         }),
       });
@@ -410,7 +438,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
   }
 
   async function excluirConta(contaId) {
-    if (!window.confirm('Excluir esta conta?')) return;
+    if (!(await confirmar({ titulo: 'Excluir esta conta?', perigo: true, botao: 'Excluir' }))) return;
     setSalvandoConta(true);
     try {
       const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}`, {
@@ -704,9 +732,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       <div className="fin-tabs">
         <div className="fin-tabs-nav">
           {[
-            { key: 'fluxo',  label: '💰 Fluxo de Caixa' },
-            { key: 'contas', label: '📋 Contas a Pagar' },
-          ].map(tab => (
+            { key: 'fluxo',  label: '💰 Fluxo de Caixa', visivel: podeFluxo },
+            { key: 'contas', label: '📋 Contas a Pagar',  visivel: podeContas },
+          ].filter(tab => tab.visivel).map(tab => (
             <button
               key={tab.key}
               className={`fin-tab-btn${abaAtiva === tab.key ? ' ativo' : ''}`}
@@ -729,6 +757,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
             disabled={fontScale >= 1.6}
             title="Aumentar fonte"
           >A+</button>
+          {podeResumo && (<>
           <button
             className="fin-tab-btn-imprimir"
             onClick={exportarResumoDiaExcel}
@@ -753,10 +782,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
           >
             🖨️ Imprimir
           </button>
+          </>)}
         </div>
       </div>
 
-      {dadosNovos && (
+      {dadosNovos && podeFluxo && (
         <div className="fin-aviso-dados-novos" role="status">
           <span>🔄 Há movimentações novas (venda, pagamento ou conta) desde que esta tela foi carregada.</span>
           <button type="button" className="fin-aviso-dados-novos-btn" onClick={atualizarDadosNovos}>
@@ -769,10 +799,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
       {/* ── CONTEÚDO ─────────────────────────────────────── */}
       <div className="fin-content">
 
+        {/* Funcionário sem nada marcado dentro do Financeiro */}
+        {nadaLiberado && (
+          <div className="fin-vazio">
+            <span className="fin-vazio-icon">🔒</span>
+            <p>Nada liberado para você aqui ainda</p>
+            <small>Peça ao dono da loja para liberar o que você pode ver no Financeiro (resumo do dia, lucro do período ou contas a pagar).</small>
+          </div>
+        )}
+
         {/* ══ ABA 1: FLUXO DE CAIXA ══ */}
-        {abaAtiva === 'fluxo' && (
+        {abaAtiva === 'fluxo' && podeFluxo && (
           <>
-            {avisoFluxoAberto ? (
+            {isMerchant || !permissoes || (podeResumo && podeDre) ? (avisoFluxoAberto ? (
               <div className="fin-contas-explicacao">
                 <span className="fin-contas-explicacao-icone">💡</span>
                 <span className="fin-contas-explicacao-texto">
@@ -786,8 +825,13 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               <button className="fin-contas-explicacao-reabrir" onClick={abrirAvisoFluxo}>
                 💡 Sobre esta aba
               </button>
+            )) : (
+              <div className="mod-aviso-permissao">
+                🔒 Visualização limitada — {podeResumo ? 'o resultado do período (DRE)' : 'o resumo do dia'} não está liberado para o seu perfil.
+              </div>
             )}
 
+            {podeResumo && (<>
             {/* Resumo do dia */}
             <div className="fin-section-header">
               <span className="fin-section-titulo">📅 Resumo do Dia</span>
@@ -876,8 +920,11 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               </div>
             </div>
 
-            <div className="fin-divisor" />
+            </>)}
 
+            {podeResumo && podeDre && <div className="fin-divisor" />}
+
+            {podeDre && (<>
             {/* DRE */}
             <div className="fin-section-header">
               <span className="fin-section-titulo">📊 Resultado do período (DRE): quanto sobrou de lucro</span>
@@ -966,11 +1013,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia })
               </div>
               </>
             )}
+            </>)}
           </>
         )}
 
         {/* ══ ABA 2: CONTAS A PAGAR ══ */}
-        {abaAtiva === 'contas' && (
+        {abaAtiva === 'contas' && podeContas && (
           <>
             {avisoContasAberto ? (
             <div className="fin-contas-explicacao">

@@ -1,4 +1,5 @@
 // src/pages/Administrador/Estabelecimentos/ListaEstabelecimentos.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -38,15 +39,15 @@ export default function ListaEstabelecimentos() {
   useEffect(() => { if (!loading) setTimeout(() => buscaRef.current?.focus(), 100); }, [loading]);
 
   async function excluirEstabelecimento(id, nome) {
-    if (!window.confirm(`Excluir "${nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir estabelecimento?', texto: `"${nome}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
       if (resp.ok) carregarEstabelecimentos();
       else {
         const json = await resp.json();
-        alert("Erro: " + json.error);
+        avisar("Erro: " + json.error);
       }
-    } catch { alert("Erro ao excluir."); }
+    } catch { avisar("Erro ao excluir."); }
   }
 
   const listaFiltrada = busca
@@ -117,7 +118,7 @@ export default function ListaEstabelecimentos() {
             <input maxLength={100}
               ref={buscaRef}
               className="dash-input"
-              placeholder="Buscar por nome ou CNPJ…"
+              placeholder="Buscar por nome ou CPF/CNPJ…"
               value={busca}
               onChange={e => setBusca(e.target.value)}
               onKeyDown={handleBuscaKeyDown}
@@ -152,7 +153,7 @@ export default function ListaEstabelecimentos() {
                     <th>Logo</th>
                     <th>Nome</th>
                     <th>Tipo</th>
-                    <th>CNPJ</th>
+                    <th>CPF / CNPJ</th>
                     <th>Telefone</th>
                     <th>Ações</th>
                   </tr>

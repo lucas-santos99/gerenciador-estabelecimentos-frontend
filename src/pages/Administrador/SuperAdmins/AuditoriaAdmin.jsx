@@ -1,4 +1,5 @@
 // src/pages/Administrador/SuperAdmins/AuditoriaAdmin.jsx
+import { avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -6,6 +7,7 @@ import { supabase } from "../../../utils/supabaseClient";
 import { MODULO_LABEL, ACAO_LABEL } from "../../../utils/auditoriaLabels";
 import * as XLSX from "xlsx";
 import { htmlIdentidade, salvarExcelIdentidade, prepararIdentidade } from "../../../utils/relatorioIdentidade";
+import Dica from '../../../components/Notificacoes/Dica';
 import "./AuditoriaAdmin.css";
 
 async function getToken() {
@@ -14,18 +16,21 @@ async function getToken() {
 }
 
 const ESCOPOS = [
-  { value: "",                 label: "Todos os escopos" },
+  { value: "",                 label: "Todas as origens" },
   { value: "admin_global",     label: "🛠️ Ações do painel admin" },
   { value: "estabelecimento",  label: "🏢 Ações dentro do estabelecimento" },
   { value: "login",            label: "🔑 Logins" },
 ];
+
+// Nome de tela de cada origem (o banco guarda o código: admin_global, estabelecimento, login)
+const ESCOPO_TELA = { admin_global: "Painel admin", estabelecimento: "Na loja", login: "Login" };
 
 const TAMANHOS_PAGINA = [20, 30, 50, 100];
 
 // Colunas que aceitam ordenação — precisa bater com a whitelist do backend
 const COLUNAS = [
   { key: "criado_em",    label: "Data/Hora",       sortable: true  },
-  { key: "escopo",       label: "Escopo",          sortable: true  },
+  { key: "escopo",       label: "Origem",          sortable: true  },
   { key: "mercearia_id", label: "Estabelecimento", sortable: false }, // resolvido no cliente, não dá pra ordenar no banco
   { key: "usuario_nome", label: "Usuário",         sortable: true  },
   { key: "modulo",       label: "Módulo",          sortable: true  },
@@ -221,7 +226,7 @@ export default function AuditoriaAdmin() {
   function formatarLinhaExport(r) {
     return {
       "Data/Hora":       new Date(r.criado_em).toLocaleString("pt-BR"),
-      "Escopo":          r.escopo || "estabelecimento",
+      "Origem":          ESCOPO_TELA[r.escopo || "estabelecimento"] || r.escopo,
       "Estabelecimento": r.mercearia_id ? nomeEstab(r.mercearia_id) : "—",
       "Usuário":         r.usuario_nome || "Sistema",
       "Módulo":          (MODULO_LABEL[r.modulo] || r.modulo || ""),
@@ -243,9 +248,9 @@ export default function AuditoriaAdmin() {
         tipo: "auditoria", semLoja: true, titulo: "Auditoria Geral",
         subtitulo: `${linhas.length} registro(s)${truncado ? " (limitado a 3.000)" : ""}`,
       });
-      if (truncado) alert("A exportação trouxe os primeiros 3.000 registros que batem no filtro. Refine o período pra exportar tudo.");
+      if (truncado) avisar({ titulo: "Exportação limitada", texto: "A exportação trouxe os primeiros 3.000 registros que batem no filtro. Refine o período pra exportar tudo.", tom: "info" });
     } catch (e) {
-      alert("Erro ao exportar: " + (e.message || "erro desconhecido"));
+      avisar("Erro ao exportar: " + (e.message || "erro desconhecido"));
     }
     setExportando(false);
   }
@@ -291,7 +296,7 @@ export default function AuditoriaAdmin() {
       win.focus();
       setTimeout(() => win.print(), 300);
     } catch (e) {
-      alert("Erro ao exportar: " + (e.message || "erro desconhecido"));
+      avisar("Erro ao exportar: " + (e.message || "erro desconhecido"));
     }
     setExportando(false);
   }
@@ -307,7 +312,7 @@ export default function AuditoriaAdmin() {
             <span className="aud-breadcrumb">🔍 Painel Administrativo</span>
             <h1 className="aud-page-title">Auditoria <span>Geral</span></h1>
             <p className="aud-page-subtitle">
-              Histórico de tudo que administradores e superadmins alteram no sistema — estabelecimentos, operadores, configurações e logins.
+              Histórico do que foi feito no sistema: ações do painel admin, ações dentro de cada estabelecimento e logins.
             </p>
           </div>
           <div className="aud-page-actions">
@@ -324,7 +329,7 @@ export default function AuditoriaAdmin() {
         {/* FILTROS */}
         <div className="aud-filters-box">
           <div className="aud-filter-group">
-            <label className="aud-filter-label">Escopo</label>
+            <label className="aud-filter-label">Origem <Dica texto="De onde veio o registro: do painel admin (você e outros SuperAdmins), de dentro de uma loja (dono e operadores) ou um login." /></label>
             <select className="aud-select" value={escopo} onChange={e => setEscopo(e.target.value)}>
               {ESCOPOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -355,7 +360,7 @@ export default function AuditoriaAdmin() {
           </div>
 
           <div className="aud-filter-group">
-            <label className="aud-filter-label">Ação</label>
+            <label className="aud-filter-label">Ação <Dica texto="A lista mostra só as ações que já aconteceram no estabelecimento e na origem escolhidos. O mesmo vale para o filtro Usuário." /></label>
             <select className="aud-select" value={acao} onChange={e => setAcao(e.target.value)}>
               <option value="">Todas</option>
               {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{ACAO_LABEL[a] || a}</option>)}
@@ -376,7 +381,7 @@ export default function AuditoriaAdmin() {
           </div>
 
           <div className="aud-filter-group aud-filter-group--data">
-            <label className="aud-filter-label">De</label>
+            <label className="aud-filter-label">De <Dica texto="As datas seguem o horário de Brasília. Com um estabelecimento selecionado, seguem o fuso dele." /></label>
             <input className="aud-input" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
           </div>
 
@@ -439,7 +444,7 @@ export default function AuditoriaAdmin() {
                         </td>
                         <td>
                           <span className="aud-badge" style={{ background: cor.bg, color: cor.cor }}>
-                            {r.escopo || "estabelecimento"}
+                            {ESCOPO_TELA[r.escopo || "estabelecimento"] || r.escopo}
                           </span>
                         </td>
                         <td className="nowrap">{r.mercearia_id ? nomeEstab(r.mercearia_id) : "—"}</td>

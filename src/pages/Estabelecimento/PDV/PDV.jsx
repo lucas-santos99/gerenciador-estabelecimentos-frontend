@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ModalCamera from './ModalCamera';
 import { apiFetch } from '../../../utils/api';
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import { identidadeRecibo } from '../../../utils/relatorioIdentidade';
 import './PDV.css';
@@ -1076,7 +1077,8 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
   }
 
   function selecionarClienteFatia(id, cli) {
-    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome } : f)));
+    // limite e dívida atual ficam guardados na fatia pro aviso de limite na hora de finalizar
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome, clienteLimite: parseFloat(cli.limite_credito) || 0, clienteSaldo: parseFloat(cli.saldo_devedor) || 0 } : f)));
     setFatiaBuscaAberta(null);
     // 17/09 — Fiado: selecionar o cliente é o último passo obrigatório da
     // fatia, então já leva o foco pro botão "Confirmar Pessoa N" dela.
@@ -1169,7 +1171,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     && fatias.every(f => f.meioPagamento !== 'Fiado' || f.clienteId)
     && Math.abs(restanteDividir) <= 0.001;
 
-  function confirmarFinalDividido() {
+  async function confirmarFinalDividido() {
     setErro('');
     if (fatias.length < 2) { setErro('Adicione pelo menos duas pessoas para dividir a venda.'); return; }
     if (restoPendente) { setErro('Escolha como tratar os itens que ainda não têm dono antes de continuar.'); return; }
@@ -1225,6 +1227,27 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
           return i >= 0 ? i : null;
         })
       : null;
+
+    // Limite de fiado — mesmo aviso da venda fiada comum. Soma as partes
+    // no Fiado por cliente (o mesmo cliente pode estar em mais de uma).
+    const fiadoPorCliente = new Map();
+    fatias.forEach((f, i) => {
+      if (f.meioPagamento !== 'Fiado' || !f.clienteId) return;
+      const atual = fiadoPorCliente.get(f.clienteId) || { nome: f.clienteNome || 'Cliente', limite: f.clienteLimite || 0, saldo: f.clienteSaldo || 0, valor: 0 };
+      atual.valor += valoresFinais[i];
+      fiadoPorCliente.set(f.clienteId, atual);
+    });
+    const estourados = [...fiadoPorCliente.values()].filter(c => c.limite > 0 && c.saldo + c.valor > c.limite + 0.001);
+    if (estourados.length > 0) {
+      const ok = await confirmar({
+        titulo: 'Limite de fiado ultrapassado',
+        texto: estourados.map(c => `${c.nome}: limite ${fmt(c.limite)} · dívida depois desta compra ${fmt(c.saldo + c.valor)}`).join('\n'),
+        detalhe: 'O limite é só um aviso — você decide se vende mesmo assim.',
+        perigo: true, icone: '⚠️', botao: 'Vender mesmo assim', botaoCancelar: 'Voltar',
+      });
+      if (!ok) return;
+    }
+
     onFinalizar('Dividido', null, { pagamentos, itensPagamentoIndex });
   }
 
@@ -1248,9 +1271,9 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     }
   }
 
-  function confirmarFinal() {
+  async function confirmarFinal() {
     setErro('');
-    if (meioPagamento === 'Dividido') { confirmarFinalDividido(); return; }
+    if (meioPagamento === 'Dividido') { await confirmarFinalDividido(); return; }
     if (meioPagamento === 'Fiado') {
       if (!clienteSelecionado?.id) { setErro('Selecione um cliente para o fiado.'); return; }
 
@@ -1259,11 +1282,12 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       const novoSaldo = saldoAtual + total;
 
       if (limite > 0 && novoSaldo > limite) {
-        const limiteStr = fmt(limite);
-        const novoStr = fmt(novoSaldo);
-        const ok = window.confirm(
-          `⚠️ Limite de crédito excedido!\n\nLimite: ${limiteStr}\nDívida após esta compra: ${novoStr}\n\nDeseja continuar mesmo assim?`
-        );
+        const ok = await confirmar({
+          titulo: 'Limite de fiado ultrapassado',
+          texto: `${clienteSelecionado.nome}: limite ${fmt(limite)} · dívida depois desta compra ${fmt(novoSaldo)}`,
+          detalhe: 'O limite é só um aviso — você decide se vende mesmo assim.',
+          perigo: true, icone: '⚠️', botao: 'Vender mesmo assim', botaoCancelar: 'Voltar',
+        });
         if (!ok) return;
       }
 
@@ -1546,18 +1570,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                   <div style={{ width: '100%', textAlign: 'center' }}>
                     {gerandoPix && <div style={{ padding: 'calc(28px * var(--pdv-pag-zoom, 1))', fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))' }}>⏳ Gerando QR Code…</div>}
                     {pixErro && (
-                      <div style={{ color: '#dc2626', fontSize: 'calc(1rem * var(--pdv-pag-zoom, 1))', padding: '12px 0' }}>
+                      <div className="pdv-pix-erro">
                         ⚠️ {pixErro}
                         <div style={{ marginTop: 10 }}>
-                          <button type="button" onClick={gerarPixSistema} style={{ fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '8px 18px', borderRadius: 8, cursor: 'pointer' }}>Tentar de novo</button>
+                          <button type="button" className="pdv-pix-btn" onClick={gerarPixSistema}>↻ Tentar de novo</button>
                         </div>
                       </div>
                     )}
                     {pixDados && !gerandoPix && (
                       <>
                         <img src={pixDados.qrcode_base64} alt="QR Code Pix" style={{ width: 'calc(260px * var(--pdv-pag-zoom, 1))', height: 'calc(260px * var(--pdv-pag-zoom, 1))', margin: '0 auto', display: 'block', borderRadius: 10 }} />
-                        <button type="button" onClick={copiarPixCopiaECola}
-                          style={{ marginTop: 14, fontSize: 'calc(0.95rem * var(--pdv-pag-zoom, 1))', padding: '9px 20px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer' }}>
+                        <button type="button" className="pdv-pix-btn pdv-pix-btn-copiar" onClick={copiarPixCopiaECola}>
                           {pixCopiado ? '✓ Copiado!' : '📋 Copiar Pix Copia e Cola'}
                         </button>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center', marginTop: 22, fontSize: 'calc(1.05rem * var(--pdv-pag-zoom, 1))', cursor: 'pointer' }}>
@@ -1595,7 +1618,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                       setPixModo(m => m === 'sistema' ? 'maquininha' : 'sistema');
                       setTimeout(() => btnConfirmarRef.current?.focus(), 0);
                     }}
-                    style={{ marginTop: 18, fontSize: 'calc(0.9rem * var(--pdv-pag-zoom, 1))', color: '#0f766e', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                    className="pdv-pix-link"
                   >
                     {pixModo === 'sistema' ? 'Usar a maquininha em vez disso' : 'Gerar QR Code pelo sistema em vez disso'}
                   </button>
@@ -1776,6 +1799,16 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                           <button type="button" className="pdv-dividido-remover" onClick={() => removerPessoa(f.id)} title="Remover pessoa">✕</button>
                         )}
                       </div>
+                      {f.clienteId && f.meioPagamento === 'Fiado' && ((f.clienteSaldo || 0) > 0 || (f.clienteLimite || 0) > 0) && (() => {
+                        const depois = (f.clienteSaldo || 0) + (valorFatiaAtual(f, i) || 0);
+                        const passou = (f.clienteLimite || 0) > 0 && depois > f.clienteLimite + 0.001;
+                        return (
+                          <div className={`pdv-dividido-fiado-info${passou ? ' passou' : ''}`}>
+                            Deve hoje {fmt(f.clienteSaldo || 0)} · fica devendo {fmt(depois)}
+                            {(f.clienteLimite || 0) > 0 && <> · limite {fmt(f.clienteLimite)}{passou ? ' ⚠️' : ''}</>}
+                          </div>
+                        );
+                      })()}
                       {!f.clienteId && (() => {
                         const fiado = f.meioPagamento === 'Fiado';
                         return (
@@ -2454,6 +2487,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   const [total,           setTotal]           = useState(0);
   const [loadingBusca,    setLoadingBusca]    = useState(false);
   const [loadingVenda,    setLoadingVenda]    = useState(false);
+  // Inventário em andamento: produtos em contagem não podem ser vendidos
+  const [inventarioAtivo, setInventarioAtivo] = useState(null);
   const [vendaStatus,     setVendaStatus]     = useState(null);
   const [telaCheia,       setTelaCheia]       = useState(false);
   const [fontScale,       setFontScale]       = useState(() => {
@@ -2598,7 +2633,30 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
 
   // Porta de entrada única do pagamento (botão, F10/F2 e o 2º Enter do
   // carrinho, que clica no botão) — segura a venda se houver pendência.
+  async function carregarInventarioAtivo() {
+    try {
+      const resp = await apiFetch('/api/inventario/em-andamento');
+      if (resp.ok) setInventarioAtivo(await resp.json());
+    } catch { /* sem resposta: o servidor confere de novo na hora da venda */ }
+  }
+  useEffect(() => {
+    if (!estabelecimentoId) return;
+    carregarInventarioAtivo();
+    const aoVoltar = () => carregarInventarioAtivo();
+    window.addEventListener('focus', aoVoltar);
+    return () => window.removeEventListener('focus', aoVoltar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estabelecimentoId]);
+
   function abrirPagamento() {
+    // Operador sem "Realizar vendas": o botão já fica travado — o atalho F10/F2 também não abre.
+    if (!pode('pdv_realizar_venda')) { mostrarStatus('erro', SEM_PERM); return; }
+    // Inventário completo em andamento: a loja toda está em contagem
+    carregarInventarioAtivo();
+    if (inventarioAtivo && inventarioAtivo.tipo !== 'por_categoria') {
+      mostrarStatus('erro', `Inventário "${inventarioAtivo.nome}" em andamento — vendas pausadas até finalizar ou cancelar a contagem.`);
+      return;
+    }
     if (qtdPrecosAlterados > 0) {
       mostrarStatus('erro', 'Há preço alterado no carrinho — clique em "Aplicar" no item (ou "Aplicar todos") antes de finalizar.');
       return;
@@ -3160,6 +3218,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
           }));
         } else if (resp.status === 409 && (result.codigo === 'ESTOQUE_INSUFICIENTE' || result.codigo === 'PRODUTO_INDISPONIVEL')) {
           sincronizarCarrinho();
+        } else if (resp.status === 409 && result.codigo === 'INVENTARIO_EM_ANDAMENTO') {
+          carregarInventarioAtivo();
         }
         throw new Error(result.error || 'Erro no servidor.');
       }
@@ -3391,14 +3451,24 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         />
       )}
 
-      {/* Banner permissão limitada */}
-      {!isMerchant && permissoes && !pode('pdv_realizar_venda') && (
-        <div className="mod-aviso-permissao mod-aviso-pdv">
-          🔒 Visualização limitada — finalização de vendas não está disponível para o seu perfil.
-        </div>
-      )}
-
       <div className="pdv-busca">
+        {/* Banner permissão limitada — dentro da coluna da busca (solto no
+            container ele virava uma terceira coluna e espremia a tela) */}
+        {!isMerchant && permissoes && !pode('pdv_realizar_venda') && (
+          <div className="mod-aviso-permissao mod-aviso-pdv">
+            🔒 Visualização limitada — finalização de vendas não está disponível para o seu perfil.
+          </div>
+        )}
+        {inventarioAtivo && (
+          <div className="mod-aviso-permissao mod-aviso-pdv pdv-aviso-inventario">
+            <span>
+              📋 <strong>Inventário em andamento</strong> ("{inventarioAtivo.nome}") —{' '}
+              {inventarioAtivo.tipo === 'por_categoria'
+                ? <>os produtos {inventarioAtivo.categoria_nome ? <>da categoria <strong>{inventarioAtivo.categoria_nome}</strong></> : 'em contagem'} não podem ser vendidos até a contagem ser finalizada ou cancelada.</>
+                : <>as <strong>vendas estão pausadas</strong> até a contagem ser finalizada ou cancelada (em Inventário).</>}
+            </span>
+          </div>
+        )}
         <div className="pdv-busca-row">
           <input maxLength={100}
             ref={inputBuscaRef}

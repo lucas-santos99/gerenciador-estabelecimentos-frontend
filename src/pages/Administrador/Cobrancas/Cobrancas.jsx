@@ -1,10 +1,12 @@
 // src/pages/Administrador/Cobrancas/Cobrancas.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import { TIMEZONE_PADRAO, hojeStrTZ, diasEntre } from "../../../utils/fusoHorario";
+import Dica from '../../../components/Notificacoes/Dica';
 import "./Cobrancas.css";
 
 async function getToken() {
@@ -347,7 +349,7 @@ export default function Cobrancas() {
     const numeroEscolhido = telefoneEscolhido[m.id] || m.telefone;
     const telefone = (numeroEscolhido || "").replace(/\D/g, "");
     if (!telefone) {
-      alert(`"${m.nome_fantasia}" não tem telefone cadastrado.`);
+      avisar(`"${m.nome_fantasia}" não tem telefone cadastrado.`);
       return;
     }
     setProcessando(m.id);
@@ -371,7 +373,7 @@ export default function Cobrancas() {
 
   async function cobrarEmail(m) {
     if (!m.email_contato) {
-      alert(`"${m.nome_fantasia}" não tem e-mail cadastrado.`);
+      avisar(`"${m.nome_fantasia}" não tem e-mail cadastrado.`);
       return;
     }
     setProcessando(m.id);
@@ -442,11 +444,11 @@ export default function Cobrancas() {
   }
 
   async function removerImagem() {
-    if (!window.confirm("Remover a imagem padrão da cobrança?")) return;
+    if (!(await confirmar({ titulo: 'Remover a imagem padrão da cobrança?', perigo: true, botao: 'Remover' }))) return;
     try {
       await apiFetch("/superadmin/config-cobranca/imagem", { method: "DELETE" });
       setConfig(prev => ({ ...prev, imagem_url: "" }));
-    } catch { alert("Erro ao remover imagem."); }
+    } catch { avisar("Erro ao remover imagem."); }
   }
 
   /* ── loading ──────────────────────────────────────────────── */
@@ -480,6 +482,7 @@ export default function Cobrancas() {
               <h1 className="cob-title">Configurações de <span>Cobrança</span></h1>
               <p className="cob-subtitle">
                 Mensagem, imagem padrão e janela de dias usadas tanto na lista de cobranças quanto no banner de renovação antecipada do estabelecimento.
+                <Dica texto="Só o SuperAdmin master consegue salvar estas configurações e trocar a imagem." />
               </p>
             </div>
             <div className="cob-header-actions">
@@ -663,7 +666,7 @@ export default function Cobrancas() {
                       onKeyUp={notifSalvarSelecao}
                     />
 
-                    <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Frequência de exibição</label>
+                    <label className="cob-config-sublabel" style={{ marginTop: 14 }}>Frequência de exibição <Dica texto="A contagem vale por vencimento: quando a loja renova e a data muda, o aviso volta a contar do zero. Ele só aparece para loja com assinatura Ativa e dentro da janela de dias." /></label>
                     <select className="cob-config-input"
                       value={config.notif_frequencia_tipo || "sempre"}
                       onChange={e => setConfig(prev => ({ ...prev, notif_frequencia_tipo: e.target.value }))}
@@ -713,6 +716,7 @@ export default function Cobrancas() {
             <h1 className="cob-title">Cobranças <span>Pendentes</span></h1>
             <p className="cob-subtitle">
               Estabelecimentos com vencimento em até <strong>{config?.dias_aviso || 5} dia(s)</strong> — ordenados do mais urgente pro menos.
+              <Dica texto="Cobrar gera o Pix e o link do cartão, abre o WhatsApp ou o seu e-mail com a mensagem pronta e marca a loja como cobrada hoje. Nada é enviado sozinho: quem envia é você. Amanhã ela volta para esta lista se continuar dentro do prazo." />
             </p>
           </div>
           <div className="cob-header-actions">

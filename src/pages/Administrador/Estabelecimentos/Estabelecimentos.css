@@ -566,6 +566,8 @@
 .est-badge-inativa   { background: var(--bg-danger);   color: var(--text-danger); }
 .est-badge-bloqueada { background: var(--bg-warning);  color: var(--text-warning); }
 .est-badge-excluida  { background: var(--bg-danger);   color: var(--text-danger); }
+/* O status vem do banco em minúsculo ("ativa") — só a inicial maiúscula na tela */
+.est-badge-ativa, .est-badge-inativa, .est-badge-bloqueada, .est-badge-excluida { text-transform: capitalize; }
 
 .est-badge-tipo {
   background: var(--bg-blue);

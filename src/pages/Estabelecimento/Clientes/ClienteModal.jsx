@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Clientes/ClienteModal.jsx
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
@@ -122,7 +123,7 @@ export default function ClienteModal({
       setErro('Não é possível excluir cliente com dívida pendente.');
       return;
     }
-    if (!window.confirm(`Excluir "${cliente.nome}"? Esta ação é irreversível.`)) return;
+    if (!(await confirmar({ titulo: 'Excluir cliente?', texto: `"${cliente.nome}" será excluído. Esta ação é irreversível.`, perigo: true, botao: 'Excluir' }))) return;
     setSalvando(true);
     try {
       const resp = await apiFetch(`/api/clientes/deletar/${encodeURIComponent(cliente.id)}`,

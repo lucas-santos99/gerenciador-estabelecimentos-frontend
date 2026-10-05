@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import Dica from '../../../components/Notificacoes/Dica';
 import { erroSenhaFraca } from '../../../utils/senha';
 
 export default function NovoOperador() {
@@ -141,7 +142,7 @@ export default function NovoOperador() {
 
           {/* SEÇÃO 3 — Acesso */}
           <div className="op-form-section">
-            <div className="op-form-section-title">🔐 Acesso</div>
+            <div className="op-form-section-title">🔐 Acesso <Dica texto="O operador é criado sem nenhuma permissão. Depois de cadastrar, abra os Detalhes dele e marque o que ele pode fazer." /></div>
             <div className="op-form-group">
               <label className="op-label">Senha inicial *</label>
               <input maxLength={72}

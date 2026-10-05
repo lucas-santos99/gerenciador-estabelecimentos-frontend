@@ -1,4 +1,5 @@
 // src/pages/Administrador/Painel/Sidebar.jsx
+import { avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
@@ -175,7 +176,7 @@ export default function Sidebar() {
   /* ── logout confirmado ───────────────────────────────────── */
   async function confirmarLogout() {
     try { await logout(); navigate("/login"); }
-    catch { alert("Erro ao encerrar sessão."); }
+    catch { avisar("Erro ao encerrar sessão."); }
   }
 
   const menuItems = [

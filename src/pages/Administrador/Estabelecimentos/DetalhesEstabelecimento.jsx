@@ -2,6 +2,7 @@
 // Este componente foi unificado com EditarEstabelecimento via ?view=details.
 // Este arquivo garante compatibilidade caso a rota /detalhes/:id seja usada diretamente.
 
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -66,17 +67,17 @@ export default function DetalhesEstabelecimento() {
   }
 
   async function restaurar() {
-    if (!window.confirm("Restaurar este estabelecimento?")) return;
+    if (!(await confirmar({ titulo: 'Restaurar este estabelecimento?', botao: 'Restaurar' }))) return;
     const resp = await apiFetch(`/admin/estabelecimentos/${id}/restaurar`, { method: "PUT" });
     if (resp.ok) carregar();
-    else alert("Erro ao restaurar.");
+    else avisar("Erro ao restaurar.");
   }
 
   async function excluir() {
-    if (!window.confirm(`Excluir "${dados?.nome_fantasia}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir estabelecimento?', texto: `"${dados?.nome_fantasia}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     if (resp.ok) navigate("/admin");
-    else alert("Erro ao excluir.");
+    else avisar("Erro ao excluir.");
   }
 
   async function salvarLimite() {
@@ -90,9 +91,9 @@ export default function DetalhesEstabelecimento() {
         setDados(prev => ({ ...prev, limite_operadores: parseInt(limiteVal) }));
         setLimiteEdit(false);
       } else {
-        alert("Erro ao salvar limite.");
+        avisar("Erro ao salvar limite.");
       }
-    } catch { alert("Erro interno."); }
+    } catch { avisar("Erro interno."); }
     setLimiteSaving(false);
   }
 

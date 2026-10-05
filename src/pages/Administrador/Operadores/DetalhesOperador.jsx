@@ -1,4 +1,5 @@
 // src/pages/Administrador/Operadores/DetalhesOperador.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -37,7 +38,6 @@ export default function DetalhesOperador() {
         { id: 'pdv_realizar_venda', label: 'Realizar vendas' },
         { id: 'pdv_cancelar_venda', label: 'Cancelar vendas' },
         { id: 'pdv_fiado',          label: 'Vender no fiado' },
-        { id: 'pdv_desconto',       label: 'Aplicar desconto' },
       ],
     },
     {
@@ -60,9 +60,9 @@ export default function DetalhesOperador() {
     {
       id: 'financeiro', label: 'Financeiro', icone: '💰',
       acoes: [
-        { id: 'financeiro_ver_resumo',   label: 'Ver resumo do caixa' },
-        { id: 'financeiro_ver_dre',      label: 'Ver DRE' },
-        { id: 'financeiro_contas_pagar', label: 'Gerenciar contas a pagar' },
+        { id: 'financeiro_ver_resumo',   label: 'Ver resumo do dia (caixa)' },
+        { id: 'financeiro_ver_dre',      label: 'Ver DRE (resultado do período)' },
+        { id: 'financeiro_contas_pagar', label: 'Ver e gerenciar contas a pagar' },
       ],
     },
     {
@@ -72,13 +72,13 @@ export default function DetalhesOperador() {
         { id: 'relatorios_operadores', label: 'Ver vendas por operador' },
         { id: 'relatorios_produtos',   label: 'Ver produtos mais vendidos' },
         { id: 'relatorios_estoque',    label: 'Ver relatório de estoque' },
-        { id: 'relatorios_auditoria',  label: 'Ver auditoria de ações' },
       ],
     },
     {
-      id: 'configuracoes', label: 'Configurações', icone: '⚙️',
+      // O id gravado é 'config' (o mesmo da tela do dono e do servidor).
+      id: 'config', label: 'Configurações', icone: '⚙️',
       acoes: [
-        { id: 'config_editar_dados', label: 'Editar dados' },
+        { id: 'config_editar_dados', label: 'Pedir alteração dos dados' },
         { id: 'config_editar_logo',  label: 'Alterar logo' },
       ],
     },
@@ -89,6 +89,21 @@ export default function DetalhesOperador() {
         { id: 'inventario_finalizar', label: 'Finalizar e aplicar inventário ao estoque' },
         { id: 'inventario_ajuste',    label: 'Ajustes rápidos de estoque' },
       ],
+    },
+    {
+      id: 'fornecedores', label: 'Fornecedores', icone: '🚚',
+      acoes: [
+        { id: 'fornecedores_adicionar', label: 'Adicionar fornecedores' },
+        { id: 'fornecedores_editar',    label: 'Editar fornecedores' },
+        { id: 'fornecedores_excluir',   label: 'Excluir fornecedores' },
+        { id: 'fornecedores_comprar',   label: 'Lançar compras e marcar como pagas' },
+        { id: 'fornecedores_cancelar',  label: 'Cancelar compras' },
+      ],
+    },
+    {
+      // Tela só de leitura: não tem ações, só liga/desliga.
+      id: 'auditoria', label: 'Auditoria', icone: '🔍',
+      acoes: [],
     },
   ];
 
@@ -101,7 +116,12 @@ export default function DetalhesOperador() {
       ]);
       const data = await respOp.json();
       setOp(respOp.ok ? data : null);
-      if (respPerms.ok) setPermissoes(await respPerms.json());
+      if (respPerms.ok) {
+        // 'pdv_desconto' saiu da tela (não existe desconto no PDV): se ainda
+        // estiver gravado, é ignorado aqui e some no próximo salvar.
+        const salvas = await respPerms.json();
+        setPermissoes(Array.isArray(salvas) ? salvas.filter(p => p !== 'pdv_desconto' && p !== 'relatorios_auditoria') : []);
+      }
     } catch { setOp(null); }
     setLoading(false);
   }
@@ -137,32 +157,32 @@ export default function DetalhesOperador() {
         body:   JSON.stringify({ permissoes }),
       });
       if (resp.ok) setPermEditing(false);
-      else alert("Erro ao salvar permissões.");
-    } catch { alert("Erro interno."); }
+      else avisar("Erro ao salvar permissões.");
+    } catch { avisar("Erro interno."); }
     setPermSaving(false);
   }
 
   async function toggleStatus() {
     if (!op) return;
     const novoStatus = op.status === "ativo" ? "inativo" : "ativo";
-    if (!window.confirm(`Alterar status para "${novoStatus}"?`)) return;
+    if (!(await confirmar({ titulo: novoStatus === 'ativo' ? 'Ativar operador?' : 'Desativar operador?', texto: `O status passa para "${novoStatus}".`, botao: novoStatus === 'ativo' ? 'Ativar' : 'Desativar' }))) return;
     try {
       const resp = await apiFetch(`/admin/operadores/${id}/status`, {
         method: "PUT",
         body:   JSON.stringify({ status: novoStatus }),
       });
       if (resp.ok) carregar();
-      else alert("Erro ao alterar status.");
-    } catch { alert("Erro ao alterar status."); }
+      else avisar("Erro ao alterar status.");
+    } catch { avisar("Erro ao alterar status."); }
   }
 
   async function excluir() {
-    if (!window.confirm(`Excluir operador "${op?.nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir operador?', texto: `"${op?.nome}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/admin/operadores/${id}`, { method: "DELETE" });
       if (resp.ok) navigate(-1);
-      else alert("Erro ao excluir operador.");
-    } catch { alert("Erro ao excluir operador."); }
+      else avisar("Erro ao excluir operador.");
+    } catch { avisar("Erro ao excluir operador."); }
   }
 
   /* ── loading ────────────────────────────────────────────── */

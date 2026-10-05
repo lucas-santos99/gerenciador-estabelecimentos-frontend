@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Fornecedores/Fornecedores.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
@@ -78,7 +79,14 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
     if (d?.conta_id) setDestinoConta({ id: d.conta_id, status: d.status || 'pendente', ts: Date.now() });
   });
 
-  const pode = (perm) => isMerchant || (permissoes || []).includes(perm);
+  // Dono (permissoes === null) pode tudo; funcionário só o que foi marcado.
+  const pode = (perm) => isMerchant || !permissoes || permissoes.includes(perm);
+  const SEM_PERM = 'Sem permissão — contate o administrador';
+  const podeAdicionar = pode('fornecedores_adicionar');
+  const podeEditar    = pode('fornecedores_editar');
+  const podeExcluir   = pode('fornecedores_excluir');
+  const podeComprar   = pode('fornecedores_comprar');   // lançar compra e marcar compra como paga
+  const podeCancelar  = pode('fornecedores_cancelar');  // cancelar compra
 
   function changeFontScale(delta) {
     setFontScale(prev => {
@@ -110,12 +118,13 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   }, [busca]);
 
   async function excluir(f) {
-    if (!window.confirm(`Excluir "${f.nome}"? Isso não apaga o histórico de compras já feitas.`)) return;
+    if (!podeExcluir) return;
+    if (!(await confirmar({ titulo: 'Excluir fornecedor?', texto: `"${f.nome}" sai da lista de fornecedores. Isso não apaga o histórico de compras já feitas.`, perigo: true, botao: 'Excluir' }))) return;
     try {
       const resp = await apiFetch(`/api/fornecedores/${f.id}`, { method: 'DELETE' });
       if (resp.ok) carregar();
-      else { const j = await resp.json(); alert(j.error || 'Erro ao excluir.'); }
-    } catch { alert('Erro ao excluir.'); }
+      else { const j = await resp.json(); avisar(j.error || 'Erro ao excluir.'); }
+    } catch { avisar('Erro ao excluir.'); }
   }
 
   return (
@@ -135,9 +144,14 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
       </div>
 
       {tela === 'contas' ? (
-        <ContasFornecedores fontScale={fontScale} destino={destinoConta} />
+        <ContasFornecedores fontScale={fontScale} destino={destinoConta} podePagar={podeComprar} semPermMsg={SEM_PERM} />
       ) : (
       <>
+      {!isMerchant && permissoes && (!podeAdicionar || !podeEditar || !podeExcluir || !podeComprar || !podeCancelar) && (
+        <div className="mod-aviso-permissao">
+          🔒 Visualização limitada — algumas ações de fornecedores não estão disponíveis para o seu perfil.
+        </div>
+      )}
       <div className="cli-header">
         <input maxLength={100}
           className="cli-header-busca"
@@ -159,12 +173,18 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           </select>
         )}
         <div className="cli-header-btns">
-          {pode('fornecedores') && (
-            <button className="cli-btn verde" onClick={() => setModalCompra(true)}>🧾 Lançar Compra</button>
-          )}
-          {pode('fornecedores') && (
-            <button className="cli-btn primary" onClick={() => setModalForm('novo')}>+ Novo Fornecedor</button>
-          )}
+          <button
+            className="cli-btn verde"
+            onClick={podeComprar ? () => setModalCompra(true) : undefined}
+            disabled={!podeComprar}
+            title={!podeComprar ? SEM_PERM : undefined}
+          >🧾 Lançar Compra</button>
+          <button
+            className="cli-btn primary"
+            onClick={podeAdicionar ? () => setModalForm('novo') : undefined}
+            disabled={!podeAdicionar}
+            title={!podeAdicionar ? SEM_PERM : undefined}
+          >+ Novo Fornecedor</button>
         </div>
       </div>
 
@@ -179,7 +199,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           ) : (
             <>
               <p>Nenhum fornecedor cadastrado ainda.</p>
-              {pode('fornecedores') && <button className="cli-btn primary" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
+              {podeAdicionar && <button className="cli-btn primary" onClick={() => setModalForm('novo')}>+ Cadastrar o primeiro</button>}
             </>
           )}
         </div>
@@ -230,13 +250,9 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
               </div>
               <div className="forn-card-acoes">
                 <button className="cli-btn-acao detalhes" onClick={() => setDetalhesId(f.id)}>📋 Detalhes</button>
-                {pode('fornecedores') && (
-                  <>
-                    <button className="cli-btn-acao" onClick={() => { setFornecedorParaCompra(f); setModalCompra(true); }} title="Lançar compra desse fornecedor">🧾</button>
-                    <button className="cli-btn-acao" onClick={() => setModalForm(f)} title="Editar">✏️</button>
-                    <button className="cli-btn-acao excluir" onClick={() => excluir(f)} title="Excluir">🗑</button>
-                  </>
-                )}
+                <button className="cli-btn-acao" onClick={podeComprar ? () => { setFornecedorParaCompra(f); setModalCompra(true); } : undefined} disabled={!podeComprar} title={!podeComprar ? SEM_PERM : 'Lançar compra desse fornecedor'}>🧾</button>
+                <button className="cli-btn-acao" onClick={podeEditar ? () => setModalForm(f) : undefined} disabled={!podeEditar} title={!podeEditar ? SEM_PERM : 'Editar'}>✏️</button>
+                <button className="cli-btn-acao excluir" onClick={podeExcluir ? () => excluir(f) : undefined} disabled={!podeExcluir} title={!podeExcluir ? SEM_PERM : 'Excluir'}>🗑</button>
               </div>
             </div>
           ))}
@@ -244,7 +260,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
       )}
       </div>
 
-      {modalForm && (
+      {modalForm && (modalForm === 'novo' ? podeAdicionar : podeEditar) && (
         <FornecedorModal
           fornecedor={modalForm === 'novo' ? null : modalForm}
           onClose={() => setModalForm(null)}
@@ -253,7 +269,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
         />
       )}
 
-      {modalCompra && (
+      {modalCompra && podeComprar && (
         <LancarCompraModal
           estabelecimentoId={estabelecimentoId}
           fornecedorPreselecionado={fornecedorParaCompra}
@@ -269,6 +285,9 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
           onFechar={() => setDetalhesId(null)}
           onAtualizar={carregar}
           fontScale={fontScale}
+          podePagar={podeComprar}
+          podeCancelar={podeCancelar}
+          semPermMsg={SEM_PERM}
         />
       )}
       </>
@@ -282,7 +301,7 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
    CONTAS A PAGAR DE FORNECEDORES — visão agregada, todos os
    fornecedores juntos numa lista só (não precisa abrir um por um)
 ════════════════════════════════════════════════════════════ */
-function ContasFornecedores({ fontScale = 1, destino = null }) {
+function ContasFornecedores({ fontScale = 1, destino = null, podePagar = true, semPermMsg = '' }) {
   const [lista,       setLista]       = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filtroStatus, setFiltroStatus] = useState('pendente'); // 'pendente' | 'paga' | 'atrasada'
@@ -328,14 +347,15 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
   useEffect(() => { carregar(); }, [filtroStatus]);
 
   async function pagar(contaId, fornecedorNome) {
-    if (!window.confirm(`Marcar essa compra de "${fornecedorNome}" como paga?`)) return;
+    if (!podePagar) return;
+    if (!(await confirmar({ titulo: 'Marcar como paga?', texto: `Compra de "${fornecedorNome}".`, botao: 'Marcar como paga' }))) return;
     setPagando(contaId);
     try {
       const resp = await apiFetch(`/api/financeiro/${contaId}/pagar`, { method: 'PUT' });
       const data = await resp.json();
-      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
+      if (!resp.ok) { avisar(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
       carregar();
-    } catch { alert('Erro ao marcar como paga.'); }
+    } catch { avisar('Erro ao marcar como paga.'); }
     setPagando(null);
   }
 
@@ -435,8 +455,9 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
                 {c.status !== 'paga' && (
                   <button
                     className="forn-contapag-card-btn pagar"
-                    disabled={pagando === c.conta_a_pagar_id}
-                    onClick={() => pagar(c.conta_a_pagar_id, c.fornecedor_nome)}
+                    disabled={!podePagar || pagando === c.conta_a_pagar_id}
+                    title={!podePagar ? semPermMsg : undefined}
+                    onClick={podePagar ? () => pagar(c.conta_a_pagar_id, c.fornecedor_nome) : undefined}
                   >
                     {pagando === c.conta_a_pagar_id ? '⏳' : '💰 Pagar'}
                   </button>
@@ -456,6 +477,8 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
           onFechar={() => setCompraDetalheId(null)}
           fontScale={fontScale}
           onPago={carregar}
+          podePagar={podePagar}
+          semPermMsg={semPermMsg}
         />
       )}
     </div>
@@ -465,7 +488,7 @@ function ContasFornecedores({ fontScale = 1, destino = null }) {
 /* ════════════════════════════════════════════════════════════
    DETALHES DO FORNECEDOR — histórico de compras + produtos
 ════════════════════════════════════════════════════════════ */
-function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1 }) {
+function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1, podePagar = true, podeCancelar = true, semPermMsg = '' }) {
   const [dados,   setDados]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [aba,     setAba]     = useState('compras'); // 'compras' | 'produtos'
@@ -498,33 +521,35 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
   }, [onFechar]);
 
   async function cancelarCompra(compraId) {
-    if (!window.confirm('Cancelar essa compra? O estoque que entrou será estornado.')) return;
+    if (!podeCancelar) return;
+    if (!(await confirmar({ titulo: 'Cancelar esta compra?', texto: 'O estoque que entrou nessa compra é retirado e a conta a pagar dela é apagada.', perigo: true, botao: 'Cancelar a compra', botaoCancelar: 'Voltar' }))) return;
     setCancelando(compraId);
     try {
       const resp = await apiFetch(`/api/compras/${compraId}`, { method: 'DELETE' });
       const data = await resp.json();
-      if (!resp.ok) { alert(data.error || 'Erro ao cancelar.'); setCancelando(null); return; }
+      if (!resp.ok) { avisar(data.error || 'Erro ao cancelar.'); setCancelando(null); return; }
       // Recarrega os detalhes
       const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
       setDados(await respD.json());
       onAtualizar?.();
-    } catch { alert('Erro ao cancelar compra.'); }
+    } catch { avisar('Erro ao cancelar compra.'); }
     setCancelando(null);
   }
 
   // Paga a compra a prazo direto por aqui — chama o mesmo endpoint que
   // o módulo Financeiro usa, só que sem precisar sair de Fornecedores.
   async function pagarCompra(contaId, nomeFornecedor) {
-    if (!window.confirm(`Marcar essa compra de "${nomeFornecedor}" como paga?`)) return;
+    if (!podePagar) return;
+    if (!(await confirmar({ titulo: 'Marcar como paga?', texto: `Compra de "${nomeFornecedor}".`, botao: 'Marcar como paga' }))) return;
     setPagando(contaId);
     try {
       const resp = await apiFetch(`/api/financeiro/${contaId}/pagar`, { method: 'PUT' });
       const data = await resp.json();
-      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
+      if (!resp.ok) { avisar(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
       const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
       setDados(await respD.json());
       onAtualizar?.();
-    } catch { alert('Erro ao marcar como paga.'); }
+    } catch { avisar('Erro ao marcar como paga.'); }
     setPagando(null);
   }
 
@@ -757,17 +782,18 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                           {c.forma_pagamento === 'a_prazo' && c.conta_a_pagar_id && ['pendente', 'atrasada'].includes(c.status_conta_pagar) && (
                             <button
                               className="forn-compra-pagar"
-                              disabled={pagando === c.conta_a_pagar_id}
-                              onClick={() => pagarCompra(c.conta_a_pagar_id, dados.nome)}
+                              disabled={!podePagar || pagando === c.conta_a_pagar_id}
+                              title={!podePagar ? semPermMsg : undefined}
+                              onClick={podePagar ? () => pagarCompra(c.conta_a_pagar_id, dados.nome) : undefined}
                             >
                               {pagando === c.conta_a_pagar_id ? '⏳' : '💰 Pagar'}
                             </button>
                           )}
                           <button
                             className="forn-compra-cancelar"
-                            title="Cancela a compra: tira do estoque o que entrou e apaga a conta a pagar dela"
-                            disabled={cancelando === c.id}
-                            onClick={() => cancelarCompra(c.id)}
+                            title={!podeCancelar ? semPermMsg : 'Cancela a compra: tira do estoque o que entrou e apaga a conta a pagar dela'}
+                            disabled={!podeCancelar || cancelando === c.id}
+                            onClick={podeCancelar ? () => cancelarCompra(c.id) : undefined}
                           >
                             {cancelando === c.id ? '⏳' : '✕ Cancelar'}
                           </button>
@@ -807,6 +833,8 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
           compraId={compraDetalheId}
           onFechar={() => setCompraDetalheId(null)}
           fontScale={fontScale}
+          podePagar={podePagar}
+          semPermMsg={semPermMsg}
           onPago={async () => {
             const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
             setDados(await respD.json());
@@ -822,7 +850,7 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
    DETALHE DE UMA COMPRA — itens completos (produto, qtd, custo,
    subtotal), aberto ao clicar numa linha do histórico
 ════════════════════════════════════════════════════════════ */
-function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
+function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago, podePagar = true, semPermMsg = '' }) {
   const [compra,  setCompra]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [pagando, setPagando] = useState(false);
@@ -846,16 +874,17 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
   }, [onFechar]);
 
   async function pagarAqui() {
+    if (!podePagar) return;
     if (!compra?.conta_a_pagar_id) return;
-    if (!window.confirm(`Marcar essa compra de "${compra.fornecedor_nome}" como paga?`)) return;
+    if (!(await confirmar({ titulo: 'Marcar como paga?', texto: `Compra de "${compra.fornecedor_nome}".`, botao: 'Marcar como paga' }))) return;
     setPagando(true);
     try {
       const resp = await apiFetch(`/api/financeiro/${compra.conta_a_pagar_id}/pagar`, { method: 'PUT' });
       const data = await resp.json();
-      if (!resp.ok) { alert(data.error || 'Erro ao marcar como paga.'); setPagando(false); return; }
+      if (!resp.ok) { avisar(data.error || 'Erro ao marcar como paga.'); setPagando(false); return; }
       setCompra(prev => ({ ...prev, status_conta_pagar: 'paga' }));
       onPago?.();
-    } catch { alert('Erro ao marcar como paga.'); }
+    } catch { avisar('Erro ao marcar como paga.'); }
     setPagando(false);
   }
 
@@ -912,7 +941,7 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago }) {
               compra.status_conta_pagar === 'paga' ? (
                 <div className="forn-compra-paga-box">✓ Essa conta já está paga</div>
               ) : compra.status === 'ativa' && (
-                <button className="forn-compra-pagar forn-compra-pagar--grande" disabled={pagando} onClick={pagarAqui}>
+                <button className="forn-compra-pagar forn-compra-pagar--grande" disabled={!podePagar || pagando} title={!podePagar ? semPermMsg : undefined} onClick={podePagar ? pagarAqui : undefined}>
                   {pagando ? '⏳ Marcando…' : '💰 Marcar como paga'}
                 </button>
               )

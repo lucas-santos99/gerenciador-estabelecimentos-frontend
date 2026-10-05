@@ -1,3 +1,4 @@
+import { confirmar } from '../../components/Dialogo/dialogo';
 import React, { useEffect, useState, useRef } from "react";
 import LayoutAdmin from "./Painel/LayoutAdmin";
 import "./DashboardAdmin.css";
@@ -5,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { supabase } from "../../utils/supabaseClient";
 import { apiFetch } from "../../utils/api";
+import Dica from '../../components/Notificacoes/Dica';
 
 /* ── ícones inline leves (sem dep. extra) ─────────────────── */
 const Icon = {
@@ -231,7 +233,7 @@ export default function DashboardAdmin() {
 
   /* ── excluir ────────────────────────────────────────────── */
   async function excluir(id, nome) {
-    if (!window.confirm(`Excluir "${nome}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir estabelecimento?', texto: `"${nome}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     carregarDados();
   }
@@ -347,7 +349,7 @@ export default function DashboardAdmin() {
             <div
               onClick={e => e.stopPropagation()}
               style={{
-                background: "var(--est-card, #1e1e1e)", borderRadius: 12, padding: 28,
+                background: "var(--bg-card-solid, var(--est-card, #1e1e1e))", borderRadius: 12, padding: 28,
                 maxWidth: 420, width: "90%", textAlign: "center",
                 boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
               }}
@@ -496,7 +498,7 @@ export default function DashboardAdmin() {
           >
             <div className="stat-card-inner">
               <div className="stat-info">
-                <span className="stat-label">Inativas</span>
+                <span className="stat-label">Inativas <Dica texto="Soma os estabelecimentos com status Inativa e Bloqueada, incluindo os que foram bloqueados sozinhos por vencimento." /></span>
                 <span className="stat-value">{stats.inativas}</span>
               </div>
               <div className="stat-icon"><Icon.Pause /></div>
@@ -562,7 +564,7 @@ export default function DashboardAdmin() {
         {/* ── TABELA ─────────────────────────────────────── */}
         <div className="dash-box">
           <div className="dash-box-header">
-            <span className="dash-box-title">Estabelecimentos</span>
+            <span className="dash-box-title">Estabelecimentos <Dica texto="A bolinha de cada linha mostra o vencimento: verde em dia, amarela vence em até 5 dias, vermelha já vencido e cinza sem data." /></span>
             <span className="dash-count-badge">{listaFiltrada.length}</span>
           </div>
 
@@ -677,7 +679,7 @@ export default function DashboardAdmin() {
             </div>
 
             {/* Período */}
-            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>⏱ Período de liberação</div>
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>⏱ Período de liberação <Dica texto="Se a assinatura ainda não venceu, os dias são somados ao vencimento atual; se já venceu, contam a partir de hoje. O status volta para Ativa. A data mostrada ao lado é só a conta a partir de hoje." /></div>
             <div className="dash-dias-atalhos" style={{ marginBottom: 8 }}>
               {[7, 15, 30, 60, 90, 180, 365].map(d => (
                 <button key={d} type="button"
@@ -698,7 +700,7 @@ export default function DashboardAdmin() {
             </div>
 
             {/* Forma de pagamento */}
-            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>💰 Forma de pagamento</div>
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>💰 Forma de pagamento <Dica texto="Fica só anotada no histórico de liberações e na auditoria. Não gera cobrança nem confere se o pagamento entrou." /></div>
             <div className="dash-dias-atalhos" style={{ marginBottom: 16 }}>
               {[
                 { key: "dinheiro",  label: "💵 Dinheiro" },

@@ -38,7 +38,7 @@ export default function ResetSenhaModal({ id, onClose }) {
         <span className="op-modal-icon">🔑</span>
         <div className="op-modal-title">Resetar Senha</div>
         <div className="op-modal-subtitle">
-          Defina uma nova senha para este operador.
+          Defina uma nova senha para este operador. Ela passa a valer na hora e ele não é avisado: repasse a senha nova a ele.
         </div>
 
         {erro && (

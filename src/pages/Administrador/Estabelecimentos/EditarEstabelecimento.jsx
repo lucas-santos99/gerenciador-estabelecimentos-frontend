@@ -1,4 +1,5 @@
 // src/pages/Administrador/Estabelecimentos/EditarEstabelecimento.jsx
+import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -7,6 +8,7 @@ import { useAuth } from "../../../contexts/AuthProvider";
 import "./Estabelecimentos.css";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
+import Dica from '../../../components/Notificacoes/Dica';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -212,7 +214,7 @@ export default function EditarEstabelecimento() {
 
   /* ── logo ────────────────────────────────────────────────── */
   async function enviarLogo() {
-    if (!logoFile) { alert("Selecione um arquivo."); return; }
+    if (!logoFile) { avisar("Selecione um arquivo."); return; }
     const fd = new FormData();
     fd.append("logo", logoFile);
     try {
@@ -224,23 +226,23 @@ export default function EditarEstabelecimento() {
       if (resp.ok) {
         setForm(s => ({ ...s, logo_url: json.logo_url }));
         setLogoFile(null);
-      } else { alert("Erro: " + (json.error || "erro")); }
-    } catch { alert("Erro ao enviar logo."); }
+      } else { avisar("Erro: " + (json.error || "erro")); }
+    } catch { avisar("Erro ao enviar logo."); }
   }
 
   async function removerLogo() {
-    if (!window.confirm("Remover logo?")) return;
+    if (!(await confirmar({ titulo: 'Remover a logo?', perigo: true, botao: 'Remover' }))) return;
     const resp = await apiFetch(`/admin/estabelecimentos/${id}/remover-logo`, { method: "DELETE" });
     if (resp.ok) setForm(s => ({ ...s, logo_url: "" }));
-    else alert("Erro ao remover logo.");
+    else avisar("Erro ao remover logo.");
   }
 
   /* ── excluir ─────────────────────────────────────────────── */
   async function excluir() {
-    if (!window.confirm(`Excluir "${form.nome_fantasia}"?`)) return;
+    if (!(await confirmar({ titulo: 'Excluir estabelecimento?', texto: `"${form.nome_fantasia}" será excluído.`, perigo: true, botao: 'Excluir' }))) return;
     const resp = await apiFetch(`/admin/estabelecimentos/${id}`, { method: "DELETE" });
     if (resp.ok) navigate("/admin");
-    else alert("Erro ao excluir.");
+    else avisar("Erro ao excluir.");
   }
 
   /* ── loading ─────────────────────────────────────────────── */
@@ -332,7 +334,7 @@ export default function EditarEstabelecimento() {
                 {profile?.is_master && form.status_assinatura !== "excluida" && (
                   <button
                     className="est-btn est-btn-outline"
-                    style={{ borderColor: "#7c3aed", color: "#7c3aed" }}
+                    style={{ borderColor: "var(--text-purple, #7c3aed)", color: "var(--text-purple, #7c3aed)" }}
                     onClick={() => setModalPersonificar(true)}
                     title="Entrar no sistema como o dono deste estabelecimento"
                   >
@@ -352,7 +354,7 @@ export default function EditarEstabelecimento() {
             <div className="est-info-block">
               <div className="est-info-block-title">Dados da Empresa</div>
               {[
-                { label: "CNPJ",     value: form.cnpj,              mono: true },
+                { label: "CPF / CNPJ", value: form.cnpj,            mono: true },
                 { label: "Telefone", value: form.telefone,           mono: true },
                 { label: "E-mail",   value: form.email_contato,      mono: false },
               ].map(r => (
@@ -403,7 +405,7 @@ export default function EditarEstabelecimento() {
               </div>
               <div className="est-info-row" style={{ marginTop: 8 }}>
                 <span className="est-info-row-label" style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  Para alterar, clique em ✏️ Editar
+                  Para alterar, abra 👥 Operadores
                 </span>
               </div>
             </div>
@@ -524,7 +526,7 @@ export default function EditarEstabelecimento() {
                 </button>
               </div>
               <div className="est-form-group">
-                <label className="est-label">E-mail de Contato</label>
+                <label className="est-label">E-mail de Contato <Dica texto="Trocar aqui muda só o e-mail de contato do cadastro (usado nas cobranças por e-mail). O dono continua entrando no sistema com o e-mail de login antigo." /></label>
                 <input maxLength={150} className="est-input" name="email_contato" value={form.email_contato} onChange={atualizar} />
               </div>
               <div className="est-form-group est-form-full">
@@ -568,7 +570,7 @@ export default function EditarEstabelecimento() {
             <div className="est-form-section-title">💳 Assinatura</div>
             <div className="est-form-grid">
               <div className="est-form-group">
-                <label className="est-label">Status</label>
+                <label className="est-label">Status <Dica texto="Só Bloqueada impede o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Inativa é apenas uma marcação no painel, a loja continua usando normalmente. Atenção: ao salvar como Inativa ou Bloqueada, a data de vencimento é apagada." /></label>
                 <select className="est-select" name="status_assinatura" value={form.status_assinatura} onChange={atualizar}>
                   <option value="ativa">Ativa</option>
                   <option value="inativa">Inativa</option>
@@ -577,7 +579,7 @@ export default function EditarEstabelecimento() {
               </div>
               {form.status_assinatura === "ativa" && (
                 <div className="est-form-group">
-                  <label className="est-label">Data de Vencimento</label>
+                  <label className="est-label">Data de Vencimento <Dica texto="A loja usa o sistema até o fim deste dia, no fuso dela. No dia seguinte o status passa sozinho para Bloqueada." /></label>
                   <input
                     className="est-input"
                     type="date"

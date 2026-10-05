@@ -6,6 +6,7 @@
 //   • Lembretes — criar, editar, concluir (repetição pula pra próxima), excluir.
 //   • Preferências — liga/desliga, antecedência, frequência e resumo ao entrar
 //     por tipo de aviso.
+import { confirmar, avisar } from '../Dialogo/dialogo';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../utils/api';
 import {
@@ -270,7 +271,7 @@ function AbaLembretes({ abrirNovoInicial = false, onNovoAberto }) {
   useEffect(() => { if (abrirNovoInicial) { setModal({}); onNovoAberto?.(); } }, [abrirNovoInicial]);
 
   async function acao(l, tipo) {
-    if (tipo === 'excluir' && !window.confirm(`Excluir o lembrete "${l.titulo}"?`)) return;
+    if (tipo === 'excluir' && !(await confirmar({ titulo: 'Excluir lembrete?', texto: `"${l.titulo}" será apagado.`, perigo: true, botao: 'Excluir' }))) return;
     setOcupado(l.id);
     try {
       const url = tipo === 'excluir' ? `/api/notificacoes/lembretes/${l.id}` : `/api/notificacoes/lembretes/${l.id}/${tipo}`;
@@ -279,7 +280,7 @@ function AbaLembretes({ abrirNovoInicial = false, onNovoAberto }) {
       if (!resp.ok) throw new Error(json.error || 'Não foi possível concluir a ação.');
       await carregar();
       ntf.recarregar();
-    } catch (e) { alert(e.message); }
+    } catch (e) { avisar(e.message); }
     finally { setOcupado(null); }
   }
 

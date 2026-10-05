@@ -976,3 +976,17 @@ body.dark .forn-contapag-badge.pendente { color: var(--est-warning); }
 @media (max-width: 480px) {
   .forn-wrapper .cli-header-btns .cli-btn.verde { display: flex; }
 }
+
+/* Botões desligados por falta de permissão do funcionário (05/10/2026) */
+.forn-wrapper .cli-btn:disabled,
+.forn-wrapper .cli-btn-acao:disabled,
+.forn-compra-cancelar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.forn-wrapper .cli-btn-acao.excluir:disabled:hover {
+  background: var(--est-danger-dim);
+  color: var(--est-danger);
+}

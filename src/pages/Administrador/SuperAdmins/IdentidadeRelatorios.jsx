@@ -15,6 +15,7 @@
 //     acompanha as mudanças futuras dele.
 // Salvo em config_sistema.relatorio_identidade = { versao, padrao, por_tipo }.
 // ============================================================
+import { confirmar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
@@ -467,9 +468,9 @@ export default function IdentidadeRelatorios() {
     marcarAlterado();
   }
 
-  function removerPersonalizacoesTipo(tipo) {
+  async function removerPersonalizacoesTipo(tipo) {
     const t = TIPOS_RELATORIO.find(x => x.tipo === tipo);
-    if (!window.confirm(`Remover todas as personalizações de "${t?.label || tipo}"? Ele volta a seguir o padrão geral. Nada é salvo até você clicar em Salvar.`)) return;
+    if (!(await confirmar({ titulo: `Remover as personalizações de "${t?.label || tipo}"?`, texto: 'Ele volta a seguir o padrão geral. Nada é salvo até você clicar em Salvar.', perigo: true, botao: 'Remover' }))) return;
     setPorTipo(pt => { const novo = { ...pt }; delete novo[tipo]; return novo; });
     marcarAlterado();
   }
@@ -545,8 +546,8 @@ export default function IdentidadeRelatorios() {
     setSalvando(false);
   }
 
-  function restaurarPadraoFabrica() {
-    if (!window.confirm("Voltar o PADRÃO GERAL pros valores de fábrica? (As personalizações por tipo continuam; as logos enviadas continuam guardadas, só deixam de ser usadas.) Nada é salvo até você clicar em Salvar.")) return;
+  async function restaurarPadraoFabrica() {
+    if (!(await confirmar({ titulo: 'Voltar o padrão geral pros valores de fábrica?', texto: 'As personalizações por tipo continuam; as logos enviadas continuam guardadas, só deixam de ser usadas. Nada é salvo até você clicar em Salvar.', perigo: true, botao: 'Voltar ao padrão de fábrica' }))) return;
     setPadrao({ ...IDENTIDADE_PADRAO });
     marcarAlterado();
   }
