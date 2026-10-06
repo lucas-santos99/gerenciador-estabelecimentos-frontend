@@ -1,0 +1,14 @@
+/* Linha "Cadastrado por … · Última alteração por …" — discreta de propósito.
+   Usa a cor do texto de onde estiver (painel da loja ou do SuperAdmin,
+   tema claro ou escuro), só mais apagada. */
+.rastro-linha {
+  display: block; /* texto corrido: quebra bem até em coluna estreita */
+  margin-top: 10px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: inherit;
+  opacity: 0.62;
+}
+.rastro-linha strong { font-weight: 600; }
+.rastro-icone { font-size: 0.7rem; margin-right: 6px; }
+.rastro-sep { opacity: 0.7; margin: 0 6px; }

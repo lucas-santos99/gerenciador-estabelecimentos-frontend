@@ -10,6 +10,7 @@ import "../Operadores/Operadores.css"; // estilos do campo de limite de operador
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -100,7 +101,9 @@ export default function EditarEstabelecimento() {
           email_contato:     data.email_contato     || "",
           endereco_completo: data.endereco_completo || "",
           enderecos_extras:  Array.isArray(data.enderecos_extras) ? data.enderecos_extras : [],
-          status_assinatura: data.status_assinatura || "ativa",
+          // "inativa" deixou de existir (05/10/2026): quem ainda vier assim do
+          // banco é tratada como bloqueada.
+          status_assinatura: data.status_assinatura === "inativa" ? "bloqueada" : (data.status_assinatura || "ativa"),
           data_vencimento:   data.data_vencimento   ?? "",
           logo_url:          data.logo_url          || "",
           limite_operadores: data.limite_operadores ?? 3,
@@ -296,7 +299,7 @@ export default function EditarEstabelecimento() {
         body:    JSON.stringify({
           ...form,
           // A data de vencimento é sempre mantida — antes era apagada ao
-          // salvar como Inativa ou Bloqueada.
+          // salvar como Bloqueada.
           data_vencimento:   form.data_vencimento || null,
           limite_operadores: limiteTxt === "" ? undefined : limiteNum,
           tipo_estabelecimento: tipoFinal,
@@ -521,6 +524,8 @@ export default function EditarEstabelecimento() {
 
           </div>
 
+          <Rastro entidade="estabelecimento" id={id} />
+
         </div>
 
         {modalPersonificar && (
@@ -725,10 +730,9 @@ export default function EditarEstabelecimento() {
             <div className="est-form-section-title">💳 Assinatura</div>
             <div className="est-form-grid">
               <div className="est-form-group">
-                <label className="est-label">Status <Dica texto="Bloqueada e Inativa impedem o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Na Bloqueada a tela oferece renovar a licença; na Inativa ela avisa que o acesso foi desativado pelo administrador e manda falar com o suporte. A data de vencimento é mantida ao trocar o status." /></label>
+                <label className="est-label">Status <Dica texto="Bloqueada impede o uso: o dono cai na tela de bloqueio, onde pode renovar a licença, e nada pode ser lançado. Pagar a renovação reativa a loja sozinho. Para tirar o acesso de vez, sem o dono poder voltar pagando, use Excluir: a loja some das listas, não entra mais e pode ser restaurada depois. Ativa exige data de vencimento; a data é mantida ao trocar o status." /></label>
                 <select className="est-select" name="status_assinatura" value={form.status_assinatura} onChange={atualizar}>
                   <option value="ativa">Ativa</option>
-                  <option value="inativa">Inativa</option>
                   <option value="bloqueada">Bloqueada</option>
                 </select>
               </div>
@@ -839,6 +843,7 @@ export default function EditarEstabelecimento() {
           </div>
 
 
+          <Rastro entidade="estabelecimento" id={id} />
 
           {/* AÇÕES */}
           <div className="est-form-actions">

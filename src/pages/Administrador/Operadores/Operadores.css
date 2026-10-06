@@ -542,6 +542,9 @@
   flex-wrap: wrap;
 }
 
+/* Linha "Cadastrado por / Última alteração por" entre a seção e os botões. */
+.op-form-wrapper > .rastro-linha { margin: -4px 2px 14px; }
+
 /* ========================= */
 /*  ALERTAS                   */
 /* ========================= */

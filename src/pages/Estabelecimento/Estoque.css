@@ -2896,3 +2896,28 @@
   .prod-hist-linha { grid-template-columns: 1fr auto; }
   .prod-hist-quando { grid-column: 1 / -1; padding-top: 0; }
 }
+
+/* ── Origem da Entrada (fornecedor ou explicação) ── */
+.prod-origem-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--est-border);
+  background: var(--est-input);
+}
+.prod-origem-ultima {
+  font-size: calc(0.76rem * var(--prod-modal-font-scale, 1));
+  color: var(--est-text-soft);
+  line-height: 1.5;
+}
+.prod-origem-ultima strong { color: var(--est-text); }
+.prod-origem-campo { display: flex; flex-direction: column; gap: 4px; }
+.prod-origem-campo .prod-input { background: var(--est-card); }
+.prod-origem-nota {
+  font-size: calc(0.72rem * var(--prod-modal-font-scale, 1));
+  color: var(--est-text-muted);
+  line-height: 1.5;
+}
+.prod-origem-nota strong { color: var(--est-text-soft); }

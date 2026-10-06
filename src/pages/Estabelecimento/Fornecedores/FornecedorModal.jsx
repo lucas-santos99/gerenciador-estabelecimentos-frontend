@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
 import './Fornecedores.css';
 
@@ -262,6 +263,9 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
               <textarea maxLength={500} className="cli-form-input" name="observacoes" rows={2} value={form.observacoes} onChange={atualizar} />
             </div>
           </div>
+
+          {/* Quem cadastrou / quem alterou por último (só ao editar) */}
+          {isEdit && <Rastro entidade="fornecedor" id={fornecedor.id} />}
 
           <div className="cli-modal-acoes">
             <button type="button" className="cli-modal-btn-cancelar" onClick={onClose} disabled={salvando}>

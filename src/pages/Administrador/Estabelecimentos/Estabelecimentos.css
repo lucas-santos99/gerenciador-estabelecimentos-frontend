@@ -338,6 +338,10 @@
   margin-top: 4px;
 }
 
+/* Linha "Cadastrado por / Última alteração por" entre a última seção e os
+   botões: mais perto da seção, com respiro antes dos botões. */
+.est-form-wrapper > .rastro-linha { margin: -8px 2px 14px; }
+
 /* ========================= */
 /*  LOGO UPLOAD               */
 /* ========================= */

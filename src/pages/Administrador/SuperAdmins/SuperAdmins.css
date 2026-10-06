@@ -580,6 +580,9 @@
 }
 .sa-contatos-lista:focus { outline: none; }
 .sa-config-item.foco-teclado { border-color: var(--border-accent); box-shadow: 0 0 0 2px var(--border-accent); }
+/* Linha "Cadastrado por / Última alteração por" na edição de um contato:
+   ocupa a linha inteira, abaixo dos campos e botões (o espaço já vem do gap). */
+.sa-config-item > .sa-rastro-contato { flex-basis: 100%; margin-top: 0; }
 
 .sa-config-item-info {
   display: flex;

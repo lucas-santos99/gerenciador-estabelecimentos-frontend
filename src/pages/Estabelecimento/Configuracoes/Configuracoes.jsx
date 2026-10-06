@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Configuracoes.css';
 
 /* ════════════════════════════════════════════════════════════
@@ -298,6 +299,9 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const podeEditarDados = pode('config_editar_dados');
 
   const [dados,          setDados]          = useState(null);
+  // Muda a cada alteração salva nesta tela, para a linha "Cadastrado por /
+  // Última alteração por" (aba Dados) buscar de novo.
+  const [rastroVersao,   setRastroVersao]   = useState(0);
   const [loading,        setLoading]        = useState(true);
   const [erro,           setErro]           = useState('');
   const [showSolicitar,  setShowSolicitar]  = useState(false);
@@ -375,6 +379,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
       setFiadoAtivo(novoValor);
       setDados(prev => ({ ...prev, fiado_ativo: novoValor }));
       setFiadoSucesso(novoValor ? 'Fiado ativado!' : 'Fiado desativado.');
+      setRastroVersao(v => v + 1);
       setTimeout(() => setFiadoSucesso(''), 4000);
     } catch (err) {
       setFiadoErro(err.message);
@@ -405,6 +410,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
       if (!resp.ok) throw new Error(json.error || 'Erro ao salvar.');
       setDados(prev => ({ ...prev, ...pixForm }));
       setPixSucesso('Configuração de Pix salva!');
+      setRastroVersao(v => v + 1);
       setTimeout(() => setPixSucesso(''), 4000);
     } catch (err) {
       setPixErro(err.message);
@@ -460,6 +466,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
       setDados(prev => ({ ...prev, logo_url: novaUrl }));
       onLogoAtualizada?.(novaUrl);
       setUploadSucesso('Logo atualizada com sucesso!');
+      setRastroVersao(v => v + 1);
       setTimeout(() => setUploadSucesso(''), 4000);
     } catch (err) {
       setUploadErro(`Erro: ${err.message}`);
@@ -578,6 +585,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                   </div>
                 ))}
               </div>
+              <Rastro entidade="estabelecimento" id={estabelecimentoId} versao={rastroVersao} />
             </div>
           </div>
         )}

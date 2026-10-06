@@ -564,7 +564,7 @@ export default function NovoEstabelecimento() {
               ) : (
                 <>
                   <div className="est-form-group">
-                    <label className="est-label">Status da Assinatura <Dica texto="Bloqueada e Inativa impedem o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Na Bloqueada a tela oferece renovar a licença; na Inativa ela avisa que o acesso foi desativado pelo administrador e manda falar com o suporte. Ativa exige data de vencimento." /></label>
+                    <label className="est-label">Status da Assinatura <Dica texto="Bloqueada impede o uso: o dono cai na tela de bloqueio, onde pode renovar a licença, e nada pode ser lançado. Pagar a renovação reativa a loja sozinho. Para tirar o acesso de vez, sem o dono poder voltar pagando, o caminho é Excluir a loja: ela some das listas, não entra mais e pode ser restaurada depois. Ativa exige data de vencimento." /></label>
                     <select
                       className="est-select"
                       name="status_assinatura"
@@ -572,7 +572,6 @@ export default function NovoEstabelecimento() {
                       onChange={atualizar}
                     >
                       <option value="ativa">Ativa</option>
-                      <option value="inativa">Inativa</option>
                       <option value="bloqueada">Bloqueada</option>
                     </select>
                   </div>

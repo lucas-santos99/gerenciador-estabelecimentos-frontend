@@ -34,6 +34,12 @@ function formatarData(dataStr) {
   return `${dia}/${mes}/${ano}`;
 }
 
+// "inativa" deixou de existir como status de loja (05/10/2026): se ainda
+// houver alguma assim no banco, a tela trata e mostra como bloqueada.
+function statusLoja(m) {
+  return m.status_assinatura === "inativa" ? "bloqueada" : m.status_assinatura;
+}
+
 function calcularDiff(dataStr) {
   if (!dataStr) return null;
   const venc = new Date(dataStr + "T12:00:00");
@@ -220,7 +226,7 @@ export default function DashboardAdmin() {
   const stats = {
     total:     base.length,
     ativas:    base.filter(m => m.status_assinatura === "ativa").length,
-    inativas:  base.filter(m => ["inativa","bloqueada"].includes(m.status_assinatura)).length,
+    bloqueadas: base.filter(m => statusLoja(m) === "bloqueada").length,
     excluidas: qtdExcluidas,
   };
 
@@ -235,11 +241,7 @@ export default function DashboardAdmin() {
       const diff = calcularDiff(m.data_vencimento);
       return diff !== null && diff >= 0 && diff <= 5;
     }
-    if (filtro === "inativas") {
-      if (!["inativa", "bloqueada"].includes(m.status_assinatura)) return false;
-    } else if (filtro && m.status_assinatura !== filtro) {
-      return false;
-    }
+    if (filtro && statusLoja(m) !== filtro) return false;
     if (!busca) return true;
     const q = busca.toLowerCase();
     return (
@@ -515,14 +517,14 @@ export default function DashboardAdmin() {
 
           <div
             className="dash-stat-card card-inativas"
-            onClick={() => { setFiltro("inativas"); setFiltroTipo(""); }}
+            onClick={() => { setFiltro("bloqueada"); setFiltroTipo(""); }}
             style={{ cursor: "pointer" }}
-            title="Ver estabelecimentos inativos ou bloqueados"
+            title="Ver estabelecimentos bloqueados"
           >
             <div className="stat-card-inner">
               <div className="stat-info">
-                <span className="stat-label">Inativas <Dica texto="Soma os estabelecimentos com status Inativa e Bloqueada, incluindo os que foram bloqueados sozinhos por vencimento." /></span>
-                <span className="stat-value">{stats.inativas}</span>
+                <span className="stat-label">Bloqueadas <Dica texto="Estabelecimentos com status Bloqueada, incluindo os que foram bloqueados sozinhos por vencimento." /></span>
+                <span className="stat-value">{stats.bloqueadas}</span>
               </div>
               <div className="stat-icon"><Icon.Pause /></div>
             </div>
@@ -565,9 +567,7 @@ export default function DashboardAdmin() {
           >
             <option value="">Todos os status</option>
             <option value="ativa">Ativa 🟢</option>
-            <option value="inativa">Inativa 🟡</option>
             <option value="bloqueada">Bloqueada 🟠</option>
-            <option value="inativas">Inativas + Bloqueadas 🟡🟠</option>
             <option value="vencidas">Vencidas 🔴</option>
             <option value="proximos">Vencendo em breve 🟡</option>
           </select>
@@ -623,7 +623,7 @@ export default function DashboardAdmin() {
                     <div
                       key={m.id}
                       id={`dash-row-${m.id}`}
-                      className={`dash-row dash-row--${m.status_assinatura}${m.id === dashNavId ? ' foco-teclado' : ''}`}
+                      className={`dash-row dash-row--${statusLoja(m)}${m.id === dashNavId ? ' foco-teclado' : ''}`}
                       onClick={() => setDashNavId(m.id)}
                     >
 
@@ -640,7 +640,7 @@ export default function DashboardAdmin() {
                         <div className="dash-row-nome-linha">
                           <span className="dash-row-nome">{m.nome_fantasia}</span>
                           <span className="badge-tipo">{m.tipo_estabelecimento || "—"}</span>
-                          <span className={`badge badge-${m.status_assinatura}`}>{m.status_assinatura}</span>
+                          <span className={`badge badge-${statusLoja(m)}`}>{statusLoja(m)}</span>
                         </div>
                         <div className="dash-row-detalhes">
                           {m.telefone && <span>📞 {m.telefone}</span>}

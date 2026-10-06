@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { novoPdfRelatorio, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Financeiro.css';
 
 
@@ -1111,6 +1112,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                     </div>
                   </div>
                   {erroContas && <div className="fin-erro" style={{ marginTop: 10 }}>⚠️ {erroContas}</div>}
+                  {contaEditId && <Rastro entidade="conta" id={contaEditId} />}
                   <div className="fin-conta-form-acoes">
                     <button type="button" className="fin-btn-cancelar-conta" onClick={cancelarForm}>
                       Cancelar

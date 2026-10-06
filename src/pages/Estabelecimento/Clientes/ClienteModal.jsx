@@ -3,6 +3,7 @@ import { confirmar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
 
 
@@ -279,6 +280,9 @@ export default function ClienteModal({
               {parseFloat(cliente.saldo_devedor) > 0.01 ? `Dívida atual: ${fmt(cliente.saldo_devedor)}` : '✓ Sem dívida'}
             </div>
           )}
+
+          {/* Quem cadastrou / quem alterou por último (só ao editar) */}
+          {isEdit && <Rastro entidade="cliente" id={cliente.id} />}
 
           {/* Ações */}
           <div className="cli-modal-acoes">

@@ -8,6 +8,7 @@ import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relat
 import ProdutoModal from './ProdutoModal';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Estoque.css';
 
 
@@ -835,6 +836,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                           ✕
                         </button>
                       </div>
+                      <Rastro entidade="categoria" id={cat.id} />
                     </div>
                   ) : (
                     <div className="estoque-cat-row">
@@ -927,6 +929,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                                     ✕
                                   </button>
                                 </div>
+                                <Rastro entidade="categoria" id={sub.id} />
                               </div>
                             ) : (
                               <div className="estoque-cat-row estoque-cat-row--sub">

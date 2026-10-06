@@ -6,6 +6,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
 import { useAuth } from "../../../contexts/AuthProvider";
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import "./SuperAdmins.css";
 
 async function getToken() {
@@ -440,6 +441,7 @@ export default function ConfiguracoesGlobais() {
                           Cancelar
                         </button>
                         {msgEdicao && <div className="sa-config-msg erro" style={{ width: "100%" }}>{msgEdicao}</div>}
+                        <Rastro entidade="contato_suporte" id={c.id} className="sa-rastro-contato" />
                       </div>
                     ) : (
                       <div

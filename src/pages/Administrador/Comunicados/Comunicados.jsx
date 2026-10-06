@@ -17,7 +17,9 @@
 //   pro comerciante — fora dela, o registro existe e pode estar "ativo",
 //   mas o backend (GET /ativos) não devolve. Ver `agendaChip`/`estaVigente`.
 // - criado_por_nome/criado_em: gravados só na criação (o PUT não altera o
-//   autor original), exibidos na listagem e num aviso no topo do modal.
+//   autor original), exibidos na listagem. No modal de edição, quem criou
+//   e quem alterou por último aparecem na linha <Rastro /> acima dos
+//   botões (05/10/2026 — substituiu o aviso "Criado por" do topo).
 // - imagem_url: upload dedicado (multipart) pro bucket "logos", mesmo
 //   padrão do logo de estabelecimento — precisa do id, então numa criação
 //   nova o arquivo fica pendente até o Salvar devolver o id (ver
@@ -36,6 +38,7 @@ import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import "../SuperAdmins/SuperAdmins.css";
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import "./Comunicados.css";
 
 // Formatos suportados hoje. Adicionar um formato novo no futuro (faixa no
@@ -844,11 +847,6 @@ export default function Comunicados() {
                 Escolha pelo menos um formato de exibição pra este comunicado — pode combinar mais de um.
                 Clicar fora não fecha esta janela — use "Cancelar" ou Esc.
               </div>
-              {editandoId && (
-                <div className="com-meta-modal">
-                  Criado por <strong>{form.criadoPorNome || "—"}</strong> em {formatarDataHora(form.criadoEm)}
-                </div>
-              )}
               {erroModal && (
                 <div style={{ background: "var(--bg-danger)", color: "var(--text-danger)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: "0.85rem", fontWeight: 500, marginBottom: 16 }}>
                   ⚠️ {erroModal}
@@ -1234,6 +1232,7 @@ export default function Comunicados() {
                   </label>
                 </div>
               </div>
+              {editandoId && <Rastro entidade="comunicado" id={editandoId} />}
               <div className="sa-modal-actions">
                 <button className="sa-btn sa-btn-ghost" onClick={fecharModal}>Cancelar</button>
                 <button className="sa-btn sa-btn-purple" onClick={salvar} disabled={salvando}>

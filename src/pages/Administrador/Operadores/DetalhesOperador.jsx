@@ -8,6 +8,7 @@ import PersonificarModal from "../../../components/PersonificarModal";
 import { useAuth } from "../../../contexts/AuthProvider";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
+import Rastro from '../../../components/Rastro/Rastro';
 
 function iniciais(nome) {
   if (!nome) return "?";
@@ -28,6 +29,9 @@ export default function DetalhesOperador() {
   const [permLoading,setPermLoading]= useState(false);
   const [permSaving, setPermSaving] = useState(false);
   const [permEditing,setPermEditing]= useState(false);
+  // Muda a cada alteração salva aqui, para a linha "Cadastrado por /
+  // Última alteração por" buscar de novo (a tela continua aberta).
+  const [rastroVersao, setRastroVersao] = useState(0);
 
   // ⚠️ FONTE DA VERDADE DO ADMIN: mantenha sincronizado com
   // OperadoresEstabelecimento.jsx ao adicionar módulos/ações
@@ -156,7 +160,7 @@ export default function DetalhesOperador() {
         method: "PUT",
         body:   JSON.stringify({ permissoes }),
       });
-      if (resp.ok) setPermEditing(false);
+      if (resp.ok) { setPermEditing(false); setRastroVersao(v => v + 1); }
       else avisar("Erro ao salvar permissões.");
     } catch { avisar("Erro interno."); }
     setPermSaving(false);
@@ -171,7 +175,7 @@ export default function DetalhesOperador() {
         method: "PUT",
         body:   JSON.stringify({ status: novoStatus }),
       });
-      if (resp.ok) carregar();
+      if (resp.ok) { carregar(); setRastroVersao(v => v + 1); }
       else avisar("Erro ao alterar status.");
     } catch { avisar("Erro ao alterar status."); }
   }
@@ -371,6 +375,8 @@ export default function DetalhesOperador() {
           </div>
         </div>
         </div>
+
+        <Rastro entidade="operador" id={id} versao={rastroVersao} />
 
       </div>
 

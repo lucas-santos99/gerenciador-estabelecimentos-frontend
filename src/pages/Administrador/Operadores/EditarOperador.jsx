@@ -5,6 +5,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 import { avisar } from '../../../components/Dialogo/dialogo';
 
 export default function EditarOperador() {
@@ -144,6 +145,8 @@ export default function EditarOperador() {
               </div>
             </div>
           </div>
+
+          <Rastro entidade="operador" id={id} />
 
           {/* AÇÕES */}
           <div className="op-form-actions">

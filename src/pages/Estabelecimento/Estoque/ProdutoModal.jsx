@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
 import { perguntar } from '../../../components/Dialogo/dialogo';
+import Rastro from '../../../components/Rastro/Rastro';
 import '../Estoque.css';
 
 /* ── Comparação "inteligente" de marcas ──────────────────────
@@ -72,7 +73,7 @@ function fmtQ(v, u) {
 }
 
 const MOTIVOS_SUGERIDOS_PRODUTO = {
-  entrada:   ['Compra de fornecedor', 'Reposição de estoque', 'Transferência entre lojas'],
+  entrada:   ['Reposição de estoque', 'Transferência entre lojas', 'Bonificação ou brinde', 'Produção própria'],
   saida:     ['Uso interno', 'Amostras/degustação', 'Transferência entre lojas', 'Devolução ao fornecedor'],
   perda:     ['Produto vencido', 'Produto danificado', 'Produto extraviado', 'Furto/roubo'],
   devolucao: ['Devolução de cliente insatisfeito', 'Troca de produto'],
@@ -93,6 +94,7 @@ const TIPOS_AJUSTE = [
 // origem de cada uma, sem precisar ir até Inventário → Movimentações.
 const ORIGENS_HIST = {
   compra:           { rotulo: '🧾 Compra de fornecedor', cor: 'verde' },
+  entrada_fornecedor: { rotulo: '📦 Entrada de fornecedor', cor: 'verde' },
   compra_cancelada: { rotulo: '↩️ Compra cancelada',      cor: 'amarelo' },
   inventario:       { rotulo: '📋 Inventário (contagem)', cor: 'roxo' },
   cadastro:         { rotulo: '🆕 Cadastro do produto',   cor: 'azul' },
@@ -202,6 +204,9 @@ function HistoricoEstoque({ estabelecimentoId, produtoId, unidade }) {
     </div>
   );
 }
+
+// Valor do seletor de origem da Entrada quando não há fornecedor
+const SEM_FORNECEDOR = '__sem_fornecedor';
 
 function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
@@ -908,6 +913,10 @@ export default function ProdutoModal({
   const [ajusteTipo,     setAjusteTipo]     = useState('entrada');
   const [ajusteQtd,      setAjusteQtd]      = useState('');
   const [ajusteMotivo,   setAjusteMotivo]   = useState('');
+  // Origem da Entrada: '' = ainda não escolheu · id do fornecedor ·
+  // SEM_FORNECEDOR = outra origem (aí a explicação é obrigatória)
+  const [ajusteFornecedorId, setAjusteFornecedorId] = useState('');
+  const [origemEstoque,      setOrigemEstoque]      = useState(null); // { ultima_compra, fornecedores }
   const [ajusteUnidade,  setAjusteUnidade]  = useState('kg'); // 'kg' | 'g'
   const [ajustando,      setAjustando]      = useState(false);
   const [ajusteMsg,      setAjusteMsg]      = useState('');
@@ -1346,6 +1355,36 @@ export default function ProdutoModal({
     }
   }
 
+  /* ── Origem da Entrada: última compra lançada + fornecedores da loja ──
+     Já deixa escolhido o fornecedor da última compra deste produto. Sem
+     fornecedor cadastrado (ou se a busca falhar) fica como sempre foi:
+     só a explicação escrita, obrigatória. */
+  useEffect(() => {
+    if (!isEdit || somenteLeitura || !produtoEditar?.id) return undefined;
+    let vivo = true;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/origem-estoque`);
+        const data = await resp.json().catch(() => ({}));
+        if (!vivo) return;
+        if (!resp.ok) throw new Error('sem origem');
+        const fornecedores = Array.isArray(data.fornecedores) ? data.fornecedores : [];
+        setOrigemEstoque({ ultima_compra: data.ultima_compra || null, fornecedores });
+        const idUltimo = data.ultima_compra?.fornecedor_id;
+        if (fornecedores.length === 0) setAjusteFornecedorId(SEM_FORNECEDOR);
+        else if (idUltimo && fornecedores.some(f => f.id === idUltimo)) setAjusteFornecedorId(idUltimo);
+      } catch {
+        if (vivo) { setOrigemEstoque({ ultima_compra: null, fornecedores: [] }); setAjusteFornecedorId(SEM_FORNECEDOR); }
+      }
+    })();
+    return () => { vivo = false; };
+  }, [isEdit, somenteLeitura, estabelecimentoId, produtoEditar?.id]);
+
+  const fornecedoresOrigem   = origemEstoque?.fornecedores || [];
+  const entradaComFornecedor = ajusteTipo === 'entrada' && !!ajusteFornecedorId && ajusteFornecedorId !== SEM_FORNECEDOR;
+  // Com fornecedor escolhido, o texto vira observação opcional
+  const ajusteMotivoObrigatorio = !entradaComFornecedor;
+
   /* ── Ajuste de estoque (edição) — mesma rota do Ajuste Rápido ── */
   function digitarAjusteQtd(valorBruto) {
     const casas = form.unidade_medida === 'kg' ? (ajusteUnidade === 'g' ? 0 : 3) : 0;
@@ -1364,6 +1403,7 @@ export default function ProdutoModal({
         tipo:       ajusteTipo,
         quantidade: qtdConvertida,
         motivo:     ajusteMotivo.trim(),
+        ...(entradaComFornecedor ? { fornecedor_id: ajusteFornecedorId } : {}),
       }),
     });
     const data = await resp.json();
@@ -1383,8 +1423,14 @@ export default function ProdutoModal({
         setErro('Informe uma quantidade válida para o ajuste de estoque.');
         return;
       }
-      if (!ajusteMotivo.trim()) {
-        setErro('Informe o motivo do ajuste de estoque.');
+      if (ajusteTipo === 'entrada' && !ajusteFornecedorId) {
+        setErro('Informe de onde veio a mercadoria da entrada: escolha o fornecedor ou "Sem fornecedor / outra origem".');
+        return;
+      }
+      if (ajusteMotivoObrigatorio && !ajusteMotivo.trim()) {
+        setErro(ajusteTipo === 'entrada'
+          ? 'Explique de onde veio a mercadoria da entrada (sem fornecedor, a explicação é obrigatória).'
+          : 'Informe o motivo do ajuste de estoque.');
         return;
       }
     }
@@ -2284,8 +2330,44 @@ export default function ProdutoModal({
                       </div>
 
                       {ajusteTipo === 'entrada' && (
-                        <div className="prod-ajuste-dica-compra">
-                          💡 <strong>Comprou de um fornecedor?</strong> O jeito mais completo é lançar em <strong>Fornecedores → Lançar Compra</strong>: o estoque entra sozinho, o preço de custo é atualizado e fica guardado de quem você comprou (e a conta a pagar, se for a prazo). Use a Entrada daqui para reposição sem fornecedor cadastrado — e escreva no motivo de onde veio.
+                        <div className="prod-origem-box">
+                          {origemEstoque?.ultima_compra && (
+                            <div className="prod-origem-ultima">
+                              🧾 <strong>Última compra lançada (já entrou no estoque):</strong>{' '}
+                              {origemEstoque.ultima_compra.fornecedor_nome || 'fornecedor não informado'}
+                              {' · '}{fmtQuandoHist(origemEstoque.ultima_compra.quando)}
+                              {' · '}{fmtQ(origemEstoque.ultima_compra.quantidade, form.unidade_medida)}
+                              {origemEstoque.ultima_compra.preco_custo != null && (
+                                <>{' · custo R$ '}{origemEstoque.ultima_compra.preco_custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                              )}
+                              {origemEstoque.ultima_compra.numero_nota && <>{' · Nota '}{origemEstoque.ultima_compra.numero_nota}</>}
+                            </div>
+                          )}
+
+                          {fornecedoresOrigem.length > 0 && (
+                            <div className="prod-origem-campo">
+                              <label className="prod-label" htmlFor="ajuste-origem-fornecedor">
+                                De onde veio esta mercadoria? *
+                                <CampoAjuda texto="Toda entrada precisa dizer a origem. Escolha o fornecedor (já vem marcado o da última compra deste produto) ou, se não veio de um fornecedor cadastrado, escolha Sem fornecedor e explique no campo ao lado da quantidade." />
+                              </label>
+                              <select
+                                id="ajuste-origem-fornecedor"
+                                className="prod-input"
+                                value={ajusteFornecedorId}
+                                onChange={e => setAjusteFornecedorId(e.target.value)}
+                              >
+                                <option value="">Selecione o fornecedor…</option>
+                                {fornecedoresOrigem.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                                <option value={SEM_FORNECEDOR}>Sem fornecedor / outra origem (explicar)</option>
+                              </select>
+                            </div>
+                          )}
+
+                          <div className="prod-origem-nota">
+                            {entradaComFornecedor
+                              ? <>Esta entrada <strong>soma ao estoque e guarda o fornecedor</strong>. Para também atualizar o preço de custo e gerar a conta a pagar, lance em <strong>Fornecedores → Lançar Compra</strong>.</>
+                              : <>Sem fornecedor, <strong>escreva de onde veio</strong> (reposição, transferência, brinde…). Comprou de um fornecedor? O jeito completo é <strong>Fornecedores → Lançar Compra</strong>: o estoque entra sozinho, o custo é atualizado e fica guardado de quem você comprou.</>}
+                          </div>
                         </div>
                       )}
 
@@ -2314,7 +2396,9 @@ export default function ProdutoModal({
                         </div>
                         <input maxLength={300}
                           className="prod-input prod-ajuste-motivo"
-                          placeholder="Motivo (obrigatório)…"
+                          placeholder={ajusteTipo === 'entrada'
+                            ? (entradaComFornecedor ? 'Observação (opcional)…' : 'De onde veio? (obrigatório)…')
+                            : 'Motivo (obrigatório)…'}
                           value={ajusteMotivo}
                           onChange={e => setAjusteMotivo(e.target.value)}
                           list="motivos-ajuste-produto"
@@ -2430,6 +2514,8 @@ export default function ProdutoModal({
                 </div>
               </div>
             </div>
+
+            {isEdit && produtoEditar?.id && <Rastro entidade="produto" id={produtoEditar.id} />}
 
             {/* Ações */}
             <div className="prod-modal-acoes">

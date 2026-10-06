@@ -5,6 +5,7 @@ import { apiFetch } from '../../../utils/api';
 import './OperadoresEstabelecimento.css';
 import { erroSenhaFraca } from '../../../utils/senha';
 import Dica from '../../../components/Notificacoes/Dica';
+import Rastro from '../../../components/Rastro/Rastro';
 
 /* ── Módulos disponíveis com ações granulares ────────────── */
 // ⚠️ FONTE DA VERDADE: ao adicionar módulos ou ações no sistema,
@@ -463,6 +464,8 @@ function ModalOperador({ operador, onClose, onSalvo }) {
               </span>
             </div>
           )}
+
+          {isEdit && <Rastro entidade="operador" id={operador.id} />}
 
           <div className="opest-modal-acoes">
             <button type="button" className="opest-modal-btn-cancelar"
