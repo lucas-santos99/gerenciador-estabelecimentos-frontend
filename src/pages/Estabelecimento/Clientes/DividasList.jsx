@@ -446,7 +446,7 @@ export default function DividasList({ estabelecimentoId, nomeEstabelecimento, pe
       setTimeout(() => document.getElementById(`cli-card-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && clienteNavId) {
+    if (e.key === 'Delete' && clienteNavId) {
       e.preventDefault();
       const alvo = listaFiltrada.find(c => c.id === clienteNavId);
       if (alvo && pode('clientes_excluir')) excluirCliente(alvo);

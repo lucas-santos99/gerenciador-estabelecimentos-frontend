@@ -1,6 +1,6 @@
 // src/components/TelaBloqueio.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiFetch } from '../utils/api';
 import { useAvisosEstabelecimento } from '../utils/realtimeEstab';
 import logo from '../assets/logo-lucasjsystems.png';
@@ -21,8 +21,21 @@ function formatarVencimento(dataStr) {
   return { dataFmt, relativo, vencida: diff > 0 };
 }
 
+// Promoção só vale se estiver ligada E (sem validade OU a validade ainda
+// não passou). A validade é uma data ('YYYY-MM-DD') e vale até o FIM do
+// dia informado — por isso a comparação é por data, não por horário.
+function promoValida(config) {
+  if (!config?.promo_ativa || !config.promo_texto) return false;
+  const validade = String(config.promo_validade || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(validade)) return true; // sem validade (ou ilegível) → não expira
+  const agora = new Date();
+  const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+  return hoje <= validade;
+}
+
 export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const navigate   = useNavigate();
+  const location   = useLocation();
   const btnRef     = useRef(null);
   const pollingRef = useRef(null);
   const visibilidadeHandlerRef = useRef(null); // handler de 'visibilitychange' ativo, se houver
@@ -38,6 +51,11 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const [copiado,     setCopiado]     = useState(false);
   const [zoom,        setZoom]        = useState(() => parseFloat(localStorage.getItem("bl-zoom") || "1"));
   const [vencimento,  setVencimento]  = useState(null); // data_vencimento (string "YYYY-MM-DD")
+  // status da loja: 'bloqueada' (licença vencida/não paga), 'inativa'
+  // (desativada pelo administrador) ou 'excluida' (estabelecimento desativado)
+  // O painel já manda o status ao redirecionar pra cá (evita piscar o texto
+  // de "licença vencida" numa loja inativa); depois é conferido na API.
+  const [statusLoja,  setStatusLoja]  = useState(() => location.state?.status || null);
 
   useEffect(() => {
     btnRef.current?.focus();
@@ -58,6 +76,10 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
           if (resp.ok) {
             const d = await resp.json();
             if (d.data_vencimento) setVencimento(d.data_vencimento);
+            if (d.status_assinatura) setStatusLoja(d.status_assinatura);
+          } else if (resp.status === 403) {
+            const j = await resp.json().catch(() => ({}));
+            if (j?.codigo === "LOJA_EXCLUIDA") setStatusLoja("excluida");
           }
         } catch { /* chip de vencimento simplesmente não aparece se falhar */ }
       })();
@@ -76,9 +98,16 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     if (verificarPagamentoRef.current) { verificarPagamentoRef.current(); return; }
     try {
       const resp = await apiFetch(`/api/estabelecimentos/dados/${mercearia_id}`);
-      if (!resp.ok) return;
+      if (!resp.ok) {
+        if (resp.status === 403) {
+          const j = await resp.json().catch(() => ({}));
+          if (j?.codigo === "LOJA_EXCLUIDA") setStatusLoja("excluida");
+        }
+        return;
+      }
       const d = await resp.json();
       if (d.data_vencimento) setVencimento(d.data_vencimento);
+      if (d.status_assinatura) setStatusLoja(d.status_assinatura);
       if (d.status_assinatura === "ativa") navigate(`/estabelecimentos/${mercearia_id}`, { replace: true });
     } catch { /* silencioso */ }
   });
@@ -234,11 +263,22 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
     if (!modalAberto && e.key === "Escape") { e.preventDefault(); onLogout(); }
   };
 
-  const titulo   = config?.titulo   || "Acesso Bloqueado";
-  const mensagem = config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`;
-  const info     = config?.info     || "Renove sua licença para continuar usando o sistema.";
-  const promo    = config?.promo_ativa ? config.promo_texto : null;
-  const venc     = formatarVencimento(vencimento);
+  // Inativa/excluída NÃO é licença vencida: o texto não fala em
+  // vencimento nem oferece renovação — só manda falar com o suporte.
+  const lojaInativa  = statusLoja === "inativa";
+  const lojaExcluida = statusLoja === "excluida";
+  const semRenovacao = lojaInativa || lojaExcluida;
+
+  const titulo   = lojaExcluida ? "Estabelecimento desativado"
+                 : lojaInativa  ? "Acesso desativado"
+                 : (config?.titulo || "Acesso Bloqueado");
+  const mensagem = lojaExcluida ? `**${nomeFantasia || "Este estabelecimento"}** foi desativado.`
+                 : lojaInativa  ? `Acesso de **${nomeFantasia || "seu estabelecimento"}** desativado pelo administrador do sistema.`
+                 : (config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`);
+  const info     = semRenovacao ? "Fale com o suporte."
+                 : (config?.info || "Renove sua licença para continuar usando o sistema.");
+  const promo    = !semRenovacao && promoValida(config) ? config.promo_texto : null;
+  const venc     = semRenovacao ? null : formatarVencimento(vencimento);
 
   function renderTexto(texto) {
     const partes = texto.split(/\*\*(.+?)\*\*/g);
@@ -291,7 +331,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
         {promo && <div className="bloqueio-promo">🎉 {promo}</div>}
 
         <div className="bloqueio-acoes">
-          {mercearia_id && (
+          {mercearia_id && !semRenovacao && (
             <button className="bloqueio-btn bloqueio-btn--primary" onClick={abrirModal}>
               💳 Renovar Licença
             </button>

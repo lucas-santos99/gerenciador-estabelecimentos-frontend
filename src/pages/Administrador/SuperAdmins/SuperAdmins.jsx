@@ -85,7 +85,7 @@ export default function SuperAdmins() {
       setForm({ nome: "", email: "", senha: "" });
       carregarLista();
     } catch { setErroCriar("Erro interno."); }
-    setSalvando(false);
+    finally { setSalvando(false); }
   }
 
   async function excluir(id, nome) {
@@ -172,7 +172,7 @@ export default function SuperAdmins() {
       if (alvo) { e.preventDefault(); abrirModalSenha(alvo); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && saNavId) {
+    if (e.key === 'Delete' && saNavId) {
       const alvo = lista.find(u => u.id === saNavId);
       if (alvo && alvo.id !== profile.id) { e.preventDefault(); excluir(alvo.id, alvo.nome); }
       return;

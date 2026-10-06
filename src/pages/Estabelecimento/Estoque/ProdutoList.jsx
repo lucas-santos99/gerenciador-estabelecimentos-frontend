@@ -265,7 +265,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       setTimeout(() => document.getElementById(`prod-${alvo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && produtoNavId) {
+    if (e.key === 'Delete' && produtoNavId) {
       e.preventDefault();
       const alvo = produtosFiltrados.find(p => p.id === produtoNavId);
       // a janela de confirmação do sistema responde a Enter (confirmar)/Esc (cancelar)

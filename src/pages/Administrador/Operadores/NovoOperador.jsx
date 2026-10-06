@@ -6,6 +6,7 @@ import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
 import Dica from '../../../components/Notificacoes/Dica';
 import { erroSenhaFraca } from '../../../utils/senha';
+import { avisar } from '../../../components/Dialogo/dialogo';
 
 export default function NovoOperador() {
   const navigate  = useNavigate();
@@ -54,6 +55,12 @@ export default function NovoOperador() {
       });
       const json = await resp.json();
       if (!resp.ok) { setErro(json.error || "Erro ao criar operador."); }
+      else if (json.operador?.id) {
+        // Vai direto para os Detalhes, onde se marcam as permissões (o operador
+        // nasce sem nenhuma). replace: o "Voltar" de lá não cai neste formulário.
+        navigate(`/admin/operadores/${json.operador.id}`, { replace: true });
+        avisar({ titulo: "Operador criado", texto: "Operador criado — marque abaixo o que ele pode fazer.", tom: "ok" });
+      }
       else { navigate(`/admin/estabelecimentos/${form.mercearia_id}/operadores`); }
     } catch { setErro("Erro interno ao criar operador."); }
     setSalvando(false);
@@ -142,7 +149,7 @@ export default function NovoOperador() {
 
           {/* SEÇÃO 3 — Acesso */}
           <div className="op-form-section">
-            <div className="op-form-section-title">🔐 Acesso <Dica texto="O operador é criado sem nenhuma permissão. Depois de cadastrar, abra os Detalhes dele e marque o que ele pode fazer." /></div>
+            <div className="op-form-section-title">🔐 Acesso <Dica texto="O operador é criado sem nenhuma permissão. Ao cadastrar, você vai direto para a tela dele para marcar o que ele pode fazer." /></div>
             <div className="op-form-group">
               <label className="op-label">Senha inicial *</label>
               <input maxLength={72}

@@ -8,6 +8,7 @@ import { definirLojaIdentidade, definirLogoLojaIdentidade, prepararIdentidade } 
 import LayoutEstabelecimento from "./Painel/LayoutEstabelecimento";
 import { NotificacoesProvider, enviarDestino } from "../../components/Notificacoes/NotificacoesContext";
 import CentralNotificacoes from "../../components/Notificacoes/CentralNotificacoes";
+import { avisar } from "../../components/Dialogo/dialogo";
 
 import PDV           from "./PDV/PDV";
 import ProdutoList   from "./Estoque/ProdutoList";
@@ -24,7 +25,7 @@ import WhatsAppLoja  from "./WhatsApp/WhatsAppLoja";
 /* ════════════════════════════════════════════════════════════ */
 export default function PainelEstabelecimento() {
   const { id: estabelecimentoId } = useParams();
-  const { user, profile }         = useAuth();
+  const { user, profile, logout } = useAuth();
   const navigate                  = useNavigate();
 
   const [abaAtiva,            setAbaAtiva]           = useState("pdv");
@@ -35,6 +36,33 @@ export default function PainelEstabelecimento() {
   const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
 
   const isMerchant = profile?.role === 'merchant';
+
+  // Loja excluída/desativada pelo SuperAdmin (05/10/2026): a API responde
+  // 403 com codigo 'LOJA_EXCLUIDA' em qualquer chamada. Mostra o aviso UMA
+  // vez (a trava evita aviso repetido e loop) e sai da conta — vale pra
+  // dono e operador.
+  const [lojaDesativada, setLojaDesativada] = useState(false);
+  const saindoRef = useRef(false);
+  const sairLojaDesativada = useCallback(async () => {
+    if (saindoRef.current) return;
+    saindoRef.current = true;
+    setLojaDesativada(true);
+    await avisar({
+      titulo: "Estabelecimento desativado",
+      texto:  "Este estabelecimento foi desativado e não pode mais ser usado. Fale com o suporte.",
+    });
+    try { await logout(); } catch { /* sai mesmo assim */ }
+    navigate("/login", { replace: true });
+  }, [logout, navigate]);
+
+  // true quando a resposta da API diz que a loja foi excluída
+  async function respostaLojaExcluida(resp) {
+    if (resp.status !== 403) return false;
+    try {
+      const j = await resp.clone().json();
+      return j?.codigo === "LOJA_EXCLUIDA";
+    } catch { return false; }
+  }
   // null = merchant (acesso total); array = operador com permissões específicas
   const permsParaModulo = isMerchant ? null : permissoes;
 
@@ -93,9 +121,15 @@ export default function PainelEstabelecimento() {
         if (respDados.ok) {
           const data = await respDados.json();
 
-          // Redirecionar para tela de bloqueio se licença bloqueada
-          if (data.status_assinatura === "bloqueada" && profile?.role === "merchant") {
-            navigate("/bloqueado", { replace: true });
+          if (data.status_assinatura === "excluida") {
+            sairLojaDesativada();
+            return;
+          }
+
+          // Redirecionar para tela de bloqueio se licença bloqueada ou
+          // loja inativa (desativada pelo administrador)
+          if (["bloqueada", "inativa"].includes(data.status_assinatura) && profile?.role === "merchant") {
+            navigate("/bloqueado", { replace: true, state: { status: data.status_assinatura } });
             return;
           }
 
@@ -110,6 +144,9 @@ export default function PainelEstabelecimento() {
             status_assinatura: data.status_assinatura || null,
             data_vencimento:   data.data_vencimento   || null,
           });
+        } else if (await respostaLojaExcluida(respDados)) {
+          sairLojaDesativada();
+          return;
         }
 
         if (respPerms && respPerms.ok) {
@@ -141,10 +178,17 @@ export default function PainelEstabelecimento() {
     if (!estabelecimentoId) return;
     try {
       const resp = await apiFetch(`/api/estabelecimentos/dados/${estabelecimentoId}`);
-      if (!resp.ok) return;
+      if (!resp.ok) {
+        if (await respostaLojaExcluida(resp)) sairLojaDesativada();
+        return;
+      }
       const data = await resp.json();
-      if (data.status_assinatura === "bloqueada" && profile?.role === "merchant") {
-        navigate("/bloqueado", { replace: true });
+      if (data.status_assinatura === "excluida") {
+        sairLojaDesativada();
+        return;
+      }
+      if (["bloqueada", "inativa"].includes(data.status_assinatura) && profile?.role === "merchant") {
+        navigate("/bloqueado", { replace: true, state: { status: data.status_assinatura } });
         return;
       }
       setLicencaInfo({
@@ -153,7 +197,7 @@ export default function PainelEstabelecimento() {
       });
       definirLojaIdentidade(data);
     } catch { /* silencioso — o próximo aviso tenta de novo */ }
-  }, [estabelecimentoId, profile?.role, navigate]);
+  }, [estabelecimentoId, profile?.role, navigate, sairLojaDesativada]);
 
   useAvisosEstabelecimento(estabelecimentoId, ["licenca"], atualizarLicenca);
 
@@ -278,6 +322,17 @@ export default function PainelEstabelecimento() {
           />
         );
     }
+  }
+
+  /* ── Loja desativada: nada do painel é mostrado ──────────── */
+  if (lojaDesativada) {
+    return (
+      <div className="est-loading-screen">
+        <div style={{ fontSize: "2rem" }}>🚫</div>
+        <strong>Estabelecimento desativado</strong>
+        <span>Este estabelecimento foi desativado. Fale com o suporte.</span>
+      </div>
+    );
   }
 
   /* ── Loading inicial ─────────────────────────────────────── */

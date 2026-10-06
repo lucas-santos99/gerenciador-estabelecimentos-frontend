@@ -91,6 +91,9 @@ const FORM_VAZIO = {
   imagem_url: null, data_inicio: "", data_fim: "",
   frequencia_tipo: "uma_vez", frequencia_quantidade: "",
   criadoPorNome: null, criadoEm: null,
+  // Só vale na edição: "Mostrar de novo para quem já viu" (apaga os
+  // vistos do comunicado). Sempre começa desmarcado.
+  reexibir: false,
 };
 
 // ── Helpers de data ──────────────────────────────────────────────────
@@ -264,6 +267,7 @@ export default function Comunicados() {
       frequencia_quantidade: c.frequencia_quantidade != null ? String(c.frequencia_quantidade) : "",
       criadoPorNome: c.criado_por_nome || null,
       criadoEm: c.criado_em || null,
+      reexibir: false,
     });
     setBuscaEstab("");
     setErroModal("");
@@ -498,7 +502,7 @@ export default function Comunicados() {
         data_fim: inputLocalParaIso(form.data_fim),
         frequencia_tipo: form.frequencia_tipo,
         frequencia_quantidade: form.frequencia_tipo === "quantidade" ? Number(form.frequencia_quantidade) : null,
-        ...(editandoId ? { imagem_url: form.imagem_url } : {}),
+        ...(editandoId ? { imagem_url: form.imagem_url, reexibir: form.reexibir === true } : {}),
       };
       const resp = await apiFetch(
         editandoId ? `/api/comunicados/admin/${editandoId}` : "/api/comunicados/admin",
@@ -506,6 +510,15 @@ export default function Comunicados() {
       );
       const json = await resp.json();
       if (!resp.ok) throw new Error(json.error || "Erro ao salvar.");
+
+      // "Mostrar de novo" vale para UM salvamento: desmarca depois de
+      // enviado (o modal pode continuar aberto se a imagem falhar, e um
+      // segundo Salvar não deve zerar os vistos outra vez). Se o servidor
+      // salvou a edição mas não conseguiu zerar quem já viu, avisa.
+      if (editandoId && form.reexibir) setForm(p => ({ ...p, reexibir: false }));
+      if (editandoId && form.reexibir && json.reexibido === false) {
+        avisar("As alterações foram salvas, mas não foi possível fazer o aviso aparecer de novo para quem já viu. Abra o comunicado, marque a opção outra vez e salve.");
+      }
 
       // Imagem que ficou pendente (criação nova) só sobe agora que já
       // existe um id. Se falhar, o comunicado já foi salvo — mantém o
@@ -621,7 +634,7 @@ export default function Comunicados() {
       if (alvo) { e.preventDefault(); abrirEditar(alvo); }
       return;
     }
-    if ((e.key === "Delete" || e.key === "Backspace") && comNavId) {
+    if (e.key === "Delete" && comNavId) {
       const alvo = listaExibida.find(c => c.id === comNavId);
       if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.titulo); }
       return;
@@ -1060,7 +1073,7 @@ export default function Comunicados() {
                 </div>
 
                 <div className="sa-form-group">
-                  <label className="sa-label">Com que frequência aparece pra mesma loja <Dica texto="A contagem é por loja, não por pessoa: se um operador fechar o aviso, ele conta como visto para a loja toda, e o dono pode nem chegar a ver. Cada formato tem a sua contagem. Editar o comunicado não zera a contagem de quem já viu." /></label>
+                  <label className="sa-label">Com que frequência aparece pra mesma pessoa <Dica texto="A contagem é por pessoa: o dono e cada operador veem o aviso conforme a frequência escolhida — um fechar não esconde dos outros. Cada formato tem a sua contagem. Editar o comunicado não zera a contagem de quem já viu, a não ser que você marque “Mostrar de novo para quem já viu”." /></label>
                   <div className="com-formatos-opcoes">
                     {FREQUENCIA_OPCOES.map(f => (
                       <label key={f.tipo} className={`com-formato-opcao${form.frequencia_tipo === f.tipo ? " selecionado" : ""}`}>
@@ -1088,6 +1101,20 @@ export default function Comunicados() {
                     </div>
                   )}
                 </div>
+
+                {editandoId && (
+                  <div className="sa-form-group">
+                    <label className="sa-config-switch">
+                      <input
+                        type="checkbox"
+                        checked={form.reexibir === true}
+                        onChange={e => setForm(p => ({ ...p, reexibir: e.target.checked }))}
+                      />
+                      <span className="sa-config-switch-texto">Mostrar de novo para quem já viu</span>
+                      <Dica texto="Marque se a mudança é importante: o aviso volta a aparecer para todo mundo, como se fosse novo." />
+                    </label>
+                  </div>
+                )}
 
                 <div className="sa-form-group">
                   <label className="sa-label">Para quem esse comunicado vai aparecer</label>

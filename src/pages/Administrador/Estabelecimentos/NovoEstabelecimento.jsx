@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Estabelecimentos.css";
+import "../Operadores/Operadores.css"; // estilos do campo de limite de operadores (op-limite-*)
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import { erroSenhaFraca } from '../../../utils/senha';
@@ -217,7 +218,8 @@ export default function NovoEstabelecimento() {
           ...form,
           data_vencimento:      dataVencimentoFinal,
           tipo_estabelecimento: tipoFinal,
-          limite_operadores:    parseInt(form.limite_operadores) || 3,
+          // 0 é válido (nenhum operador) — o padrão só entra se o campo estiver vazio/inválido
+          limite_operadores:    Number.isNaN(parseInt(form.limite_operadores, 10)) ? 3 : parseInt(form.limite_operadores, 10),
           telefones_extras:     form.telefones_extras.map(t => t.trim()).filter(Boolean),
           enderecos_extras:     form.enderecos_extras.map(e => e.trim()).filter(Boolean),
           motivo_periodo_teste: usarPeriodoTeste ? (form.motivo_periodo_teste.trim() || null) : null,
@@ -562,7 +564,7 @@ export default function NovoEstabelecimento() {
               ) : (
                 <>
                   <div className="est-form-group">
-                    <label className="est-label">Status da Assinatura <Dica texto="Só Bloqueada impede o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Inativa é apenas uma marcação no painel, a loja continua usando normalmente. Ativa exige data de vencimento." /></label>
+                    <label className="est-label">Status da Assinatura <Dica texto="Bloqueada e Inativa impedem o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Na Bloqueada a tela oferece renovar a licença; na Inativa ela avisa que o acesso foi desativado pelo administrador e manda falar com o suporte. Ativa exige data de vencimento." /></label>
                     <select
                       className="est-select"
                       name="status_assinatura"
@@ -610,7 +612,7 @@ export default function NovoEstabelecimento() {
                     onChange={atualizar}
                   />
                   <span className="op-limite-hint">
-                    Máximo de operadores cadastrados (0–50): contam os ativos e os inativos, os excluídos não. Pré-preenchido com o padrão global.
+                    Máximo de operadores cadastrados (0–50): contam os ativos e os inativos, os excluídos não. 0 = nenhum operador. Pré-preenchido com o padrão global.
                   </span>
                 </div>
               </div>

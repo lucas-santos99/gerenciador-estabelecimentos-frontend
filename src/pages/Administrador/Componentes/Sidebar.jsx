@@ -113,7 +113,8 @@ const SIDEBAR_KEY = "sidebar_collapsed";
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
+  const ehMaster = !!profile?.is_master;
   const ntf = useNotificacoes();
   const naoLidasNtf = ntf?.contagem?.nao_lidas || 0;
 
@@ -190,7 +191,9 @@ export default function Sidebar() {
         { label: "Cobranças",            path: "/admin/cobrancas",           icon: Icons.Cobranca  },
         { label: "WhatsApp",             path: "/admin/whatsapp",            icon: Icons.WhatsApp  },
         { label: "Auditoria",            path: "/admin/auditoria",           icon: Icons.Audit     },
-        { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings  },
+        // Só o master: as rotas dessa tela (padrões do sistema, tela de bloqueio,
+        // contatos de suporte) são onlyMaster no backend.
+        { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings, soMaster: true },
         { label: "Identidade dos Relatórios", path: "/admin/identidade-relatorios", icon: Icons.Relatorio },
       ],
     },
@@ -250,7 +253,7 @@ export default function Sidebar() {
           {menuItems.map(group => (
             <React.Fragment key={group.section}>
               <div className="sb-section-label">{group.section}</div>
-              {group.items.map(item => {
+              {group.items.filter(item => !item.soMaster || ehMaster).map(item => {
                 const isActive =
                   location.pathname === item.path ||
                   (item.path !== "/admin" && location.pathname.startsWith(item.path));

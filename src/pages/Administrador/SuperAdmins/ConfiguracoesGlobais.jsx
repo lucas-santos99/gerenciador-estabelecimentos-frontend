@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
+import { useAuth } from "../../../contexts/AuthProvider";
 import Dica from '../../../components/Notificacoes/Dica';
 import "./SuperAdmins.css";
 
@@ -15,6 +16,11 @@ async function getToken() {
 export default function ConfiguracoesGlobais() {
   const navigate = useNavigate();
   const API_URL  = import.meta.env.VITE_API_URL;
+  // Só o SuperAdmin master altera estas configurações (rotas onlyMaster no
+  // backend). Quem não é master vê só os contatos de suporte, sem botões,
+  // e a tela não chama nenhuma rota que responderia 403.
+  const { profile } = useAuth();
+  const ehMaster = !!profile?.is_master;
 
   const [carregando,   setCarregando]   = useState(true);
   const [aba,          setAba]          = useState("geral"); // 'geral' | 'tela' | 'contatos'
@@ -75,8 +81,8 @@ export default function ConfiguracoesGlobais() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [rGeral, rTela, rContatos] = await Promise.all([
-        fetch(`${API_URL}/superadmin/config`, { headers }),
-        fetch(`${API_URL}/superadmin/config-tela-bloqueio`, { headers }),
+        ehMaster ? fetch(`${API_URL}/superadmin/config`, { headers }) : { ok: false },
+        ehMaster ? fetch(`${API_URL}/superadmin/config-tela-bloqueio`, { headers }) : { ok: false },
         fetch(`${API_URL}/superadmin/contatos-suporte`, { headers }),
       ]);
 
@@ -99,7 +105,7 @@ export default function ConfiguracoesGlobais() {
     setCarregando(false);
   }
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { carregar(); }, [ehMaster]);
 
   /* ── Máscara de moeda tipo calculadora ────────────────────── */
   function digitarValorMascarado(valorBruto) {
@@ -177,9 +183,14 @@ export default function ConfiguracoesGlobais() {
     if (!(await confirmar({ titulo: 'Remover esse contato?', perigo: true, botao: 'Remover' }))) return;
     try {
       const token = await getToken();
-      await fetch(`${API_URL}/superadmin/contatos-suporte/${id}`, {
+      const resp = await fetch(`${API_URL}/superadmin/contatos-suporte/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => ({}));
+        avisar(j.error || "Não foi possível remover o contato.");
+        return;
+      }
       setContatos(prev => prev.filter(c => c.id !== id));
     } catch { avisar("Erro ao remover contato."); }
   }
@@ -198,6 +209,7 @@ export default function ConfiguracoesGlobais() {
   }
 
   function handleContatosKeyDown(e) {
+    if (!ehMaster) return;
     const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
     if (contatos.length === 0) return;
@@ -217,7 +229,7 @@ export default function ConfiguracoesGlobais() {
       if (alvo) { e.preventDefault(); iniciarEdicao(alvo); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && contatoNavId) {
+    if (e.key === 'Delete' && contatoNavId) {
       const alvo = contatos.find(c => c.id === contatoNavId);
       if (alvo) { e.preventDefault(); removerContato(alvo.id); }
       return;
@@ -244,6 +256,8 @@ export default function ConfiguracoesGlobais() {
     setSalvandoEdicao(false);
   }
 
+  const abaAtual = ehMaster ? aba : "contatos";
+
   /* ── render ──────────────────────────────────────────────── */
   return (
     <LayoutAdmin>
@@ -265,16 +279,21 @@ export default function ConfiguracoesGlobais() {
           <div className="sa-loading"><div className="sa-spinner" /> Carregando...</div>
         ) : (
           <>
+            {!ehMaster && (
+              <div className="sa-config-msg" style={{ marginBottom: 14, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-secondary)" }}>
+                🔒 Só o SuperAdmin master altera estas configurações. Você pode apenas consultar os contatos de suporte.
+              </div>
+            )}
             {/* ── NAVEGAÇÃO DE ABAS ───────────────────────────── */}
             <div className="sa-tabs">
               {[
                 { k: "geral",    label: "⚙️ Padrões do Sistema" },
                 { k: "tela",     label: "🔒 Tela de Bloqueio" },
                 { k: "contatos", label: "💬 Contatos de Suporte" },
-              ].map(t => (
+              ].filter(t => ehMaster || t.k === "contatos").map(t => (
                 <button
                   key={t.k}
-                  className={`sa-tab${aba === t.k ? " ativo" : ""}`}
+                  className={`sa-tab${abaAtual === t.k ? " ativo" : ""}`}
                   onClick={() => setAba(t.k)}
                 >
                   {t.label}
@@ -283,7 +302,7 @@ export default function ConfiguracoesGlobais() {
             </div>
 
             {/* ── GERAL ────────────────────────────────────── */}
-            {aba === "geral" && (
+            {abaAtual === "geral" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
@@ -327,7 +346,7 @@ export default function ConfiguracoesGlobais() {
             )}
 
             {/* ── TELA DE BLOQUEIO ────────────────────────────── */}
-            {aba === "tela" && (
+            {abaAtual === "tela" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
@@ -382,7 +401,7 @@ export default function ConfiguracoesGlobais() {
             )}
 
             {/* ── CONTATOS DE SUPORTE ─────────────────────────── */}
-            {aba === "contatos" && (
+            {abaAtual === "contatos" && (
             <div className="sa-config-box">
               <div className="sa-config-header">
                 <div className="sa-config-header-left">
@@ -435,16 +454,19 @@ export default function ConfiguracoesGlobais() {
                           </span>
                           <span className="sa-config-item-desc">{c.valor}</span>
                         </div>
+                        {ehMaster && (
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => iniciarEdicao(c)}>✏️ Editar</button>
                           <button className="sa-btn sa-btn-danger sa-btn-sm" onClick={() => removerContato(c.id)}>🗑 Remover</button>
                         </div>
+                        )}
                       </div>
                     )
                   ))
                 )}
                 </div>
 
+                {ehMaster && (
                 <div className="sa-config-item" style={{ flexWrap: "wrap", gap: 10 }}>
                   <select className="sa-config-input" value={novoTipo} onChange={e => setNovoTipo(e.target.value)} style={{ width: 120 }}>
                     <option value="whatsapp">🟢 WhatsApp</option>
@@ -458,6 +480,7 @@ export default function ConfiguracoesGlobais() {
                     {salvandoContato ? "⏳" : "+ Adicionar"}
                   </button>
                 </div>
+                )}
                 {msgContato && <div className="sa-config-msg erro">{msgContato}</div>}
               </div>
             </div>

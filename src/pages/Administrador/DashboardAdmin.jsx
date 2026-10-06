@@ -40,6 +40,25 @@ function calcularDiff(dataStr) {
   return (venc - new Date()) / (1000 * 60 * 60 * 24);
 }
 
+// Prévia do novo vencimento ao liberar acesso — MESMA regra do backend
+// (POST /admin/estabelecimentos/:id/liberar-acesso): se o vencimento atual
+// ainda vale (hoje ou futuro, no fuso da loja), os dias somam a ele; se já
+// passou ou não existe, contam a partir de hoje (no fuso da loja).
+function previaLiberacao(vencimentoAtual, timezone, dias) {
+  const n = parseInt(dias, 10);
+  if (Number.isNaN(n) || n < 1) return null;
+  let hoje;
+  try {
+    hoje = new Intl.DateTimeFormat("en-CA", { timeZone: timezone || "America/Sao_Paulo" }).format(new Date());
+  } catch {
+    hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  }
+  const acumula = !!vencimentoAtual && vencimentoAtual >= hoje;
+  const base = new Date((acumula ? vencimentoAtual : hoje) + "T12:00:00Z");
+  base.setUTCDate(base.getUTCDate() + n);
+  return { data: base.toISOString().split("T")[0], acumula };
+}
+
 function iniciais(nome) {
   if (!nome) return "?";
   return nome.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase();
@@ -47,7 +66,7 @@ function iniciais(nome) {
 
 /* ═══════════════════════════════════════════════════════════ */
 export default function DashboardAdmin() {
-  const { user }   = useAuth();
+  const { user, profile } = useAuth();
   const navigate   = useNavigate();
   const API_URL    = import.meta.env.VITE_API_URL;
 
@@ -256,13 +275,14 @@ export default function DashboardAdmin() {
       if (alvo) { e.preventDefault(); navigate(`/admin/estabelecimentos/${alvo.id}?view=details`); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && dashNavId) {
+    // Só a tecla Delete exclui — Backspace é pra apagar o texto da busca.
+    if (e.key === 'Delete' && dashNavId) {
       const alvo = listaFiltrada.find(m => m.id === dashNavId);
       if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.nome_fantasia); }
       return;
     }
     if (e.key === 'Escape' && dashNavId) { setDashNavId(null); return; }
-    if (e.key.length === 1 && dashNavId) setDashNavId(null);
+    if ((e.key.length === 1 || e.key === 'Backspace') && dashNavId) setDashNavId(null);
   }
 
   async function confirmarBloquear() {
@@ -393,12 +413,15 @@ export default function DashboardAdmin() {
               <Icon.Plus /> Novo Estabelecimento
             </button>
 
-            <button
-              className="btn btn-purple"
-              onClick={() => navigate("/admin/superadmins")}
-            >
-              <Icon.Crown /> Novo SuperAdmin
-            </button>
+            {/* A tela de SuperAdmins só é usada pelo master */}
+            {profile?.is_master && (
+              <button
+                className="btn btn-purple"
+                onClick={() => navigate("/admin/superadmins")}
+              >
+                <Icon.Crown /> Novo SuperAdmin
+              </button>
+            )}
 
             <button
               className="btn btn-ghost"
@@ -643,7 +666,7 @@ export default function DashboardAdmin() {
                         >👥 Operadores</button>
                         <button
                           className="dash-card-btn dash-card-btn--green"
-                          onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia }); }}
+                          onClick={() => { setDiasLiberar(30); setFormaPgto("dinheiro"); setMotivoLiberar(""); setLiberarMsg(""); setModalLiberar({ id: m.id, nome: m.nome_fantasia, data_vencimento: m.data_vencimento || null, timezone: m.timezone || null }); }}
                         >🔓 Liberar</button>
                         {m.status_assinatura === "ativa" && (
                           <button
@@ -679,7 +702,7 @@ export default function DashboardAdmin() {
             </div>
 
             {/* Período */}
-            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>⏱ Período de liberação <Dica texto="Se a assinatura ainda não venceu, os dias são somados ao vencimento atual; se já venceu, contam a partir de hoje. O status volta para Ativa. A data mostrada ao lado é só a conta a partir de hoje." /></div>
+            <div className="dash-config-label" style={{ fontSize: "0.78rem", marginBottom: 6 }}>⏱ Período de liberação <Dica texto="Se a assinatura ainda não venceu, os dias são somados ao vencimento atual; se já venceu, contam a partir de hoje. O status volta para Ativa. A data mostrada ao lado já é o novo vencimento." /></div>
             <div className="dash-dias-atalhos" style={{ marginBottom: 8 }}>
               {[7, 15, 30, 60, 90, 180, 365].map(d => (
                 <button key={d} type="button"
@@ -695,7 +718,11 @@ export default function DashboardAdmin() {
                 autoFocus style={{ width: 80 }} />
               <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>dias</span>
               <span style={{ fontSize: "0.82rem", color: "var(--text-accent)", fontWeight: 600 }}>
-                → {(() => { const d = new Date(); d.setDate(d.getDate() + (parseInt(diasLiberar) || 0)); return d.toLocaleDateString("pt-BR"); })()}
+                {(() => {
+                  const p = previaLiberacao(modalLiberar.data_vencimento, modalLiberar.timezone, diasLiberar);
+                  if (!p) return "→ —";
+                  return `→ ${formatarData(p.data)}${p.acumula ? ` (soma ao vencimento atual, ${formatarData(modalLiberar.data_vencimento)})` : ""}`;
+                })()}
               </span>
             </div>
 

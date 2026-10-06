@@ -75,7 +75,7 @@ export default function ListaEstabelecimentos() {
       if (alvo) { e.preventDefault(); navigate(`/admin/estabelecimentos/${alvo.id}?view=details`); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && estabNavId) {
+    if (e.key === 'Delete' && estabNavId) {
       const alvo = listaFiltrada.find(m => m.id === estabNavId);
       if (alvo) { e.preventDefault(); excluirEstabelecimento(alvo.id, alvo.nome_fantasia); }
       return;

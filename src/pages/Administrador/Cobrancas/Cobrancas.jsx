@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
+import { useAuth } from "../../../contexts/AuthProvider";
 import { TIMEZONE_PADRAO, hojeStrTZ, diasEntre } from "../../../utils/fusoHorario";
 import Dica from '../../../components/Notificacoes/Dica';
 import "./Cobrancas.css";
@@ -90,6 +91,10 @@ const NOTIF_TAMANHOS_FONTE = [12, 14, 16, 18, 20, 24, 28, 32, 40];
 /* ═══════════════════════════════════════════════════════════ */
 export default function Cobrancas() {
   const navigate = useNavigate();
+  // Salvar as configurações e trocar a imagem é só do SuperAdmin master
+  // (rotas onlyMaster). Quem não é master vê tudo somente leitura.
+  const { profile } = useAuth();
+  const ehMaster = !!profile?.is_master;
 
   const [loading, setLoading]   = useState(true);
   const [lista,   setLista]     = useState([]);
@@ -491,6 +496,13 @@ export default function Cobrancas() {
             </div>
           </div>
 
+          {!ehMaster && (
+            <div className="cob-config-msg" style={{ marginBottom: 14, border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-secondary)" }}>
+              🔒 Só o SuperAdmin master altera estas configurações. Você pode apenas consultar.
+            </div>
+          )}
+
+          <fieldset disabled={!ehMaster} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className="cob-config-grid">
 
             <div className="cob-config-col">
@@ -526,15 +538,17 @@ export default function Cobrancas() {
                 {config.imagem_url ? (
                   <div className="cob-config-imagem-preview">
                     <img src={config.imagem_url} alt="Imagem da cobrança" />
-                    <button className="cob-btn-ghost-sm" onClick={removerImagem}>🗑 Remover</button>
+                    {ehMaster && <button className="cob-btn-ghost-sm" onClick={removerImagem}>🗑 Remover</button>}
                   </div>
                 ) : (
                   <span className="cob-config-sem-imagem">Nenhuma imagem definida ainda.</span>
                 )}
+                {ehMaster && (
                 <label className="cob-btn-ghost-sm" style={{ cursor: "pointer", marginTop: 10, width: "fit-content" }}>
                   {enviandoImagem ? "⏳ Enviando…" : (config.imagem_url ? "🔄 Trocar imagem" : "+ Enviar imagem")}
                   <input type="file" accept="image/*" onChange={enviarImagem} disabled={enviandoImagem} style={{ display: "none" }} />
                 </label>
+                )}
               </div>
             </div>
 
@@ -612,7 +626,8 @@ export default function Cobrancas() {
                     <div
                       ref={notifEditorTituloRef}
                       className="cob-editor-conteudo cob-editor-conteudo-titulo"
-                      contentEditable
+                      contentEditable={ehMaster}
+                      suppressContentEditableWarning
                       data-placeholder="Ex: Sua assinatura está vencendo"
                       onInput={notifAoDigitarTitulo}
                       onPaste={notifAoColarTitulo}
@@ -658,7 +673,8 @@ export default function Cobrancas() {
                     <div
                       ref={notifEditorRef}
                       className="cob-editor-conteudo"
-                      contentEditable
+                      contentEditable={ehMaster}
+                      suppressContentEditableWarning
                       data-placeholder="Ex: Sua assinatura vence em breve. Renove agora pra continuar sem interrupção."
                       onInput={notifAoDigitar}
                       onPaste={notifAoColar}
@@ -688,13 +704,16 @@ export default function Cobrancas() {
               </div>
             </div>
           </div>
+          </fieldset>
 
+          {ehMaster && (
           <div className="cob-config-footer">
             {msgConfig && <div className={`cob-config-msg ${msgConfig.startsWith("✓") ? "sucesso" : "erro"}`}>{msgConfig}</div>}
             <button className="cob-btn-salvar" onClick={salvarConfig} disabled={salvandoConfig}>
               {salvandoConfig ? "⏳ Salvando…" : "✓ Salvar configurações"}
             </button>
           </div>
+          )}
 
         </div>
 

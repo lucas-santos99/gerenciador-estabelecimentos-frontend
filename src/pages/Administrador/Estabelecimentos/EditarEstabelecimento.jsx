@@ -6,6 +6,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import PersonificarModal from "../../../components/PersonificarModal";
 import { useAuth } from "../../../contexts/AuthProvider";
 import "./Estabelecimentos.css";
+import "../Operadores/Operadores.css"; // estilos do campo de limite de operadores (op-limite-*)
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import Dica from '../../../components/Notificacoes/Dica';
@@ -15,6 +16,18 @@ import Dica from '../../../components/Notificacoes/Dica';
 async function getToken() {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token;
+}
+
+// Tipos que aparecem prontos na lista (os mesmos da tela Novo). Qualquer
+// outro valor salvo cai em "Outro…" com o texto no campo ao lado.
+const TIPOS_PADRAO = ["loja", "mercearia", "padaria", "ferragem", "agropecuaria", "restaurante"];
+
+function formatarTipo(texto) {
+  return texto
+    .toLowerCase()
+    .split(" ")
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ");
 }
 
 function iniciais(nome) {
@@ -47,7 +60,15 @@ export default function EditarEstabelecimento() {
     logo_url:          "",
     limite_operadores: 3,
     timezone:          "America/Sao_Paulo",
+    tipo_estabelecimento: "loja",
+    valor_mensalidade:    "", // vazio = usa o valor global
   });
+
+  const [tipoOriginal,      setTipoOriginal]      = useState(""); // valor salvo, do jeito que está no cadastro
+  const [tipoCustomizado,   setTipoCustomizado]   = useState("");
+  const [tiposExistentes,   setTiposExistentes]   = useState([]);
+  const [sugestoes,         setSugestoes]         = useState([]);
+  const [mensalidadePadrao, setMensalidadePadrao] = useState(null);
 
   const [carregando,   setCarregando]   = useState(true);
   const [salvando,     setSalvando]     = useState(false);
@@ -84,7 +105,19 @@ export default function EditarEstabelecimento() {
           logo_url:          data.logo_url          || "",
           limite_operadores: data.limite_operadores ?? 3,
           timezone:          data.timezone          || "America/Sao_Paulo",
+          tipo_estabelecimento: TIPOS_PADRAO.includes((data.tipo_estabelecimento || "").trim().toLowerCase())
+            ? (data.tipo_estabelecimento || "").trim().toLowerCase()
+            : (data.tipo_estabelecimento ? "outro" : "loja"),
+          valor_mensalidade: data.valor_mensalidade != null && Number(data.valor_mensalidade) > 0
+            ? String(data.valor_mensalidade)
+            : "",
         });
+        setTipoOriginal(data.tipo_estabelecimento || "");
+        setTipoCustomizado(
+          data.tipo_estabelecimento && !TIPOS_PADRAO.includes(data.tipo_estabelecimento.trim().toLowerCase())
+            ? data.tipo_estabelecimento
+            : ""
+        );
       } else {
         setErro(data.error || "Erro ao carregar.");
       }
@@ -94,6 +127,40 @@ export default function EditarEstabelecimento() {
 
 
   useEffect(() => { carregarDados(); }, [id]);
+
+  // Apoio dos campos Tipo e Mensalidade (igual à tela Novo): tipos já
+  // usados em outros cadastros, pra sugerir, e o valor global da
+  // mensalidade, pra mostrar no campo vazio. Se falhar, a tela segue.
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp  = await apiFetch(`/admin/estabelecimentos/listar`);
+        const lista = await resp.json();
+        if (Array.isArray(lista)) {
+          setTiposExistentes([...new Set(lista.map(m => m.tipo_estabelecimento).filter(Boolean))]);
+        }
+      } catch {}
+    })();
+    (async () => {
+      try {
+        const resp = await apiFetch('/superadmin/config');
+        if (resp.ok) {
+          const d = await resp.json();
+          const v = Number(d.valor_mensalidade);
+          if (Number.isFinite(v)) setMensalidadePadrao(v);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  function filtrarSugestoes(valor) {
+    setTipoCustomizado(valor);
+    setSugestoes(
+      valor
+        ? tiposExistentes.filter(t => t.toLowerCase().includes(valor.toLowerCase()))
+        : []
+    );
+  }
 
   function atualizar(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -192,22 +259,64 @@ export default function EditarEstabelecimento() {
       return;
     }
 
+    // Tipo — mesma regra da tela Novo. Se a pessoa não mudou o tipo, manda
+    // exatamente o que já estava salvo (não mexe em maiúsculas/minúsculas).
+    let tipoFinal = form.tipo_estabelecimento;
+    if (form.tipo_estabelecimento === "outro") {
+      if (!tipoCustomizado.trim()) { setErro("Informe o tipo de estabelecimento."); return; }
+      tipoFinal = formatarTipo(tipoCustomizado.trim());
+    } else {
+      tipoFinal = formatarTipo(tipoFinal);
+    }
+    if (tipoOriginal && tipoFinal.toLowerCase() === tipoOriginal.trim().toLowerCase()) {
+      tipoFinal = tipoOriginal;
+    }
+
+    // Limite de operadores — 0 é válido (nenhum operador). Em branco, o
+    // campo não é enviado e o limite que já estava continua valendo.
+    const limiteTxt = String(form.limite_operadores ?? "").trim();
+    const limiteNum = parseInt(limiteTxt, 10);
+    if (limiteTxt !== "" && (Number.isNaN(limiteNum) || limiteNum < 0 || limiteNum > 50)) {
+      setErro("Limite de operadores inválido — informe um número de 0 a 50.");
+      return;
+    }
+
+    // Mensalidade individual — em branco = usar o valor global.
+    const mensTxt = String(form.valor_mensalidade ?? "").trim();
+    const mensNum = parseFloat(mensTxt.replace(",", "."));
+    if (mensTxt !== "" && (Number.isNaN(mensNum) || mensNum < 0)) {
+      setErro("Valor da mensalidade inválido.");
+      return;
+    }
+
     setSalvando(true);
     try {
       const resp = await apiFetch(`/admin/estabelecimentos/${id}`, {
         method:  "PUT",
         body:    JSON.stringify({
           ...form,
-          data_vencimento:
-            form.status_assinatura === "ativa" ? form.data_vencimento : null,
-          limite_operadores: parseInt(form.limite_operadores) || 3,
+          // A data de vencimento é sempre mantida — antes era apagada ao
+          // salvar como Inativa ou Bloqueada.
+          data_vencimento:   form.data_vencimento || null,
+          limite_operadores: limiteTxt === "" ? undefined : limiteNum,
+          tipo_estabelecimento: tipoFinal,
+          valor_mensalidade: mensTxt === "" ? null : mensNum,
           telefones_extras:  form.telefones_extras.map(t => t.trim()).filter(Boolean),
           enderecos_extras:  form.enderecos_extras.map(e => e.trim()).filter(Boolean),
         }),
       });
       const json = await resp.json();
       if (!resp.ok) { setErro(json.error || "Erro ao salvar."); }
-      else           { navigate(`/admin/estabelecimentos/${id}?view=details`); }
+      else {
+        if (json.login_atualizado) {
+          await avisar({
+            titulo: "E-mail de login trocado",
+            texto:  `O dono agora entra no sistema com ${json.mercearia?.email_contato || form.email_contato}. A senha continua a mesma.`,
+            tom:    "ok",
+          });
+        }
+        navigate(`/admin/estabelecimentos/${id}?view=details`);
+      }
     } catch { setErro("Erro ao salvar."); }
     setSalvando(false);
   }
@@ -466,6 +575,52 @@ export default function EditarEstabelecimento() {
                   onChange={atualizar}
                 />
               </div>
+
+              <div className="est-form-group">
+                <label className="est-label">Tipo de Estabelecimento <Dica texto="Serve para separar e filtrar as lojas no painel (lista, cobranças, solicitações) e para mandar comunicados só para um tipo. Não muda as funções do sistema para a loja." /></label>
+                <select
+                  className="est-select"
+                  name="tipo_estabelecimento"
+                  value={form.tipo_estabelecimento}
+                  onChange={atualizar}
+                >
+                  <option value="loja">Loja</option>
+                  <option value="mercearia">Mercearia</option>
+                  <option value="padaria">Padaria</option>
+                  <option value="ferragem">Ferragem</option>
+                  <option value="agropecuaria">Agropecuária</option>
+                  <option value="restaurante">Restaurante</option>
+                  <option value="outro">Outro…</option>
+                </select>
+              </div>
+
+              {form.tipo_estabelecimento === "outro" && (
+                <div className="est-form-group">
+                  <label className="est-label">Qual tipo?</label>
+                  <div className="est-autocomplete-wrap">
+                    <input maxLength={60}
+                      className="est-input"
+                      placeholder="Ex: Pet Shop, Oficina…"
+                      value={tipoCustomizado}
+                      onChange={e => filtrarSugestoes(e.target.value)}
+                    />
+                    {sugestoes.length > 0 && (
+                      <div className="est-sugestoes">
+                        {sugestoes.map((tipo, i) => (
+                          <div
+                            key={i}
+                            className="est-sugestao-item"
+                            onClick={() => { setTipoCustomizado(tipo); setSugestoes([]); }}
+                          >
+                            {tipo}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="est-form-group">
                 <label className="est-label">CPF / CNPJ</label>
                 {/* Toggle CPF / CNPJ */}
@@ -526,8 +681,8 @@ export default function EditarEstabelecimento() {
                 </button>
               </div>
               <div className="est-form-group">
-                <label className="est-label">E-mail de Contato <Dica texto="Trocar aqui muda só o e-mail de contato do cadastro (usado nas cobranças por e-mail). O dono continua entrando no sistema com o e-mail de login antigo." /></label>
-                <input maxLength={150} className="est-input" name="email_contato" value={form.email_contato} onChange={atualizar} />
+                <label className="est-label">E-mail de Contato <Dica texto="É também o e-mail de login do dono. Ao trocar aqui e salvar, o dono passa a entrar no sistema com o e-mail novo (a senha continua a mesma). Não pode ser um e-mail já usado por outro usuário. Também é usado nas cobranças por e-mail." /></label>
+                <input maxLength={150} className="est-input" name="email_contato" type="email" value={form.email_contato} onChange={atualizar} />
               </div>
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
@@ -570,7 +725,7 @@ export default function EditarEstabelecimento() {
             <div className="est-form-section-title">💳 Assinatura</div>
             <div className="est-form-grid">
               <div className="est-form-group">
-                <label className="est-label">Status <Dica texto="Só Bloqueada impede o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Inativa é apenas uma marcação no painel, a loja continua usando normalmente. Atenção: ao salvar como Inativa ou Bloqueada, a data de vencimento é apagada." /></label>
+                <label className="est-label">Status <Dica texto="Bloqueada e Inativa impedem o uso: o dono cai na tela de bloqueio e nada pode ser lançado. Na Bloqueada a tela oferece renovar a licença; na Inativa ela avisa que o acesso foi desativado pelo administrador e manda falar com o suporte. A data de vencimento é mantida ao trocar o status." /></label>
                 <select className="est-select" name="status_assinatura" value={form.status_assinatura} onChange={atualizar}>
                   <option value="ativa">Ativa</option>
                   <option value="inativa">Inativa</option>
@@ -589,6 +744,55 @@ export default function EditarEstabelecimento() {
                   />
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* SEÇÃO 3b — Operadores */}
+          <div className="est-form-section">
+            <div className="est-form-section-title">👥 Operadores</div>
+            <div className="est-form-grid">
+              <div className="est-form-group">
+                <label className="est-label">Limite de operadores</label>
+                <div className="op-limite-field">
+                  <input
+                    className="op-limite-input"
+                    type="number"
+                    name="limite_operadores"
+                    min="0"
+                    max="50"
+                    value={form.limite_operadores}
+                    onChange={atualizar}
+                  />
+                  <span className="op-limite-hint">
+                    Máximo de operadores cadastrados (0–50): contam os ativos e os inativos, os excluídos não. 0 = nenhum operador.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SEÇÃO 3c — Mensalidade individual */}
+          <div className="est-form-section">
+            <div className="est-form-section-title">💰 Mensalidade</div>
+            <div className="est-form-grid">
+              <div className="est-form-group">
+                <label className="est-label">Mensalidade individual (R$, opcional)</label>
+                <input
+                  className="est-input"
+                  type="number"
+                  name="valor_mensalidade"
+                  min="0"
+                  step="0.01"
+                  value={form.valor_mensalidade}
+                  onChange={atualizar}
+                  placeholder={mensalidadePadrao != null
+                    ? `Valor global: R$ ${mensalidadePadrao.toFixed(2).replace(".", ",")}`
+                    : "Em branco = valor global"}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>
+                  Deixe em branco para usar o valor global. Preencha para aplicar um preço diferenciado a este cliente.
+                </span>
+              </div>
             </div>
           </div>
 

@@ -87,6 +87,122 @@ const TIPOS_AJUSTE = [
   { key: 'correcao',  label: '✏️ Correção',   cor: 'amarelo',  desc: 'Troca o estoque pelo número exato que você digitar (não soma nem diminui).' },
 ];
 
+// ── Histórico de estoque do produto ("de onde veio este estoque") ──
+// O estoque só muda por venda, compra de fornecedor, ajuste com motivo,
+// inventário ou cadastro. Esta lista mostra as últimas mudanças com a
+// origem de cada uma, sem precisar ir até Inventário → Movimentações.
+const ORIGENS_HIST = {
+  compra:           { rotulo: '🧾 Compra de fornecedor', cor: 'verde' },
+  compra_cancelada: { rotulo: '↩️ Compra cancelada',      cor: 'amarelo' },
+  inventario:       { rotulo: '📋 Inventário (contagem)', cor: 'roxo' },
+  cadastro:         { rotulo: '🆕 Cadastro do produto',   cor: 'azul' },
+  venda:            { rotulo: '🛒 Venda',                 cor: 'azul' },
+  venda_cancelada:  { rotulo: '↩️ Venda cancelada',       cor: 'amarelo' },
+};
+const AJUSTES_HIST = {
+  entrada:   { rotulo: '📦 Entrada manual',        cor: 'verde' },
+  saida:     { rotulo: '📤 Saída manual',          cor: 'azul' },
+  perda:     { rotulo: '🗑️ Perda',                 cor: 'vermelho' },
+  devolucao: { rotulo: '↩️ Devolução de cliente',  cor: 'roxo' },
+  correcao:  { rotulo: '✏️ Correção manual',       cor: 'amarelo' },
+};
+
+function fmtQuandoHist(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function HistoricoEstoque({ estabelecimentoId, produtoId, unidade }) {
+  const [aberto,     setAberto]     = useState(false);
+  const [itens,      setItens]      = useState(null); // null = ainda não carregou
+  const [carregando, setCarregando] = useState(false);
+  const [erro,       setErro]       = useState('');
+  const [semVendas,  setSemVendas]  = useState(false);
+
+  async function carregar() {
+    setCarregando(true);
+    setErro('');
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoId}/movimentacoes?limite=30`);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || 'Não foi possível carregar o histórico.');
+      setItens(Array.isArray(data.itens) ? data.itens : []);
+      setSemVendas(!!data.vendas_indisponiveis);
+    } catch (e) {
+      setErro(e.message || 'Não foi possível carregar o histórico.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function alternar() {
+    const abrir = !aberto;
+    setAberto(abrir);
+    if (abrir && itens === null && !carregando) carregar();
+  }
+
+  return (
+    <div className="prod-hist-box">
+      <button type="button" className="prod-hist-cabecalho" onClick={alternar} aria-expanded={aberto}>
+        <span className="prod-hist-titulo">🕘 De onde veio este estoque</span>
+        <span className="prod-hist-sub">últimas entradas e saídas, com a origem de cada uma</span>
+        <span className="prod-hist-seta">{aberto ? '▲' : '▼'}</span>
+      </button>
+
+      {aberto && (
+        <div className="prod-hist-corpo">
+          {carregando && <div className="prod-hist-vazio">⏳ Carregando…</div>}
+          {!carregando && erro && (
+            <div className="prod-hist-vazio">
+              ⚠️ {erro} <button type="button" className="prod-hist-link" onClick={carregar}>Tentar de novo</button>
+            </div>
+          )}
+          {!carregando && !erro && itens && itens.length === 0 && (
+            <div className="prod-hist-vazio">Nenhuma entrada ou saída registrada para este produto ainda.</div>
+          )}
+          {!carregando && !erro && itens && itens.length > 0 && (
+            <>
+              <div className="prod-hist-lista">
+                {itens.map(it => {
+                  const info = ORIGENS_HIST[it.origem] || AJUSTES_HIST[it.tipo] || { rotulo: 'Ajuste', cor: 'azul' };
+                  const qtd  = Number(it.quantidade) || 0;
+                  return (
+                    <div key={it.id} className="prod-hist-linha">
+                      <span className="prod-hist-quando">{fmtQuandoHist(it.quando)}</span>
+                      <div className="prod-hist-meio">
+                        <span className={`prod-hist-origem prod-hist-${info.cor}`}>{info.rotulo}</span>
+                        {it.detalhe && <span className="prod-hist-detalhe">{it.detalhe}</span>}
+                        {it.quem && <span className="prod-hist-quem">por {it.quem}</span>}
+                      </div>
+                      <div className="prod-hist-qtd">
+                        <strong className={qtd > 0 ? 'prod-ajuste-preview-mais' : qtd < 0 ? 'prod-ajuste-preview-menos' : ''}>
+                          {qtd > 0 ? '+' : qtd < 0 ? '−' : ''}{qtd === 0 ? 'sem mudança' : fmtQ(Math.abs(qtd), unidade)}
+                        </strong>
+                        {it.depois !== null && it.depois !== undefined && (
+                          <span className="prod-hist-ficou">ficou com {fmtQ(it.depois, unidade)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="prod-ajuste-hint">
+                {semVendas
+                  ? 'As vendas não puderam ser carregadas agora — a lista mostra só compras, ajustes e inventário. '
+                  : 'Mostra os 30 registros mais recentes, juntando vendas, compras, ajustes e inventário. '}
+                A lista completa de compras, ajustes e contagens fica em Inventário → Movimentações.
+              </span>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
   if (!digitos) return '';
@@ -2167,6 +2283,12 @@ export default function ProdutoModal({
                         {TIPOS_AJUSTE.find(t => t.key === ajusteTipo)?.desc}
                       </div>
 
+                      {ajusteTipo === 'entrada' && (
+                        <div className="prod-ajuste-dica-compra">
+                          💡 <strong>Comprou de um fornecedor?</strong> O jeito mais completo é lançar em <strong>Fornecedores → Lançar Compra</strong>: o estoque entra sozinho, o preço de custo é atualizado e fica guardado de quem você comprou (e a conta a pagar, se for a prazo). Use a Entrada daqui para reposição sem fornecedor cadastrado — e escreva no motivo de onde veio.
+                        </div>
+                      )}
+
                       <div className="prod-ajuste-linha">
                         {isKg && (
                           <div className="prod-unidade-toggle">
@@ -2218,6 +2340,16 @@ export default function ProdutoModal({
                   </div>
                 )}
                 </>
+                )}
+
+                {isEdit && produtoEditar?.id && (
+                  <div className="prod-form-group prod-form-full">
+                    <HistoricoEstoque
+                      estabelecimentoId={estabelecimentoId}
+                      produtoId={produtoEditar.id}
+                      unidade={form.unidade_medida}
+                    />
+                  </div>
                 )}
 
               </div>

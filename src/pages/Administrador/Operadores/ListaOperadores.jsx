@@ -95,7 +95,7 @@ export default function ListaOperadores() {
       if (alvo) { e.preventDefault(); navigate(`/admin/operadores/${alvo.id}`); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && operadorNavId) {
+    if (e.key === 'Delete' && operadorNavId) {
       const alvo = operadores.find(op => op.id === operadorNavId);
       if (alvo) { e.preventDefault(); excluir(alvo.id, alvo.nome); }
       return;

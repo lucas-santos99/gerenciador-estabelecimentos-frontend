@@ -126,7 +126,7 @@ export default function SolicitacoesAdmin() {
       if (alvo && alvo.status === 'pendente') { e.preventDefault(); abrirResposta(alvo.id, 'atendida'); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && solNavId) {
+    if (e.key === 'Delete' && solNavId) {
       const alvo = lista.find(s => s.id === solNavId);
       if (alvo && alvo.status === 'pendente') { e.preventDefault(); abrirResposta(alvo.id, 'recusada'); }
       return;

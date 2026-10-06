@@ -5,6 +5,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
 import Dica from '../../../components/Notificacoes/Dica';
+import { avisar } from '../../../components/Dialogo/dialogo';
 
 export default function EditarOperador() {
   const { id }   = useParams();
@@ -51,9 +52,18 @@ export default function EditarOperador() {
         method: "PUT",
         body:   JSON.stringify(form),
       });
-      if (resp.ok) navigate(`/admin/operadores/${id}`);
+      const json = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        navigate(`/admin/operadores/${id}`);
+        if (json.login_alterado) {
+          avisar({
+            titulo: "E-mail de login trocado",
+            texto: `A partir de agora o operador entra no sistema com ${json.operador?.email || form.email}. A senha continua a mesma.`,
+            tom: "ok",
+          });
+        }
+      }
       else {
-        const json = await resp.json().catch(() => ({}));
         setErro(json.error || "Erro ao salvar.");
       }
     } catch { setErro("Erro ao salvar operador."); }
@@ -106,7 +116,7 @@ export default function EditarOperador() {
                 />
               </div>
               <div className="op-form-group">
-                <label className="op-label">E-mail * <Dica texto="Trocar aqui muda só o e-mail do cadastro. O operador continua entrando no sistema com o e-mail de login antigo." /></label>
+                <label className="op-label">E-mail * <Dica texto="É o e-mail que o operador usa para entrar no sistema. Ao trocar aqui, ele passa a entrar com o novo e-mail; a senha continua a mesma." /></label>
                 <input maxLength={150}
                   className="op-input"
                   name="email"

@@ -44,8 +44,15 @@ export default function Excluidas() {
     if (!(await confirmar({ titulo: 'Restaurar estabelecimento?', texto: `"${nome}"`, botao: 'Restaurar' }))) return;
     try {
       const resp = await apiFetch(`/admin/estabelecimentos/${id}/restaurar`, { method: "PUT" });
-      if (resp.ok) carregar();
-      else { const j = await resp.json(); avisar("Erro: " + j.error); }
+      const j = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        carregar();
+        // Vencida ou sem data volta Bloqueada — avisa pra não parecer que liberou o acesso
+        if (j.status_assinatura === "bloqueada") {
+          avisar({ titulo: "Restaurado como Bloqueada", texto: j.mensagem || "A assinatura está vencida ou sem data. Use Liberar acesso para ativar." });
+        }
+      }
+      else { avisar("Erro: " + (j.error || "não foi possível restaurar.")); }
     } catch { avisar("Erro ao restaurar."); }
   }
 
@@ -74,7 +81,7 @@ export default function Excluidas() {
       if (alvo) { e.preventDefault(); restaurar(alvo.id, alvo.nome_fantasia); }
       return;
     }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && rowFoco) {
+    if (e.key === 'Delete' && rowFoco) {
       const alvo = lista.find(m => m.id === rowFoco);
       if (alvo) { e.preventDefault(); abrirModal(alvo.id, alvo.nome_fantasia); }
       return;
@@ -105,7 +112,7 @@ export default function Excluidas() {
             <span className="est-breadcrumb">🏢 Estabelecimentos</span>
             <h1 className="est-page-title">
               Estabelecimentos <span>Excluídos</span>
-              <Dica texto="Excluir só tira o estabelecimento das listas do painel: os dados ficam guardados e o login da loja não é bloqueado por isso (para impedir o uso, bloqueie o acesso). Restaurar devolve à lista com status Ativa. Excluir definitivamente apaga o cadastro e não tem volta." />
+              <Dica texto="Loja excluída não entra mais no sistema, mas os dados ficam guardados. Restaurar devolve à lista como Ativa se a assinatura ainda não venceu; vencida ou sem data volta Bloqueada. Excluir definitivamente apaga o cadastro e os logins do dono e dos operadores, sem volta." />
             </h1>
           </div>
           <div className="est-page-actions">
