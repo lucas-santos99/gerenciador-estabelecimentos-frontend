@@ -8,6 +8,7 @@ import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import { erroSenhaFraca } from '../../../utils/senha';
 import Dica from '../../../components/Notificacoes/Dica';
+import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -367,6 +368,7 @@ export default function NovoEstabelecimento() {
                     ⚠️ {cpfCnpjErro}
                   </span>
                 )}
+                <ValidarDocumento valor={form.cnpj} tipo={tipoCpfCnpj} />
               </div>
 
             </div>
