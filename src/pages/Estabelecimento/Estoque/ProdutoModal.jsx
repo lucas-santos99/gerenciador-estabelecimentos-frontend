@@ -214,9 +214,6 @@ function HistoricoEstoque({ estabelecimentoId, produtoId, unidade }) {
   );
 }
 
-// Valor do seletor de origem da Entrada quando não há fornecedor
-const SEM_FORNECEDOR = '__sem_fornecedor';
-
 function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
   if (!digitos) return '';
@@ -922,10 +919,9 @@ export default function ProdutoModal({
   const [ajusteTipo,     setAjusteTipo]     = useState('entrada');
   const [ajusteQtd,      setAjusteQtd]      = useState('');
   const [ajusteMotivo,   setAjusteMotivo]   = useState('');
-  // Origem da Entrada: '' = ainda não escolheu · id do fornecedor ·
-  // SEM_FORNECEDOR = outra origem (aí a explicação é obrigatória)
-  const [ajusteFornecedorId, setAjusteFornecedorId] = useState('');
-  const [origemEstoque,      setOrigemEstoque]      = useState(null); // { ultima_compra, ultima_entrada, fornecedores }
+  // Entrada pelo Ajustar estoque é só para mercadoria SEM fornecedor (o motivo
+  // é obrigatório). Entrada de fornecedor se lança em Fornecedores → Lançar Compra.
+  const [origemEstoque,      setOrigemEstoque]      = useState(null); // { ultima_compra, ultima_entrada }
   const [ajusteUnidade,  setAjusteUnidade]  = useState('kg'); // 'kg' | 'g'
   const [ajustando,      setAjustando]      = useState(false);
   const [ajusteMsg,      setAjusteMsg]      = useState('');
@@ -1364,10 +1360,8 @@ export default function ProdutoModal({
     }
   }
 
-  /* ── Origem da Entrada: última compra lançada + fornecedores da loja ──
-     Já deixa escolhido o fornecedor da última compra deste produto. Sem
-     fornecedor cadastrado (ou se a busca falhar) fica como sempre foi:
-     só a explicação escrita, obrigatória. */
+  /* ── Origem da Entrada: última compra lançada + última entrada de estoque ──
+     Só informativo: a Entrada daqui é sem fornecedor, com motivo obrigatório. */
   useEffect(() => {
     if (!isEdit || somenteLeitura || !produtoEditar?.id) return undefined;
     let vivo = true;
@@ -1377,22 +1371,14 @@ export default function ProdutoModal({
         const data = await resp.json().catch(() => ({}));
         if (!vivo) return;
         if (!resp.ok) throw new Error('sem origem');
-        const fornecedores = Array.isArray(data.fornecedores) ? data.fornecedores : [];
-        setOrigemEstoque({ ultima_compra: data.ultima_compra || null, ultima_entrada: data.ultima_entrada || null, fornecedores });
-        const idUltimo = data.ultima_compra?.fornecedor_id;
-        if (fornecedores.length === 0) setAjusteFornecedorId(SEM_FORNECEDOR);
-        else if (idUltimo && fornecedores.some(f => f.id === idUltimo)) setAjusteFornecedorId(idUltimo);
+        setOrigemEstoque({ ultima_compra: data.ultima_compra || null, ultima_entrada: data.ultima_entrada || null });
       } catch {
-        if (vivo) { setOrigemEstoque({ ultima_compra: null, ultima_entrada: null, fornecedores: [] }); setAjusteFornecedorId(SEM_FORNECEDOR); }
+        if (vivo) setOrigemEstoque({ ultima_compra: null, ultima_entrada: null });
       }
     })();
     return () => { vivo = false; };
   }, [isEdit, somenteLeitura, estabelecimentoId, produtoEditar?.id]);
 
-  const fornecedoresOrigem   = origemEstoque?.fornecedores || [];
-  const entradaComFornecedor = ajusteTipo === 'entrada' && !!ajusteFornecedorId && ajusteFornecedorId !== SEM_FORNECEDOR;
-  // Com fornecedor escolhido, o texto vira observação opcional
-  const ajusteMotivoObrigatorio = !entradaComFornecedor;
 
   /* ── Ajuste de estoque (edição) — mesma rota do Ajuste Rápido ── */
   function digitarAjusteQtd(valorBruto) {
@@ -1412,7 +1398,6 @@ export default function ProdutoModal({
         tipo:       ajusteTipo,
         quantidade: qtdConvertida,
         motivo:     ajusteMotivo.trim(),
-        ...(entradaComFornecedor ? { fornecedor_id: ajusteFornecedorId } : {}),
       }),
     });
     const data = await resp.json();
@@ -1432,13 +1417,9 @@ export default function ProdutoModal({
         setErro('Informe uma quantidade válida para o ajuste de estoque.');
         return;
       }
-      if (ajusteTipo === 'entrada' && !ajusteFornecedorId) {
-        setErro('Informe de onde veio a mercadoria da entrada: escolha o fornecedor ou "Sem fornecedor / outra origem".');
-        return;
-      }
-      if (ajusteMotivoObrigatorio && !ajusteMotivo.trim()) {
+      if (!ajusteMotivo.trim()) {
         setErro(ajusteTipo === 'entrada'
-          ? 'Explique de onde veio a mercadoria da entrada (sem fornecedor, a explicação é obrigatória).'
+          ? 'Explique de onde veio a mercadoria da entrada (reposição, devolução, sobra…). Se veio de fornecedor, lance em Fornecedores → Lançar Compra.'
           : 'Informe o motivo do ajuste de estoque.');
         return;
       }
@@ -2366,29 +2347,10 @@ export default function ProdutoModal({
                             </div>
                           )}
 
-                          {fornecedoresOrigem.length > 0 && (
-                            <div className="prod-origem-campo">
-                              <label className="prod-label" htmlFor="ajuste-origem-fornecedor">
-                                De onde veio esta mercadoria? *
-                                <CampoAjuda texto="Toda entrada precisa dizer a origem. Escolha o fornecedor (já vem marcado o da última compra deste produto) ou, se não veio de um fornecedor cadastrado, escolha Sem fornecedor e explique no campo ao lado da quantidade." />
-                              </label>
-                              <select
-                                id="ajuste-origem-fornecedor"
-                                className="prod-input"
-                                value={ajusteFornecedorId}
-                                onChange={e => setAjusteFornecedorId(e.target.value)}
-                              >
-                                <option value="">Selecione o fornecedor…</option>
-                                {fornecedoresOrigem.map(f => <option key={f.id} value={f.id}>Fornecedor: {f.nome}</option>)}
-                                <option value={SEM_FORNECEDOR}>Sem fornecedor / outra origem (explicar)</option>
-                              </select>
-                            </div>
-                          )}
-
                           <div className="prod-origem-nota">
-                            {entradaComFornecedor
-                              ? <>Esta entrada <strong>soma ao estoque e guarda o fornecedor</strong>. Para também atualizar o preço de custo e gerar a conta a pagar, lance em <strong>Fornecedores → Lançar Compra</strong>.</>
-                              : <>Sem fornecedor, <strong>escreva de onde veio</strong> (reposição, transferência, brinde…). Comprou de um fornecedor? O jeito completo é <strong>Fornecedores → Lançar Compra</strong>: o estoque entra sozinho, o custo é atualizado e fica guardado de quem você comprou.</>}
+                            <strong>Veio de fornecedor?</strong> Não lance por aqui: use <strong>Fornecedores → Lançar Compra</strong>. Lá o estoque entra sozinho, o custo é atualizado, a nota e a conta a pagar ficam guardadas e a compra aparece quando você abre o fornecedor.
+                            {' '}Aqui, use só para mercadoria <strong>sem fornecedor</strong> (reposição, devolução, sobra, brinde…) e <strong>escreva de onde veio</strong>.
+                            <CampoAjuda texto="Entrada feita aqui só soma ao estoque: não guarda nota, custo nem conta a pagar, e não aparece dentro do fornecedor. Por isso, compra de fornecedor deve ser lançada em Fornecedores → Lançar Compra." />
                           </div>
                         </div>
                       )}
@@ -2419,7 +2381,7 @@ export default function ProdutoModal({
                         <input maxLength={300}
                           className="prod-input prod-ajuste-motivo"
                           placeholder={ajusteTipo === 'entrada'
-                            ? (entradaComFornecedor ? 'Observação (opcional)…' : 'De onde veio? (obrigatório)…')
+                            ? 'De onde veio? (obrigatório)…'
                             : 'Motivo (obrigatório)…'}
                           value={ajusteMotivo}
                           onChange={e => setAjusteMotivo(e.target.value)}
