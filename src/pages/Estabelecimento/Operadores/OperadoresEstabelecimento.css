@@ -805,3 +805,33 @@
   padding: 5px 12px;
   margin: 0 12px 4px;
 }
+/* ========================= */
+/*  CELULAR                   */
+/* ========================= */
+@media (max-width: 640px) {
+  /* Avatar + nome + status na 1ª linha; botões na linha de baixo,
+     quebrando em várias linhas em vez de estourar a tela. */
+  .opest-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 12px;
+    padding: 14px;
+  }
+  .opest-card-info {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .opest-card-nome,
+  .opest-card-email {
+    overflow-wrap: anywhere;
+  }
+  .opest-card-acoes {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .opest-acao-btn {
+    padding: 9px 14px;
+    font-size: 0.78rem;
+  }
+}
