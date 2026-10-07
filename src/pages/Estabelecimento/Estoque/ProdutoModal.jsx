@@ -117,6 +117,15 @@ function fmtQuandoHist(iso) {
     + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Texto curto da "Última entrada de estoque" (qualquer origem).
+function descreverUltimaEntrada(e) {
+  if (!e) return '';
+  if (e.origem === 'entrada_fornecedor') return e.fornecedor_nome ? `Fornecedor ${e.fornecedor_nome}` : (e.detalhe || 'Entrada de fornecedor');
+  if (e.origem === 'compra')   return 'Compra lançada em Fornecedores';
+  if (e.origem === 'cadastro') return 'Estoque inicial do cadastro';
+  return e.detalhe || 'Entrada manual';
+}
+
 function HistoricoEstoque({ estabelecimentoId, produtoId, unidade }) {
   const [aberto,     setAberto]     = useState(false);
   const [itens,      setItens]      = useState(null); // null = ainda não carregou
@@ -916,7 +925,7 @@ export default function ProdutoModal({
   // Origem da Entrada: '' = ainda não escolheu · id do fornecedor ·
   // SEM_FORNECEDOR = outra origem (aí a explicação é obrigatória)
   const [ajusteFornecedorId, setAjusteFornecedorId] = useState('');
-  const [origemEstoque,      setOrigemEstoque]      = useState(null); // { ultima_compra, fornecedores }
+  const [origemEstoque,      setOrigemEstoque]      = useState(null); // { ultima_compra, ultima_entrada, fornecedores }
   const [ajusteUnidade,  setAjusteUnidade]  = useState('kg'); // 'kg' | 'g'
   const [ajustando,      setAjustando]      = useState(false);
   const [ajusteMsg,      setAjusteMsg]      = useState('');
@@ -1369,12 +1378,12 @@ export default function ProdutoModal({
         if (!vivo) return;
         if (!resp.ok) throw new Error('sem origem');
         const fornecedores = Array.isArray(data.fornecedores) ? data.fornecedores : [];
-        setOrigemEstoque({ ultima_compra: data.ultima_compra || null, fornecedores });
+        setOrigemEstoque({ ultima_compra: data.ultima_compra || null, ultima_entrada: data.ultima_entrada || null, fornecedores });
         const idUltimo = data.ultima_compra?.fornecedor_id;
         if (fornecedores.length === 0) setAjusteFornecedorId(SEM_FORNECEDOR);
         else if (idUltimo && fornecedores.some(f => f.id === idUltimo)) setAjusteFornecedorId(idUltimo);
       } catch {
-        if (vivo) { setOrigemEstoque({ ultima_compra: null, fornecedores: [] }); setAjusteFornecedorId(SEM_FORNECEDOR); }
+        if (vivo) { setOrigemEstoque({ ultima_compra: null, ultima_entrada: null, fornecedores: [] }); setAjusteFornecedorId(SEM_FORNECEDOR); }
       }
     })();
     return () => { vivo = false; };
@@ -2333,7 +2342,8 @@ export default function ProdutoModal({
                         <div className="prod-origem-box">
                           {origemEstoque?.ultima_compra && (
                             <div className="prod-origem-ultima">
-                              🧾 <strong>Última compra lançada (já entrou no estoque):</strong>{' '}
+                              🧾 <strong>Última compra lançada (já entrou no estoque):</strong>
+                              <CampoAjuda texto="Esta caixa só mostra compras lançadas em Fornecedores → Lançar Compra (é de lá que vêm a nota e o custo). Uma entrada feita aqui, em Ajustar estoque, não aparece nesta caixa: veja a linha 'Última entrada de estoque' logo abaixo ou a lista 'De onde veio este estoque'." />{' '}
                               Fornecedor <strong>{origemEstoque.ultima_compra.fornecedor_nome || 'não informado'}</strong>
                               {' · '}{fmtQuandoHist(origemEstoque.ultima_compra.quando)}
                               {' · '}{fmtQ(origemEstoque.ultima_compra.quantidade, form.unidade_medida)}
@@ -2342,6 +2352,17 @@ export default function ProdutoModal({
                               )}
                               {origemEstoque.ultima_compra.numero_nota && <>{' · Nota '}{origemEstoque.ultima_compra.numero_nota}</>}
                               {origemEstoque.ultima_compra.lancado_por && <>{' · compra lançada por '}<strong>{origemEstoque.ultima_compra.lancado_por}</strong></>}
+                            </div>
+                          )}
+
+                          {origemEstoque?.ultima_entrada && (
+                            <div className="prod-origem-ultima">
+                              📦 <strong>Última entrada de estoque:</strong>
+                              <CampoAjuda texto="Mostra a entrada mais recente de qualquer origem: compra lançada em Fornecedores, entrada com fornecedor feita aqui, entrada manual ou estoque inicial do cadastro. Serve para você ver que a entrada que acabou de fazer foi gravada." />{' '}
+                              {fmtQuandoHist(origemEstoque.ultima_entrada.quando)}
+                              {' · '}{fmtQ(origemEstoque.ultima_entrada.quantidade, form.unidade_medida)}
+                              {' · '}{descreverUltimaEntrada(origemEstoque.ultima_entrada)}
+                              {origemEstoque.ultima_entrada.quem && <>{' · por '}<strong>{origemEstoque.ultima_entrada.quem}</strong></>}
                             </div>
                           )}
 
