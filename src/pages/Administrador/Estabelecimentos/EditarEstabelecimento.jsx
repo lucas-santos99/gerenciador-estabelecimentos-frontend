@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import PersonificarModal from "../../../components/PersonificarModal";
+import ResetSenhaModal from "../Operadores/ResetSenhaModal";
 import { useAuth } from "../../../contexts/AuthProvider";
 import "./Estabelecimentos.css";
 import "../Operadores/Operadores.css"; // estilos do campo de limite de operadores (op-limite-*)
@@ -47,6 +48,7 @@ export default function EditarEstabelecimento() {
     new URLSearchParams(location.search).get("view") === "details";
 
   const [modalPersonificar, setModalPersonificar] = useState(false);
+  const [modalSenhaDono, setModalSenhaDono] = useState(false);
 
   const [form, setForm] = useState({
     nome_fantasia:     "",
@@ -453,6 +455,15 @@ export default function EditarEstabelecimento() {
                     🔑 Entrar como
                   </button>
                 )}
+                {form.status_assinatura !== "excluida" && (
+                  <button
+                    className="est-btn est-btn-outline"
+                    onClick={() => setModalSenhaDono(true)}
+                    title="Definir uma senha nova para o dono (sem precisar da antiga)"
+                  >
+                    🔑 Senha do dono
+                  </button>
+                )}
                 <button className="est-btn est-btn-danger" onClick={excluir}>
                   🗑 Excluir
                 </button>
@@ -535,6 +546,9 @@ export default function EditarEstabelecimento() {
             nomeExibicao={form.nome_fantasia}
             onClose={() => setModalPersonificar(false)}
           />
+        )}
+        {modalSenhaDono && (
+          <ResetSenhaModal id={id} quem="dono" onClose={() => setModalSenhaDono(false)} />
         )}
       </LayoutAdmin>
     );
@@ -688,6 +702,9 @@ export default function EditarEstabelecimento() {
               <div className="est-form-group">
                 <label className="est-label">E-mail de Contato <Dica texto="É também o e-mail de login do dono. Ao trocar aqui e salvar, o dono passa a entrar no sistema com o e-mail novo (a senha continua a mesma). Não pode ser um e-mail já usado por outro usuário. Também é usado nas cobranças por e-mail." /></label>
                 <input maxLength={150} className="est-input" name="email_contato" type="email" value={form.email_contato} onChange={atualizar} />
+                <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={() => setModalSenhaDono(true)}>
+                  🔑 Definir nova senha do dono
+                </button>
               </div>
               <div className="est-form-group est-form-full">
                 <label className="est-label">Endereço Completo</label>
@@ -865,6 +882,9 @@ export default function EditarEstabelecimento() {
 
         </form>
       </div>
+      {modalSenhaDono && (
+        <ResetSenhaModal id={id} quem="dono" onClose={() => setModalSenhaDono(false)} />
+      )}
     </LayoutAdmin>
   );
 }

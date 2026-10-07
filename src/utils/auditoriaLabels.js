@@ -91,6 +91,7 @@ export const ACAO_LABEL = {
   editar_permissoes_operador:   '🔐 Permissões do operador editadas',
   reset_senha_operador:         '🔑 Senha do operador redefinida',
   resetar_senha_operador:       '🔑 Senha do operador redefinida',
+  resetar_senha_dono:           '🔑 Senha do dono redefinida',
 
   // Fornecedores e compras
   criar_fornecedor:  '➕ Fornecedor criado',

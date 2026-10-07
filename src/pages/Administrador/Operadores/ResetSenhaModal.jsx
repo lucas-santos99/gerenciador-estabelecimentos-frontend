@@ -4,7 +4,12 @@ import "./Operadores.css";
 import { apiFetch } from "../../../utils/api";
 import { erroSenhaFraca } from '../../../utils/senha';
 
-export default function ResetSenhaModal({ id, onClose }) {
+// Serve para operador (padrão) e para o dono do estabelecimento:
+//   <ResetSenhaModal id={id} onClose={…} />                       → operador
+//   <ResetSenhaModal id={lojaId} quem="dono" onClose={…} />       → dono
+export default function ResetSenhaModal({ id, onClose, quem = "operador" }) {
+  const ehDono   = quem === "dono";
+  const endpoint = ehDono ? `/admin/estabelecimentos/${id}/reset-senha-dono` : `/admin/operadores/${id}/reset-senha`;
   const [senha,    setSenha]    = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -20,7 +25,7 @@ export default function ResetSenhaModal({ id, onClose }) {
     }
     setSalvando(true);
     try {
-      const resp = await apiFetch(`/admin/operadores/${id}/reset-senha`, {
+      const resp = await apiFetch(endpoint, {
         method: "POST",
         body:   JSON.stringify({ senha }),
       });
@@ -38,7 +43,9 @@ export default function ResetSenhaModal({ id, onClose }) {
         <span className="op-modal-icon">🔑</span>
         <div className="op-modal-title">Resetar Senha</div>
         <div className="op-modal-subtitle">
-          Defina uma nova senha para este operador. Ela passa a valer na hora e ele não é avisado: repasse a senha nova a ele.
+          {ehDono
+            ? "Defina uma nova senha para o dono deste estabelecimento. Você não precisa da senha antiga. Ela passa a valer na hora e ele não é avisado: repasse a senha nova a ele."
+            : "Defina uma nova senha para este operador. Ela passa a valer na hora e ele não é avisado: repasse a senha nova a ele."}
         </div>
 
         {erro && (
