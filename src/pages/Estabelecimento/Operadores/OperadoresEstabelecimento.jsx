@@ -245,9 +245,9 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
         </div>
         <div className="opest-header-right">
           <div className="opest-limite-badge">
-            <span className="opest-limite-num">{limite.total}</span>
+            <span className="opest-limite-num">{loading ? '–' : limite.total}</span>
             <span className="opest-limite-sep">/</span>
-            <span className="opest-limite-max">{limite.limite}</span>
+            <span className="opest-limite-max">{loading ? '–' : limite.limite}</span>
             <span className="opest-limite-label">operadores</span>
             <Dica texto="Quantos operadores você já cadastrou e o máximo liberado para a sua loja. Os inativos contam; os excluídos não. Para aumentar o limite, fale com o administrador." />
           </div>
