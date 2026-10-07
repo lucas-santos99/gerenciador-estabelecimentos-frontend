@@ -368,7 +368,8 @@ export default function NovoEstabelecimento() {
                     ⚠️ {cpfCnpjErro}
                   </span>
                 )}
-                <ValidarDocumento valor={form.cnpj} tipo={tipoCpfCnpj} />
+                <ValidarDocumento valor={form.cnpj} tipo={tipoCpfCnpj} nomeAtual={form.nome_fantasia}
+                  onEncontrar={e => setForm(prev => ({ ...prev, nome_fantasia: e.nome }))} />
               </div>
 
             </div>

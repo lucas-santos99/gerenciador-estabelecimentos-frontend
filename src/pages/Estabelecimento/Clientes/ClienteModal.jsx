@@ -5,6 +5,7 @@ import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
+import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
 
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -195,6 +196,8 @@ export default function ClienteModal({
                 onChange={e => setCpf(formatarCpfCnpj(e.target.value))}
                 disabled={salvando}
               />
+              <ValidarDocumento valor={cpf} tipo="auto" nomeAtual={nome} classeBotao="cli-btn"
+                onEncontrar={e => setNome(e.nome)} />
               <span className="cli-form-small">
                 Ajuda a localizar o cliente rápido no PDV, mesmo quem não usa fiado.
               </span>

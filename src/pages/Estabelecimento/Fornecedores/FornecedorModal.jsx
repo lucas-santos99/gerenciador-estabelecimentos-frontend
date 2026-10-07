@@ -5,6 +5,7 @@ import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
 import './Fornecedores.css';
+import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
 
 const CONDICOES_PAGAMENTO = [
   { value: 'a_vista', label: 'À vista' },
@@ -181,6 +182,8 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
             <div className="cli-form-group">
               <label className="cli-form-label">CNPJ/CPF (opcional)</label>
               <input maxLength={18} className="cli-form-input" name="cnpj_cpf" value={form.cnpj_cpf} onChange={atualizar} />
+              <ValidarDocumento valor={form.cnpj_cpf} tipo="auto" nomeAtual={form.nome} classeBotao="cli-btn"
+                onEncontrar={e => setForm(prev => ({ ...prev, nome: e.nome || prev.nome, razao_social: e.razao_social || prev.razao_social }))} />
             </div>
 
             <div className="cli-form-group">
