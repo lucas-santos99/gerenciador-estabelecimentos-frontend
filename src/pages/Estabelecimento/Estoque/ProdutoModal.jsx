@@ -2334,13 +2334,14 @@ export default function ProdutoModal({
                           {origemEstoque?.ultima_compra && (
                             <div className="prod-origem-ultima">
                               🧾 <strong>Última compra lançada (já entrou no estoque):</strong>{' '}
-                              {origemEstoque.ultima_compra.fornecedor_nome || 'fornecedor não informado'}
+                              Fornecedor <strong>{origemEstoque.ultima_compra.fornecedor_nome || 'não informado'}</strong>
                               {' · '}{fmtQuandoHist(origemEstoque.ultima_compra.quando)}
                               {' · '}{fmtQ(origemEstoque.ultima_compra.quantidade, form.unidade_medida)}
                               {origemEstoque.ultima_compra.preco_custo != null && (
                                 <>{' · custo R$ '}{origemEstoque.ultima_compra.preco_custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
                               )}
                               {origemEstoque.ultima_compra.numero_nota && <>{' · Nota '}{origemEstoque.ultima_compra.numero_nota}</>}
+                              {origemEstoque.ultima_compra.lancado_por && <>{' · compra lançada por '}<strong>{origemEstoque.ultima_compra.lancado_por}</strong></>}
                             </div>
                           )}
 
@@ -2357,7 +2358,7 @@ export default function ProdutoModal({
                                 onChange={e => setAjusteFornecedorId(e.target.value)}
                               >
                                 <option value="">Selecione o fornecedor…</option>
-                                {fornecedoresOrigem.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                                {fornecedoresOrigem.map(f => <option key={f.id} value={f.id}>Fornecedor: {f.nome}</option>)}
                                 <option value={SEM_FORNECEDOR}>Sem fornecedor / outra origem (explicar)</option>
                               </select>
                             </div>
@@ -2515,7 +2516,7 @@ export default function ProdutoModal({
               </div>
             </div>
 
-            {isEdit && produtoEditar?.id && <Rastro entidade="produto" id={produtoEditar.id} />}
+            {isEdit && produtoEditar?.id && <Rastro entidade="produto" id={produtoEditar.id} rotulos={{ criado: 'Produto cadastrado', alterado: 'Produto alterado pela última vez', dica: 'Vale para o produto inteiro (nome, preços, foto, categoria…), não só para o campo que está perto. As entradas e saídas de estoque aparecem em "De onde veio este estoque".' }} />}
 
             {/* Ações */}
             <div className="prod-modal-acoes">

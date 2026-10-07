@@ -33,7 +33,7 @@ function frase(verbo, por, em) {
   );
 }
 
-export default function Rastro({ entidade, id, versao = 0, className = '' }) {
+export default function Rastro({ entidade, id, versao = 0, className = '', rotulos = {} }) {
   const [dados, setDados] = useState(null);
 
   useEffect(() => {
@@ -53,13 +53,13 @@ export default function Rastro({ entidade, id, versao = 0, className = '' }) {
 
   if (!dados || !dados.disponivel) return null;
 
-  const criado   = frase('Cadastrado', dados.criado_por, dados.criado_em);
+  const criado   = frase(rotulos.criado || 'Cadastrado', dados.criado_por, dados.criado_em);
   // "Alterado" só aparece se houve alteração depois do cadastro
-  const alterado = dados.atualizado_em ? frase('Última alteração', dados.atualizado_por, dados.atualizado_em) : null;
+  const alterado = dados.atualizado_em ? frase(rotulos.alterado || 'Última alteração', dados.atualizado_por, dados.atualizado_em) : null;
   if (!criado && !alterado) return null;
 
   return (
-    <div className={`rastro-linha ${className}`.trim()} title="Registro de quem cadastrou e de quem fez a última alteração">
+    <div className={`rastro-linha ${className}`.trim()} title={rotulos.dica || 'Registro de quem cadastrou e de quem fez a última alteração'}>
       <span className="rastro-icone" aria-hidden="true">🕘</span>
       {criado}
       {criado && alterado && <span className="rastro-sep" aria-hidden="true">·</span>}
