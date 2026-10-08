@@ -905,6 +905,8 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago, podePag
             <div className="forn-detalhes-sub">
               <span>🚚 {compra.fornecedor_nome}</span>
               {compra.numero_nota && <span>📄 Nota {compra.numero_nota}</span>}
+              {compra.usuario_nome && <span>👤 Lançada por {compra.usuario_nome}</span>}
+              {compra.recebido_por && <span>📥 Recebida por {compra.recebido_por}</span>}
               <span>{compra.forma_pagamento === 'a_vista' ? '💵 À vista' : '📆 A prazo'}</span>
               {compra.forma_pagamento === 'a_prazo' && compra.data_vencimento_prazo && (
                 <span>🗓 Vence {fmtData(compra.data_vencimento_prazo)}</span>

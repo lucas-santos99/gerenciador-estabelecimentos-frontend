@@ -47,6 +47,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
   const [formaPgto,    setFormaPgto]    = useState('a_vista');
   const [dataVenc,     setDataVenc]     = useState('');
   const [observacoes,  setObservacoes]  = useState('');
+  const [recebidoPor,  setRecebidoPor]  = useState('');
 
   // Busca de produto pra adicionar na lista
   const [buscaProduto, setBuscaProduto] = useState('');
@@ -171,6 +172,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
           forma_pagamento: formaPgto,
           data_vencimento: formaPgto === 'a_prazo' ? dataVenc : null,
           observacoes: observacoes.trim() || null,
+          recebido_por: recebidoPor.trim() || null,
           itens: carrinho.map(i => ({
             produto_id: i.produto_id,
             quantidade: paraFloatBR(i.quantidade),
@@ -343,6 +345,11 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
             <strong>{fmt(valorTotal)}</strong>
           </div>
         )}
+
+        <div className="cli-form-group" style={{ marginTop: 10 }}>
+          <label className="cli-form-label">Quem recebeu a mercadoria (opcional) <Dica texto="Nome de quem conferiu e recebeu a entrega. É diferente de quem lança a compra no sistema, que fica registrado sozinho. Pode deixar em branco." /></label>
+          <input maxLength={100} className="cli-form-input" placeholder="Ex.: nome de quem conferiu a entrega" value={recebidoPor} onChange={e => setRecebidoPor(e.target.value)} />
+        </div>
 
         <div className="cli-form-group" style={{ marginTop: 10 }}>
           <label className="cli-form-label">Observações (opcional)</label>
