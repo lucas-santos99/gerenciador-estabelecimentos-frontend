@@ -2936,3 +2936,10 @@
 .prod-grade-rodape > span { flex: 1 1 220px; }
 .prod-grade-valores { display: flex; gap: 10px; flex-wrap: wrap; }
 .prod-grade-valores label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; flex: 1 1 110px; min-width: 0; }
+
+/* ── Variação recolhível ── */
+.prod-variacao-topo-clicavel { cursor: pointer; user-select: none; }
+.prod-variacao-seta { font-size: .8rem; opacity: .7; width: 12px; flex: none; }
+.prod-variacao-mini { font-size: .75rem; opacity: .7; white-space: nowrap; margin-left: auto; }
+.prod-variacao-recolher-barra { display: flex; gap: 14px; justify-content: flex-end; font-size: .8rem; margin-bottom: 6px; }
+.prod-variacao-recolher-barra .etq-link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; opacity: .8; }

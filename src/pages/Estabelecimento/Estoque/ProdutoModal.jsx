@@ -316,6 +316,10 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
   const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
   const [gradeMsg, setGradeMsg] = useState('');
+  const [recolhidas, setRecolhidas] = useState(() => new Set());
+  function alternarRecolhida(chave) {
+    setRecolhidas(prev => { const n = new Set(prev); if (n.has(chave)) n.delete(chave); else n.add(chave); return n; });
+  }
   const [gradeDados, setGradeDados] = useState({ estoque: '', custo: '', venda: '' });
   const [gerandoIdx, setGerandoIdx] = useState(null);
   const [enviandoImagemIdx, setEnviandoImagemIdx] = useState(null);
@@ -515,18 +519,28 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
         <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
       )}
 
+      {variacoes.length > 1 && (
+        <div className="prod-variacao-recolher-barra">
+          <button type="button" className="etq-link" onClick={() => setRecolhidas(new Set(variacoes.map((v, i) => v.id || v._key || i)))}>Recolher todas</button>
+          <button type="button" className="etq-link" onClick={() => setRecolhidas(new Set())}>Expandir todas</button>
+        </div>
+      )}
+
       {/* 23/09/2026 — cada variação num cartão próprio, numerado, com o
           nome de cada campo em cima (antes só a 1ª linha tinha cabeçalho). */}
       {variacoes.map((v, idx) => {
         const chave = v.id || v._key || idx;
         const resumo = resumoVariacao(v);
+        const recolhida = recolhidas.has(chave);
         return (
         <div className="prod-variacao-grupo prod-variacao-card" key={chave}>
-          <div className="prod-variacao-card-topo">
+          <div className="prod-variacao-card-topo prod-variacao-topo-clicavel" onClick={() => alternarRecolhida(chave)} title={recolhida ? 'Clique para expandir' : 'Clique para recolher'}>
+            <span className="prod-variacao-seta" aria-hidden="true">{recolhida ? '▸' : '▾'}</span>
             <span className="prod-variacao-numero">Variação {idx + 1}</span>
             <span className={`prod-variacao-resumo${resumo ? '' : ' vazio'}`}>{resumo || 'preencha tamanho, cor ou gênero'}</span>
+            {recolhida && <span className="prod-variacao-mini">estoque {v.estoque_atual || 0}</span>}
             {!somenteLeitura && (
-              <div className="prod-variacao-card-acoes">
+              <div className="prod-variacao-card-acoes" onClick={e => e.stopPropagation()}>
                 <button type="button" className="prod-variacao-duplicar" onClick={() => adicionar(v)}
                   title="Criar uma nova variação com a mesma cor, gênero e preços desta (tamanho, estoque e código ficam em branco)">
                   ⧉ Espelhar
@@ -537,6 +551,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               </div>
             )}
           </div>
+          {!recolhida && (<>
           <div className="prod-variacao-linha prod-variacao-linha--rotulada">
             <label className="prod-variacao-campo">
               <span className="prod-variacao-preco-label">Tamanho</span>
@@ -685,6 +700,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
               </button>
             )}
           </div>
+          </>)}
         </div>
         );
       })}
