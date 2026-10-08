@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import JsBarcode from 'jsbarcode';
 import Dica from '../../../components/Notificacoes/Dica';
 import { esc } from '../../../utils/relatorioIdentidade';
@@ -126,15 +127,15 @@ export default function EtiquetasModal({ produto, onFechar }) {
   }
 
   useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onFechar(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
+    const h = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onFechar(); } };
+    window.addEventListener('keydown', h, true);
+    return () => window.removeEventListener('keydown', h, true);
   }, [onFechar]);
 
   const semCodigo = itens.filter(i => !i.codigo).length;
 
-  return (
-    <div className="prod-modal-overlay" onClick={onFechar}>
+  return createPortal(
+    <div className="prod-modal-overlay" style={{ zIndex: 3500 }} onClick={e => { e.stopPropagation(); onFechar(); }}>
       <div className="prod-modal etq-modal" onClick={e => e.stopPropagation()}>
         <h2 className="etq-titulo">🏷️ Imprimir etiquetas</h2>
         <p className="etq-sub">{produto.nome}</p>
@@ -193,6 +194,7 @@ export default function EtiquetasModal({ produto, onFechar }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

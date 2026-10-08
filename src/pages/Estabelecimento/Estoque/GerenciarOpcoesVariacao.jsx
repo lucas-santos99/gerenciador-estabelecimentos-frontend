@@ -9,6 +9,10 @@ import '../Estoque.css';
 // Aparecem como um atalho de "adicionar tudo de uma vez" quando a lista
 // de gênero ainda tá vazia; o comerciante pode remover as que não usa.
 const SUGESTOES_GENERO = ['Masculino', 'Feminino', 'Unissex', 'Infantil'];
+const SUGESTOES_TAMANHO = {
+  roupas:   { rotulo: 'Roupas (PP, P, M, G, GG, XG)', valores: ['PP', 'P', 'M', 'G', 'GG', 'XG'] },
+  calcados: { rotulo: 'Calçados (34 ao 44)', valores: ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'] },
+};
 
 const LABEL_ABA = { tamanho: 'Tamanhos', cor: 'Cores', genero: 'Gêneros' };
 const LABEL_ABA_SINGULAR = { tamanho: 'tamanho', cor: 'cor', genero: 'gênero' };
@@ -73,15 +77,16 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
 
   // Adiciona de uma vez as sugestões prontas de gênero (Masculino, Feminino,
   // Unissex, Infantil) — atalho pra não ter que digitar uma por uma.
-  async function adicionarSugestoesGenero() {
+  async function adicionarSugestoesGenero() { return adicionarSugestoes('genero', SUGESTOES_GENERO); }
+  async function adicionarSugestoes(tipo, valores) {
     setAdicionandoSugestoes(true);
     try {
-      for (const valor of SUGESTOES_GENERO) {
-        if ((opcoes.genero || []).some(o => o.valor.toLowerCase() === valor.toLowerCase())) continue;
+      for (const valor of valores) {
+        if ((opcoes[tipo] || []).some(o => o.valor.toLowerCase() === valor.toLowerCase())) continue;
         await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ tipo: 'genero', valor }),
+          body:    JSON.stringify({ tipo, valor }),
         });
       }
       await carregar();
@@ -131,6 +136,17 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
             {salvando ? '…' : '+'}
           </button>
         </form>
+
+        {aba === 'tamanho' && !loading && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            {Object.entries(SUGESTOES_TAMANHO).map(([k, g]) => (
+              <button key={k} type="button" className="prod-btn-gerenciar-opcoes" style={{ width: 'auto', flex: '1 1 auto' }}
+                onClick={() => adicionarSugestoes('tamanho', g.valores)} disabled={adicionandoSugestoes}>
+                {adicionandoSugestoes ? '…' : `+ ${g.rotulo}`}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 24, color: 'var(--est-text-muted)', fontSize: '0.85rem' }}>
