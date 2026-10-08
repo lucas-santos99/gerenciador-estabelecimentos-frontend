@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx-js-style';
 import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relatorioIdentidade';
 import ProdutoModal from './ProdutoModal';
+import EtiquetasModal from './EtiquetasModal';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
@@ -60,6 +61,7 @@ function estoqueStatus(produto) {
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoList({ estabelecimentoId, permissoes = null, isMerchant = true }) {
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
+  const [produtoEtiquetas, setProdutoEtiquetas] = useState(null); // produto cujas etiquetas estão sendo impressas
   const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
   const SEM_PERM = 'Sem permissão — contate o administrador';
 
@@ -230,7 +232,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
      de adicionar. F7 (e não F2) porque F2–F6 já são os atalhos globais
      do menu do painel (F2 = PDV, F3 = Estoque…). */
   useEffect(() => {
-    if (!podeAdicionar || modalAberto || imagemExpandida) return;
+    if (!podeAdicionar || modalAberto || imagemExpandida || produtoEtiquetas) return;
     function handleAtalhoNovo(e) {
       if (e.key !== 'F7' || e.repeat) return;
       e.preventDefault();
@@ -1092,6 +1094,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
                 somenteLeitura={somenteLeitura}
                 visualizacao={visualizacao}
                 onExpandirImagem={setImagemExpandida}
+                onEtiquetas={() => setProdutoEtiquetas(produto)}
               />
             ))
           )}
@@ -1099,6 +1102,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 
       </div>
 
+      {produtoEtiquetas && <EtiquetasModal produto={produtoEtiquetas} onFechar={() => setProdutoEtiquetas(null)} />}
       {imagemExpandida && (
         <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
           <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
@@ -1110,7 +1114,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 }
 
 /* ── Card de produto ─────────────────────────────────────────*/
-function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false, visualizacao = 'lista', onExpandirImagem }) {
+function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, podeExcluir = true, somenteLeitura = false, visualizacao = 'lista', onExpandirImagem, onEtiquetas }) {
   const status = estoqueStatus(produto);
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
   const modoGrade = visualizacao === 'grade';
@@ -1191,6 +1195,9 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
           <button className="prod-btn-acao editar" onClick={onEditar}>
             {somenteLeitura && !podeEditar ? '👁️ Ver' : '✏️ Editar'}
           </button>
+        )}
+        {(produto.codigo_barras || (produto.variacoes || []).some(v => v.codigo_barras)) && (
+          <button className="prod-btn-acao editar" onClick={onEtiquetas} title="Imprimir etiquetas com código de barras">🏷️ Etiquetas</button>
         )}
         {podeExcluir && (
           <button className="prod-btn-acao excluir" onClick={onDeletar}>🗑 Excluir</button>
