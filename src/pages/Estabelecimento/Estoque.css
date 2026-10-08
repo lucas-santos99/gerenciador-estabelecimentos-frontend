@@ -2934,3 +2934,5 @@
 .prod-grade-novo .prod-input { flex: 1; min-width: 0; }
 .prod-grade-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .82rem; }
 .prod-grade-rodape > span { flex: 1 1 220px; }
+.prod-grade-valores { display: flex; gap: 10px; flex-wrap: wrap; }
+.prod-grade-valores label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; flex: 1 1 110px; min-width: 0; }

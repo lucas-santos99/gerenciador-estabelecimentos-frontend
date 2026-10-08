@@ -316,6 +316,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
   const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
   const [gradeMsg, setGradeMsg] = useState('');
+  const [gradeDados, setGradeDados] = useState({ estoque: '', custo: '', venda: '' });
   const [gerandoIdx, setGerandoIdx] = useState(null);
   const [enviandoImagemIdx, setEnviandoImagemIdx] = useState(null);
   const [erroImagem, setErroImagem] = useState('');
@@ -397,12 +398,13 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
     setVariacoes(prev => [...prev, ...lista.map(({ t, c, g }) => ({
       _key: Math.random().toString(36).slice(2),
       tamanho: t, cor: c, genero: g,
-      codigo_barras: '', estoque_atual: '',
-      preco_custo: modelo ? (modelo.preco_custo || '') : '',
-      preco_venda: modelo ? (modelo.preco_venda || '') : '',
+      codigo_barras: '', estoque_atual: gradeDados.estoque,
+      preco_custo: gradeDados.custo || (modelo ? (modelo.preco_custo || '') : ''),
+      preco_venda: gradeDados.venda || (modelo ? (modelo.preco_venda || '') : ''),
       imagem_url: '', imagem_origem: '',
     }))]);
     setGradeSel({ tamanho: [], cor: [], genero: [] });
+    setGradeDados({ estoque: '', custo: '', venda: '' });
     setGradeAberta(false);
   }
 
@@ -738,11 +740,28 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 {bloco('tamanho', '📏 Tamanhos', opcoesTamanho)}
                 {bloco('cor', '🎨 Cores', opcoesCor)}
                 {opcoesGenero.length > 0 && bloco('genero', '🚻 Gênero (opcional)', opcoesGenero)}
+                <div className="prod-grade-bloco">
+                  <div className="prod-grade-titulo">Valores iguais para todas as novas (opcional) <CampoAjuda texto="Se preencher, todas as variações criadas já nascem com esse estoque e esses preços. Em branco = estoque zerado e preços iguais ao da última variação (ou ao preço padrão do produto). Depois você pode ajustar qualquer linha individualmente." /></div>
+                  <div className="prod-grade-valores">
+                    <label>Estoque de cada{unidadeMedida === 'kg' ? ' (kg)' : ''}
+                      <input className="prod-input" inputMode="numeric" placeholder="0" value={gradeDados.estoque}
+                        onChange={e => setGradeDados(d => ({ ...d, estoque: digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0) }))} />
+                    </label>
+                    <label>Preço de custo
+                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.custo}
+                        onChange={e => setGradeDados(d => ({ ...d, custo: digitarValorMascarado(e.target.value, 2) }))} />
+                    </label>
+                    <label>Preço de venda
+                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.venda}
+                        onChange={e => setGradeDados(d => ({ ...d, venda: digitarValorMascarado(e.target.value, 2) }))} />
+                    </label>
+                  </div>
+                </div>
                 <div className="prod-grade-rodape">
                   <span>
                     {lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha tamanhos e cores acima'}
                     {jaExistem > 0 && ` (${jaExistem} já existe${jaExistem > 1 ? 'm' : ''} e não será repetida)`}.
-                    {' '}Depois é só preencher o estoque de cada uma.
+                    {' '}Depois é só ajustar o que for diferente em cada uma.
                   </span>
                   <button type="button" className="prod-btn-add-variacao" onClick={gerarGrade} disabled={!lista.length}>✓ Criar variações</button>
                 </div>
