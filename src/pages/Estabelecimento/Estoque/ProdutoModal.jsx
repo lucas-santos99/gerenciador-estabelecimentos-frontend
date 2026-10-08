@@ -3,7 +3,7 @@ import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
-import { perguntar } from '../../../components/Dialogo/dialogo';
+import { perguntar, confirmar } from '../../../components/Dialogo/dialogo';
 import Rastro from '../../../components/Rastro/Rastro';
 import EtiquetasModal from './EtiquetasModal';
 import '../Estoque.css';
@@ -422,8 +422,18 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   function atualizarCampo(idx, campo, valor) {
     setVariacoes(prev => prev.map((v, i) => i === idx ? { ...v, [campo]: valor } : v));
   }
-  function remover(idx) {
-    setVariacoes(prev => prev.filter((_, i) => i !== idx));
+  async function remover(idx) {
+    const v = variacoes[idx];
+    const nome = resumoVariacao(v) || `Variação ${idx + 1}`;
+    const ok = await confirmar({
+      titulo: 'Remover variação?',
+      texto: v?.id
+        ? `"${nome}" será removida do produto quando você salvar. Essa ação não pode ser desfeita.`
+        : `"${nome}" será removida da lista.`,
+      perigo: true, botao: 'Remover',
+    });
+    if (!ok) return;
+    setVariacoes(prev => prev.filter(x => x !== v));
   }
 
   async function gerarCodigo(idx) {
