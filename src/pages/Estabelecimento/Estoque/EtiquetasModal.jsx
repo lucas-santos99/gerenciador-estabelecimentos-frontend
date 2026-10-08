@@ -10,7 +10,9 @@ const TAMANHOS = {
   '40x25': { rotulo: '40 × 25 mm (térmica)', w: 40, h: 25, folha: false },
   '60x40': { rotulo: '60 × 40 mm (térmica)', w: 60, h: 40, folha: false },
   'a4':    { rotulo: 'Folha A4 (impressora comum)', w: 63.5, h: 38.1, folha: true },
+  'custom': { rotulo: 'Outro tamanho (digitar)', w: 50, h: 30, folha: false },
 };
+const lim = (v, mn, mx, padrao) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? Math.min(mx, Math.max(mn, n)) : padrao; };
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const MAX_COPIAS = 500;
@@ -27,8 +29,8 @@ function svgBarcode(codigo) {
   return new XMLSerializer().serializeToString(svg);
 }
 
-function htmlEtiquetas(linhas, tam, mostrarPreco) {
-  const t = TAMANHOS[tam];
+function htmlEtiquetas(linhas, tam, mostrarPreco, medida) {
+  const t = tam === 'custom' ? { ...TAMANHOS.custom, w: lim(medida.w, 20, 150, 50), h: lim(medida.h, 15, 150, 30) } : TAMANHOS[tam];
   const etiquetas = [];
   linhas.forEach(l => {
     const bc = svgBarcode(l.codigo);
@@ -99,6 +101,7 @@ export default function EtiquetasModal({ produto, onFechar }) {
   const [copias, setCopias] = useState(() => Object.fromEntries(itens.map(i => [i.chave, i.codigo ? 1 : 0])));
   const [tam, setTam] = useState(() => localStorage.getItem('etiqueta-tamanho') || '50x30');
   const [mostrarPreco, setMostrarPreco] = useState(() => localStorage.getItem('etiqueta-preco') !== 'nao');
+  const [medida, setMedida] = useState(() => { try { return JSON.parse(localStorage.getItem('etiqueta-medida')) || { w: '50', h: '30' }; } catch { return { w: '50', h: '30' }; } });
   const [erro, setErro] = useState('');
 
   const total = itens.reduce((s, i) => s + (i.codigo ? (copias[i.chave] || 0) : 0), 0);
@@ -117,8 +120,8 @@ export default function EtiquetasModal({ produto, onFechar }) {
       .map(i => ({ ...i, copias: copias[i.chave] }));
     if (!linhas.length) { setErro('Coloque a quantidade de pelo menos uma etiqueta.'); return; }
     if (total > 1000) { setErro('Máximo de 1000 etiquetas por impressão.'); return; }
-    try { localStorage.setItem('etiqueta-tamanho', tam); localStorage.setItem('etiqueta-preco', mostrarPreco ? 'sim' : 'nao'); } catch { /* ignora */ }
-    try { imprimirHtml(htmlEtiquetas(linhas, tam, mostrarPreco)); }
+    try { localStorage.setItem('etiqueta-tamanho', tam); localStorage.setItem('etiqueta-preco', mostrarPreco ? 'sim' : 'nao'); localStorage.setItem('etiqueta-medida', JSON.stringify(medida)); } catch { /* ignora */ }
+    try { imprimirHtml(htmlEtiquetas(linhas, tam, mostrarPreco, medida)); }
     catch { setErro('Não foi possível gerar as etiquetas. Confira se os códigos de barras estão corretos.'); }
   }
 
@@ -143,6 +146,13 @@ export default function EtiquetasModal({ produto, onFechar }) {
               {Object.entries(TAMANHOS).map(([k, t]) => <option key={k} value={k}>{t.rotulo}</option>)}
             </select>
           </label>
+          {tam === 'custom' && (
+            <div className="etq-medida">
+              <label>Largura (mm) <input className="prod-input" inputMode="decimal" value={medida.w} onChange={e => setMedida(m => ({ ...m, w: e.target.value }))} /></label>
+              <label>Altura (mm) <input className="prod-input" inputMode="decimal" value={medida.h} onChange={e => setMedida(m => ({ ...m, h: e.target.value }))} /></label>
+              <small>Meça a etiqueta do seu rolo (de 20 a 150 mm).</small>
+            </div>
+          )}
           <label className="etq-check">
             <input type="checkbox" checked={mostrarPreco} onChange={e => setMostrarPreco(e.target.checked)} />
             Mostrar preço na etiqueta

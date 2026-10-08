@@ -5,6 +5,7 @@ import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
 import { perguntar } from '../../../components/Dialogo/dialogo';
 import Rastro from '../../../components/Rastro/Rastro';
+import EtiquetasModal from './EtiquetasModal';
 import '../Estoque.css';
 
 /* ── Comparação "inteligente" de marcas ──────────────────────
@@ -309,7 +310,8 @@ function CampoAjuda({ texto }) {
 
 // Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit }) {
+function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto }) {
+  const [etiquetaProd, setEtiquetaProd] = useState(null);
   const [gerandoIdx, setGerandoIdx] = useState(null);
   const [enviandoImagemIdx, setEnviandoImagemIdx] = useState(null);
   const [erroImagem, setErroImagem] = useState('');
@@ -610,6 +612,21 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 {gerandoIdx === idx ? '…' : '🏷️ Gerar'}
               </button>
             )}
+            {(v.codigo_barras || '').trim() && (
+              <button
+                type="button"
+                className="prod-variacao-codigo-gerar"
+                onClick={() => setEtiquetaProd({
+                  nome: nomeProduto || 'Produto', unidade_medida: unidadeMedida,
+                  preco_venda: paraFloatBR(precoBase) || 0, tem_variacoes: true,
+                  variacoes: [{ id: v.id, tamanho: v.tamanho, cor: v.cor, genero: v.genero, codigo_barras: v.codigo_barras,
+                    preco_venda: (v.preco_venda || '').toString().trim() ? paraFloatBR(v.preco_venda) : null }],
+                })}
+                title="Imprimir etiqueta dessa variação"
+              >
+                🖨️ Etiqueta
+              </button>
+            )}
           </div>
         </div>
         );
@@ -660,6 +677,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           )}
         </div>
       )}
+      {etiquetaProd && <EtiquetasModal produto={etiquetaProd} onFechar={() => setEtiquetaProd(null)} />}
     </div>
   );
 }
@@ -847,6 +865,7 @@ export default function ProdutoModal({
   const [autoPreenchido,    setAutoPreenchido]    = useState(null); // 'catalogo' | 'openfoodfacts' | null
   const [nomeTraduzido,     setNomeTraduzido]     = useState(false); // nome veio em outro idioma e foi traduzido automático
   const [ultimoAutoPreenchido, setUltimoAutoPreenchido] = useState(null); // { codigo, nome, marca, imagem_url } — snapshot do que a última busca preencheu
+  const [etiquetaPrincipal, setEtiquetaPrincipal] = useState(false);
   const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
   const [imagemErro,        setImagemErro]        = useState(false);
   const [imagemExpandidaAberta, setImagemExpandidaAberta] = useState(false);
@@ -1887,6 +1906,16 @@ export default function ProdutoModal({
                         {gerandoCodigo ? '…' : '🏷️ Gerar código'}
                       </button>
                     )}
+                    {form.codigo_barras && !form.codigo_barras.includes('*') && (
+                      <button
+                        type="button"
+                        className="prod-btn-gerar-codigo"
+                        onClick={() => setEtiquetaPrincipal(true)}
+                        title="Imprimir etiqueta com esse código de barras"
+                      >
+                        🖨️ Etiqueta
+                      </button>
+                    )}
                   </div>
                   {granelSemEtiqueta && !form.codigo_barras && (
                     <span className="prod-label-hint">
@@ -2252,6 +2281,7 @@ export default function ProdutoModal({
                     estabelecimentoId={estabelecimentoId}
                     produtoId={produtoEditar?.id}
                     isEdit={isEdit}
+                    nomeProduto={form.nome}
                   />
                 ) : (
                 <>
@@ -2500,6 +2530,11 @@ export default function ProdutoModal({
             </div>
 
             {isEdit && produtoEditar?.id && <Rastro entidade="produto" id={produtoEditar.id} rotulos={{ criado: 'Produto cadastrado', alterado: 'Produto alterado pela última vez', dica: 'Vale para o produto inteiro (nome, preços, foto, categoria…), não só para o campo que está perto. As entradas e saídas de estoque aparecem em "De onde veio este estoque".' }} />}
+
+            {etiquetaPrincipal && <EtiquetasModal onFechar={() => setEtiquetaPrincipal(false)} produto={{
+              nome: form.nome || 'Produto', marca: form.marca, unidade_medida: form.unidade_medida,
+              preco_venda: paraFloatBR(form.preco_venda) || 0, tem_variacoes: false, codigo_barras: form.codigo_barras,
+            }} />}
 
             {/* Ações */}
             <div className="prod-modal-acoes">
