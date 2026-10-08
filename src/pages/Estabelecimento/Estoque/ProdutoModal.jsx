@@ -312,6 +312,10 @@ function CampoAjuda({ texto }) {
 // preço opcional (em branco = usa o preço de venda padrão do produto).
 function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto }) {
   const [etiquetaProd, setEtiquetaProd] = useState(null);
+  const [gradeAberta, setGradeAberta] = useState(false);
+  const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
+  const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
+  const [gradeMsg, setGradeMsg] = useState('');
   const [gerandoIdx, setGerandoIdx] = useState(null);
   const [enviandoImagemIdx, setEnviandoImagemIdx] = useState(null);
   const [erroImagem, setErroImagem] = useState('');
@@ -351,6 +355,57 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       imagem_origem: '',
     }]);
   }
+  /* ── Montar grade: escolhe vários tamanhos × cores (× gêneros) e o
+     sistema cria uma linha pra cada combinação que ainda não existe.
+     Cada linha continua tendo estoque, código e preço próprios. ── */
+  const MAX_VARIACOES = 200;
+  function alternarGrade(tipo, valor) {
+    setGradeMsg('');
+    setGradeSel(prev => ({ ...prev, [tipo]: prev[tipo].includes(valor) ? prev[tipo].filter(x => x !== valor) : [...prev[tipo], valor] }));
+  }
+  function adicionarValorGrade(tipo) {
+    const novos = gradeNovo[tipo].split(/[,;]/).map(x => x.trim()).filter(Boolean).slice(0, 30);
+    if (!novos.length) return;
+    setGradeSel(prev => {
+      const atual = prev[tipo];
+      const extra = novos.filter(n => !atual.some(a => a.toLowerCase() === n.toLowerCase()));
+      return { ...prev, [tipo]: [...atual, ...extra] };
+    });
+    setGradeNovo(prev => ({ ...prev, [tipo]: '' }));
+    setGradeMsg('');
+  }
+  function combinacoesGrade() {
+    const T = gradeSel.tamanho.length ? gradeSel.tamanho : [''];
+    const C = gradeSel.cor.length ? gradeSel.cor : [''];
+    const G = gradeSel.genero.length ? gradeSel.genero : [''];
+    const chave = (t, c, g) => [t, c, g].map(x => (x || '').trim().toLowerCase()).join('|');
+    const existentes = new Set(variacoes.map(v => chave(v.tamanho, v.cor, v.genero)));
+    const lista = [];
+    let jaExistem = 0;
+    for (const t of T) for (const c of C) for (const g of G) {
+      if (!t && !c && !g) continue;
+      if (existentes.has(chave(t, c, g))) { jaExistem++; continue; }
+      lista.push({ t, c, g });
+    }
+    return { lista, jaExistem };
+  }
+  function gerarGrade() {
+    const { lista, jaExistem } = combinacoesGrade();
+    if (!lista.length) { setGradeMsg(jaExistem ? 'Todas essas combinações já existem.' : 'Escolha pelo menos um tamanho ou uma cor.'); return; }
+    if (variacoes.length + lista.length > MAX_VARIACOES) { setGradeMsg(`O limite é de ${MAX_VARIACOES} variações por produto. Escolha menos opções.`); return; }
+    const modelo = variacoes[variacoes.length - 1] || null;
+    setVariacoes(prev => [...prev, ...lista.map(({ t, c, g }) => ({
+      _key: Math.random().toString(36).slice(2),
+      tamanho: t, cor: c, genero: g,
+      codigo_barras: '', estoque_atual: '',
+      preco_custo: modelo ? (modelo.preco_custo || '') : '',
+      preco_venda: modelo ? (modelo.preco_venda || '') : '',
+      imagem_url: '', imagem_origem: '',
+    }))]);
+    setGradeSel({ tamanho: [], cor: [], genero: [] });
+    setGradeAberta(false);
+  }
+
   function adicionarEspelhando() {
     const idx = modeloIdx === 'ultima' ? variacoes.length - 1 : Number(modeloIdx);
     adicionar(variacoes[idx] || null);
@@ -649,6 +704,54 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       <datalist id="opcoes-genero-datalist">
         {opcoesGenero.map(o => <option key={o} value={o} />)}
       </datalist>
+
+      {!somenteLeitura && (
+        <div className="prod-grade">
+          <button type="button" className="prod-btn-add-variacao prod-grade-toggle" onClick={() => setGradeAberta(a => !a)}
+            title="Escolha vários tamanhos e várias cores de uma vez — o sistema cria todas as combinações">
+            {gradeAberta ? '▾' : '▸'} ⚡ Montar grade (vários tamanhos × cores de uma vez)
+          </button>
+          {gradeAberta && (() => {
+            const { lista, jaExistem } = combinacoesGrade();
+            const bloco = (tipo, titulo, opcoes) => {
+              const todas = [...opcoes, ...gradeSel[tipo].filter(x => !opcoes.some(o => o.toLowerCase() === x.toLowerCase()))];
+              return (
+                <div className="prod-grade-bloco">
+                  <div className="prod-grade-titulo">{titulo}</div>
+                  <div className="prod-grade-chips">
+                    {todas.length === 0 && <span className="prod-label-hint">Nenhuma cadastrada — digite abaixo.</span>}
+                    {todas.map(o => (
+                      <button type="button" key={o} className={`prod-grade-chip${gradeSel[tipo].includes(o) ? ' ativo' : ''}`} onClick={() => alternarGrade(tipo, o)}>{o}</button>
+                    ))}
+                  </div>
+                  <div className="prod-grade-novo">
+                    <input className="prod-input" maxLength={120} placeholder="Outro? Digite (separe com vírgula)" value={gradeNovo[tipo]}
+                      onChange={e => setGradeNovo(p => ({ ...p, [tipo]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarValorGrade(tipo); } }} />
+                    <button type="button" className="prod-btn-scan" onClick={() => adicionarValorGrade(tipo)} disabled={!gradeNovo[tipo].trim()}>+</button>
+                  </div>
+                </div>
+              );
+            };
+            return (
+              <div className="prod-grade-painel">
+                {bloco('tamanho', '📏 Tamanhos', opcoesTamanho)}
+                {bloco('cor', '🎨 Cores', opcoesCor)}
+                {opcoesGenero.length > 0 && bloco('genero', '🚻 Gênero (opcional)', opcoesGenero)}
+                <div className="prod-grade-rodape">
+                  <span>
+                    {lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha tamanhos e cores acima'}
+                    {jaExistem > 0 && ` (${jaExistem} já existe${jaExistem > 1 ? 'm' : ''} e não será repetida)`}.
+                    {' '}Depois é só preencher o estoque de cada uma.
+                  </span>
+                  <button type="button" className="prod-btn-add-variacao" onClick={gerarGrade} disabled={!lista.length}>✓ Criar variações</button>
+                </div>
+                {gradeMsg && <div className="prod-label-hint" style={{ color: 'var(--est-danger)' }}>{gradeMsg}</div>}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {!somenteLeitura && (
         <div className="prod-variacao-add-barra">

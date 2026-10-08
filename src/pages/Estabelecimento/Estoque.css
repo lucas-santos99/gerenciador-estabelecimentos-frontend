@@ -2921,3 +2921,16 @@
   line-height: 1.5;
 }
 .prod-origem-nota strong { color: var(--est-text-soft); }
+
+/* ── Montar grade (tamanhos × cores) ── */
+.prod-grade { margin-bottom: 10px; }
+.prod-grade-toggle { width: 100%; }
+.prod-grade-painel { margin-top: 10px; padding: 14px; border: 1px dashed var(--est-border); border-radius: 14px; display: flex; flex-direction: column; gap: 14px; }
+.prod-grade-titulo { font-size: .78rem; font-weight: 700; margin-bottom: 6px; color: var(--est-text-soft); }
+.prod-grade-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.prod-grade-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--est-border); background: none; color: inherit; font-size: .82rem; cursor: pointer; font-family: inherit; }
+.prod-grade-chip.ativo { background: var(--est-accent); border-color: var(--est-accent); color: #fff; font-weight: 700; }
+.prod-grade-novo { display: flex; gap: 8px; margin-top: 8px; }
+.prod-grade-novo .prod-input { flex: 1; min-width: 0; }
+.prod-grade-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .82rem; }
+.prod-grade-rodape > span { flex: 1 1 220px; }
