@@ -1545,3 +1545,11 @@ body.dark .cli-hist-aviso-limite {
   color: #fcd34d;
   border-color: rgba(245,158,11,0.35);
 }
+
+/* ── Resumo do cliente no card (aba Clientes) ── */
+.cli-card-resumo { display: flex; flex-direction: column; gap: 10px; }
+.cli-resumo-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.cli-chip { font-size: calc(0.7rem * var(--cli-font-scale, 1)); font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--est-border); color: var(--est-text-soft); white-space: nowrap; }
+.cli-chip--ok { color: var(--est-accent); border-color: var(--est-accent); }
+.cli-chip--alerta { color: var(--est-danger); border-color: var(--est-danger); }
+.cli-resumo-desde { font-size: calc(0.7rem * var(--cli-font-scale, 1)); color: var(--est-text-muted); }

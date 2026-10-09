@@ -829,6 +829,12 @@ function ClienteCard({ cliente, modo = 'clientes', emFoco = false, onEditar, onH
     return ` (vence em ${diff} dia${diff === 1 ? '' : 's'})`;
   }
 
+  const temDividaGeral = parseFloat(cliente.saldo_devedor || 0) > 0.01;
+  function formatarDataLocal(s) {
+    try { return new Date(s).toLocaleDateString('pt-BR', { timeZone: TIMEZONE_PADRAO, day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    catch { return '—'; }
+  }
+
   const svStatus = statusVencimento(cliente.data_vencimento);
   const abrirDetalhe = ehFiado ? onDetalhesFiado : onHistorico;
 
@@ -847,6 +853,42 @@ function ClienteCard({ cliente, modo = 'clientes', emFoco = false, onEditar, onH
         <span className="cli-card-tel">📞 {cliente.telefone || 'Sem telefone'}</span>
         {cliente.cpf && <span className="cli-card-tel">🪪 {labelDocumento(cliente.cpf)}: {cliente.cpf}</span>}
       </div>
+
+      {/* Resumo do cliente — só na aba Clientes */}
+      {!ehFiado && (
+        <div className="cli-card-corpo cli-card-resumo" onClick={abrirDetalhe} style={{ cursor: "pointer" }}>
+          <div className="cli-resumo-badges">
+            {cliente.permite_fiado
+              ? <span className="cli-chip cli-chip--ok" title="Esse cliente pode comprar fiado">💳 Aceita fiado</span>
+              : <span className="cli-chip" title="Fiado não liberado pra esse cliente">Sem fiado</span>}
+            {cliente.permite_fiado && (
+              <span className="cli-chip" title="Limite de crédito do fiado">
+                {parseFloat(cliente.limite_credito || 0) === 0 ? '∞ Sem limite' : `Limite ${fmt(cliente.limite_credito)}`}
+              </span>
+            )}
+            {temDividaGeral && (
+              <span className={`cli-chip cli-chip--alerta`} title="Quanto esse cliente está devendo no fiado">
+                🔴 Deve {fmt(cliente.saldo_devedor)}
+              </span>
+            )}
+          </div>
+          <div className="cli-card-info-row">
+            <div className="cli-info-item">
+              <span className="cli-info-label">Compras</span>
+              <span className="cli-info-valor">{cliente.compras_qtd || 0}</span>
+            </div>
+            <div className="cli-info-item">
+              <span className="cli-info-label">Total gasto</span>
+              <span className="cli-info-valor">{fmt(cliente.compras_total)}</span>
+            </div>
+            <div className="cli-info-item">
+              <span className="cli-info-label">Última compra</span>
+              <span className="cli-info-valor">{cliente.ultima_compra ? formatarDataLocal(cliente.ultima_compra) : 'Nunca'}</span>
+            </div>
+          </div>
+          {cliente.criado_em && <span className="cli-resumo-desde">Cliente desde {formatarDataLocal(cliente.criado_em)}</span>}
+        </div>
+      )}
 
       {/* Corpo com dívida/limite/vencimento — só na aba Fiado */}
       {ehFiado && (
