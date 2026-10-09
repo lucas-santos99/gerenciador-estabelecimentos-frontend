@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
+import HistoricoRenovacoes from '../../../components/HistoricoRenovacoes';
 import '../Configuracoes.css';
 
 /* ════════════════════════════════════════════════════════════
@@ -311,7 +312,22 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const [uploadSucesso, setUploadSucesso] = useState('');
   const fileInputRef = useRef(null);
 
-  const [abaCfg, setAbaCfg] = useState('dados'); // 'dados' | 'logo' | 'pagamentos' | 'tutoriais'
+  const [abaCfg, setAbaCfg] = useState('dados'); // 'dados' | 'logo' | 'pagamentos' | 'fiado' | 'assinatura' | 'tutoriais'
+  const [histAssinatura, setHistAssinatura] = useState(null); // null = ainda não carregou
+  const [histAssinaturaErro, setHistAssinaturaErro] = useState('');
+  useEffect(() => {
+    if (abaCfg !== 'assinatura' || !estabelecimentoId) return;
+    let cancelado = false;
+    setHistAssinaturaErro('');
+    apiFetch(`/api/estabelecimentos/${estabelecimentoId}/assinatura/historico`)
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Erro ao carregar o histórico.');
+        if (!cancelado) setHistAssinatura(Array.isArray(d) ? d : []);
+      })
+      .catch(e => { if (!cancelado) setHistAssinaturaErro(e.message); });
+    return () => { cancelado = true; };
+  }, [abaCfg, estabelecimentoId]);
 
   // Configuração de Pix — carregada de `dados` quando chega da API
   const [pixForm,      setPixForm]      = useState({ pix_chave: '', pix_tipo_chave: 'cpf', pix_cidade: '', pix_modo: 'maquininha' });
@@ -519,6 +535,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
             { key: 'logo',       label: '🖼️ Logo' },
             { key: 'pagamentos', label: '💳 Pagamentos' },
             { key: 'fiado',      label: '💰 Fiado' },
+            ...(ehDono ? [{ key: 'assinatura', label: '🧾 Assinatura' }] : []),
             { key: 'tutoriais',  label: '📚 Tutoriais' },
           ].map(t => (
             <button
@@ -743,6 +760,22 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 {salvandoPix ? '⏳ Salvando…' : '✓ Salvar configuração de Pix'}
               </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ══ ABA ASSINATURA — histórico de renovações (só o dono) ══ */}
+        {abaCfg === 'assinatura' && ehDono && (
+          <div className="cfg-aba-maxwidth">
+            <div className="cfg-section">
+              <span className="cfg-section-titulo">🧾 Histórico da assinatura</span>
+              <p className="cfg-guia-intro">
+                Todas as renovações da mensalidade do sistema: pagamentos por Pix ou cartão, estornos e liberações feitas pelo suporte, com o vencimento de cada uma.
+              </p>
+              {histAssinaturaErro && <div className="cfg-alert erro" style={{ marginBottom: 12 }}>⚠️ {histAssinaturaErro}</div>}
+              {histAssinatura === null && !histAssinaturaErro
+                ? <div className="cfg-guia-intro">Carregando…</div>
+                : <HistoricoRenovacoes linhas={histAssinatura || []} />}
             </div>
           </div>
         )}

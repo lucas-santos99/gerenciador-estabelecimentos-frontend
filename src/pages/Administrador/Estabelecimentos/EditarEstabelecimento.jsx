@@ -12,6 +12,7 @@ import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
+import HistoricoRenovacoes from '../../../components/HistoricoRenovacoes';
 import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
@@ -133,6 +134,23 @@ export default function EditarEstabelecimento() {
 
 
   useEffect(() => { carregarDados(); }, [id]);
+
+  // Histórico de renovações (pagamentos Pix/cartão + liberações) — só na tela de detalhes
+  const [histRenovacoes, setHistRenovacoes] = useState(null); // null = carregando
+  const [histRenovacoesErro, setHistRenovacoesErro] = useState('');
+  useEffect(() => {
+    if (!modoDetalhes || !id) return;
+    let cancelado = false;
+    setHistRenovacoes(null); setHistRenovacoesErro('');
+    apiFetch(`/admin/estabelecimentos/${id}/historico-licenca`)
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Erro ao carregar o histórico.');
+        if (!cancelado) setHistRenovacoes(Array.isArray(d) ? d : []);
+      })
+      .catch(e => { if (!cancelado) setHistRenovacoesErro(e.message); });
+    return () => { cancelado = true; };
+  }, [id, modoDetalhes]);
 
   // Apoio dos campos Tipo e Mensalidade (igual à tela Novo): tipos já
   // usados em outros cadastros, pra sugerir, e o valor global da
@@ -534,6 +552,18 @@ export default function EditarEstabelecimento() {
               </div>
             </div>
 
+          </div>
+
+          {/* HISTÓRICO DE RENOVAÇÕES */}
+          <div className="est-card" style={{ marginBottom: 16 }}>
+            <div className="est-info-block-title" style={{ padding: "12px 16px", borderBottom: "1px solid var(--border, #e5e7eb)" }}>
+              📋 Histórico de Renovações
+            </div>
+            {histRenovacoesErro
+              ? <div style={{ padding: 16, color: "#dc2626", fontSize: "0.85rem" }}>⚠️ {histRenovacoesErro}</div>
+              : histRenovacoes === null
+                ? <div style={{ padding: 16, opacity: .7, fontSize: "0.85rem" }}>Carregando…</div>
+                : <HistoricoRenovacoes linhas={histRenovacoes} admin vazio="Nenhuma renovação registrada." />}
           </div>
 
           <Rastro entidade="estabelecimento" id={id} />
