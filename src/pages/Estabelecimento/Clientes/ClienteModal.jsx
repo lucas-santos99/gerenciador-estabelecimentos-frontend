@@ -66,7 +66,7 @@ export default function ClienteModal({
     parseFloat(cliente?.limite_credito || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   );
   const [dataVencimento, setDataVencimento] = useState(formatarDataInput(cliente?.data_vencimento));
-  const [vencRecorrente, setVencRecorrente] = useState(!!cliente?.vencimento_recorrente);
+  const [vencRecorrente, setVencRecorrente] = useState(cliente?.vencimento_ciclo || (cliente?.vencimento_recorrente ? 'mensal' : ''));
   const [salvando,       setSalvando]       = useState(false);
   const [erro,           setErro]           = useState('');
 
@@ -106,7 +106,7 @@ export default function ClienteModal({
           permiteFiado,
           limiteCredito: semLimite ? '0' : limiteCredito.replace(/\./g, '').replace(',', '.'),
           dataVencimento: dataVencimento || null,
-          vencimentoRecorrente: !!dataVencimento && vencRecorrente,
+          vencimentoCiclo: dataVencimento ? (vencRecorrente || null) : null,
         }),
       });
       const data = await resp.json();
@@ -274,12 +274,17 @@ export default function ClienteModal({
                 Dia combinado pra esse cliente pagar o fiado. Perto dessa data e depois dela, o sistema avisa nesta tela e nas notificações, enquanto houver dívida.
               </span>
               {dataVencimento && (
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: '0.85rem' }}>
-                  <input type="checkbox" checked={vencRecorrente} onChange={e => setVencRecorrente(e.target.checked)} disabled={salvando} style={{ marginTop: 3 }} />
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, fontSize: '0.85rem' }}>
                   <span>
-                    🔁 Repetir todo mês neste mesmo dia
-                    <Dica texto="Quando a data passar e o cliente estiver sem dívida, o vencimento pula sozinho para o mesmo dia do mês seguinte (dia 31 vira o último dia dos meses menores). Se ainda houver dívida pendente, a data fica como está e continua avisando — só renova depois que tudo for pago." />
+                    🔁 Repetir o vencimento
+                    <Dica texto="Quando a data passar e o cliente estiver sem dívida, o vencimento pula sozinho: +7 dias (semanal), +15 dias (quinzenal) ou o mesmo dia do mês seguinte (mensal; dia 31 vira o último dia dos meses menores). Se ainda houver dívida pendente, a data fica como está e continua avisando — só renova depois que tudo for pago." />
                   </span>
+                  <select className="cli-form-input" value={vencRecorrente} onChange={e => setVencRecorrente(e.target.value)} disabled={salvando}>
+                    <option value="">Não repetir</option>
+                    <option value="semanal">Toda semana (a cada 7 dias)</option>
+                    <option value="quinzenal">A cada 15 dias</option>
+                    <option value="mensal">Todo mês (mesmo dia)</option>
+                  </select>
                 </label>
               )}
             </div>
