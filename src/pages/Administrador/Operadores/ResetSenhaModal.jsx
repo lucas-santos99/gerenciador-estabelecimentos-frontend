@@ -41,7 +41,7 @@ export default function ResetSenhaModal({ id, onClose, quem = "operador" }) {
       <div className="op-modal" onClick={e => e.stopPropagation()}>
 
         <span className="op-modal-icon">🔑</span>
-        <div className="op-modal-title">Resetar Senha</div>
+        <div className="op-modal-title">Alterar senha</div>
         <div className="op-modal-subtitle">
           {ehDono
             ? "Defina uma nova senha para o dono deste estabelecimento. Você não precisa da senha antiga. Ela passa a valer na hora e ele não é avisado: repasse a senha nova a ele."
@@ -92,7 +92,7 @@ export default function ResetSenhaModal({ id, onClose, quem = "operador" }) {
             onClick={enviar}
             disabled={salvando}
           >
-            {salvando ? "⏳ Salvando…" : "✓ Resetar Senha"}
+            {salvando ? "⏳ Salvando…" : "✓ Alterar senha"}
           </button>
         </div>
 

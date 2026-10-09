@@ -339,7 +339,7 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
                   onClick={() => setResetModal(op)}
                   title="Alterar senha"
                 >
-                  🔒 Senha
+                  🔒 Alterar senha
                 </button>
                 <button
                   className={`opest-acao-btn status ${op.status === 'ativo' ? 'desativar' : 'ativar'}`}

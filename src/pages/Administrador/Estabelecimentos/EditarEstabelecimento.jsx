@@ -480,7 +480,7 @@ export default function EditarEstabelecimento() {
                     onClick={() => setModalSenhaDono(true)}
                     title="Definir uma senha nova para o dono (sem precisar da antiga)"
                   >
-                    🔑 Senha do dono
+                    🔑 Alterar senha do dono
                   </button>
                 )}
                 <button className="est-btn est-btn-danger" onClick={excluir}>
@@ -563,7 +563,7 @@ export default function EditarEstabelecimento() {
               ? <div style={{ padding: 16, color: "#dc2626", fontSize: "0.85rem" }}>⚠️ {histRenovacoesErro}</div>
               : histRenovacoes === null
                 ? <div style={{ padding: 16, opacity: .7, fontSize: "0.85rem" }}>Carregando…</div>
-                : <HistoricoRenovacoes linhas={histRenovacoes} admin vazio="Nenhuma renovação registrada." />}
+                : <HistoricoRenovacoes linhas={histRenovacoes} admin timezone={form.timezone} vazio="Nenhuma renovação registrada." />}
           </div>
 
           <Rastro entidade="estabelecimento" id={id} />
@@ -736,7 +736,7 @@ export default function EditarEstabelecimento() {
                 <label className="est-label">E-mail de Contato <Dica texto="É também o e-mail de login do dono. Ao trocar aqui e salvar, o dono passa a entrar no sistema com o e-mail novo (a senha continua a mesma). Não pode ser um e-mail já usado por outro usuário. Também é usado nas cobranças por e-mail." /></label>
                 <input maxLength={150} className="est-input" name="email_contato" type="email" value={form.email_contato} onChange={atualizar} />
                 <button type="button" className="est-btn est-btn-ghost" style={{ marginTop: 6 }} onClick={() => setModalSenhaDono(true)}>
-                  🔑 Definir nova senha do dono
+                  🔑 Alterar senha do dono
                 </button>
               </div>
               <div className="est-form-group est-form-full">

@@ -245,7 +245,7 @@ export default function SuperAdmins() {
                   </div>
                   <div className="sa-user-actions">
                     <button className="sa-btn sa-btn-primary sa-btn-sm" onClick={() => abrirModalSenha(user)}>
-                      🔑 {isMe ? "Minha Senha" : "Alterar Senha"}
+                      🔑 {isMe ? "Alterar minha senha" : "Alterar senha"}
                     </button>
                     {!isMe && (
                       <>

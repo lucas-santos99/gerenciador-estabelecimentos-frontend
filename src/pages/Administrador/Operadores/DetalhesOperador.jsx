@@ -266,7 +266,7 @@ export default function DetalhesOperador() {
               className="op-btn op-btn-primary op-btn-sm"
               onClick={() => setShowReset(true)}
             >
-              🔑 Resetar Senha
+              🔑 Alterar senha
             </button>
             {profile?.is_master && isAtivo && (
               <button

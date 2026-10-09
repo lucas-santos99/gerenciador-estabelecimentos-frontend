@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { paraDataStrTZ, TIMEZONE_PADRAO } from '../utils/fusoHorario';
 import './HistoricoRenovacoes.css';
 
 const fmtMoeda = (v) => parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -25,10 +26,29 @@ const STATUS = {
 
 // Linha do tempo de renovações da assinatura. `admin` mostra também o motivo
 // e quem liberou (liberações manuais) — o dono da loja não recebe esses campos.
-export default function HistoricoRenovacoes({ linhas, admin = false, vazio = 'Nenhuma renovação registrada ainda.' }) {
-  if (!linhas || linhas.length === 0) return <div className="hren-vazio">{vazio}</div>;
+export default function HistoricoRenovacoes({ linhas: todas, admin = false, timezone = TIMEZONE_PADRAO, vazio = 'Nenhuma renovação registrada ainda.' }) {
+  const [de, setDe] = useState('');
+  const [ate, setAte] = useState('');
+  const invertido = !!(de && ate && de > ate);
+  const linhas = useMemo(() => (todas || []).filter(l => {
+    if (!de && !ate) return true;
+    const dia = paraDataStrTZ(new Date(l.data), timezone);
+    if (de && dia < de) return false;
+    if (ate && dia > ate) return false;
+    return true;
+  }), [todas, de, ate, timezone]);
+  if (!todas || todas.length === 0) return <div className="hren-vazio">{vazio}</div>;
   return (
     <div className="hren-wrap">
+      <div className="hren-filtro">
+        <label>De <input type="date" value={de} onChange={e => setDe(e.target.value)} /></label>
+        <label>Até <input type="date" value={ate} onChange={e => setAte(e.target.value)} /></label>
+        {(de || ate) && <button type="button" className="hren-filtro-limpar" onClick={() => { setDe(''); setAte(''); }}>✕ Limpar filtro</button>}
+        <span className="hren-filtro-qtd">{linhas.length} de {todas.length} registro(s)</span>
+      </div>
+      {invertido && <div className="hren-vazio">A data inicial é maior que a final. Ajuste o período.</div>}
+      {!invertido && linhas.length === 0 && <div className="hren-vazio">Nenhuma renovação neste período.</div>}
+      {!invertido && linhas.length > 0 && (
       <table className="hren-tabela">
         <thead>
           <tr>
@@ -71,6 +91,7 @@ export default function HistoricoRenovacoes({ linhas, admin = false, vazio = 'Ne
           })}
         </tbody>
       </table>
+      )}
     </div>
   );
 }
