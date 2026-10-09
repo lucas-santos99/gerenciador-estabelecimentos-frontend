@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import TabelaCreditos from "../../../components/WhatsApp/TabelaCreditos";
 import { apiFetch } from "../../../utils/api";
+import { confirmar as confirmarDialogo } from "../../../components/Dialogo/dialogo";
 import { useAvisosGlobais } from "../../../utils/realtimeEstab";
 import {
   TIPOS_PEDIDO, normalizarParametros, aplicarDolarAuto, piorCasoPorPedido,
@@ -519,6 +520,18 @@ function AbaPlanos({ planos, params, podeEditar, recarregar, avisar }) {
   const cmc = params ? custoMaxPorCredito(params) : 0;
 
   async function alternarAtivo(plano, confirmar = false) {
+    if (!confirmar) {
+      const nomeTipo = plano.tipo === "pacote" ? "pacote" : "plano";
+      const desativando = !!plano.ativo;
+      if (!(await confirmarDialogo({
+        titulo: desativando ? `Desativar ${nomeTipo}?` : `Ativar ${nomeTipo}?`,
+        texto: desativando
+          ? `“${plano.nome}” deixa de aparecer para as lojas contratarem. Quem já contratou não é afetado.`
+          : `“${plano.nome}” passa a aparecer para as lojas contratarem.`,
+        perigo: desativando,
+        botao: desativando ? "Desativar" : "Ativar",
+      }))) return;
+    }
     setOcupado(true);
     try {
       const r = await apiFetch(`${API}/planos/${plano.id}/ativo`, {
@@ -1744,9 +1757,9 @@ function AbaLojas({ podeEditarPagina, avisar, onPendentes }) {
                   {pode && (
                     <div className="wa-pedido-acoes">
                       <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" disabled={ocupado}
-                        onClick={() => acao(`/assinaturas/${a.id}/numeros-extras/recusar`, {}, "Pedido recusado.")}>Recusar</button>
+                        onClick={async () => { if (await confirmarDialogo({ titulo: "Recusar o pedido de número extra?", texto: `O pedido de +${a.numeros_extras_pedido} número(s) de ${a.loja_nome} será recusado.`, perigo: true, botao: "Recusar" })) acao(`/assinaturas/${a.id}/numeros-extras/recusar`, {}, "Pedido recusado."); }}>Recusar</button>
                       <button type="button" className="sa-btn sa-btn-success sa-btn-sm" disabled={ocupado}
-                        onClick={() => acao(`/assinaturas/${a.id}/numeros-extras/aprovar`, {}, `Aprovado: +${a.numeros_extras_pedido} número(s) para ${a.loja_nome}.`)}>Aprovar</button>
+                        onClick={async () => { if (await confirmarDialogo({ titulo: "Aprovar número extra?", texto: `+${a.numeros_extras_pedido} número(s) para ${a.loja_nome} — liberado na hora e passa a ser cobrado.`, botao: "Aprovar" })) acao(`/assinaturas/${a.id}/numeros-extras/aprovar`, {}, `Aprovado: +${a.numeros_extras_pedido} número(s) para ${a.loja_nome}.`); }}>Aprovar</button>
                     </div>
                   )}
                 </li>

@@ -100,6 +100,15 @@ export default function SuperAdmins() {
   }
 
   async function toggleAtivo(id) {
+    const alvo = lista.find(u => u.id === id);
+    const desativando = !alvo || alvo.is_active !== false;
+    const quem = alvo ? (alvo.nome || alvo.email) : 'Este usuário';
+    if (!(await confirmar({
+      titulo: desativando ? 'Desativar SuperAdmin?' : 'Ativar SuperAdmin?',
+      texto: desativando ? `"${quem}" perde o acesso ao painel administrativo na hora.` : `"${quem}" volta a ter acesso ao painel administrativo.`,
+      perigo: desativando,
+      botao: desativando ? 'Desativar' : 'Ativar',
+    }))) return;
     try {
       const token = await getToken();
       await fetch(`${API_URL}/superadmin/${id}/ativo`, {

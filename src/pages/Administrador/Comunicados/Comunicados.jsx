@@ -551,6 +551,14 @@ export default function Comunicados() {
   }
 
   async function alternarAtivo(c) {
+    if (!(await confirmar({
+      titulo: c.ativo ? 'Desativar comunicado?' : 'Ativar comunicado?',
+      texto: c.ativo
+        ? `"${c.titulo}" deixa de aparecer para os estabelecimentos. Você pode ativar de novo depois.`
+        : `"${c.titulo}" passa a aparecer para o público escolhido (respeitando as datas de agendamento).`,
+      perigo: !!c.ativo,
+      botao: c.ativo ? 'Desativar' : 'Ativar',
+    }))) return;
     try {
       const resp = await apiFetch(`/api/comunicados/admin/${c.id}/ativo`, {
         method: "PATCH",

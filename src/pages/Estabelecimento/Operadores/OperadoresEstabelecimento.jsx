@@ -147,6 +147,15 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
 
   async function alterarStatus(op) {
     const novoStatus = op.status === 'ativo' ? 'inativo' : 'ativo';
+    const desativando = novoStatus === 'inativo';
+    if (!(await confirmarDialogo({
+      titulo: desativando ? 'Desativar operador?' : 'Reativar operador?',
+      texto: desativando
+        ? `"${op.nome}" perde o acesso ao sistema na hora. Você pode reativar quando quiser.`
+        : `"${op.nome}" volta a poder entrar no sistema, com as mesmas permissões de antes.`,
+      perigo: desativando,
+      botao: desativando ? 'Desativar' : 'Reativar',
+    }))) return;
     try {
       const resp = await apiFetch(`/api/operadores/${op.id}/status`, {
         method:  'PUT',
