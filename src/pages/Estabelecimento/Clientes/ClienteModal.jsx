@@ -66,6 +66,7 @@ export default function ClienteModal({
     parseFloat(cliente?.limite_credito || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   );
   const [dataVencimento, setDataVencimento] = useState(formatarDataInput(cliente?.data_vencimento));
+  const [vencRecorrente, setVencRecorrente] = useState(!!cliente?.vencimento_recorrente);
   const [salvando,       setSalvando]       = useState(false);
   const [erro,           setErro]           = useState('');
 
@@ -105,6 +106,7 @@ export default function ClienteModal({
           permiteFiado,
           limiteCredito: semLimite ? '0' : limiteCredito.replace(/\./g, '').replace(',', '.'),
           dataVencimento: dataVencimento || null,
+          vencimentoRecorrente: !!dataVencimento && vencRecorrente,
         }),
       });
       const data = await resp.json();
@@ -271,6 +273,15 @@ export default function ClienteModal({
               <span className="cli-form-small">
                 Dia combinado pra esse cliente pagar o fiado. Perto dessa data e depois dela, o sistema avisa nesta tela e nas notificações, enquanto houver dívida.
               </span>
+              {dataVencimento && (
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 8, cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input type="checkbox" checked={vencRecorrente} onChange={e => setVencRecorrente(e.target.checked)} disabled={salvando} style={{ marginTop: 3 }} />
+                  <span>
+                    🔁 Repetir todo mês neste mesmo dia
+                    <Dica texto="Quando a data passar e o cliente estiver sem dívida, o vencimento pula sozinho para o mesmo dia do mês seguinte (dia 31 vira o último dia dos meses menores). Se ainda houver dívida pendente, a data fica como está e continua avisando — só renova depois que tudo for pago." />
+                  </span>
+                </label>
+              )}
             </div>
             </>
             )}

@@ -12,6 +12,18 @@ const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency
 // já é um elemento visual separado (ex: prefixo fixo ao lado do campo),
 // pra não duplicar "R$ R$" nem descasar o alinhamento entre o campo
 // digitável (Fase 1) e o campo calculado (Fase 2) do pagamento dividido.
+// Fiado vencido: dívida em aberto E data de vencimento do cliente já passou.
+// Devolve { valor, desde: 'dd/mm/aaaa' } ou null.
+function fiadoVencido(saldo, dataVenc) {
+  const valor = parseFloat(saldo) || 0;
+  const venc = dataVenc ? String(dataVenc).slice(0, 10) : '';
+  if (valor <= 0.01 || !venc) return null;
+  const hoje = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD no fuso do navegador
+  if (venc >= hoje) return null;
+  const [a, m, d] = venc.split('-');
+  return { valor, desde: `${d}/${m}/${a}` };
+}
+
 const fmtNum = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Ícone de "sem imagem" — SVG em vez de emoji, pra nunca depender da
@@ -1078,7 +1090,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
 
   function selecionarClienteFatia(id, cli) {
     // limite e dívida atual ficam guardados na fatia pro aviso de limite na hora de finalizar
-    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome, clienteLimite: parseFloat(cli.limite_credito) || 0, clienteSaldo: parseFloat(cli.saldo_devedor) || 0 } : f)));
+    setFatias(fs => fs.map(f => (f.id === id ? { ...f, clienteId: cli.id, clienteNome: cli.nome, clienteLimite: parseFloat(cli.limite_credito) || 0, clienteSaldo: parseFloat(cli.saldo_devedor) || 0, clienteVenc: cli.data_vencimento || null } : f)));
     setFatiaBuscaAberta(null);
     // 17/09 — Fiado: selecionar o cliente é o último passo obrigatório da
     // fatia, então já leva o foco pro botão "Confirmar Pessoa N" dela.
@@ -1233,10 +1245,20 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
     const fiadoPorCliente = new Map();
     fatias.forEach((f, i) => {
       if (f.meioPagamento !== 'Fiado' || !f.clienteId) return;
-      const atual = fiadoPorCliente.get(f.clienteId) || { nome: f.clienteNome || 'Cliente', limite: f.clienteLimite || 0, saldo: f.clienteSaldo || 0, valor: 0 };
+      const atual = fiadoPorCliente.get(f.clienteId) || { nome: f.clienteNome || 'Cliente', limite: f.clienteLimite || 0, saldo: f.clienteSaldo || 0, venc: f.clienteVenc || null, valor: 0 };
       atual.valor += valoresFinais[i];
       fiadoPorCliente.set(f.clienteId, atual);
     });
+    const atrasados = [...fiadoPorCliente.values()].map(c => ({ c, v: fiadoVencido(c.saldo, c.venc) })).filter(x => x.v);
+    if (atrasados.length > 0) {
+      const ok = await confirmar({
+        titulo: 'Cliente com fiado atrasado',
+        texto: atrasados.map(({ c, v }) => `${c.nome}: ${fmt(v.valor)} em atraso desde ${v.desde}`).join('\n'),
+        detalhe: 'É só um aviso — você decide se vende fiado mesmo assim.',
+        perigo: true, icone: '⏰', botao: 'Vender mesmo assim', botaoCancelar: 'Voltar',
+      });
+      if (!ok) return;
+    }
     const estourados = [...fiadoPorCliente.values()].filter(c => c.limite > 0 && c.saldo + c.valor > c.limite + 0.001);
     if (estourados.length > 0) {
       const ok = await confirmar({
@@ -1280,6 +1302,17 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
       const limite = parseFloat(clienteSelecionado.limite_credito || 0);
       const saldoAtual = parseFloat(clienteSelecionado.saldo_devedor || 0);
       const novoSaldo = saldoAtual + total;
+
+      const atraso = fiadoVencido(saldoAtual, clienteSelecionado.data_vencimento);
+      if (atraso) {
+        const ok = await confirmar({
+          titulo: 'Cliente com fiado atrasado',
+          texto: `${clienteSelecionado.nome}: ${fmt(atraso.valor)} em atraso desde ${atraso.desde}`,
+          detalhe: 'É só um aviso — você decide se vende fiado mesmo assim.',
+          perigo: true, icone: '⏰', botao: 'Vender mesmo assim', botaoCancelar: 'Voltar',
+        });
+        if (!ok) return;
+      }
 
       if (limite > 0 && novoSaldo > limite) {
         const ok = await confirmar({
@@ -1804,6 +1837,7 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                         const passou = (f.clienteLimite || 0) > 0 && depois > f.clienteLimite + 0.001;
                         return (
                           <div className={`pdv-dividido-fiado-info${passou ? ' passou' : ''}`}>
+                            {fiadoVencido(f.clienteSaldo, f.clienteVenc) && <>⏰ Atrasado desde {fiadoVencido(f.clienteSaldo, f.clienteVenc).desde} · </>}
                             Deve hoje {fmt(f.clienteSaldo || 0)} · fica devendo {fmt(depois)}
                             {(f.clienteLimite || 0) > 0 && <> · limite {fmt(f.clienteLimite)}{passou ? ' ⚠️' : ''}</>}
                           </div>
@@ -2126,6 +2160,14 @@ function PagamentoModal({ total, onFinalizar, onCancelar, loading, podeUsarFiado
                 ) : clienteSelecionado ? (
                   <div className="pdv-cliente-selecionado">
                     <span className="pdv-cliente-selecionado-nome">📋 {clienteSelecionado.nome}</span>
+                    {(() => {
+                      const atraso = fiadoVencido(clienteSelecionado.saldo_devedor, clienteSelecionado.data_vencimento);
+                      return atraso ? (
+                        <div className="pdv-aviso-atraso" role="alert">
+                          ⏰ <strong>Fiado atrasado:</strong> {fmt(atraso.valor)} em aberto, venceu em {atraso.desde}.
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="pdv-cliente-selecionado-info">
                       <div className="pdv-cliente-info-item">
                         <span className="pdv-cliente-info-label">Dívida atual</span>

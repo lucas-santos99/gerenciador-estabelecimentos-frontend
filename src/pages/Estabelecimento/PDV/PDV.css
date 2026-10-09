@@ -3107,3 +3107,6 @@ body.dark .pdv-dividido-fatia-pix-erro { color: #f87171; }
 /* Inventário em andamento: produtos em contagem travados para venda */
 .pdv-aviso-inventario { line-height: 1.45; align-items: flex-start; }
 .pdv-aviso-inventario strong { color: var(--est-text); }
+
+/* Aviso de fiado atrasado ao escolher o cliente */
+.pdv-aviso-atraso { margin: 8px 0; padding: 9px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.35; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); color: var(--est-danger, #ef4444); }
