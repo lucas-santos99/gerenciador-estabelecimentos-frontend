@@ -1553,3 +1553,19 @@ body.dark .cli-hist-aviso-limite {
 .cli-chip--ok { color: var(--est-accent); border-color: var(--est-accent); }
 .cli-chip--alerta { color: var(--est-danger); border-color: var(--est-danger); }
 .cli-resumo-desde { font-size: calc(0.7rem * var(--cli-font-scale, 1)); color: var(--est-text-muted); }
+
+/* ── Fiado: botão de pagar compra em destaque + resumo da lista ── */
+.cli-pagar-venda-trigger {
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--est-accent);
+  color: #fff;
+  font-size: calc(0.9rem * var(--cli-font-scale, 1));
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.cli-pagar-venda-trigger:hover:not(:disabled) { background: var(--est-accent); filter: brightness(1.1); transform: translateY(-1px); }
+.cli-resumo-lista { font-size: calc(0.8rem * var(--cli-font-scale, 1)); color: var(--est-text-soft); padding: 2px 2px 4px; }

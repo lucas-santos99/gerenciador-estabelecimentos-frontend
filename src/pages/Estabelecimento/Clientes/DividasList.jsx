@@ -90,6 +90,21 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
   const [erro,          setErro]          = useState('');
   const [abaDetalhe,    setAbaDetalhe]    = useState('compras'); // 'compras' | 'pagamentos'
   const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
+  // Filtro de datas (vale pras duas abas). Começa vazio: dívida em aberto não
+  // deve sumir da tela por causa de um período padrão.
+  const [filtroDe,  setFiltroDe]  = useState('');
+  const [filtroAte, setFiltroAte] = useState('');
+  const periodoInvertido = !!(filtroDe && filtroAte && filtroDe > filtroAte);
+  const noPeriodo = (iso) => {
+    if (!filtroDe && !filtroAte) return true;
+    if (periodoInvertido) return false;
+    const dia = paraDataStrTZ(new Date(iso), timezone);
+    return (!filtroDe || dia >= filtroDe) && (!filtroAte || dia <= filtroAte);
+  };
+  const vendasVisiveis     = vendas.filter(v => noPeriodo(v.data_venda));
+  const pagamentosVisiveis = pagamentos.filter(p => noPeriodo(p.data_transacao));
+  const totalVendasVisiveis     = vendasVisiveis.reduce((a, v) => a + (parseFloat(v.valor_total) || 0), 0);
+  const totalPagamentosVisiveis = pagamentosVisiveis.reduce((a, p) => a + (parseFloat(p.valor) || 0), 0);
 
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
   useEffect(() => {
@@ -140,6 +155,18 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
         </button>
       </div>
 
+      <div className="cli-hist-filtro-barra">
+        <div className="cli-hist-filtro-datas">
+          <span className="cli-form-label">De</span>
+          <input className="cli-form-input" type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)} />
+          <span className="cli-form-label">Até</span>
+          <input className="cli-form-input" type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)} />
+          {(filtroDe || filtroAte) && (
+            <button className="cli-btn" onClick={() => { setFiltroDe(''); setFiltroAte(''); }} title="Tirar as datas e mostrar tudo">✕ Limpar</button>
+          )}
+        </div>
+      </div>
+
       <div className="cli-detalhes-body">
         {loading && (
           <div className="cli-detalhes-loading">
@@ -148,17 +175,30 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
           </div>
         )}
         {erro && <div className="cli-erro">⚠️ {erro}</div>}
+        {periodoInvertido && (
+          <div className="cli-erro">⚠️ A data "De" está depois da data "Até". Ajuste o período.</div>
+        )}
+        {!loading && !periodoInvertido && abaDetalhe === 'compras' && vendasVisiveis.length > 0 && (
+          <div className="cli-resumo-lista">
+            {vendasVisiveis.length} compra{vendasVisiveis.length > 1 ? 's' : ''} em aberto{(filtroDe || filtroAte) ? ' no período' : ''} · <strong>{fmt(totalVendasVisiveis)}</strong>
+          </div>
+        )}
+        {!loading && !periodoInvertido && abaDetalhe === 'pagamentos' && pagamentosVisiveis.length > 0 && (
+          <div className="cli-resumo-lista">
+            {pagamentosVisiveis.length} pagamento{pagamentosVisiveis.length > 1 ? 's' : ''}{(filtroDe || filtroAte) ? ' no período' : ''} · <strong>{fmt(totalPagamentosVisiveis)}</strong>
+          </div>
+        )}
 
         {/* Aba compras */}
-        {!loading && abaDetalhe === 'compras' && (
+        {!loading && !periodoInvertido && abaDetalhe === 'compras' && (
           <>
-            {vendas.length === 0 ? (
+            {vendasVisiveis.length === 0 ? (
               <div className="cli-vazio">
                 <span className="cli-vazio-icon">📋</span>
-                <p>Nenhuma compra fiada em aberto</p>
+                <p>{vendas.length > 0 ? 'Nenhuma compra em aberto neste período' : 'Nenhuma compra fiada em aberto'}</p>
               </div>
             ) : (
-              vendas.map(venda => (
+              vendasVisiveis.map(venda => (
                 <div key={venda.venda_id} className="cli-venda-card">
                   <div className="cli-venda-info">
                     <span className="cli-venda-info-data">📅 {fmtDataHora(venda.data_venda, timezone)}</span>
@@ -205,7 +245,7 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
                     disabled={!podeReceber}
                     title={!podeReceber ? semPermMsg : undefined}
                   >
-                    💰 Pagar esta compra
+                    💰 Pagar esta compra · {fmt(venda.valor_total)}
                   </button>
                 </div>
               ))
@@ -214,15 +254,15 @@ function DetalhesFiado({ cliente, onFechar, onPagarVenda, podeReceber = true, se
         )}
 
         {/* Aba pagamentos */}
-        {!loading && abaDetalhe === 'pagamentos' && (
+        {!loading && !periodoInvertido && abaDetalhe === 'pagamentos' && (
           <>
-            {pagamentos.length === 0 ? (
+            {pagamentosVisiveis.length === 0 ? (
               <div className="cli-vazio">
                 <span className="cli-vazio-icon">💰</span>
-                <p>Nenhum pagamento registrado</p>
+                <p>{pagamentos.length > 0 ? 'Nenhum pagamento neste período' : 'Nenhum pagamento registrado'}</p>
               </div>
             ) : (
-              pagamentos.map((p, i) => (
+              pagamentosVisiveis.map((p, i) => (
                 <div key={i} className="cli-pagamento-card">
                   <div className="cli-pagamento-info">
                     <span className="cli-pagamento-data">📅 {fmtDataHora(p.data_transacao, timezone)}</span>
