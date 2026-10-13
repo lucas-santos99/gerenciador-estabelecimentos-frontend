@@ -521,6 +521,7 @@
 
 .inv-item-nome { font-size: calc(0.875rem * var(--inv-font-scale, 1)); font-weight: 700; color: var(--est-text); }
 .inv-item-marca { font-size: calc(0.72rem * var(--inv-font-scale, 1)); color: var(--est-text-muted); font-weight: 500; }
+.inv-item-variacao { font-size: calc(0.8rem * var(--inv-font-scale, 1)); color: var(--est-text); font-weight: 600; }
 .inv-item-sistema { font-size: calc(0.82rem * var(--inv-font-scale, 1)); font-family: 'JetBrains Mono', monospace; color: var(--est-text-soft); }
 
 .inv-item-input {

@@ -7,6 +7,10 @@ import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import './Inventario.css';
 
+
+// Item de produto com variação mostra qual variação (ex.: "Camiseta (P · Azul)"). SQL 37.
+const nomeItem = (i) => (i.variacao_rotulo ? `${i.produto_nome} (${i.variacao_rotulo})` : i.produto_nome);
+const textoBusca = (i) => `${i.produto_nome} ${i.variacao_rotulo || ''}`.toLowerCase();
 /* ─── helpers ─────────────────────────────────────────────── */
 const fmt  = v => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtQ = (v, u) => u === 'kg'
@@ -150,7 +154,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
   const inputRefs = useRef({});
 
   const itensFiltrados = itens.filter(item => {
-    const matchBusca = !busca || item.produto_nome.toLowerCase().includes(busca.toLowerCase()) || (item.produto_marca || '').toLowerCase().includes(busca.toLowerCase());
+    const matchBusca = !busca || textoBusca(item).includes(busca.toLowerCase()) || (item.produto_marca || '').toLowerCase().includes(busca.toLowerCase());
     if (!matchBusca) return false;
     if (filtro === 'nao_contados')  return item.estoque_contado === null;
     if (filtro === 'com_diferenca') return item.diferenca !== null && item.diferenca !== 0;
@@ -220,7 +224,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
 
   function exportarExcel() {
     const dados = itens.map(i => ({
-      'Produto':           i.produto_nome,
+      'Produto':           nomeItem(i),
       'Marca':             i.produto_marca || '',
       'Unidade':           i.unidade_medida,
       'Estoque Sistema':   parseFloat(i.estoque_sistema),
@@ -240,7 +244,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
 
   function exportarPDF() {
     const linhas = itens.map(i => ({
-      'Produto':   i.produto_nome + (i.produto_marca ? ` · ${i.produto_marca}` : ''),
+      'Produto':   nomeItem(i) + (i.produto_marca ? ` · ${i.produto_marca}` : ''),
       'Unidade':   i.unidade_medida,
       'Sistema':   parseFloat(i.estoque_sistema),
       'Contado':   i.estoque_contado !== null ? parseFloat(i.estoque_contado) : '—',
@@ -372,6 +376,7 @@ function TelaContagem({ inventario, onAtualizado, onFinalizado, onCancelado }) {
             <div key={item.id} className={`inv-item${item.estoque_contado !== null ? ' contado' : ''}`}>
               <div className="inv-col-produto">
                 <span className="inv-item-nome">{item.produto_nome}</span>
+                {item.variacao_rotulo && <span className="inv-item-variacao"> ({item.variacao_rotulo})</span>}
                 {item.produto_marca && <span className="inv-item-marca"> · {item.produto_marca}</span>}
               </div>
               <div className="inv-col-sistema">
@@ -562,7 +567,7 @@ function AbaContagens({ estabelecimentoId, categorias, permissoes = null, isMerc
 
   function linhasParaExportar(itens) {
     return itens.map(i => ({
-      'Produto':         i.produto_nome,
+      'Produto':         nomeItem(i),
       'Marca':           i.produto_marca || '',
       'Unidade':         i.unidade_medida,
       'Estoque Sistema': parseFloat(i.estoque_sistema),
@@ -836,7 +841,7 @@ function ModalDetalhesContagem({ inv, filtroInicial = 'todos', onFechar }) {
 
   const itensFiltrados = itens.filter(item => {
     const matchBusca = !busca
-      || item.produto_nome.toLowerCase().includes(busca.toLowerCase())
+      || textoBusca(item).includes(busca.toLowerCase())
       || (item.produto_marca || '').toLowerCase().includes(busca.toLowerCase());
     if (!matchBusca) return false;
     if (filtro === 'contados')      return item.estoque_contado !== null;
@@ -914,6 +919,7 @@ function ModalDetalhesContagem({ inv, filtroInicial = 'todos', onFechar }) {
                 <div key={item.id} className="inv-modal-tabela-linha">
                   <span className="inv-modal-tabela-produto">
                     {item.produto_nome}
+                    {item.variacao_rotulo && <span className="inv-item-variacao"> ({item.variacao_rotulo})</span>}
                     {item.produto_marca && <span className="inv-modal-tabela-marca"> · {item.produto_marca}</span>}
                   </span>
                   <span className="inv-modal-tabela-mono">{fmtQ(item.estoque_sistema, item.unidade_medida)}</span>
