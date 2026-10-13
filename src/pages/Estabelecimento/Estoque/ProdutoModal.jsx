@@ -318,7 +318,8 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
   const [gradeTipo, setGradeTipo] = useState('todos'); // filtro de tamanhos por tipo de produto
   const [modelosProprios, setModelosProprios] = useState([]);
-  useEffect(() => { if (gradeAberta) buscarModelosProprios(estabelecimentoId).then(setModelosProprios); }, [gradeAberta, estabelecimentoId]);
+  const [tipoEstab, setTipoEstab] = useState(null);
+  useEffect(() => { if (gradeAberta) buscarModelosProprios(estabelecimentoId).then(d => { setModelosProprios(d.rows); setTipoEstab(d.tipo); }); }, [gradeAberta, estabelecimentoId]);
   const [gradeMsg, setGradeMsg] = useState('');
   const [recolhidas, setRecolhidas] = useState(() => new Set());
   function alternarRecolhida(chave) {
@@ -509,7 +510,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
 
   const PAINEL_GRADE = !gradeAberta ? null : (() => {
             const { lista, jaExistem } = combinacoesGrade();
-            const modelos = todosModelos(modelosProprios);
+            const modelos = todosModelos(modelosProprios, tipoEstab);
             const modeloSel = modelos.find(m => m.id === gradeTipo) || null;
             const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
             const bloco = (tipo, titulo, opcoes, sugestoes = []) => {

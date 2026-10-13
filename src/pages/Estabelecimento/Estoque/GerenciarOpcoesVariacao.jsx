@@ -5,7 +5,7 @@ import { apiFetch } from '../../../utils/api';
 import {
   MODELOS_PRONTOS, CORES_BASICAS, GENEROS_BASICOS,
   buscarModelosProprios, criarModeloProprio, excluirModeloProprio, separarValores,
-  todosModelos, salvarExtrasModelo, atualizarModeloProprio,
+  todosModelos, salvarExtrasModelo, atualizarModeloProprio, modelosDisponiveis, definirVisibilidadeModelo,
 } from './modelosVariacao';
 import '../Estoque.css';
 
@@ -23,6 +23,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
 
   // Tipos de produto (modelos de tamanho)
   const [proprios,  setProprios]  = useState([]);
+  const [tipoEst,   setTipoEst]   = useState(null);          // tipo do estabelecimento (loja, mercearia…)
+  const [escolhendo, setEscolhendo] = useState(false);        // painel "＋ Adicionar tipo"
   const [modeloId,  setModeloId]  = useState(null);          // modelo aberto
   const [marcados,  setMarcados]  = useState([]);             // tamanhos marcados no modelo aberto
   const [criando,   setCriando]   = useState(false);
@@ -31,7 +33,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   // Sugestões de cor/gênero (marcação múltipla)
   const [sugMarcadas, setSugMarcadas] = useState({ cor: [], genero: [] });
 
-  const modelos = useMemo(() => todosModelos(proprios), [proprios]);
+  const modelos = useMemo(() => todosModelos(proprios, tipoEst), [proprios, tipoEst]);
+  const disponiveis = useMemo(() => modelosDisponiveis(proprios, tipoEst), [proprios, tipoEst]);
   const [novoNoTipo, setNovoNoTipo] = useState('');
   const [tipoDestino, setTipoDestino] = useState('');   // campo de cima: também colocar no tipo…
 
@@ -45,7 +48,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
 
   useEffect(() => { carregar(true); }, [estabelecimentoId]);
-  useEffect(() => { buscarModelosProprios(estabelecimentoId).then(setProprios); }, [estabelecimentoId]);
+  useEffect(() => { buscarModelosProprios(estabelecimentoId).then(d => { setProprios(d.rows); setTipoEst(d.tipo); }); }, [estabelecimentoId]);
 
   useEffect(() => {
     function handleEsc(e) { if (e.key === 'Escape') onClose(); }
@@ -164,10 +167,34 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
       const extras = lista.filter(t => !MODELOS_PRONTOS.find(b => b.id === m.id).tamanhos.some(x => x.toLowerCase() === t.toLowerCase()));
       const d = await salvarExtrasModelo(estabelecimentoId, m.id, m.nome, extras);
       setProprios(prev => {
+        const atual = prev.find(x => x.modelo_base === m.id);
+        const visivel = atual?.visivel ?? null;
         const sem = prev.filter(x => x.modelo_base !== m.id);
-        return extras.length ? [...sem, { id: d.id, nome: m.nome, tamanhos: extras, modelo_base: m.id }] : sem;
+        if (!extras.length && visivel === null) return sem;
+        return [...sem, { id: atual?.id || d.id, nome: m.nome, tamanhos: extras, modelo_base: m.id, visivel }];
       });
     }
+  }
+  // Põe um tipo pronto na lista desta loja (ou tira dela).
+  async function mostrarTipo(b, visivel) {
+    setErro(''); setOcupado(true);
+    try {
+      const d = await definirVisibilidadeModelo(estabelecimentoId, b.id, b.nome, visivel);
+      setProprios(prev => {
+        const atual = prev.find(x => x.modelo_base === b.id);
+        const sem = prev.filter(x => x.modelo_base !== b.id);
+        // sem linha e sem extras: o servidor apaga a linha quando volta ao padrão
+        if (d && d.removido) return sem;
+        return [...sem, { id: d?.id || atual?.id, nome: b.nome, tamanhos: atual?.tamanhos || [], modelo_base: b.id, visivel }];
+      });
+      if (visivel) { setEscolhendo(false); setModeloId(b.id); setTipoDestino(b.id); }
+      else if (modeloId === b.id) { setModeloId(null); setTipoDestino(''); }
+    } catch (err) { setErro(err.message); }
+    setOcupado(false);
+  }
+  async function tirarTipo(m) {
+    if (!(await confirmar({ titulo: `Tirar "${m.nome}" dos seus tipos?`, texto: 'O tipo some desta tela e do filtro de Montar grade. Os tamanhos que já estão na sua lista e os produtos não mudam — e você pode trazê-lo de volta em "＋ Adicionar tipo".', perigo: true, botao: 'Tirar tipo' }))) return;
+    await mostrarTipo(m, false);
   }
   async function excluirModelo(m) {
     if (!(await confirmar({ titulo: `Excluir o tipo "${m.nome}"?`, texto: 'Só o atalho do tipo é apagado. Os tamanhos já cadastrados continuam na sua lista.', perigo: true, botao: 'Excluir' }))) return;
@@ -302,10 +329,33 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                   <span>{m.icone}</span> {m.nome}
                 </button>
               ))}
-              <button type="button" className={`gov-tipo gov-tipo-novo${criando ? ' on' : ''}`} onClick={() => { setCriando(c => !c); setModeloId(null); setErro(''); }}>
-                ＋ Outro produto…
+              {disponiveis.length > 0 && (
+                <button type="button" className={`gov-tipo gov-tipo-novo${escolhendo ? ' on' : ''}`} onClick={() => { setEscolhendo(v => !v); setCriando(false); setModeloId(null); setErro(''); }}>
+                  ＋ Adicionar tipo
+                </button>
+              )}
+              <button type="button" className={`gov-tipo gov-tipo-novo${criando ? ' on' : ''}`} onClick={() => { setCriando(c => !c); setEscolhendo(false); setModeloId(null); setErro(''); }}>
+                ＋ Criar meu tipo…
               </button>
             </div>
+
+            {modelos.length === 0 && !escolhendo && !criando && (
+              <div className="gov-vazio">Você ainda não tem tipos de produto. Use <strong>＋ Adicionar tipo</strong> para trazer um modelo pronto ou <strong>＋ Criar meu tipo…</strong> para montar o seu.</div>
+            )}
+
+            {escolhendo && (
+              <div className="gov-painel">
+                <div className="gov-painel-topo"><strong>＋ Adicionar tipo à sua lista</strong></div>
+                <div className="gov-chips">
+                  {disponiveis.map(b => (
+                    <button key={b.id} type="button" className="gov-tipo" disabled={ocupado} onClick={() => mostrarTipo(b, true)} title={b.tamanhos.join(', ')}>
+                      <span>{b.icone}</span> {b.nome}
+                    </button>
+                  ))}
+                </div>
+                <small className="gov-nota">Mostramos por padrão os tipos que combinam com o seu estabelecimento. Aqui você traz qualquer outro; para tirar um, abra-o e use “Tirar este tipo”.</small>
+              </div>
+            )}
 
             {modeloAberto && (
               <div className="gov-painel">
@@ -315,7 +365,9 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                     <button type="button" className="etq-link" onClick={() => {
                       setMarcados(marcados.length === modeloAberto.tamanhos.length ? [] : [...modeloAberto.tamanhos]);
                     }}>{marcados.length === modeloAberto.tamanhos.length ? 'Limpar todos' : 'Marcar todos'}</button>
-                    {modeloAberto.proprio && <button type="button" className="etq-link gov-perigo" onClick={() => excluirModelo(modeloAberto)}>Excluir tipo</button>}
+                    {modeloAberto.proprio
+                      ? <button type="button" className="etq-link gov-perigo" onClick={() => excluirModelo(modeloAberto)}>Excluir tipo</button>
+                      : <button type="button" className="etq-link gov-perigo" onClick={() => tirarTipo(modeloAberto)}>Tirar este tipo</button>}
                   </span>
                 </div>
                 <div className="gov-chips">
