@@ -33,6 +33,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
 
   const modelos = useMemo(() => todosModelos(proprios), [proprios]);
   const [novoNoTipo, setNovoNoTipo] = useState('');
+  const [tipoDestino, setTipoDestino] = useState('');   // campo de cima: também colocar no tipo…
 
   async function carregar(primeira = false) {
     if (primeira) setLoading(true);   // só a 1ª carga mostra "Carregando…" (evita a tela piscar)
@@ -86,7 +87,15 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     const valores = separarValores(novoValor, 30);
     if (!valores.length) return;
     setSalvando(true);
-    if (await adicionarVarios(aba, valores)) setNovoValor('');
+    const destino = aba === 'tamanho' ? modelos.find(m => m.id === tipoDestino) : null;
+    if (destino) {
+      const novosNoTipo = valores.filter(t => !destino.tamanhos.some(x => x.toLowerCase() === t.toLowerCase()));
+      try { if (novosNoTipo.length) await gravarTamanhosTipo(destino, [...destino.tamanhos, ...novosNoTipo]); }
+      catch (err) { setErro(err.message); setSalvando(false); return; }
+    }
+    const jaTinha = valores.every(v => jaTem(aba, v));
+    if (jaTinha && destino) { setNovoValor(''); }            // só entrou no tipo
+    else if (await adicionarVarios(aba, valores)) setNovoValor('');
     setSalvando(false);
   }
 
@@ -101,17 +110,32 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
 
   /* ── tipos de produto ── */
   function abrirModelo(m) {
-    if (modeloId === m.id) { setModeloId(null); return; }
+    if (modeloId === m.id) { setModeloId(null); setTipoDestino(''); return; }
     setCriando(false);
     setModeloId(m.id);
-    setMarcados(m.tamanhos.filter(t => !jaTem('tamanho', t)));
+    setTipoDestino(m.id);
+    setMarcados(m.tamanhos.filter(t => jaTem('tamanho', t)));   // marcados = os que ficam na sua lista
   }
   const modeloAberto = modelos.find(m => m.id === modeloId) || null;
+  const sigModelo = modeloAberto ? modeloAberto.tamanhos.join('|') : '';
+  const sigLista = (opcoes.tamanho || []).map(o => o.valor).join('|');
+  useEffect(() => {
+    if (modeloAberto) setMarcados(modeloAberto.tamanhos.filter(t => jaTem('tamanho', t)));
+  }, [sigLista, sigModelo, modeloId]); // eslint-disable-line
   function alternarMarcado(t) {
     setMarcados(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   }
-  async function adicionarMarcados() {
-    if (await adicionarVarios('tamanho', marcados)) setMarcados([]);
+  // Aplica a seleção do painel: marcados entram na sua lista, desmarcados saem dela.
+  async function aplicarSelecao(m) {
+    const entrar = m.tamanhos.filter(t => marcados.includes(t) && !jaTem('tamanho', t));
+    const sair = (opcoes.tamanho || []).filter(o => m.tamanhos.some(t => t.toLowerCase() === o.valor.toLowerCase()) && !marcados.some(t => t.toLowerCase() === o.valor.toLowerCase()));
+    if (sair.length && !(await confirmar({ titulo: `Tirar ${sair.length} tamanho${sair.length > 1 ? 's' : ''} da sua lista?`, texto: `${sair.map(o => o.valor).join(', ')} deixam de aparecer como sugestão. Produtos que já usam esses valores não mudam, e eles continuam no tipo "${m.nome}" para você marcar de novo quando quiser.`, perigo: true, botao: 'Tirar da lista' }))) return;
+    setOcupado(true); setErro('');
+    try {
+      for (const o of sair) await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao/${o.id}`, { method: 'DELETE' });
+      if (entrar.length) await adicionarVarios('tamanho', entrar); else { await carregar(); onAlterado?.(); }
+    } catch { setErro('Não foi possível atualizar a lista. Tente de novo.'); }
+    setOcupado(false);
   }
   // Acrescenta tamanhos (ex.: 56) ao tipo aberto — vale para tipos prontos e próprios.
   async function adicionarAoTipo(m, texto) {
@@ -259,6 +283,14 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
             {salvando ? '…' : '+ Adicionar'}
           </button>
         </form>
+        {aba === 'tamanho' && (
+          <label className="gov-destino">Colocar também no tipo:
+            <select className="prod-input" value={tipoDestino} onChange={e => setTipoDestino(e.target.value)}>
+              <option value="">Nenhum (só na minha lista)</option>
+              {modelos.map(m => <option key={m.id} value={m.id}>{m.icone} {m.nome}</option>)}
+            </select>
+          </label>
+        )}
 
         {/* ── Tamanhos: por tipo de produto ── */}
         {aba === 'tamanho' && !loading && (
@@ -281,9 +313,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                   <strong>{modeloAberto.icone} {modeloAberto.nome}</strong>
                   <span>
                     <button type="button" className="etq-link" onClick={() => {
-                      const faltam = modeloAberto.tamanhos.filter(t => !jaTem('tamanho', t));
-                      setMarcados(marcados.length === faltam.length ? [] : faltam);
-                    }}>Marcar / limpar todos</button>
+                      setMarcados(marcados.length === modeloAberto.tamanhos.length ? [] : [...modeloAberto.tamanhos]);
+                    }}>{marcados.length === modeloAberto.tamanhos.length ? 'Limpar todos' : 'Marcar todos'}</button>
                     {modeloAberto.proprio && <button type="button" className="etq-link gov-perigo" onClick={() => excluirModelo(modeloAberto)}>Excluir tipo</button>}
                   </span>
                 </div>
@@ -293,10 +324,11 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                     const removivel = modeloAberto.proprio ? true : (modeloAberto.extras || []).includes(t);
                     return (
                       <span key={t} className="gov-chip-wrap">
-                        <button type="button" disabled={tem}
-                          className={`gov-chip${marcados.includes(t) ? ' on' : ''}${tem ? ' feito' : ''}`}
-                          onClick={() => alternarMarcado(t)} title={tem ? 'Já está na sua lista' : ''}>
-                          {tem ? '✓ ' : marcados.includes(t) ? '✓ ' : '+ '}{t}
+                        <button type="button"
+                          className={`gov-chip${marcados.includes(t) ? ' on' : ''}${tem && !marcados.includes(t) ? ' sair' : ''}`}
+                          onClick={() => alternarMarcado(t)}
+                          title={marcados.includes(t) ? (tem ? 'Está na sua lista — clique para tirar' : 'Será adicionado — clique para desfazer') : (tem ? 'Será tirado da lista' : 'Clique para adicionar à sua lista')}>
+                          {marcados.includes(t) ? '✓ ' : tem ? '− ' : '+ '}{t}
                         </button>
                         {removivel && <button type="button" className="gov-chip-x" title={`Tirar "${t}" deste tipo`} onClick={() => removerDoTipo(modeloAberto, t)}>✕</button>}
                       </span>
@@ -309,9 +341,17 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarAoTipo(modeloAberto, novoNoTipo); } }} />
                   <button type="button" className="gov-btn-principal" disabled={!novoNoTipo.trim() || ocupado} onClick={() => adicionarAoTipo(modeloAberto, novoNoTipo)}>Adicionar ao tipo</button>
                 </div>
-                <button type="button" className="gov-btn-principal" disabled={!marcados.length || ocupado} onClick={adicionarMarcados}>
-                  {ocupado ? 'Adicionando…' : marcados.length ? `Adicionar ${marcados.length} tamanho${marcados.length > 1 ? 's' : ''}` : 'Todos já estão na sua lista'}
-                </button>
+                {(() => {
+                  const m = modeloAberto;
+                  const entrar = m.tamanhos.filter(t => marcados.includes(t) && !jaTem('tamanho', t)).length;
+                  const sair = m.tamanhos.filter(t => !marcados.includes(t) && jaTem('tamanho', t)).length;
+                  const txt = [entrar ? `adicionar ${entrar}` : '', sair ? `tirar ${sair}` : ''].filter(Boolean).join(' e ');
+                  return (
+                    <button type="button" className="gov-btn-principal" disabled={!txt || ocupado} onClick={() => aplicarSelecao(m)}>
+                      {ocupado ? 'Atualizando…' : txt ? `Aplicar: ${txt}` : 'Marque ou desmarque para alterar sua lista'}
+                    </button>
+                  );
+                })()}
               </div>
             )}
 

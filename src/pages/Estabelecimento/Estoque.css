@@ -3018,3 +3018,6 @@
 .gov-add-tipo { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
 .gov-add-tipo .prod-input { flex: 1 1 200px; min-width: 0; }
 .gov-add-tipo .gov-btn-principal { width: auto; margin: 0; padding: 8px 14px; }
+.gov-chip.sair { text-decoration: line-through; opacity: .65; border-style: dashed; }
+.gov-destino { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: .78rem; color: var(--est-text-muted, #64748b); flex-wrap: wrap; }
+.gov-destino .prod-input { flex: 1 1 180px; min-width: 0; padding: 6px 8px; }
