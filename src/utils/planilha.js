@@ -198,7 +198,7 @@ export async function salvarXlsx(wb, nomeArquivo) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = nomeArquivo;
+  a.download = String(nomeArquivo || 'planilha.xlsx').replace(/[\\/:*?"<>|]/g, '-'); // barra e outros caracteres que o sistema de arquivos recusa
   document.body.appendChild(a);
   a.click();
   a.remove();
