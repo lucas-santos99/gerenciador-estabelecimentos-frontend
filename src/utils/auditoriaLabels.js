@@ -195,4 +195,17 @@ export const ACAO_LABEL = {
   whatsapp_liberado:              '🔌 WhatsApp liberado/pausado para as lojas',
   whatsapp_webhook_assinado:      '🔌 Avisos do WhatsApp ligados',
   whatsapp_teste:                 '🧪 Mensagem de teste',
+
+  // Fotos de operador (SuperAdmin) — 13/10/2026
+  operador_foto_enviada:  '🖼️ Foto do operador enviada',
+  operador_foto_removida: '🗑️ Foto do operador removida',
 };
+
+// Último recurso para código sem rótulo: "conta_paga" → "Conta paga". Nunca mostra o código cru.
+export function rotuloLegivel(codigo) {
+  if (!codigo) return '';
+  const t = String(codigo).replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+export const rotuloModulo = (m) => MODULO_LABEL[m] || rotuloLegivel(m);
+export const rotuloAcao   = (a) => ACAO_LABEL[a]   || rotuloLegivel(a);

@@ -1,7 +1,7 @@
 // src/pages/Estabelecimento/Auditoria/Auditoria.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { MODULO_LABEL, MODULO_COR, ACAO_LABEL } from '../../../utils/auditoriaLabels';
+import { MODULO_LABEL, MODULO_COR, ACAO_LABEL, rotuloLegivel } from '../../../utils/auditoriaLabels';
 import Dica from '../../../components/Notificacoes/Dica';
 import './Auditoria.css';
 
@@ -51,39 +51,15 @@ function calcularDiff(antes, depois) {
   return campos.length > 0 ? campos : null;
 }
 
-// Nomes que aparecem nesta tela para módulos/ações que ainda não têm
-// rótulo em utils/auditoriaLabels.js (sem isso o comerciante via o código
-// cru, ex.: "conta_paga"). Só apresentação.
+// Rótulos vêm de utils/auditoriaLabels.js (mesma fonte da Auditoria do SuperAdmin).
+// Nesta tela alguns módulos ganham nome mais completo.
 const MODULO_TELA = {
   ...MODULO_LABEL,
   configuracoes: '⚙️ Configurações',
   auth:          '🔑 Login',
   notificacoes:  '🔔 Lembretes',
 };
-const ACAO_TELA = {
-  ...ACAO_LABEL,
-  conta_criada:   '➕ Conta a pagar criada',
-  conta_editada:  '✏️ Conta a pagar editada',
-  conta_excluida: '🗑️ Conta a pagar excluída',
-  conta_paga:     '✅ Conta paga',
-  produto_imagem_enviada:   '🖼️ Foto do produto enviada',
-  produto_imagem_removida:  '🗑️ Foto do produto removida',
-  variacao_imagem_enviada:  '🖼️ Foto da variação enviada',
-  variacao_imagem_removida: '🗑️ Foto da variação removida',
-  opcao_variacao_criada:    '➕ Opção de variação criada',
-  modelo_variacao_criado: '🏷️ Tipo de produto criado',
-  modelo_variacao_removido: '🏷️ Tipo de produto removido',
-  opcao_variacao_removida:  '🗑️ Opção de variação removida',
-  lembrete_criado:   '➕ Lembrete criado',
-  lembrete_editado:  '✏️ Lembrete editado',
-  lembrete_excluido: '🗑️ Lembrete excluído',
-};
-// Último recurso: código sem rótulo vira texto legível ("conta_paga" → "Conta paga")
-function rotuloLegivel(codigo) {
-  if (!codigo) return '';
-  const t = String(codigo).replace(/_/g, ' ');
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
+const ACAO_TELA = ACAO_LABEL;
 
 const LIMIT = 30;
 

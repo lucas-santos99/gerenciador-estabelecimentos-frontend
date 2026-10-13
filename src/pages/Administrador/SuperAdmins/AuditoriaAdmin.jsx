@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
-import { MODULO_LABEL, ACAO_LABEL } from "../../../utils/auditoriaLabels";
+import { MODULO_LABEL, ACAO_LABEL, rotuloModulo, rotuloAcao } from "../../../utils/auditoriaLabels";
 import * as XLSX from "xlsx";
 import { htmlIdentidade, salvarExcelIdentidade, prepararIdentidade } from "../../../utils/relatorioIdentidade";
 import Dica from '../../../components/Notificacoes/Dica';
@@ -229,8 +229,8 @@ export default function AuditoriaAdmin() {
       "Origem":          ESCOPO_TELA[r.escopo || "estabelecimento"] || r.escopo,
       "Estabelecimento": r.mercearia_id ? nomeEstab(r.mercearia_id) : "—",
       "Usuário":         r.usuario_nome || "Sistema",
-      "Módulo":          (MODULO_LABEL[r.modulo] || r.modulo || ""),
-      "Ação":            (ACAO_LABEL[r.acao] || r.acao || ""),
+      "Módulo":          rotuloModulo(r.modulo),
+      "Ação":            rotuloAcao(r.acao),
       "Descrição":       r.descricao || "",
     };
   }
@@ -363,7 +363,7 @@ export default function AuditoriaAdmin() {
             <label className="aud-filter-label">Ação <Dica texto="A lista mostra só as ações que já aconteceram no estabelecimento e na origem escolhidos. O mesmo vale para o filtro Usuário." /></label>
             <select className="aud-select" value={acao} onChange={e => setAcao(e.target.value)}>
               <option value="">Todas</option>
-              {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{ACAO_LABEL[a] || a}</option>)}
+              {opcoesFiltro.acoes.map(a => <option key={a} value={a}>{rotuloAcao(a)}</option>)}
             </select>
           </div>
 
@@ -449,8 +449,8 @@ export default function AuditoriaAdmin() {
                         </td>
                         <td className="nowrap">{r.mercearia_id ? nomeEstab(r.mercearia_id) : "—"}</td>
                         <td className="nowrap">{r.usuario_nome || "Sistema"}</td>
-                        <td className="nowrap">{MODULO_LABEL[r.modulo] || r.modulo}</td>
-                        <td className="nowrap">{ACAO_LABEL[r.acao] || r.acao}</td>
+                        <td className="nowrap">{rotuloModulo(r.modulo)}</td>
+                        <td className="nowrap">{rotuloAcao(r.acao)}</td>
                         <td className="aud-desc">{r.descricao}</td>
                       </tr>
                     );
