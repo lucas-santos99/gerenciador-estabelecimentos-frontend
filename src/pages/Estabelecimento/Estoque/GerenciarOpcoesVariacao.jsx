@@ -35,8 +35,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     [proprios]
   );
 
-  async function carregar() {
-    setLoading(true);
+  async function carregar(primeira = false) {
+    if (primeira) setLoading(true);   // só a 1ª carga mostra "Carregando…" (evita a tela piscar)
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao?comId=1`);
       if (resp.ok) setOpcoes(await resp.json());
@@ -44,7 +44,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     setLoading(false);
   }
 
-  useEffect(() => { carregar(); }, [estabelecimentoId]);
+  useEffect(() => { carregar(true); }, [estabelecimentoId]);
   useEffect(() => { buscarModelosProprios(estabelecimentoId).then(setProprios); }, [estabelecimentoId]);
 
   useEffect(() => {
