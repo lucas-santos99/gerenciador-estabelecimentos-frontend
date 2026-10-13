@@ -2974,7 +2974,7 @@
 .gov-topo-icone { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 1.4rem; background: linear-gradient(135deg, var(--est-accent), #0d9488); color: #fff; }
 .gov-titulo { font-size: 1.15rem; font-weight: 800; color: var(--est-text); }
 .gov-sub { font-size: .8rem; line-height: 1.45; color: var(--est-text-soft, var(--est-text-muted)); margin-top: 3px; }
-.gov-abas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: var(--est-input); border: 1px solid var(--est-border); margin-bottom: 14px; }
+.gov-abas { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--est-input); border: 1px solid var(--est-border); margin-bottom: 14px; }
 .gov-aba { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--est-text-muted); font-weight: 700; font-size: .85rem; cursor: pointer; font-family: inherit; }
 .gov-aba em { font-style: normal; font-size: .68rem; padding: 1px 7px; border-radius: 999px; background: var(--est-border); color: var(--est-text-muted); }
 .gov-aba.ativa { background: var(--est-accent); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
@@ -3087,3 +3087,25 @@
 .prod-var-acao.ativa { background: linear-gradient(135deg, var(--est-accent), #0d9488); border-color: transparent; color: #fff; box-shadow: 0 0 0 3px var(--est-accent-dim); }
 .prod-var-acao.ativa .prod-var-acao-icone { background: rgba(255,255,255,.2); color: #fff; }
 .prod-var-acao.ativa small { color: rgba(255,255,255,.85); }
+
+/* ── Atributos da loja ── */
+.gov-atributos-link { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 9px 12px; margin-bottom: 12px; border-radius: 12px; border: 1px dashed var(--est-border); background: var(--est-input); font-size: .78rem; color: var(--est-text-muted); }
+.gov-atributos-link strong { color: var(--est-text); }
+.gov-atributos-link .etq-link { background: none; border: 0; padding: 0; color: var(--est-accent); text-decoration: underline; cursor: pointer; font-size: .78rem; font-weight: 700; font-family: inherit; }
+.atl-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.atl-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--est-border); background: var(--est-input); }
+.atl-item.oculto { opacity: .6; border-style: dashed; }
+.atl-ordem { display: inline-flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+.atl-ordem button { border: 0; background: transparent; color: var(--est-text-muted); cursor: pointer; font-size: .6rem; line-height: 1; padding: 2px 5px; border-radius: 5px; }
+.atl-ordem button:hover:not(:disabled) { background: var(--est-border); color: var(--est-text); }
+.atl-ordem button:disabled { opacity: .25; cursor: default; }
+.atl-nome { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .9rem; color: var(--est-text); }
+.atl-nome strong { overflow-wrap: anywhere; }
+.atl-nome em { font-style: normal; font-size: .64rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--est-border); color: var(--est-text-muted); }
+.atl-nome em.oculto-tag { background: rgba(220,38,38,.12); color: #dc2626; }
+.atl-nome .prod-input { width: 100%; padding: 5px 8px; }
+.atl-acoes { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.atl-acoes .etq-link { background: none; border: 0; padding: 2px 4px; color: var(--est-accent); text-decoration: underline; cursor: pointer; font-size: .76rem; font-weight: 600; font-family: inherit; }
+.atl-acoes .etq-link.gov-perigo { color: var(--est-danger); }
+.atl-acoes .etq-link:disabled { opacity: .4; cursor: default; }
+@media (max-width: 520px) { .atl-item { flex-wrap: wrap; } .atl-acoes { width: 100%; justify-content: flex-end; } }

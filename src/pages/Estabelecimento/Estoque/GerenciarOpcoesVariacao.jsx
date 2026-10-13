@@ -7,14 +7,23 @@ import {
   buscarModelosProprios, criarModeloProprio, excluirModeloProprio, separarValores,
   todosModelos, salvarExtrasModelo, atualizarModeloProprio, modelosDisponiveis, definirVisibilidadeModelo,
 } from './modelosVariacao';
+import AtributosLoja from './AtributosLoja';
+import Dica from '../../../components/Notificacoes/Dica';
 import '../Estoque.css';
 
-const LABEL_ABA = { tamanho: 'Tamanhos', cor: 'Cores', genero: 'Gêneros' };
-const LABEL_ABA_SINGULAR = { tamanho: 'tamanho', cor: 'cor', genero: 'gênero' };
+// Atributos que existem antes de a loja personalizar (e se a rota de atributos falhar).
+const ATRIBUTOS_PADRAO = [
+  { chave: 'tamanho', nome: 'Tamanho', ativo: true, legado: true },
+  { chave: 'cor',     nome: 'Cor',     ativo: true, legado: true },
+  { chave: 'genero',  nome: 'Gênero',  ativo: true, legado: true },
+];
+const ICONE_ABA = { tamanho: '📏', cor: '🎨', genero: '🚻' };
 
 export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, onAlterado }) {
   const [aba,       setAba]       = useState('tamanho');
   const [opcoes,    setOpcoes]    = useState({ tamanho: [], cor: [], genero: [] });
+  const [atributos, setAtributos] = useState(ATRIBUTOS_PADRAO);   // atributos da loja (nome, ordem, ativo)
+  const [atributosAberto, setAtributosAberto] = useState(false);   // janela "Atributos da loja"
   const [novoValor, setNovoValor] = useState('');
   const [loading,   setLoading]   = useState(true);
   const [salvando,  setSalvando]  = useState(false);
@@ -47,14 +56,26 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     setLoading(false);
   }
 
-  useEffect(() => { carregar(true); }, [estabelecimentoId]);
+  async function carregarAtributos() {
+    try {
+      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/atributos-variacao`);
+      if (resp.ok) {
+        const d = await resp.json();
+        if (Array.isArray(d.atributos) && d.atributos.length) setAtributos(d.atributos);
+      }
+    } catch { /* mantém os 3 padrão */ }
+  }
+
+  useEffect(() => { carregar(true); carregarAtributos(); }, [estabelecimentoId]);
   useEffect(() => { buscarModelosProprios(estabelecimentoId).then(d => { setProprios(d.rows); setTipoEst(d.tipo); }); }, [estabelecimentoId]);
 
   useEffect(() => {
-    function handleEsc(e) { if (e.key === 'Escape') onClose(); }
+    function handleEsc(e) { if (e.key === 'Escape' && !atributosAberto) onClose(); }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
+  }, [onClose, atributosAberto]);
+
+  const nomeAba = (chave) => (atributos.find(a => a.chave === chave)?.nome) || chave;
 
   const jaTem = (tipo, valor) => (opcoes[tipo] || []).some(o => o.valor.toLowerCase() === valor.toLowerCase());
 
@@ -103,7 +124,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
 
   async function remover(opt) {
-    if (!(await confirmar({ titulo: `Remover "${opt.valor}"?`, texto: `Ele sai da lista de ${LABEL_ABA[aba].toLowerCase()}. Produtos que já usam esse valor não mudam — ele só deixa de aparecer na lista de sugestões.`, perigo: true, botao: 'Remover' }))) return;
+    if (!(await confirmar({ titulo: `Remover "${opt.valor}"?`, texto: `Ele sai da lista de ${nomeAba(aba).toLowerCase()}. Produtos que já usam esse valor não mudam — ele só deixa de aparecer na lista de sugestões.`, perigo: true, botao: 'Remover' }))) return;
     try {
       await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao/${opt.id}`, { method: 'DELETE' });
       await carregar();
@@ -272,11 +293,11 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     );
   };
 
-  const ABAS = [
-    { id: 'tamanho', icone: '📏', rotulo: 'Tamanhos' },
-    { id: 'cor',     icone: '🎨', rotulo: 'Cores' },
-    { id: 'genero',  icone: '🚻', rotulo: 'Gênero' },
-  ];
+  // Uma aba por atributo ligado, na ordem que a loja escolheu.
+  const ABAS = [...atributos].filter(a => a.ativo).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+    .map(a => ({ id: a.chave, icone: ICONE_ABA[a.chave] || '🔹', rotulo: a.nome }));
+  const abaValida = ABAS.some(a => a.id === aba);
+  useEffect(() => { if (ABAS.length && !abaValida) setAba(ABAS[0].id); }, [abaValida, ABAS.length]); // eslint-disable-line
 
   return (
     <div className="prod-modal-overlay" onClick={onClose}>
@@ -285,9 +306,15 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
         <div className="gov-topo">
           <span className="gov-topo-icone">⚙️</span>
           <div>
-            <div className="gov-titulo">Tamanhos, cores e gênero</div>
+            <div className="gov-titulo">Valores das variações</div>
             <div className="gov-sub">Cadastre uma vez e use em todos os produtos. Aparecem como sugestão ao montar as variações. Remover daqui não muda produtos que já usam o valor.</div>
           </div>
+        </div>
+
+        <div className="gov-atributos-link">
+          <span>O que varia nos seus produtos? <strong>{ABAS.map(a => a.rotulo).join(', ') || '—'}</strong></span>
+          <button type="button" className="etq-link" onClick={() => setAtributosAberto(true)}>🧩 Atributos da loja</button>
+          <Dica texto="Aqui você escolhe o que muda de uma variação para outra: renomear (ex.: Tamanho → Medida), ocultar o que não usa, criar novos (ex.: Material, Voltagem) e mudar a ordem." />
         </div>
 
         <div className="gov-abas" role="tablist">
@@ -304,7 +331,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
 
         <form onSubmit={adicionar} className="gov-add">
           <input maxLength={200} className="prod-input"
-            placeholder={aba === 'tamanho' ? 'Digite um ou vários — ex: XG, 48, 50' : aba === 'cor' ? 'Digite uma ou várias — ex: Verde musgo, Azul bebê' : 'Digite um ou vários — ex: Infantil'}
+            placeholder={aba === 'tamanho' ? 'Digite um ou vários — ex: XG, 48, 50' : aba === 'cor' ? 'Digite uma ou várias — ex: Verde musgo, Azul bebê' : aba === 'genero' ? 'Digite um ou vários — ex: Infantil' : `Digite um ou vários valores de ${nomeAba(aba)}, separados por vírgula`}
             value={novoValor} onChange={e => setNovoValor(e.target.value)} disabled={salvando} autoFocus />
           <button type="submit" className="gov-btn-principal gov-btn-add" disabled={salvando || !novoValor.trim()} title="Adicionar (ou Enter). Separe vários com vírgula.">
             {salvando ? '…' : '+ Adicionar'}
@@ -432,7 +459,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
         {/* ── Lista cadastrada ── */}
         <div className="gov-secao">
           <div className="gov-secao-titulo gov-secao-linha">
-            <span>Sua lista de {LABEL_ABA[aba].toLowerCase()} <span>({lista.length})</span></span>
+            <span>Sua lista de {nomeAba(aba).toLowerCase()} <span>({lista.length})</span></span>
             {aba === 'tamanho' && lista.length > 1 && (
               <span className="gov-seg">
                 <button type="button" className={!agrupar ? 'on' : ''} onClick={() => setAgrupar(false)}>Juntos</button>
@@ -444,7 +471,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
             <div className="gov-vazio">Carregando…</div>
           ) : lista.length === 0 ? (
             <div className="gov-vazio">
-              Nenhum{aba === 'cor' ? 'a' : ''} {LABEL_ABA_SINGULAR[aba]} cadastrado{aba === 'cor' ? 'a' : ''} ainda. Use as sugestões acima ou digite no campo.
+              Nenhum valor de {nomeAba(aba).toLowerCase()} cadastrado ainda.{aba === 'tamanho' || aba === 'cor' || aba === 'genero' ? ' Use as sugestões acima ou digite no campo.' : ' Digite no campo acima — ou deixe em branco e digite direto ao montar o produto.'}
             </div>
           ) : grupos ? (
             grupos.map(g => (
@@ -463,6 +490,14 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
         </div>
 
       </div>
+
+      {atributosAberto && (
+        <AtributosLoja
+          estabelecimentoId={estabelecimentoId}
+          onClose={() => { setAtributosAberto(false); carregarAtributos(); carregar(); }}
+          onAlterado={onAlterado}
+        />
+      )}
     </div>
   );
 }

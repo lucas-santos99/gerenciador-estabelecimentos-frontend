@@ -56,6 +56,8 @@ export const ACAO_LABEL = {
   modelo_variacao_criado: '🏷️ Tipo de produto criado',
   modelo_variacao_removido: '🏷️ Tipo de produto removido',
   opcao_variacao_removida:   '🗑️ Opção de variação removida',
+  atributo_variacao_criado:  '🧩 Atributo de variação criado',
+  atributo_variacao_alterado: '🧩 Atributo de variação alterado',
 
   // Clientes / fiado
   cliente_criado:   '👤 Cliente criado',
