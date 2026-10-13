@@ -3082,3 +3082,8 @@
   .prod-secao .prod-form-group { min-width: 0; }
   .prod-modal form > .prod-modal-acoes { bottom: -20px; margin: 12px -14px -20px; padding: 12px 14px; }
 }
+
+/* Montar grade: só fica em destaque enquanto o painel está aberto */
+.prod-var-acao.ativa { background: linear-gradient(135deg, var(--est-accent), #0d9488); border-color: transparent; color: #fff; box-shadow: 0 0 0 3px var(--est-accent-dim); }
+.prod-var-acao.ativa .prod-var-acao-icone { background: rgba(255,255,255,.2); color: #fff; }
+.prod-var-acao.ativa small { color: rgba(255,255,255,.85); }

@@ -613,10 +613,10 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
             <span className="prod-var-acao-icone">⚙️</span>
             <span className="prod-var-acao-texto"><strong>Tamanhos e cores</strong><small>Sua lista de sugestões</small></span>
           </button>
-          <button type="button" className={`prod-var-acao destaque${gradeAberta ? ' aberta' : ''}`} onClick={() => setGradeAberta(a => !a)}
+          <button type="button" className={`prod-var-acao${gradeAberta ? ' ativa' : ''}`} aria-pressed={gradeAberta} onClick={() => setGradeAberta(a => !a)}
             title="Escolha vários tamanhos e várias cores de uma vez — o sistema cria todas as combinações">
             <span className="prod-var-acao-icone">⚡</span>
-            <span className="prod-var-acao-texto"><strong>Montar grade</strong><small>Vários tamanhos × cores de uma vez</small></span>
+            <span className="prod-var-acao-texto"><strong>Montar grade</strong><small>{gradeAberta ? 'Aberta — clique para fechar' : 'Vários tamanhos × cores de uma vez'}</small></span>
           </button>
           <button type="button" className="prod-var-acao" onClick={() => adicionar()}>
             <span className="prod-var-acao-icone">＋</span>
