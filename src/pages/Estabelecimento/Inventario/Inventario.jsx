@@ -1163,7 +1163,15 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
     try {
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/buscar-global?termo=${encodeURIComponent(termo)}`);
       const data = await resp.json();
-      setResultados(Array.isArray(data) ? data.slice(0, 8) : []);
+      // Produto com variações aparece uma vez por variação (o estoque está em cada uma)
+      const lista = (Array.isArray(data) ? data : []).flatMap(p => {
+        if (!p.tem_variacoes) return [{ ...p, chave: p.id }];
+        return (p.variacoes || []).map(v => ({
+          ...p, produto_variacao_id: v.id, variacao_rotulo: v.rotulo || '',
+          estoque_atual: v.estoque_atual, chave: `${p.id}:${v.id}`,
+        }));
+      });
+      setResultados(lista.slice(0, 15));
     } catch { setResultados([]); }
     finally { setLoadingBusca(false); }
   }
@@ -1212,12 +1220,12 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
       const resp = await apiFetch('/api/inventario/ajuste-rapido', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ produto_id: produto.id, tipo, quantidade: qtdNumerica, motivo: motivo.trim() }),
+        body: JSON.stringify({ produto_id: produto.id, produto_variacao_id: produto.produto_variacao_id || undefined, tipo, quantidade: qtdNumerica, motivo: motivo.trim() }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error);
 
-      setSucesso(`✓ Ajuste aplicado! ${produto.nome}: ${fmtQ(data.quantidade_anterior, produto.unidade_medida)} → ${fmtQ(data.quantidade_posterior, produto.unidade_medida)}`);
+      setSucesso(`✓ Ajuste aplicado! ${nomeItem(produto)}: ${fmtQ(data.quantidade_anterior, produto.unidade_medida)} → ${fmtQ(data.quantidade_posterior, produto.unidade_medida)}`);
       setTimeout(() => setSucesso(''), 5000);
       setProduto(null); setQuantidade(''); setMotivo('');
       inputRef.current?.focus();
@@ -1254,7 +1262,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
               {produto ? (
                 <div className="inv-produto-selecionado">
                   <div className="inv-produto-sel-info">
-                    <span className="inv-produto-sel-nome">{produto.nome}</span>
+                    <span className="inv-produto-sel-nome">{produto.nome}{produto.variacao_rotulo && <span className="inv-item-variacao"> ({produto.variacao_rotulo})</span>}</span>
                     {produto.marca && <span className="inv-produto-sel-marca"> · {produto.marca}</span>}
                     <span className="inv-produto-sel-estoque">Estoque atual: <strong>{fmtQ(produto.estoque_atual, produto.unidade_medida)}</strong></span>
                   </div>
@@ -1275,8 +1283,8 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
                   {resultados.length > 0 && (
                     <ul className="inv-busca-lista">
                       {resultados.map(p => (
-                        <li key={p.id} className="inv-busca-item" onClick={() => selecionarProduto(p)}>
-                          <span className="inv-busca-nome">{p.nome}{p.marca ? <span className="inv-busca-marca"> · {p.marca}</span> : ''}</span>
+                        <li key={p.chave || p.id} className="inv-busca-item" onClick={() => selecionarProduto(p)}>
+                          <span className="inv-busca-nome">{p.nome}{p.variacao_rotulo ? <span className="inv-item-variacao"> ({p.variacao_rotulo})</span> : ''}{p.marca ? <span className="inv-busca-marca"> · {p.marca}</span> : ''}</span>
                           <span className="inv-busca-estoque">{fmtQ(p.estoque_atual, p.unidade_medida)}</span>
                         </li>
                       ))}
