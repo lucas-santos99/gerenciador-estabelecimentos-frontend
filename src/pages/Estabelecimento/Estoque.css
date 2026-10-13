@@ -3077,5 +3077,8 @@
   .prod-secao-nav-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .prod-secao-chip { white-space: nowrap; }
   .prod-secao-resumo { white-space: normal; }
+  .prod-secao-corpo { padding: 2px 10px 12px; }
+  .prod-secao .prod-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .prod-secao .prod-form-group { min-width: 0; }
   .prod-modal form > .prod-modal-acoes { bottom: -20px; margin: 12px -14px -20px; padding: 12px 14px; }
 }
