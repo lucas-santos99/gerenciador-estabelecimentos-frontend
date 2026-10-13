@@ -79,6 +79,35 @@ export function separarValores(texto, max = 60) {
   return out;
 }
 
-export function todosModelos(proprios = []) {
-  return [...MODELOS_PRONTOS, ...proprios.map(m => ({ ...m, icone: '🏷️', proprio: true }))];
+// Junta os tipos prontos (com os tamanhos extras que a loja acrescentou) e os tipos próprios.
+export function todosModelos(rows = []) {
+  const extrasPorBase = {};
+  rows.filter(m => m.modelo_base).forEach(m => { extrasPorBase[m.modelo_base] = m.tamanhos || []; });
+  const prontos = MODELOS_PRONTOS.map(m => {
+    const extras = (extrasPorBase[m.id] || []).filter(t => !m.tamanhos.some(x => x.toLowerCase() === String(t).toLowerCase()));
+    return { ...m, extras, tamanhos: [...m.tamanhos, ...extras] };
+  });
+  return [...prontos, ...rows.filter(m => !m.modelo_base).map(m => ({ ...m, icone: '🏷️', proprio: true }))];
+}
+
+// Salva os tamanhos extras de um tipo pronto (lista vazia = remove).
+export async function salvarExtrasModelo(estId, baseId, nome, tamanhos) {
+  const r = await apiFetch(`${base(estId)}/base/${baseId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, tamanhos }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ao salvar o tamanho no tipo.');
+  return d;
+}
+
+// Troca os tamanhos de um tipo criado pela loja.
+export async function atualizarModeloProprio(estId, id, tamanhos) {
+  const r = await apiFetch(`${base(estId)}/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tamanhos }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ao salvar os tamanhos do tipo.');
+  return d;
 }

@@ -5,6 +5,7 @@ import { apiFetch } from '../../../utils/api';
 import {
   MODELOS_PRONTOS, CORES_BASICAS, GENEROS_BASICOS,
   buscarModelosProprios, criarModeloProprio, excluirModeloProprio, separarValores,
+  todosModelos, salvarExtrasModelo, atualizarModeloProprio,
 } from './modelosVariacao';
 import '../Estoque.css';
 
@@ -30,10 +31,8 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   // Sugestões de cor/gênero (marcação múltipla)
   const [sugMarcadas, setSugMarcadas] = useState({ cor: [], genero: [] });
 
-  const modelos = useMemo(
-    () => [...MODELOS_PRONTOS, ...proprios.map(m => ({ ...m, icone: '🏷️', proprio: true }))],
-    [proprios]
-  );
+  const modelos = useMemo(() => todosModelos(proprios), [proprios]);
+  const [novoNoTipo, setNovoNoTipo] = useState('');
 
   async function carregar(primeira = false) {
     if (primeira) setLoading(true);   // só a 1ª carga mostra "Carregando…" (evita a tela piscar)
@@ -113,6 +112,38 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
   async function adicionarMarcados() {
     if (await adicionarVarios('tamanho', marcados)) setMarcados([]);
+  }
+  // Acrescenta tamanhos (ex.: 56) ao tipo aberto — vale para tipos prontos e próprios.
+  async function adicionarAoTipo(m, texto) {
+    const novos = separarValores(texto, 60).filter(t => !m.tamanhos.some(x => x.toLowerCase() === t.toLowerCase()));
+    if (!novos.length) { setErro('Esse tamanho já está no tipo.'); return; }
+    setErro(''); setOcupado(true);
+    try {
+      await gravarTamanhosTipo(m, [...m.tamanhos, ...novos]);
+      setNovoNoTipo('');
+      await adicionarVarios('tamanho', novos);
+    } catch (err) { setErro(err.message); }
+    setOcupado(false);
+  }
+  async function removerDoTipo(m, t) {
+    if (m.proprio && m.tamanhos.length <= 1) { setErro('O tipo precisa ter pelo menos um tamanho. Para tirar o tipo, use "Excluir tipo".'); return; }
+    setErro('');
+    try { await gravarTamanhosTipo(m, m.tamanhos.filter(x => x !== t)); }
+    catch (err) { setErro(err.message); }
+  }
+  // Grava a nova lista: tipo próprio troca tudo; tipo pronto guarda só os extras.
+  async function gravarTamanhosTipo(m, lista) {
+    if (m.proprio) {
+      const d = await atualizarModeloProprio(estabelecimentoId, m.id, lista);
+      setProprios(prev => prev.map(x => x.id === m.id ? { ...x, tamanhos: d.tamanhos } : x));
+    } else {
+      const extras = lista.filter(t => !MODELOS_PRONTOS.find(b => b.id === m.id).tamanhos.some(x => x.toLowerCase() === t.toLowerCase()));
+      const d = await salvarExtrasModelo(estabelecimentoId, m.id, m.nome, extras);
+      setProprios(prev => {
+        const sem = prev.filter(x => x.modelo_base !== m.id);
+        return extras.length ? [...sem, { id: d.id, nome: m.nome, tamanhos: extras, modelo_base: m.id }] : sem;
+      });
+    }
   }
   async function excluirModelo(m) {
     if (!(await confirmar({ titulo: `Excluir o tipo "${m.nome}"?`, texto: 'Só o atalho do tipo é apagado. Os tamanhos já cadastrados continuam na sua lista.', perigo: true, botao: 'Excluir' }))) return;
@@ -259,14 +290,24 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                 <div className="gov-chips">
                   {modeloAberto.tamanhos.map(t => {
                     const tem = jaTem('tamanho', t);
+                    const removivel = modeloAberto.proprio ? true : (modeloAberto.extras || []).includes(t);
                     return (
-                      <button key={t} type="button" disabled={tem}
-                        className={`gov-chip${marcados.includes(t) ? ' on' : ''}${tem ? ' feito' : ''}`}
-                        onClick={() => alternarMarcado(t)} title={tem ? 'Já está na sua lista' : ''}>
-                        {tem ? '✓ ' : marcados.includes(t) ? '✓ ' : '+ '}{t}
-                      </button>
+                      <span key={t} className="gov-chip-wrap">
+                        <button type="button" disabled={tem}
+                          className={`gov-chip${marcados.includes(t) ? ' on' : ''}${tem ? ' feito' : ''}`}
+                          onClick={() => alternarMarcado(t)} title={tem ? 'Já está na sua lista' : ''}>
+                          {tem ? '✓ ' : marcados.includes(t) ? '✓ ' : '+ '}{t}
+                        </button>
+                        {removivel && <button type="button" className="gov-chip-x" title={`Tirar "${t}" deste tipo`} onClick={() => removerDoTipo(modeloAberto, t)}>✕</button>}
+                      </span>
                     );
                   })}
+                </div>
+                <div className="gov-add-tipo">
+                  <input className="prod-input" maxLength={120} placeholder={`＋ Outro tamanho para ${modeloAberto.nome} — ex: 56 ou 56, 58`}
+                    value={novoNoTipo} onChange={e => setNovoNoTipo(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarAoTipo(modeloAberto, novoNoTipo); } }} />
+                  <button type="button" className="gov-btn-principal" disabled={!novoNoTipo.trim() || ocupado} onClick={() => adicionarAoTipo(modeloAberto, novoNoTipo)}>Adicionar ao tipo</button>
                 </div>
                 <button type="button" className="gov-btn-principal" disabled={!marcados.length || ocupado} onClick={adicionarMarcados}>
                   {ocupado ? 'Adicionando…' : marcados.length ? `Adicionar ${marcados.length} tamanho${marcados.length > 1 ? 's' : ''}` : 'Todos já estão na sua lista'}

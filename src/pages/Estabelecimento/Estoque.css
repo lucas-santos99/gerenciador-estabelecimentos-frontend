@@ -3010,3 +3010,11 @@
 .gov-grupo { margin-bottom: 10px; }
 .gov-grupo-titulo { font-size: .76rem; font-weight: 700; color: var(--est-text-muted); margin-bottom: 6px; }
 @media (max-width: 520px) { .gov-add { flex-direction: column; } }
+
+/* Tamanhos extras dentro de um tipo (13/10) */
+.gov-chip-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.gov-chip-x { border: none; background: transparent; color: var(--est-text-muted, #94a3b8); cursor: pointer; font-size: .7rem; padding: 2px 4px; border-radius: 6px; }
+.gov-chip-x:hover { color: #dc2626; background: rgba(220,38,38,.1); }
+.gov-add-tipo { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.gov-add-tipo .prod-input { flex: 1 1 200px; min-width: 0; }
+.gov-add-tipo .gov-btn-principal { width: auto; margin: 0; padding: 8px 14px; }
