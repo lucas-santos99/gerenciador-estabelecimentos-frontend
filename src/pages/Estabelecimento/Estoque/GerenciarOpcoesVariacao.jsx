@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../../utils/api';
 import {
   MODELOS_PRONTOS, CORES_BASICAS, GENEROS_BASICOS,
-  carregarModelosProprios, salvarModelosProprios, separarValores,
+  buscarModelosProprios, criarModeloProprio, excluirModeloProprio, separarValores,
 } from './modelosVariacao';
 import '../Estoque.css';
 
@@ -21,7 +21,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   const [ocupado,   setOcupado]   = useState(false);
 
   // Tipos de produto (modelos de tamanho)
-  const [proprios,  setProprios]  = useState(() => carregarModelosProprios(estabelecimentoId));
+  const [proprios,  setProprios]  = useState([]);
   const [modeloId,  setModeloId]  = useState(null);          // modelo aberto
   const [marcados,  setMarcados]  = useState([]);             // tamanhos marcados no modelo aberto
   const [criando,   setCriando]   = useState(false);
@@ -45,6 +45,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
 
   useEffect(() => { carregar(); }, [estabelecimentoId]);
+  useEffect(() => { buscarModelosProprios(estabelecimentoId).then(setProprios); }, [estabelecimentoId]);
 
   useEffect(() => {
     function handleEsc(e) { if (e.key === 'Escape') onClose(); }
@@ -115,8 +116,10 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   }
   async function excluirModelo(m) {
     if (!(await confirmar({ titulo: `Excluir o tipo "${m.nome}"?`, texto: 'Só o atalho do tipo é apagado. Os tamanhos já cadastrados continuam na sua lista.', perigo: true, botao: 'Excluir' }))) return;
-    const lista = proprios.filter(x => x.id !== m.id);
-    setProprios(lista); salvarModelosProprios(estabelecimentoId, lista); setModeloId(null);
+    try {
+      await excluirModeloProprio(estabelecimentoId, m.id);
+      setProprios(prev => prev.filter(x => x.id !== m.id)); setModeloId(null);
+    } catch (err) { setErro(err.message); }
   }
   async function salvarNovoTipo(e) {
     e.preventDefault();
@@ -126,9 +129,10 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     if (!tamanhos.length) { setErro('Digite os tamanhos desse tipo, separados por vírgula (ex.: 56, 58, 60).'); return; }
     if (modelos.some(m => m.nome.toLowerCase() === nome.toLowerCase())) { setErro('Já existe um tipo com esse nome.'); return; }
     setErro('');
-    const novo = { id: `p-${Date.now().toString(36)}`, nome, tamanhos };
-    const lista = [...proprios, novo];
-    setProprios(lista); salvarModelosProprios(estabelecimentoId, lista);
+    let novo;
+    try { novo = await criarModeloProprio(estabelecimentoId, nome, tamanhos); }
+    catch (err) { setErro(err.message); return; }
+    setProprios(prev => [...prev, novo]);
     setNovoTipo({ nome: '', tamanhos: '' }); setCriando(false);
     await adicionarVarios('tamanho', tamanhos);
     setModeloId(novo.id); setMarcados([]);
@@ -282,7 +286,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
                     onChange={e => setNovoTipo(p => ({ ...p, tamanhos: e.target.value }))} />
                 </label>
                 <button type="submit" className="gov-btn-principal" disabled={ocupado}>Salvar tipo e adicionar os tamanhos</button>
-                <small className="gov-nota">O tipo fica salvo neste navegador, como atalho. Você pode organizar do jeito que quiser — ou ignorar e digitar os tamanhos direto no campo acima.</small>
+                <small className="gov-nota">O tipo fica salvo na conta da loja e vale em qualquer computador. Você pode organizar do jeito que quiser — ou ignorar e digitar os tamanhos direto no campo acima.</small>
               </form>
             )}
           </div>

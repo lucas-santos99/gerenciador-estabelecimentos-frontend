@@ -15,17 +15,54 @@ export const CORES_BASICAS = ['Preto', 'Branco', 'Cinza', 'Azul', 'Azul marinho'
 
 export const GENEROS_BASICOS = ['Masculino', 'Feminino', 'Unissex', 'Infantil'];
 
-const chave = (estId) => `variacao-modelos-${estId}`;
+import { apiFetch } from '../../../utils/api';
 
-export function carregarModelosProprios(estId) {
+const chaveAntiga = (estId) => `variacao-modelos-${estId}`;
+const base = (estId) => `/api/estabelecimentos/${estId}/modelos-variacao`;
+
+// Tipos criados pelo comerciante, guardados na conta da loja (valem em qualquer
+// computador). Se houver tipos da versão antiga (salvos só neste navegador),
+// eles são enviados para a conta uma única vez e apagados daqui.
+export async function buscarModelosProprios(estId) {
+  let lista = [];
   try {
-    const arr = JSON.parse(localStorage.getItem(chave(estId)) || '[]');
-    return Array.isArray(arr) ? arr.filter(m => m && m.id && m.nome && Array.isArray(m.tamanhos)) : [];
+    const r = await apiFetch(base(estId));
+    if (r.ok) lista = await r.json();
   } catch { return []; }
+  try {
+    const bruto = localStorage.getItem(chaveAntiga(estId));
+    if (bruto) {
+      const antigos = JSON.parse(bruto);
+      let tudoCerto = true;
+      if (Array.isArray(antigos)) {
+        for (const m of antigos) {
+          if (!m?.nome || !Array.isArray(m.tamanhos) || lista.some(x => x.nome.toLowerCase() === String(m.nome).toLowerCase())) continue;
+          const r = await apiFetch(base(estId), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nome: m.nome, tamanhos: m.tamanhos }),
+          });
+          if (r.ok) lista.push(await r.json()); else if (r.status !== 409) tudoCerto = false;
+        }
+      }
+      if (tudoCerto) localStorage.removeItem(chaveAntiga(estId));
+    }
+  } catch { /* migração é opcional */ }
+  return lista;
 }
 
-export function salvarModelosProprios(estId, lista) {
-  try { localStorage.setItem(chave(estId), JSON.stringify(lista)); } catch { /* sem armazenamento: segue sem salvar */ }
+export async function criarModeloProprio(estId, nome, tamanhos) {
+  const r = await apiFetch(base(estId), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, tamanhos }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ao salvar o tipo de produto.');
+  return d;
+}
+
+export async function excluirModeloProprio(estId, id) {
+  const r = await apiFetch(`${base(estId)}/${id}`, { method: 'DELETE' });
+  if (!r.ok) throw new Error('Erro ao excluir o tipo de produto.');
 }
 
 // "P, M; G" -> ['P','M','G'] (sem repetir, até 60 itens, 50 caracteres cada)
@@ -42,6 +79,6 @@ export function separarValores(texto, max = 60) {
   return out;
 }
 
-export function todosModelos(estId) {
-  return [...MODELOS_PRONTOS, ...carregarModelosProprios(estId).map(m => ({ ...m, icone: m.icone || '🏷️', proprio: true }))];
+export function todosModelos(proprios = []) {
+  return [...MODELOS_PRONTOS, ...proprios.map(m => ({ ...m, icone: '🏷️', proprio: true }))];
 }

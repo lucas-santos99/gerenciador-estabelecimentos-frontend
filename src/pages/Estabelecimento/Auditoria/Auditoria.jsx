@@ -71,6 +71,8 @@ const ACAO_TELA = {
   variacao_imagem_enviada:  '🖼️ Foto da variação enviada',
   variacao_imagem_removida: '🗑️ Foto da variação removida',
   opcao_variacao_criada:    '➕ Opção de variação criada',
+  modelo_variacao_criado: '🏷️ Tipo de produto criado',
+  modelo_variacao_removido: '🏷️ Tipo de produto removido',
   opcao_variacao_removida:  '🗑️ Opção de variação removida',
   lembrete_criado:   '➕ Lembrete criado',
   lembrete_editado:  '✏️ Lembrete editado',

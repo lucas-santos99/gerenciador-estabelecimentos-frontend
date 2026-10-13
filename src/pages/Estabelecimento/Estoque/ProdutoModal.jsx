@@ -3,7 +3,7 @@ import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
-import { todosModelos, CORES_BASICAS } from './modelosVariacao';
+import { todosModelos, buscarModelosProprios, CORES_BASICAS } from './modelosVariacao';
 import { perguntar, confirmar } from '../../../components/Dialogo/dialogo';
 import Rastro from '../../../components/Rastro/Rastro';
 import EtiquetasModal from './EtiquetasModal';
@@ -317,6 +317,8 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
   const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
   const [gradeTipo, setGradeTipo] = useState('todos'); // filtro de tamanhos por tipo de produto
+  const [modelosProprios, setModelosProprios] = useState([]);
+  useEffect(() => { if (gradeAberta) buscarModelosProprios(estabelecimentoId).then(setModelosProprios); }, [gradeAberta, estabelecimentoId]);
   const [gradeMsg, setGradeMsg] = useState('');
   const [recolhidas, setRecolhidas] = useState(() => new Set());
   function alternarRecolhida(chave) {
@@ -507,7 +509,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
 
   const PAINEL_GRADE = !gradeAberta ? null : (() => {
             const { lista, jaExistem } = combinacoesGrade();
-            const modelos = todosModelos(estabelecimentoId);
+            const modelos = todosModelos(modelosProprios);
             const modeloSel = modelos.find(m => m.id === gradeTipo) || null;
             const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
             const bloco = (tipo, titulo, opcoes, sugestoes = []) => {

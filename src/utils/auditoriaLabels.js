@@ -53,6 +53,8 @@ export const ACAO_LABEL = {
   variacao_imagem_enviada:   '🖼️ Foto da variação enviada',
   variacao_imagem_removida:  '🗑️ Foto da variação removida',
   opcao_variacao_criada:     '➕ Opção de variação criada',
+  modelo_variacao_criado: '🏷️ Tipo de produto criado',
+  modelo_variacao_removido: '🏷️ Tipo de produto removido',
   opcao_variacao_removida:   '🗑️ Opção de variação removida',
 
   // Clientes / fiado
