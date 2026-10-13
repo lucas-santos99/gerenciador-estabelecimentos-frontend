@@ -3021,3 +3021,61 @@
 .gov-chip.sair { text-decoration: line-through; opacity: .65; border-style: dashed; }
 .gov-destino { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: .78rem; color: var(--est-text-muted, #64748b); flex-wrap: wrap; }
 .gov-destino .prod-input { flex: 1 1 180px; min-width: 0; padding: 6px 8px; }
+
+/* ===== Modal de produto: seções recolhíveis ===== */
+.prod-secao-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  position: sticky; top: -28px; z-index: 5; margin: -4px -28px 14px; padding: 8px 28px;
+  background: var(--est-card); border-bottom: 1px solid var(--est-border);
+}
+.prod-secao-nav-chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.prod-secao-chip {
+  padding: 5px 11px; border-radius: 999px; border: 1px solid var(--est-border);
+  background: transparent; color: var(--est-text); cursor: pointer; font-family: inherit;
+  font-size: calc(0.74rem * var(--prod-modal-font-scale, 1)); font-weight: 600;
+}
+.prod-secao-chip:hover { border-color: var(--est-accent); color: var(--est-accent); }
+.prod-secao-chip.fechada { opacity: .65; }
+.prod-secao-todas { white-space: nowrap; }
+
+.prod-secao {
+  border: 1px solid var(--est-border); border-radius: 14px; margin-bottom: 12px;
+  background: color-mix(in srgb, var(--est-card) 92%, var(--est-accent) 2%);
+  scroll-margin-top: 60px;
+}
+.prod-secao.com-aviso:not(.aberta) { border-color: #e0a100; }
+.prod-secao-cab {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 12px 14px; background: transparent; border: none; cursor: pointer;
+  color: var(--est-text); font-family: inherit;
+}
+.prod-secao-cab:hover .prod-secao-titulo { color: var(--est-accent); }
+.prod-secao-icone { font-size: calc(1.15rem * var(--prod-modal-font-scale, 1)); }
+.prod-secao-textos { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.prod-secao-titulo { font-weight: 800; font-size: calc(0.9rem * var(--prod-modal-font-scale, 1)); }
+.prod-secao-resumo {
+  font-size: calc(0.78rem * var(--prod-modal-font-scale, 1)); color: var(--est-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prod-secao-aviso {
+  font-size: calc(0.72rem * var(--prod-modal-font-scale, 1)); font-weight: 700; color: #b97f00;
+  background: rgba(224,161,0,.14); padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.prod-secao-seta { transition: transform .2s; color: var(--est-text-muted); transform: rotate(-90deg); }
+.prod-secao.aberta .prod-secao-seta { transform: rotate(0); }
+.prod-secao-corpo { padding: 2px 14px 14px; }
+.prod-secao-corpo[hidden] { display: none; }
+.prod-secao-dica { display: flex; align-items: center; gap: 6px; padding: 0 14px; font-size: calc(0.74rem * var(--prod-modal-font-scale, 1)); color: var(--est-text-muted); }
+
+/* Botões Cancelar / Salvar sempre à vista no fim do modal */
+.prod-modal form > .prod-modal-acoes {
+  position: sticky; bottom: -28px; z-index: 5; margin: 12px -28px -28px; padding: 14px 28px;
+  background: var(--est-card); box-shadow: 0 -8px 18px rgba(0,0,0,.12);
+}
+@media (max-width: 700px) {
+  .prod-secao-nav { top: -20px; margin: -4px -14px 12px; padding: 8px 14px; }
+  .prod-secao-nav-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .prod-secao-chip { white-space: nowrap; }
+  .prod-secao-resumo { white-space: normal; }
+  .prod-modal form > .prod-modal-acoes { bottom: -20px; margin: 12px -14px -20px; padding: 12px 14px; }
+}

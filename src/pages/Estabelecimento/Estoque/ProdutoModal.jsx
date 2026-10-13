@@ -970,6 +970,30 @@ function CategoriaSelect({ categorias, value, onChange, somenteLeitura }) {
 
 // Ícone de "sem imagem" — SVG em vez de emoji, pra não depender da fonte
 // de emoji do sistema (renderiza igual em qualquer navegador/SO)
+// ── Seção recolhível do formulário de produto ─────────────────────────
+// O conteúdo continua montado quando recolhido (só fica escondido), assim nada que a
+// pessoa digitou se perde e os campos obrigatórios continuam valendo.
+function SecaoForm({ id, icone, titulo, resumo, aviso, dica, aberta, onToggle, children }) {
+  return (
+    <section className={`prod-secao${aberta ? ' aberta' : ''}${aviso ? ' com-aviso' : ''}`} id={`prod-secao-${id}`} data-secao={id}>
+      <button type="button" className="prod-secao-cab" onClick={() => onToggle(id)} aria-expanded={aberta}>
+        <span className="prod-secao-icone">{icone}</span>
+        <span className="prod-secao-textos">
+          <span className="prod-secao-titulo">{titulo}</span>
+          {!aberta && resumo && <span className="prod-secao-resumo">{resumo}</span>}
+        </span>
+        {aviso && <span className="prod-secao-aviso" title={aviso}>⚠️ {aviso}</span>}
+        <span className="prod-secao-seta" aria-hidden="true">▾</span>
+      </button>
+      {dica && aberta && <div className="prod-secao-dica"><CampoAjuda texto={dica} /> <span>Como funciona esta parte</span></div>}
+      <div className="prod-secao-corpo" hidden={!aberta}>{children}</div>
+    </section>
+  );
+}
+
+const SECOES_PADRAO = { ident: true, venda: true, variacoes: true, estoque: true, historico: false, precos: true };
+const CHAVE_SECOES = 'estoque-prod-modal-secoes';
+
 function IconePacote({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1798,6 +1822,52 @@ export default function ProdutoModal({
   const labelVenda  = `Preço de venda (R$/${isKg ? 'kg' : 'un'})${form.tem_variacoes ? '' : ' *'}`;
   const labelCusto  = isKg ? 'Preço de custo (R$/kg)' : 'Preço de custo (R$/un)';
 
+  // ── Seções recolhíveis ──
+  const [secoes, setSecoes] = useState(() => {
+    try { return { ...SECOES_PADRAO, ...(JSON.parse(localStorage.getItem(CHAVE_SECOES) || '{}')) }; }
+    catch { return { ...SECOES_PADRAO }; }
+  });
+  const secaoAberta = (id) => secoes[id] !== false;
+  function gravarSecoes(prox) {
+    setSecoes(prox);
+    try { localStorage.setItem(CHAVE_SECOES, JSON.stringify(prox)); } catch { /* sem armazenamento: só não lembra */ }
+  }
+  function alternarSecao(id) { gravarSecoes({ ...secoes, [id]: !secaoAberta(id) }); }
+  function todasSecoes(abrir) {
+    const prox = {};
+    Object.keys(SECOES_PADRAO).forEach(k => { prox[k] = abrir; });
+    gravarSecoes(prox);
+  }
+  function irParaSecao(id) {
+    gravarSecoes({ ...secoes, [id]: true });
+    setTimeout(() => document.getElementById(`prod-secao-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  }
+  // Campo obrigatório vazio dentro de uma seção recolhida: abre a seção antes de validar.
+  function abrirSecoesInvalidas(formEl) {
+    if (!formEl) return;
+    const abrir = {};
+    formEl.querySelectorAll(':invalid').forEach(el => {
+      const sec = el.closest('[data-secao]');
+      if (sec) { abrir[sec.dataset.secao] = true; const c = sec.querySelector('.prod-secao-corpo'); if (c) c.hidden = false; }
+    });
+    if (Object.keys(abrir).length) gravarSecoes({ ...secoes, ...abrir });
+  }
+  const catNome = (categorias || []).flatMap(c => [c, ...(c.subcategorias || [])]).find(c => String(c.id) === String(form.categoria_id))?.nome;
+  const brl = (v) => { const n = paraFloatBR(v); return n > 0 ? `R$ ${n.toFixed(2).replace('.', ',')}` : null; };
+  const nVar = (variacoes || []).filter(v => v.ativo !== false).length;
+  const faltaNome = !String(form.nome || '').trim();
+  const faltaVenda = !form.tem_variacoes && !(paraFloatBR(form.preco_venda) > 0);
+  const infoSecao = {
+    ident: { icone: '📋', titulo: 'Identificação', resumo: [form.nome || 'Sem nome ainda', form.marca, catNome].filter(Boolean).join(' · '), aviso: faltaNome ? 'falta o nome' : '' },
+    venda: { icone: '⚖️', titulo: 'Como é vendido', resumo: isKg ? (form.vendido_por_peso ? 'Quilo · etiqueta de balança' : 'Quilo · a granel') : 'Unidade' },
+    variacoes: { icone: '🎨', titulo: 'Variações (tamanho, cor, gênero)', resumo: form.tem_variacoes ? `${nVar} variaç${nVar === 1 ? 'ão' : 'ões'}` : 'Produto único — sem variações' },
+    estoque: { icone: '📦', titulo: 'Estoque', resumo: `${form.estoque_atual || '0'} ${isKg ? 'kg' : 'un'} em estoque · mínimo ${form.estoque_minimo ? form.estoque_minimo : 'sem alerta'}` },
+    historico: { icone: '🕘', titulo: 'De onde veio este estoque', resumo: 'Entradas e saídas recentes' },
+    precos: { icone: '💰', titulo: form.tem_variacoes ? 'Preços (padrão do produto)' : 'Preços', resumo: [brl(form.preco_custo) && `Custo ${brl(form.preco_custo)}`, brl(form.preco_venda) && `Venda ${brl(form.preco_venda)}`].filter(Boolean).join(' · ') || 'Ainda sem preço', aviso: faltaVenda ? 'falta o preço de venda' : '' },
+  };
+  const NAV_SECOES = [['ident', '📋 Identificação'], ['venda', '⚖️ Venda'], ['variacoes', '🎨 Variações'], ...(!form.tem_variacoes ? [['estoque', '📦 Estoque']] : []), ['precos', '💰 Preços'], ...(isEdit ? [['historico', '🕘 Histórico']] : [])];
+  const todasAbertas = NAV_SECOES.every(([id]) => secaoAberta(id));
+
   /* ════════════════════════════════════════════════════════ */
   return (
     <>
@@ -1968,11 +2038,22 @@ export default function ProdutoModal({
           <>
           {erro && <div className="prod-modal-erro">⚠️ {erro}</div>}
 
-          <form onSubmit={salvar}>
+          <form onSubmit={salvar} onInvalidCapture={e => abrirSecoesInvalidas(e.currentTarget)}>
+
+            <div className="prod-secao-nav">
+              <span className="prod-secao-nav-chips">
+                {NAV_SECOES.map(([id, rot]) => (
+                  <button key={id} type="button" className={`prod-secao-chip${secaoAberta(id) ? '' : ' fechada'}`} onClick={() => irParaSecao(id)} title="Ir para esta parte">{rot}</button>
+                ))}
+              </span>
+              <button type="button" className="etq-link prod-secao-todas" onClick={() => todasSecoes(!todasAbertas)}>
+                {todasAbertas ? '▴ Recolher tudo' : '▾ Expandir tudo'}
+              </button>
+            </div>
+
 
             {/* ── Identificação ─────────────────────────── */}
-            <div className="prod-form-section">
-              <div className="prod-form-section-titulo">📋 Identificação</div>
+            <SecaoForm id="ident" aberta={secaoAberta('ident')} onToggle={alternarSecao} {...infoSecao.ident}>
               <div className="prod-form-grid">
 
                 <div className="prod-form-group prod-form-full">
@@ -2278,13 +2359,11 @@ export default function ProdutoModal({
                 </div>
 
               </div>
-            </div>
+            </SecaoForm>
 
-            {/* ── Estoque ───────────────────────────────── */}
-            <div className="prod-form-section">
-              <div className="prod-form-section-titulo">📦 Estoque & Unidade</div>
+            {/* ── Como é vendido ───────────────────────────────── */}
+            <SecaoForm id="venda" aberta={secaoAberta("venda")} onToggle={alternarSecao} {...infoSecao.venda}>
               <div className="prod-form-grid">
-
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
                     Vendido por *
@@ -2413,6 +2492,11 @@ export default function ProdutoModal({
                   </div>
                 )}
 
+              </div>
+            </SecaoForm>
+
+            <SecaoForm id="variacoes" aberta={secaoAberta("variacoes")} onToggle={alternarSecao} {...infoSecao.variacoes}>
+              <div className="prod-form-grid">
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-balanca-checkbox-label">
                     <input
@@ -2452,7 +2536,7 @@ export default function ProdutoModal({
                   )}
                 </div>
 
-                {form.tem_variacoes ? (
+                {form.tem_variacoes && (
                   <VariacoesTabela
                     variacoes={variacoes}
                     setVariacoes={setVariacoes}
@@ -2469,8 +2553,13 @@ export default function ProdutoModal({
                     isEdit={isEdit}
                     nomeProduto={form.nome}
                   />
-                ) : (
-                <>
+                )}
+              </div>
+            </SecaoForm>
+
+            {!form.tem_variacoes && (
+            <SecaoForm id="estoque" aberta={secaoAberta("estoque")} onToggle={alternarSecao} {...infoSecao.estoque}>
+              <div className="prod-form-grid">
                 <div className="prod-form-group">
                   <label className="prod-label">
                     Estoque atual * <span className="prod-label-unit">({form.unidade_medida})</span>
@@ -2623,9 +2712,13 @@ export default function ProdutoModal({
                     </div>
                   </div>
                 )}
-                </>
-                )}
+              </div>
+            </SecaoForm>
+            )}
 
+            {isEdit && produtoEditar?.id && (
+            <SecaoForm id="historico" aberta={secaoAberta("historico")} onToggle={alternarSecao} {...infoSecao.historico}>
+              <div className="prod-form-grid">
                 {isEdit && produtoEditar?.id && (
                   <div className="prod-form-group prod-form-full">
                     <HistoricoEstoque
@@ -2637,17 +2730,14 @@ export default function ProdutoModal({
                 )}
 
               </div>
-            </div>
+            </SecaoForm>
+            )}
 
 
             {/* ── Preços ────────────────────────────────── */}
-            <div className="prod-form-section">
-              <div className="prod-form-section-titulo">
-                💰 Preços {form.tem_variacoes && <span className="prod-label-unit">(padrão do produto)</span>}
-                <CampoAjuda texto={form.tem_variacoes
+            <SecaoForm id="precos" aberta={secaoAberta('precos')} onToggle={alternarSecao} {...infoSecao.precos} dica={form.tem_variacoes
                   ? "Esse é o preço padrão/geral do produto — não o de uma variação específica. Cada variação (acima, em Variações) pode ter seu próprio preço de custo/venda; quando ela não tiver, o PDV usa esse aqui. Se TODAS as variações já tiverem preço de venda próprio, esse campo geral vira opcional (nunca seria usado mesmo). Mas se sobrar qualquer variação sem preço, esse aqui volta a ser obrigatório — garante que nada fique à venda sem um preço válido."
-                  : "Preço de custo e venda deste produto. Se um dia ele ganhar variações (tamanho/cor/gênero), esse preço vira o padrão — usado só pras variações que não tiverem um preço próprio definido."} />
-              </div>
+                  : "Preço de custo e venda deste produto. Se um dia ele ganhar variações (tamanho/cor/gênero), esse preço vira o padrão — usado só pras variações que não tiverem um preço próprio definido."}>
 
               {!form.tem_variacoes && paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
                 <div className="prod-margem-preview">
@@ -2713,7 +2803,7 @@ export default function ProdutoModal({
                   </div>
                 </div>
               </div>
-            </div>
+            </SecaoForm>
 
             {isEdit && produtoEditar?.id && <Rastro entidade="produto" id={produtoEditar.id} rotulos={{ criado: 'Produto cadastrado', alterado: 'Produto alterado pela última vez', dica: 'Vale para o produto inteiro (nome, preços, foto, categoria…), não só para o campo que está perto. As entradas e saídas de estoque aparecem em "De onde veio este estoque".' }} />}
 
@@ -2728,7 +2818,7 @@ export default function ProdutoModal({
                 {somenteLeitura ? 'Fechar' : 'Cancelar (Esc)'}
               </button>
               {!somenteLeitura && (
-                <button type="submit" className="prod-modal-btn-salvar" disabled={salvando || ajustando}>
+                <button type="submit" className="prod-modal-btn-salvar" disabled={salvando || ajustando} onClick={e => abrirSecoesInvalidas(e.currentTarget.form)}>
                   {ajustando ? '⏳ Ajustando estoque…' : salvando ? '⏳ Salvando…' : isEdit ? '✓ Atualizar produto' : '✓ Criar produto'}
                 </button>
               )}
