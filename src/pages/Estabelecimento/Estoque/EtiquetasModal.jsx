@@ -93,7 +93,7 @@ export default function EtiquetasModal({ produto, onFechar }) {
     }
     return produto.variacoes.map((v, i) => ({
       chave: v.id || `v${i}`, nome: produto.nome,
-      detalhe: [v.tamanho, v.cor, v.genero].map(x => (x || '').trim()).filter(Boolean).join(' · '),
+      detalhe: (v.rotulo || [v.tamanho, v.cor, v.genero, ...Object.values(v.atributos || {})].map(x => String(x || '').trim()).filter(Boolean).join(' · ')),
       codigo: (v.codigo_barras || '').trim(),
       preco: fmt(v.preco_venda != null ? v.preco_venda : produto.preco_venda) + sufixo,
     }));

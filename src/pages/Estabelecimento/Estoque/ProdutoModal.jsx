@@ -868,7 +868,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
                 onClick={() => setEtiquetaProd({
                   nome: nomeProduto || 'Produto', unidade_medida: unidadeMedida,
                   preco_venda: paraFloatBR(precoBase) || 0, tem_variacoes: true,
-                  variacoes: [{ id: v.id, tamanho: v.tamanho, cor: v.cor, genero: v.genero, atributos: extrasParaEnviar(v), codigo_barras: v.codigo_barras,
+                  variacoes: [{ id: v.id, tamanho: v.tamanho, cor: v.cor, genero: v.genero, atributos: extrasParaEnviar(v), rotulo: resumoVariacao(v), codigo_barras: v.codigo_barras,
                     preco_venda: (v.preco_venda || '').toString().trim() ? paraFloatBR(v.preco_venda) : null }],
                 })}
                 title="Imprimir etiqueta dessa variação"

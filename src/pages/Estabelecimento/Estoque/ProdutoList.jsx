@@ -300,7 +300,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   }
 
   /* ── Exportar Excel ──────────────────────────────────────── */
-  function exportarExcel() {
+  async function exportarExcel() {
     if (produtos.length === 0) return;
 
     const TEAL      = '14B8A6';
@@ -399,8 +399,19 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     });
 
     // ── Aba 2: Variações (detalhe, 1 linha por tamanho/cor) ────
+    // Uma coluna por atributo da loja (ligados + ocultos que ainda têm valor), na ordem dela.
+    let atributosLoja = [
+      { chave: 'tamanho', nome: 'Tamanho', ativo: true }, { chave: 'cor', nome: 'Cor', ativo: true }, { chave: 'genero', nome: 'Gênero', ativo: true },
+    ];
+    try {
+      const respAt = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/atributos-variacao`);
+      if (respAt.ok) { const d = await respAt.json(); if (Array.isArray(d.atributos) && d.atributos.length) atributosLoja = d.atributos; }
+    } catch { /* sem a lista da loja, exporta os 3 atributos fixos */ }
+    const valorAttr = (v, chave) => String((['tamanho', 'cor', 'genero'].includes(chave) ? v[chave] : v.atributos?.[chave]) ?? '').trim();
+    const colunasAttr = atributosLoja.filter(a => a.ativo || produtos.some(p => p.tem_variacoes && (p.variacoes || []).some(v => valorAttr(v, a.chave))));
+    const nAttr = colunasAttr.length;
     const headerVariacoes = [
-      'Produto', 'Marca', 'Tamanho', 'Cor', 'Gênero', 'Estoque', 'Unid.',
+      'Produto', 'Marca', ...colunasAttr.map(a => a.nome), 'Estoque', 'Unid.',
       'Custo (R$)', 'Venda (R$)', 'Valor em Estoque a Custo (R$)',
     ];
     const linhasVariacoes = [];
@@ -411,7 +422,7 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
         const venda   = parseFloat(v.preco_venda != null ? v.preco_venda : p.preco_venda || 0);
         const estoque = parseFloat(v.estoque_atual || 0);
         linhasVariacoes.push([
-          p.nome, p.marca || '', v.tamanho || '', v.cor || '', v.genero || '',
+          p.nome, p.marca || '', ...colunasAttr.map(a => valorAttr(v, a.chave)),
           estoque, p.unidade_medida, custo, venda, estoque * custo,
         ]);
       });
@@ -423,9 +434,9 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
     if (linhasVariacoes.length > 0) {
       const wsVariacoes = XLSX.utils.aoa_to_sheet([headerVariacoes, ...linhasVariacoes]);
       wsVariacoes['!cols'] = [
-        { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
+        { wch: 30 }, { wch: 16 }, ...colunasAttr.map(() => ({ wch: 14 })), { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 18 },
       ];
-      estilizarAba(wsVariacoes, headerVariacoes.length, linhasVariacoes.length, [7, 8, 9], []);
+      estilizarAba(wsVariacoes, headerVariacoes.length, linhasVariacoes.length, [4 + nAttr, 5 + nAttr, 6 + nAttr], []);
       XLSX.utils.book_append_sheet(wb, wsVariacoes, 'Variações');
     }
 
@@ -1169,7 +1180,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
           {produto.marca && <div className="prod-marca">{produto.marca}</div>}
           <div className="prod-card-meta">
             {temVariacoes && (
-              <span className="prod-badge-variacoes" title={produto.variacoes.map(v => [v.tamanho, v.cor, v.genero].filter(Boolean).join(' ')).join(', ')}>
+              <span className="prod-badge-variacoes" title={produto.variacoes.map(v => v.rotulo || [v.tamanho, v.cor, v.genero].filter(Boolean).join(' · ')).join(', ')}>
                 🎨 {produto.variacoes.length} variaç{produto.variacoes.length > 1 ? 'ões' : 'ão'}
               </span>
             )}
