@@ -188,7 +188,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
   const ocultos = ordenados.length - ativos.length;
 
   return createPortal(
-    <div className="prod-modal-overlay" style={{ zIndex: 1400 }} onClick={e => { e.stopPropagation(); fechar(); }}>
+    <div className="prod-modal-overlay" style={{ zIndex: 3100 }} onClick={e => { e.stopPropagation(); fechar(); }}>
       <div className="prod-modal gov-modal" onClick={e => e.stopPropagation()}>
 
         <div className="gov-topo">
