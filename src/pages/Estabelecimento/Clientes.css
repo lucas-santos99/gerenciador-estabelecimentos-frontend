@@ -1208,6 +1208,13 @@
     max-width: 100%;
     padding: 24px 16px;
   }
+  .cli-modal-acoes {
+    position: sticky;
+    bottom: -24px;
+    margin-bottom: -24px;
+    padding-bottom: 24px;
+    background: var(--est-card);
+  }
   .cli-receb-total-valor { font-size: 2rem; }
   .cli-receb-input { font-size: 1.5rem; padding: 12px; }
   .cli-meio-item { padding: 15px 14px; }
