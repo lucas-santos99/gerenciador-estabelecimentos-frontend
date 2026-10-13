@@ -309,13 +309,72 @@ function CampoAjuda({ texto }) {
   );
 }
 
-// Tabela de variações (tamanho/cor) — cada linha tem estoque próprio, e
+// ── Atributos das variações (13/10/2026) ───────────────────────────────
+// tamanho/cor/gênero continuam nos campos antigos da variação; qualquer outro
+// atributo que a loja criar fica em `v.atributos` (objeto chave → valor).
+const CHAVES_LEGADO = ['tamanho', 'cor', 'genero'];
+const ICONE_ATRIBUTO = { tamanho: '📏', cor: '🎨', genero: '🚻' };
+const MAX_ATRIBUTOS_PRODUTO = 8;
+const MAX_VARIACOES_PRODUTO = 300;
+const AVISO_VARIACOES_PRODUTO = 200;
+const ATRIBUTOS_BASE = [
+  { chave: 'tamanho', nome: 'Tamanho', ativo: true, legado: true },
+  { chave: 'cor',     nome: 'Cor',     ativo: true, legado: true },
+  { chave: 'genero',  nome: 'Gênero',  ativo: true, legado: true },
+];
+function valorAtributo(v, chave) {
+  const bruto = CHAVES_LEGADO.includes(chave) ? v?.[chave] : v?.atributos?.[chave];
+  return bruto == null ? '' : String(bruto);
+}
+function comAtributo(v, chave, valor) {
+  if (CHAVES_LEGADO.includes(chave)) return { ...v, [chave]: valor };
+  const atributos = { ...(v.atributos || {}) };
+  if (String(valor).trim()) atributos[chave] = valor; else delete atributos[chave];
+  return { ...v, atributos };
+}
+function chavesPreenchidas(variacoes) {
+  const set = new Set();
+  for (const v of variacoes) {
+    for (const k of CHAVES_LEGADO) if (String(v?.[k] || '').trim()) set.add(k);
+    for (const [k, val] of Object.entries(v?.atributos || {})) if (String(val ?? '').trim()) set.add(k);
+  }
+  return set;
+}
+function extrasParaEnviar(v) {
+  const out = {};
+  for (const [k, val] of Object.entries(v?.atributos || {})) {
+    const t = String(val ?? '').trim();
+    if (t) out[k] = t;
+  }
+  return out;
+}
+// Combinação de todos os atributos preenchidos (pra achar variação repetida).
+function chaveCombinacao(v) {
+  const partes = [];
+  for (const k of CHAVES_LEGADO) partes.push(`${k}=${String(v?.[k] || '').trim().toLowerCase()}`);
+  for (const [k, val] of Object.entries(extrasParaEnviar(v)).sort(([a], [b]) => a.localeCompare(b))) partes.push(`${k}=${val.toLowerCase()}`);
+  return partes.join('|');
+}
+const variacaoSemValor = (v) => CHAVES_LEGADO.every(k => !String(v?.[k] || '').trim()) && Object.keys(extrasParaEnviar(v)).length === 0;
+
+// Tabela de variações (atributos da loja: tamanho, cor…) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, opcoesGenero, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto }) {
+function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChave, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto }) {
   const [etiquetaProd, setEtiquetaProd] = useState(null);
   const [gradeAberta, setGradeAberta] = useState(false);
-  const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
-  const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
+  const [gradeSel, setGradeSel] = useState({});   // chave do atributo → valores marcados
+  const [gradeNovo, setGradeNovo] = useState({});   // chave do atributo → texto digitado
+
+  // Atributos que aparecem na tabela: os ativos da loja (na ordem dela) + os
+  // ocultos que ainda têm valor em alguma variação (nunca esconde dado salvo).
+  const preenchidas = chavesPreenchidas(variacoes);
+  const todosAtributos = (atributosLoja && atributosLoja.length) ? atributosLoja : ATRIBUTOS_BASE;
+  const atributos = todosAtributos.filter(a => a.ativo || preenchidas.has(a.chave));
+  const nomeAtributo = (chave) => (todosAtributos.find(a => a.chave === chave)?.nome) || chave;
+  const opcoesDe = (chave) => (opcoesPorChave && opcoesPorChave[chave]) || [];
+  const nomesTxt = atributos.map(a => a.nome.toLowerCase()).join(', ') || 'atributos';
+  // Atributo que fica em branco ao espelhar: o Tamanho (se a loja usa) ou o primeiro.
+  const chaveEspelhoLimpa = (atributos.find(a => a.chave === 'tamanho') || atributos[0])?.chave;
   const [gradeTipo, setGradeTipo] = useState('todos'); // filtro de tamanhos por tipo de produto
   const [modelosProprios, setModelosProprios] = useState([]);
   const [tipoEstab, setTipoEstab] = useState(null);
@@ -333,7 +392,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const idxImagemAlvo = useRef(null);
   // 23/09/2026 — "espelhar" valores de uma variação já preenchida ao criar
   // outra. Guarda qual variação serve de modelo ('' = em branco) e qual
-  // variação nova deve ganhar o foco no campo Tamanho depois de criada.
+  // variação nova deve ganhar o foco no primeiro campo depois de criada.
   const [modeloIdx, setModeloIdx] = useState('ultima');
   const tamanhoRefs = useRef({});
   const focarNovaKey = useRef(null);
@@ -346,73 +405,88 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
     if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   }, [variacoes.length]);
 
-  // Adiciona uma variação nova. Com `modelo`, copia cor, gênero e os dois
-  // preços dela; tamanho, estoque, código de barras e foto ficam em branco
-  // (cada tamanho tem estoque e código próprios — copiar isso daria erro).
+  // Adiciona uma variação nova. Com `modelo`, copia os atributos (menos o
+  // Tamanho, ou o 1º atributo se a loja não usa Tamanho) e os dois preços
+  // dela; estoque, código de barras e foto ficam em branco (cada variação tem
+  // estoque e código próprios — copiar isso daria erro).
   function adicionar(modelo = null) {
+    if (variacoes.length >= MAX_VARIACOES_PRODUTO) { setGradeMsg(`O limite é de ${MAX_VARIACOES_PRODUTO} variações por produto.`); setGradeAberta(true); return; }
     const key = Math.random().toString(36).slice(2);
     focarNovaKey.current = key;
-    setVariacoes(prev => [...prev, {
+    let nova = {
       _key: key,
-      tamanho: '',
-      cor: modelo ? (modelo.cor || '') : '',
-      genero: modelo ? (modelo.genero || '') : '',
+      tamanho: '', cor: '', genero: '', atributos: {},
       codigo_barras: '',
       estoque_atual: '',
       preco_custo: modelo ? (modelo.preco_custo || '') : '',
       preco_venda: modelo ? (modelo.preco_venda || '') : '',
       imagem_url: '',
       imagem_origem: '',
-    }]);
+    };
+    if (modelo) {
+      for (const a of atributos) if (a.chave !== chaveEspelhoLimpa) nova = comAtributo(nova, a.chave, valorAtributo(modelo, a.chave));
+    }
+    setVariacoes(prev => [...prev, nova]);
   }
   /* ── Montar grade: escolhe vários tamanhos × cores (× gêneros) e o
      sistema cria uma linha pra cada combinação que ainda não existe.
      Cada linha continua tendo estoque, código e preço próprios. ── */
-  const MAX_VARIACOES = 200;
+  const MAX_VARIACOES = MAX_VARIACOES_PRODUTO;
   function alternarGrade(tipo, valor) {
     setGradeMsg('');
-    setGradeSel(prev => ({ ...prev, [tipo]: prev[tipo].includes(valor) ? prev[tipo].filter(x => x !== valor) : [...prev[tipo], valor] }));
+    setGradeSel(prev => { const atual = prev[tipo] || []; return { ...prev, [tipo]: atual.includes(valor) ? atual.filter(x => x !== valor) : [...atual, valor] }; });
   }
   function adicionarValorGrade(tipo) {
-    const novos = gradeNovo[tipo].split(/[,;]/).map(x => x.trim()).filter(Boolean).slice(0, 30);
+    const novos = (gradeNovo[tipo] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean).slice(0, 30);
     if (!novos.length) return;
     setGradeSel(prev => {
-      const atual = prev[tipo];
+      const atual = prev[tipo] || [];
       const extra = novos.filter(n => !atual.some(a => a.toLowerCase() === n.toLowerCase()));
       return { ...prev, [tipo]: [...atual, ...extra] };
     });
     setGradeNovo(prev => ({ ...prev, [tipo]: '' }));
     setGradeMsg('');
   }
+  // Produto cartesiano dos valores marcados em cada atributo. Antes de montar
+  // a lista conta quantas seriam — se passar do limite, nem monta (evita travar).
   function combinacoesGrade() {
-    const T = gradeSel.tamanho.length ? gradeSel.tamanho : [''];
-    const C = gradeSel.cor.length ? gradeSel.cor : [''];
-    const G = gradeSel.genero.length ? gradeSel.genero : [''];
-    const chave = (t, c, g) => [t, c, g].map(x => (x || '').trim().toLowerCase()).join('|');
-    const existentes = new Set(variacoes.map(v => chave(v.tamanho, v.cor, v.genero)));
-    const lista = [];
+    const escolhidos = atributos.filter(a => (gradeSel[a.chave] || []).length);
+    const total = escolhidos.reduce((n, a) => n * gradeSel[a.chave].length, escolhidos.length ? 1 : 0);
+    if (total > 5000) return { lista: [], jaExistem: 0, total, escolhidos };
+    const existentes = new Set(variacoes.map(chaveCombinacao));
+    let lista = [];
     let jaExistem = 0;
-    for (const t of T) for (const c of C) for (const g of G) {
-      if (!t && !c && !g) continue;
-      if (existentes.has(chave(t, c, g))) { jaExistem++; continue; }
-      lista.push({ t, c, g });
+    let parciais = [{}];
+    for (const a of escolhidos) {
+      const prox = [];
+      for (const base of parciais) for (const val of gradeSel[a.chave]) prox.push({ ...base, [a.chave]: val });
+      parciais = prox;
     }
-    return { lista, jaExistem };
+    for (const combo of escolhidos.length ? parciais : []) {
+      let v = { tamanho: '', cor: '', genero: '', atributos: {} };
+      for (const [k, val] of Object.entries(combo)) v = comAtributo(v, k, val);
+      if (existentes.has(chaveCombinacao(v))) { jaExistem++; continue; }
+      lista.push(v);
+    }
+    return { lista, jaExistem, total, escolhidos };
   }
   function gerarGrade() {
-    const { lista, jaExistem } = combinacoesGrade();
-    if (!lista.length) { setGradeMsg(jaExistem ? 'Todas essas combinações já existem.' : 'Escolha pelo menos um tamanho ou uma cor.'); return; }
-    if (variacoes.length + lista.length > MAX_VARIACOES) { setGradeMsg(`O limite é de ${MAX_VARIACOES} variações por produto. Escolha menos opções.`); return; }
+    const { lista, jaExistem, total, escolhidos } = combinacoesGrade();
+    if (!lista.length) { setGradeMsg(total > 5000 ? 'São combinações demais. Escolha menos opções.' : jaExistem ? 'Todas essas combinações já existem.' : 'Escolha pelo menos um valor em algum atributo.'); return; }
+    if (variacoes.length + lista.length > MAX_VARIACOES) { setGradeMsg(`O limite é de ${MAX_VARIACOES} variações por produto (você tem ${variacoes.length} e esta grade criaria mais ${lista.length}). Escolha menos opções.`); return; }
+    const usadas = chavesPreenchidas(variacoes);
+    for (const a of escolhidos) usadas.add(a.chave);
+    if (usadas.size > MAX_ATRIBUTOS_PRODUTO) { setGradeMsg(`Um produto pode usar no máximo ${MAX_ATRIBUTOS_PRODUTO} atributos ao mesmo tempo (aqui seriam ${usadas.size}). Deixe algum de fora.`); return; }
     const modelo = variacoes[variacoes.length - 1] || null;
-    setVariacoes(prev => [...prev, ...lista.map(({ t, c, g }) => ({
+    setVariacoes(prev => [...prev, ...lista.map(v => ({
+      ...v,
       _key: Math.random().toString(36).slice(2),
-      tamanho: t, cor: c, genero: g,
       codigo_barras: '', estoque_atual: gradeDados.estoque,
       preco_custo: gradeDados.custo || (modelo ? (modelo.preco_custo || '') : ''),
       preco_venda: gradeDados.venda || (modelo ? (modelo.preco_venda || '') : ''),
       imagem_url: '', imagem_origem: '',
     }))]);
-    setGradeSel({ tamanho: [], cor: [], genero: [] });
+    setGradeSel({});
     setGradeDados({ estoque: '', custo: '', venda: '' });
     setGradeAberta(false);
   }
@@ -422,10 +496,13 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
     adicionar(variacoes[idx] || null);
   }
   function resumoVariacao(v) {
-    return [v.tamanho, v.cor, v.genero].map(x => (x || '').trim()).filter(Boolean).join(' · ');
+    return atributos.map(a => valorAtributo(v, a.chave).trim()).filter(Boolean).join(' · ');
   }
   function atualizarCampo(idx, campo, valor) {
     setVariacoes(prev => prev.map((v, i) => i === idx ? { ...v, [campo]: valor } : v));
+  }
+  function atualizarAtributo(idx, chave, valor) {
+    setVariacoes(prev => prev.map((v, i) => i === idx ? comAtributo(v, chave, valor) : v));
   }
   async function remover(idx) {
     const v = variacoes[idx];
@@ -509,25 +586,30 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   }
 
   const PAINEL_GRADE = !gradeAberta ? null : (() => {
-            const { lista, jaExistem } = combinacoesGrade();
+            const { lista, jaExistem, total } = combinacoesGrade();
             const modelos = todosModelos(modelosProprios, tipoEstab);
             const modeloSel = modelos.find(m => m.id === gradeTipo) || null;
             const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
-            const bloco = (tipo, titulo, opcoes, sugestoes = []) => {
+            const bloco = (a) => {
+              const tipo = a.chave;
+              const titulo = `${ICONE_ATRIBUTO[tipo] || '🔹'} ${a.nome}`;
+              const opcoes = opcoesDe(tipo);
+              const sugestoes = tipo === 'cor' ? CORES_BASICAS : [];
+              const selTipo = gradeSel[tipo] || [];
               let base = opcoes;
               if (tipo === 'tamanho' && modeloSel) {
                 // mostra os tamanhos do tipo escolhido (cadastrados ou não)
                 base = modeloSel.tamanhos;
               }
-              const todas = [...base, ...gradeSel[tipo].filter(x => !base.some(o => eq(o, x)))];
-              const sugs = sugestoes.filter(x => !opcoes.some(o => eq(o, x)) && !gradeSel[tipo].some(o => eq(o, x)));
-              const todosMarcados = base.length > 0 && base.every(o => gradeSel[tipo].some(x => eq(x, o)));
+              const todas = [...base, ...selTipo.filter(x => !base.some(o => eq(o, x)))];
+              const sugs = sugestoes.filter(x => !opcoes.some(o => eq(o, x)) && !selTipo.some(o => eq(o, x)));
+              const todosMarcados = base.length > 0 && base.every(o => selTipo.some(x => eq(x, o)));
               return (
-                <div className="prod-grade-bloco">
+                <div className="prod-grade-bloco" key={tipo}>
                   <div className="prod-grade-titulo prod-grade-titulo-linha">
                     <span>{titulo}</span>
                     {todas.length > 1 && (
-                      <button type="button" className="etq-link" onClick={() => setGradeSel(prev => ({ ...prev, [tipo]: todosMarcados ? prev[tipo].filter(x => !base.some(o => eq(o, x))) : [...prev[tipo], ...base.filter(o => !prev[tipo].some(x => eq(x, o)))] }))}>
+                      <button type="button" className="etq-link" onClick={() => setGradeSel(prev => { const at = prev[tipo] || []; return { ...prev, [tipo]: todosMarcados ? at.filter(x => !base.some(o => eq(o, x))) : [...at, ...base.filter(o => !at.some(x => eq(x, o)))] }; })}>
                         {todosMarcados ? 'Limpar' : 'Marcar todos'}
                       </button>
                     )}
@@ -543,26 +625,25 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                   <div className="prod-grade-chips">
                     {todas.length === 0 && <span className="prod-label-hint">Nenhuma cadastrada — digite abaixo.</span>}
                     {todas.map(o => (
-                      <button type="button" key={o} className={`prod-grade-chip${gradeSel[tipo].some(x => eq(x, o)) ? ' ativo' : ''}`} onClick={() => alternarGrade(tipo, gradeSel[tipo].find(x => eq(x, o)) || o)}>{o}</button>
+                      <button type="button" key={o} className={`prod-grade-chip${selTipo.some(x => eq(x, o)) ? ' ativo' : ''}`} onClick={() => alternarGrade(tipo, selTipo.find(x => eq(x, o)) || o)}>{o}</button>
                     ))}
                     {sugs.map(o => (
                       <button type="button" key={`s-${o}`} className="prod-grade-chip sugestao" title="Sugestão pronta — clique para usar" onClick={() => alternarGrade(tipo, o)}>+ {o}</button>
                     ))}
                   </div>
                   <div className="prod-grade-novo">
-                    <input className="prod-input" maxLength={120} placeholder="Outro? Digite (separe com vírgula)" value={gradeNovo[tipo]}
+                    <input className="prod-input" maxLength={120} placeholder="Outro? Digite (separe com vírgula)" value={gradeNovo[tipo] || ''}
                       onChange={e => setGradeNovo(p => ({ ...p, [tipo]: e.target.value }))}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarValorGrade(tipo); } }} />
-                    <button type="button" className="prod-btn-scan" onClick={() => adicionarValorGrade(tipo)} disabled={!gradeNovo[tipo].trim()}>+</button>
+                    <button type="button" className="prod-btn-scan" onClick={() => adicionarValorGrade(tipo)} disabled={!(gradeNovo[tipo] || '').trim()}>+</button>
                   </div>
                 </div>
               );
             };
             return (
               <div className="prod-grade-painel prod-grade-painel-novo">
-                {bloco('tamanho', '📏 Tamanhos', opcoesTamanho)}
-                {bloco('cor', '🎨 Cores', opcoesCor, CORES_BASICAS)}
-                {opcoesGenero.length > 0 && bloco('genero', '🚻 Gênero (opcional)', opcoesGenero)}
+                {atributos.filter(a => a.ativo).map(bloco)}
+                {atributos.filter(a => a.ativo).length === 0 && <span className="prod-label-hint">Nenhum atributo ligado. Abra “Atributos e valores” e ligue ou crie algum.</span>}
                 <div className="prod-grade-bloco">
                   <div className="prod-grade-titulo">Valores iguais para todas as novas (opcional) <CampoAjuda texto="Se preencher, todas as variações criadas já nascem com esse estoque e esses preços. Em branco = estoque zerado e preços iguais ao da última variação (ou ao preço padrão do produto). Depois você pode ajustar qualquer linha individualmente." /></div>
                   <div className="prod-grade-valores">
@@ -582,12 +663,15 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 </div>
                 <div className="prod-grade-rodape">
                   <span>
-                    {lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha tamanhos e cores acima'}
+                    {total > 5000 ? 'São combinações demais' : lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha os valores acima'}
                     {jaExistem > 0 && ` (${jaExistem} já existe${jaExistem > 1 ? 'm' : ''} e não será repetida)`}.
                     {' '}Depois é só ajustar o que for diferente em cada uma.
                   </span>
                   <button type="button" className="prod-btn-add-variacao" onClick={gerarGrade} disabled={!lista.length}>✓ Criar variações</button>
                 </div>
+                {!gradeMsg && lista.length > 0 && variacoes.length + lista.length > AVISO_VARIACOES_PRODUTO && variacoes.length + lista.length <= MAX_VARIACOES && (
+                  <div className="prod-label-hint" style={{ color: 'var(--est-danger)' }}>⚠️ Ficariam {variacoes.length + lista.length} variações neste produto (o limite é {MAX_VARIACOES}). Confira se não é melhor dividir em mais de um produto.</div>
+                )}
                 {gradeMsg && <div className="prod-label-hint" style={{ color: 'var(--est-danger)' }}>{gradeMsg}</div>}
               </div>
             );
@@ -600,7 +684,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       <div className="prod-variacoes-header">
         <label className="prod-label" style={{ marginBottom: 0 }}>
           Variações
-          <CampoAjuda texto="Cada linha é uma combinação de tamanho/cor/gênero, com estoque, foto e preços próprios. Digite um valor novo em tamanho/cor/gênero pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preço em branco = usa o preço padrão do produto (lá embaixo, em Preços). Uma camiseta M azul precisa de um código de barras diferente da mesma camiseta G azul — se não tiver etiqueta de fábrica, gere um código próprio (🏷️)." />
+          <CampoAjuda texto={`Cada variação é uma combinação de ${nomesTxt}, com estoque, foto e preços próprios. Digite um valor novo em qualquer atributo pra criar uma opção nova — ela fica salva como sugestão pra próxima vez. Preencha só o que faz sentido: nenhum atributo é obrigatório, mas cada variação precisa de pelo menos um. Preço em branco = usa o preço padrão do produto (lá embaixo, em Preços). Duas variações do mesmo produto precisam de códigos de barras diferentes — se não tiver etiqueta de fábrica, gere um código próprio (🏷️). Para mudar quais atributos aparecem, use “Atributos e valores”.`} />
         </label>
         {variacoes.length > 0 && (
           <span className="prod-label-unit">Estoque total: {fmtQ(totalEstoque, unidadeMedida)}</span>
@@ -611,12 +695,12 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
         <div className="prod-var-acoes">
           <button type="button" className="prod-var-acao" onClick={onGerenciarOpcoes}>
             <span className="prod-var-acao-icone">⚙️</span>
-            <span className="prod-var-acao-texto"><strong>Tamanhos e cores</strong><small>Sua lista de sugestões</small></span>
+            <span className="prod-var-acao-texto"><strong>Atributos e valores</strong><small>O que varia + sugestões</small></span>
           </button>
           <button type="button" className={`prod-var-acao${gradeAberta ? ' ativa' : ''}`} aria-pressed={gradeAberta} onClick={() => setGradeAberta(a => !a)}
-            title="Escolha vários tamanhos e várias cores de uma vez — o sistema cria todas as combinações">
+            title="Escolha vários valores de cada atributo de uma vez — o sistema cria todas as combinações">
             <span className="prod-var-acao-icone">⚡</span>
-            <span className="prod-var-acao-texto"><strong>Montar grade</strong><small>{gradeAberta ? 'Aberta — clique para fechar' : 'Vários tamanhos × cores de uma vez'}</small></span>
+            <span className="prod-var-acao-texto"><strong>Montar grade</strong><small>{gradeAberta ? 'Aberta — clique para fechar' : 'Várias combinações de uma vez'}</small></span>
           </button>
           <button type="button" className="prod-var-acao" onClick={() => adicionar()}>
             <span className="prod-var-acao-icone">＋</span>
@@ -650,12 +734,12 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           <div className="prod-variacao-card-topo prod-variacao-topo-clicavel" onClick={() => alternarRecolhida(chave)} title={recolhida ? 'Clique para expandir' : 'Clique para recolher'}>
             <span className="prod-variacao-seta" aria-hidden="true">{recolhida ? '▸' : '▾'}</span>
             <span className="prod-variacao-numero">Variação {idx + 1}</span>
-            <span className={`prod-variacao-resumo${resumo ? '' : ' vazio'}`}>{resumo || 'preencha tamanho, cor ou gênero'}</span>
+            <span className={`prod-variacao-resumo${resumo ? '' : ' vazio'}`}>{resumo || 'preencha ao menos um atributo'}</span>
             {recolhida && <span className="prod-variacao-mini">estoque {v.estoque_atual || 0}</span>}
             {!somenteLeitura && (
               <div className="prod-variacao-card-acoes" onClick={e => e.stopPropagation()}>
                 <button type="button" className="prod-variacao-duplicar" onClick={() => adicionar(v)}
-                  title="Criar uma nova variação com a mesma cor, gênero e preços desta (tamanho, estoque e código ficam em branco)">
+                  title={`Criar uma nova variação com os mesmos atributos e preços desta (${nomeAtributo(chaveEspelhoLimpa)}, estoque e código ficam em branco)`}>
                   ⧉ Espelhar
                 </button>
                 <button type="button" className="prod-variacao-remover" onClick={() => remover(idx)} title="Remover variação">
@@ -666,40 +750,20 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           </div>
           {!recolhida && (<>
           <div className="prod-variacao-linha prod-variacao-linha--rotulada">
-            <label className="prod-variacao-campo">
-              <span className="prod-variacao-preco-label">Tamanho</span>
-              <input maxLength={30}
-                ref={el => { tamanhoRefs.current[chave] = el; }}
-                className="prod-input"
-                list="opcoes-tamanho-datalist"
-                placeholder="P, M, G…"
-                value={v.tamanho}
-                onChange={e => atualizarCampo(idx, 'tamanho', e.target.value)}
-                disabled={somenteLeitura}
-              />
-            </label>
-            <label className="prod-variacao-campo">
-              <span className="prod-variacao-preco-label">Cor</span>
-              <input maxLength={40}
-                className="prod-input"
-                list="opcoes-cor-datalist"
-                placeholder="Azul, Preto…"
-                value={v.cor}
-                onChange={e => atualizarCampo(idx, 'cor', e.target.value)}
-                disabled={somenteLeitura}
-              />
-            </label>
-            <label className="prod-variacao-campo">
-              <span className="prod-variacao-preco-label">Gênero</span>
-              <input maxLength={30}
-                className="prod-input"
-                list="opcoes-genero-datalist"
-                placeholder="Masc, Fem, Unissex…"
-                value={v.genero || ''}
-                onChange={e => atualizarCampo(idx, 'genero', e.target.value)}
-                disabled={somenteLeitura}
-              />
-            </label>
+            {atributos.map((at, i) => (
+              <label className="prod-variacao-campo" key={at.chave}>
+                <span className="prod-variacao-preco-label">{at.nome}{!at.ativo ? ' (oculto)' : ''}</span>
+                <input maxLength={at.chave === 'cor' ? 40 : CHAVES_LEGADO.includes(at.chave) ? 30 : 50}
+                  ref={i === 0 ? (el => { tamanhoRefs.current[chave] = el; }) : undefined}
+                  className="prod-input"
+                  list={`opcoes-av-${at.chave}`}
+                  placeholder={at.chave === 'tamanho' ? 'P, M, G…' : at.chave === 'cor' ? 'Azul, Preto…' : at.chave === 'genero' ? 'Masc, Fem, Unissex…' : ''}
+                  value={valorAtributo(v, at.chave)}
+                  onChange={e => atualizarAtributo(idx, at.chave, e.target.value)}
+                  disabled={somenteLeitura}
+                />
+              </label>
+            ))}
             <label className="prod-variacao-campo">
               <span className="prod-variacao-preco-label">Estoque ({unidadeMedida})</span>
               <input maxLength={15}
@@ -792,7 +856,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 className="prod-variacao-codigo-gerar"
                 onClick={() => gerarCodigo(idx)}
                 disabled={gerandoIdx === idx}
-                title="Gerar um código de barras próprio pra essa variação (tamanho/cor sem etiqueta de fábrica)"
+                title="Gerar um código de barras próprio pra essa variação (sem etiqueta de fábrica)"
               >
                 {gerandoIdx === idx ? '…' : '🏷️ Gerar'}
               </button>
@@ -804,7 +868,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
                 onClick={() => setEtiquetaProd({
                   nome: nomeProduto || 'Produto', unidade_medida: unidadeMedida,
                   preco_venda: paraFloatBR(precoBase) || 0, tem_variacoes: true,
-                  variacoes: [{ id: v.id, tamanho: v.tamanho, cor: v.cor, genero: v.genero, codigo_barras: v.codigo_barras,
+                  variacoes: [{ id: v.id, tamanho: v.tamanho, cor: v.cor, genero: v.genero, atributos: extrasParaEnviar(v), codigo_barras: v.codigo_barras,
                     preco_venda: (v.preco_venda || '').toString().trim() ? paraFloatBR(v.preco_venda) : null }],
                 })}
                 title="Imprimir etiqueta dessa variação"
@@ -826,15 +890,11 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
         onChange={selecionarImagemVariacao}
       />
 
-      <datalist id="opcoes-tamanho-datalist">
-        {opcoesTamanho.map(o => <option key={o} value={o} />)}
-      </datalist>
-      <datalist id="opcoes-cor-datalist">
-        {opcoesCor.map(o => <option key={o} value={o} />)}
-      </datalist>
-      <datalist id="opcoes-genero-datalist">
-        {opcoesGenero.map(o => <option key={o} value={o} />)}
-      </datalist>
+      {atributos.map(at => (
+        <datalist id={`opcoes-av-${at.chave}`} key={at.chave}>
+          {opcoesDe(at.chave).map(o => <option key={o} value={o} />)}
+        </datalist>
+      ))}
 
       {!somenteLeitura && variacoes.length > 0 && (
         <div className="prod-variacao-add-barra">
@@ -844,7 +904,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
           {variacoes.length > 0 && (
             <div className="prod-variacao-espelhar">
               <button type="button" className="prod-btn-add-variacao prod-btn-espelhar" onClick={adicionarEspelhando}
-                title="Nova variação já com a cor, o gênero e os preços da variação escolhida — só falta o tamanho, o estoque e o código">
+                title="Nova variação já com os atributos e os preços da variação escolhida — só falta o que muda, o estoque e o código">
                 ⧉ Adicionar espelhando
               </button>
               <select className="prod-input prod-variacao-espelhar-select" value={modeloIdx} onChange={e => setModeloIdx(e.target.value)}
@@ -859,7 +919,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
             </div>
           )}
           {variacoes.length > 0 && (
-            <span className="prod-label-hint">Espelhar copia cor, gênero e preços. Tamanho, estoque e código de barras ficam em branco — cada tamanho tem os seus.</span>
+            <span className="prod-label-hint">Espelhar copia os atributos e os preços. {nomeAtributo(chaveEspelhoLimpa)}, estoque e código de barras ficam em branco — cada variação tem os seus.</span>
           )}
         </div>
       )}
@@ -1056,9 +1116,8 @@ export default function ProdutoModal({
   });
 
   const [variacoes,     setVariacoes]     = useState([]);
-  const [opcoesTamanho, setOpcoesTamanho] = useState([]);
-  const [opcoesCor,     setOpcoesCor]     = useState([]);
-  const [opcoesGenero,  setOpcoesGenero]  = useState([]);
+  const [opcoesPorChave, setOpcoesPorChave] = useState({});   // chave do atributo → valores sugeridos
+  const [atributosLoja,  setAtributosLoja]  = useState([]);   // atributos da loja (ativos e ocultos)
   const [gerenciarOpcoesAberto, setGerenciarOpcoesAberto] = useState(false);
   const [comoConfigurarAberto, setComoConfigurarAberto]   = useState(false);
 
@@ -1185,6 +1244,7 @@ export default function ProdutoModal({
         tamanho:        v.tamanho || '',
         cor:            v.cor || '',
         genero:         v.genero || '',
+        atributos:      (v.atributos && typeof v.atributos === 'object' && !Array.isArray(v.atributos)) ? { ...v.atributos } : {},
         codigo_barras:  v.codigo_barras || '',
         estoque_atual:  formatarValorBR(v.estoque_atual, produtoEditar.unidade_medida === 'kg' ? 3 : 0),
         preco_custo:    v.preco_custo != null ? formatarValorBR(v.preco_custo, 2) : '',
@@ -1220,12 +1280,14 @@ export default function ProdutoModal({
   /* ── Carregar presets de tamanho/cor/gênero (sugestão nas variações) ── */
   async function carregarOpcoesVariacao() {
     try {
-      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`);
-      if (resp.ok) {
-        const d = await resp.json();
-        setOpcoesTamanho(d.tamanho || []);
-        setOpcoesCor(d.cor || []);
-        setOpcoesGenero(d.genero || []);
+      const [respOp, respAt] = await Promise.all([
+        apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`),
+        apiFetch(`/api/estabelecimentos/${estabelecimentoId}/atributos-variacao`),
+      ]);
+      if (respOp.ok) setOpcoesPorChave(await respOp.json());
+      if (respAt.ok) {
+        const d = await respAt.json();
+        if (Array.isArray(d.atributos) && d.atributos.length) setAtributosLoja(d.atributos);
       }
     } catch { /* sugestão é acessório, falha silenciosa */ }
   }
@@ -1659,8 +1721,16 @@ export default function ProdutoModal({
       setErro('Adicione ao menos uma variação, ou desmarque "Este produto tem variações".');
       return;
     }
-    if (form.tem_variacoes && variacoes.some(v => !v.tamanho.trim() && !v.cor.trim() && !(v.genero || '').trim())) {
-      setErro('Toda variação precisa de pelo menos um Tamanho, Cor ou Gênero preenchidos.');
+    if (form.tem_variacoes && variacoes.some(variacaoSemValor)) {
+      setErro('Toda variação precisa de pelo menos um atributo preenchido (ex.: tamanho ou cor).');
+      return;
+    }
+    if (form.tem_variacoes && variacoes.length > MAX_VARIACOES_PRODUTO) {
+      setErro(`Um produto pode ter no máximo ${MAX_VARIACOES_PRODUTO} variações.`);
+      return;
+    }
+    if (form.tem_variacoes && chavesPreenchidas(variacoes).size > MAX_ATRIBUTOS_PRODUTO) {
+      setErro(`Este produto usa ${chavesPreenchidas(variacoes).size} atributos nas variações, mas o máximo é ${MAX_ATRIBUTOS_PRODUTO}. Deixe em branco algum que não precisa.`);
       return;
     }
     // 23/09/2026 — aviso rápido antes de ir pro servidor (que confere de
@@ -1670,8 +1740,8 @@ export default function ProdutoModal({
       const chaves = new Map();
       for (let i = 0; i < variacoes.length; i++) {
         const v = variacoes[i];
-        const k = [v.tamanho, v.cor, v.genero].map(x => String(x || '').trim().toLowerCase()).join('|');
-        if (chaves.has(k)) { setErro(`As variações ${chaves.get(k) + 1} e ${i + 1} estão iguais (mesmo tamanho, cor e gênero). Mude uma delas.`); return; }
+        const k = chaveCombinacao(v);
+        if (chaves.has(k)) { setErro(`As variações ${chaves.get(k) + 1} e ${i + 1} estão iguais (mesma combinação de atributos). Mude uma delas.`); return; }
         chaves.set(k, i);
       }
       const codigos = new Map();
@@ -1741,6 +1811,7 @@ export default function ProdutoModal({
               tamanho:       v.tamanho.trim() || null,
               cor:           v.cor.trim() || null,
               genero:        (v.genero || '').trim() || null,
+              atributos:     extrasParaEnviar(v),
               codigo_barras: (v.codigo_barras || '').trim() || null,
               estoque_atual: paraFloatBR(v.estoque_atual) || 0,
               preco_custo:   (v.preco_custo || '').trim() ? paraFloatBR(v.preco_custo) : null,
@@ -1860,7 +1931,7 @@ export default function ProdutoModal({
   const infoSecao = {
     ident: { icone: '📋', titulo: 'Identificação', resumo: [form.nome || 'Sem nome ainda', form.marca, catNome].filter(Boolean).join(' · '), aviso: faltaNome ? 'falta o nome' : '' },
     venda: { icone: '⚖️', titulo: 'Como é vendido', resumo: isKg ? (form.vendido_por_peso ? 'Quilo · etiqueta de balança' : 'Quilo · a granel') : 'Unidade' },
-    variacoes: { icone: '🎨', titulo: 'Variações (tamanho, cor, gênero)', resumo: form.tem_variacoes ? `${nVar} variaç${nVar === 1 ? 'ão' : 'ões'}` : 'Produto único — sem variações' },
+    variacoes: { icone: '🎨', titulo: 'Variações (tamanho, cor e outros atributos)', resumo: form.tem_variacoes ? `${nVar} variaç${nVar === 1 ? 'ão' : 'ões'}` : 'Produto único — sem variações' },
     estoque: { icone: '📦', titulo: 'Estoque', resumo: `${form.estoque_atual || '0'} ${isKg ? 'kg' : 'un'} em estoque · mínimo ${form.estoque_minimo ? form.estoque_minimo : 'sem alerta'}` },
     historico: { icone: '🕘', titulo: 'De onde veio este estoque', resumo: 'Entradas e saídas recentes' },
     precos: { icone: '💰', titulo: form.tem_variacoes ? 'Preços (padrão do produto)' : 'Preços', resumo: [brl(form.preco_custo) && `Custo ${brl(form.preco_custo)}`, brl(form.preco_venda) && `Venda ${brl(form.preco_venda)}`].filter(Boolean).join(' · ') || 'Ainda sem preço', aviso: faltaVenda ? 'falta o preço de venda' : '' },
@@ -1985,7 +2056,7 @@ export default function ProdutoModal({
                 </>
               ) : (
                 <>
-                  <p className="prod-etapa-pergunta">🎨 Esse produto tem variações (tamanho, cor, gênero)?</p>
+                  <p className="prod-etapa-pergunta">🎨 Esse produto tem variações (tamanho, cor ou outras opções)?</p>
                   <p className="prod-etapa-sub">Ex: uma camiseta em P/M/G, em cores diferentes, ou nas linhas masculina/feminina/infantil. Use as setas e Enter — ou clique.</p>
                   <div className="prod-unidade-toggle prod-unidade-toggle--compacta" style={{ marginTop: 14 }}>
                     <button
@@ -1997,7 +2068,7 @@ export default function ProdutoModal({
                     >
                       <span className="prod-unidade-icon">🎨</span>
                       <span className="prod-unidade-label">Sim, tem variações</span>
-                      <span className="prod-unidade-sub">tamanho, cor e/ou gênero</span>
+                      <span className="prod-unidade-sub">tamanho, cor ou outras opções</span>
                     </button>
                     <button
                       type="button"
@@ -2509,7 +2580,7 @@ export default function ProdutoModal({
                     />
                     <span>
                       <strong>
-                        🎨 Este produto tem variações (tamanho/cor/gênero)
+                        🎨 Este produto tem variações (tamanho, cor…)
                         <CampoAjuda texto="Ative pra produtos que existem em mais de uma opção — ex: uma camiseta em P/M/G, em cores diferentes, ou em linha masculina/feminina/infantil. Cada variação vira sua própria linha de estoque, e pode ter preço diferente das outras." />
                       </strong>
                       <span className="prod-label-hint" style={{ display: 'block', marginTop: 2 }}>
@@ -2540,9 +2611,8 @@ export default function ProdutoModal({
                   <VariacoesTabela
                     variacoes={variacoes}
                     setVariacoes={setVariacoes}
-                    opcoesTamanho={opcoesTamanho}
-                    opcoesCor={opcoesCor}
-                    opcoesGenero={opcoesGenero}
+                    atributosLoja={atributosLoja}
+                    opcoesPorChave={opcoesPorChave}
                     unidadeMedida={form.unidade_medida}
                     somenteLeitura={somenteLeitura}
                     precoBase={form.preco_venda}
@@ -2737,7 +2807,7 @@ export default function ProdutoModal({
             {/* ── Preços ────────────────────────────────── */}
             <SecaoForm id="precos" aberta={secaoAberta('precos')} onToggle={alternarSecao} {...infoSecao.precos} dica={form.tem_variacoes
                   ? "Esse é o preço padrão/geral do produto — não o de uma variação específica. Cada variação (acima, em Variações) pode ter seu próprio preço de custo/venda; quando ela não tiver, o PDV usa esse aqui. Se TODAS as variações já tiverem preço de venda próprio, esse campo geral vira opcional (nunca seria usado mesmo). Mas se sobrar qualquer variação sem preço, esse aqui volta a ser obrigatório — garante que nada fique à venda sem um preço válido."
-                  : "Preço de custo e venda deste produto. Se um dia ele ganhar variações (tamanho/cor/gênero), esse preço vira o padrão — usado só pras variações que não tiverem um preço próprio definido."}>
+                  : "Preço de custo e venda deste produto. Se um dia ele ganhar variações (tamanho, cor…), esse preço vira o padrão — usado só pras variações que não tiverem um preço próprio definido."}>
 
               {!form.tem_variacoes && paraFloatBR(form.preco_venda) > 0 && paraFloatBR(form.preco_custo) > 0 && (
                 <div className="prod-margem-preview">
