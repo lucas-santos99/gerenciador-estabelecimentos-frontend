@@ -1,7 +1,7 @@
 // src/pages/Estabelecimento/Fornecedores/Fornecedores.jsx
 import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '../../../utils/planilha';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';

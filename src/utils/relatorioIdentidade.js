@@ -26,7 +26,7 @@
 // ============================================================
 
 import jsPDF from 'jspdf';
-import * as XLSXS from 'xlsx-js-style';
+import { utils as U, salvarXlsx } from './planilha';
 import { apiFetch } from './api';
 
 /* ── Valores de fábrica ─────────────────────────────────────── */
@@ -899,8 +899,6 @@ export function identidadeRecibo() {
    EXCEL
    ════════════════════════════════════════════════════════════ */
 
-const { utils: U } = XLSXS;
-
 function rgbHex(hex) { return corValida(hex, '#000000').slice(1).toUpperCase(); }
 
 // Fórmulas (ex.: total com SUM(K2:K40)) precisam acompanhar as linhas que
@@ -1040,8 +1038,7 @@ function aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm
 
 /**
  * Coloca cabeçalho/rodapé da identidade em TODAS as abas do Excel e baixa.
- * Funciona com planilha montada pelo 'xlsx' ou pelo 'xlsx-js-style'
- * (a gravação é sempre pelo xlsx-js-style, que é quem grava as cores).
+ * A planilha é montada com utils/planilha.js e gravada com o exceljs (13/10/2026).
  *   await salvarExcelIdentidade(wb, 'Estoque.xlsx', { tipo: 'estoque', titulo: 'Relatório de Estoque' });
  */
 export async function salvarExcelIdentidade(wb, nomeArquivo, {
@@ -1055,7 +1052,7 @@ export async function salvarExcelIdentidade(wb, nomeArquivo, {
     const ws = wb.Sheets[nome];
     if (ws) aplicarIdentidadeNaPlanilha(ws, id, loja, { titulo, subtitulo, geradoEm });
   });
-  XLSXS.writeFile(wb, nomeArquivo);
+  await salvarXlsx(wb, nomeArquivo);
 }
 
 /* Só pros testes/prévia: permite montar a planilha sem baixar. */

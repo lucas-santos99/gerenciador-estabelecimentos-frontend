@@ -22,7 +22,7 @@ import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { supabase } from "../../../utils/supabaseClient";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as XLSX from '../../../utils/planilha';
 import {
   IDENTIDADE_PADRAO,
   TIPOS_RELATORIO,

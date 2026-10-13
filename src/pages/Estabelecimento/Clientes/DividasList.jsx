@@ -6,7 +6,7 @@ import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import ClienteModal from './ClienteModal';
 import ModalRecebimento, { fmtDataHora } from './ModalRecebimento';
 import '../Clientes.css';
-import * as XLSX from 'xlsx';
+import * as XLSX from '../../../utils/planilha';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import { TIMEZONE_PADRAO, hojeStrTZ, paraDataStrTZ, subtrairDias } from '../../../utils/fusoHorario';
 import { useDestinoNotificacao } from '../../../components/Notificacoes/NotificacoesContext';

@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { supabase } from "../../../utils/supabaseClient";
 import { MODULO_LABEL, ACAO_LABEL, rotuloModulo, rotuloAcao } from "../../../utils/auditoriaLabels";
-import * as XLSX from "xlsx";
+import * as XLSX from '../../../utils/planilha';
 import { htmlIdentidade, salvarExcelIdentidade, prepararIdentidade } from "../../../utils/relatorioIdentidade";
 import Dica from '../../../components/Notificacoes/Dica';
 import "./AuditoriaAdmin.css";

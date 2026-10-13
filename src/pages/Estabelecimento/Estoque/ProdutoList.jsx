@@ -3,7 +3,7 @@ import { confirmar } from '../../../components/Dialogo/dialogo';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx-js-style';
+import * as XLSX from '../../../utils/planilha';
 import { htmlIdentidade, salvarExcelIdentidade, esc } from '../../../utils/relatorioIdentidade';
 import ProdutoModal from './ProdutoModal';
 import EtiquetasModal from './EtiquetasModal';
@@ -347,7 +347,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
           if (colunaPct.includes(c))   cell.z = PCT_FMT;
         }
       }
-      ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(numColunas - 1)}1` };
+      // filtro cobre o cabeçalho e as linhas de produto (a linha de totais fica de fora)
+      ws['!autofilter'] = { ref: `A1:${XLSX.utils.encode_col(numColunas - 1)}${numLinhas + 1}` };
     }
 
     // ── Aba 1: Produtos (resumo, 1 linha por produto) ──────────

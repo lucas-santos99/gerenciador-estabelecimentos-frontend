@@ -3,7 +3,7 @@ import { avisar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import * as XLSX from '../../../utils/planilha';
 import { novoPdfRelatorio, htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
 import Dica from '../../../components/Notificacoes/Dica';
 import './Relatorios.css';
