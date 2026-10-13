@@ -3,6 +3,7 @@ import { apiFetch } from '../../../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import ModalCamera from '../PDV/ModalCamera';
 import GerenciarOpcoesVariacao from './GerenciarOpcoesVariacao';
+import { todosModelos, CORES_BASICAS } from './modelosVariacao';
 import { perguntar, confirmar } from '../../../components/Dialogo/dialogo';
 import Rastro from '../../../components/Rastro/Rastro';
 import EtiquetasModal from './EtiquetasModal';
@@ -315,6 +316,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
   const [gradeAberta, setGradeAberta] = useState(false);
   const [gradeSel, setGradeSel] = useState({ tamanho: [], cor: [], genero: [] });
   const [gradeNovo, setGradeNovo] = useState({ tamanho: '', cor: '', genero: '' });
+  const [gradeTipo, setGradeTipo] = useState('todos'); // filtro de tamanhos por tipo de produto
   const [gradeMsg, setGradeMsg] = useState('');
   const [recolhidas, setRecolhidas] = useState(() => new Set());
   function alternarRecolhida(chave) {
@@ -503,6 +505,91 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
     }
   }
 
+  const PAINEL_GRADE = !gradeAberta ? null : (() => {
+            const { lista, jaExistem } = combinacoesGrade();
+            const modelos = todosModelos(estabelecimentoId);
+            const modeloSel = modelos.find(m => m.id === gradeTipo) || null;
+            const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
+            const bloco = (tipo, titulo, opcoes, sugestoes = []) => {
+              let base = opcoes;
+              if (tipo === 'tamanho' && modeloSel) {
+                // mostra os tamanhos do tipo escolhido (cadastrados ou não)
+                base = modeloSel.tamanhos;
+              }
+              const todas = [...base, ...gradeSel[tipo].filter(x => !base.some(o => eq(o, x)))];
+              const sugs = sugestoes.filter(x => !opcoes.some(o => eq(o, x)) && !gradeSel[tipo].some(o => eq(o, x)));
+              const todosMarcados = base.length > 0 && base.every(o => gradeSel[tipo].some(x => eq(x, o)));
+              return (
+                <div className="prod-grade-bloco">
+                  <div className="prod-grade-titulo prod-grade-titulo-linha">
+                    <span>{titulo}</span>
+                    {todas.length > 1 && (
+                      <button type="button" className="etq-link" onClick={() => setGradeSel(prev => ({ ...prev, [tipo]: todosMarcados ? prev[tipo].filter(x => !base.some(o => eq(o, x))) : [...prev[tipo], ...base.filter(o => !prev[tipo].some(x => eq(x, o)))] }))}>
+                        {todosMarcados ? 'Limpar' : 'Marcar todos'}
+                      </button>
+                    )}
+                  </div>
+                  {tipo === 'tamanho' && (
+                    <div className="prod-grade-tipos">
+                      <button type="button" className={`prod-grade-tipo${gradeTipo === 'todos' ? ' ativo' : ''}`} onClick={() => setGradeTipo('todos')}>Todos</button>
+                      {modelos.map(m => (
+                        <button type="button" key={m.id} className={`prod-grade-tipo${gradeTipo === m.id ? ' ativo' : ''}`} onClick={() => setGradeTipo(m.id)}>{m.icone} {m.nome}</button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="prod-grade-chips">
+                    {todas.length === 0 && <span className="prod-label-hint">Nenhuma cadastrada — digite abaixo.</span>}
+                    {todas.map(o => (
+                      <button type="button" key={o} className={`prod-grade-chip${gradeSel[tipo].some(x => eq(x, o)) ? ' ativo' : ''}`} onClick={() => alternarGrade(tipo, gradeSel[tipo].find(x => eq(x, o)) || o)}>{o}</button>
+                    ))}
+                    {sugs.map(o => (
+                      <button type="button" key={`s-${o}`} className="prod-grade-chip sugestao" title="Sugestão pronta — clique para usar" onClick={() => alternarGrade(tipo, o)}>+ {o}</button>
+                    ))}
+                  </div>
+                  <div className="prod-grade-novo">
+                    <input className="prod-input" maxLength={120} placeholder="Outro? Digite (separe com vírgula)" value={gradeNovo[tipo]}
+                      onChange={e => setGradeNovo(p => ({ ...p, [tipo]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarValorGrade(tipo); } }} />
+                    <button type="button" className="prod-btn-scan" onClick={() => adicionarValorGrade(tipo)} disabled={!gradeNovo[tipo].trim()}>+</button>
+                  </div>
+                </div>
+              );
+            };
+            return (
+              <div className="prod-grade-painel prod-grade-painel-novo">
+                {bloco('tamanho', '📏 Tamanhos', opcoesTamanho)}
+                {bloco('cor', '🎨 Cores', opcoesCor, CORES_BASICAS)}
+                {opcoesGenero.length > 0 && bloco('genero', '🚻 Gênero (opcional)', opcoesGenero)}
+                <div className="prod-grade-bloco">
+                  <div className="prod-grade-titulo">Valores iguais para todas as novas (opcional) <CampoAjuda texto="Se preencher, todas as variações criadas já nascem com esse estoque e esses preços. Em branco = estoque zerado e preços iguais ao da última variação (ou ao preço padrão do produto). Depois você pode ajustar qualquer linha individualmente." /></div>
+                  <div className="prod-grade-valores">
+                    <label>Estoque de cada{unidadeMedida === 'kg' ? ' (kg)' : ''}
+                      <input className="prod-input" inputMode="numeric" placeholder="0" value={gradeDados.estoque}
+                        onChange={e => setGradeDados(d => ({ ...d, estoque: digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0) }))} />
+                    </label>
+                    <label>Preço de custo
+                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.custo}
+                        onChange={e => setGradeDados(d => ({ ...d, custo: digitarValorMascarado(e.target.value, 2) }))} />
+                    </label>
+                    <label>Preço de venda
+                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.venda}
+                        onChange={e => setGradeDados(d => ({ ...d, venda: digitarValorMascarado(e.target.value, 2) }))} />
+                    </label>
+                  </div>
+                </div>
+                <div className="prod-grade-rodape">
+                  <span>
+                    {lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha tamanhos e cores acima'}
+                    {jaExistem > 0 && ` (${jaExistem} já existe${jaExistem > 1 ? 'm' : ''} e não será repetida)`}.
+                    {' '}Depois é só ajustar o que for diferente em cada uma.
+                  </span>
+                  <button type="button" className="prod-btn-add-variacao" onClick={gerarGrade} disabled={!lista.length}>✓ Criar variações</button>
+                </div>
+                {gradeMsg && <div className="prod-label-hint" style={{ color: 'var(--est-danger)' }}>{gradeMsg}</div>}
+              </div>
+            );
+          })();
+
   const totalEstoque = variacoes.reduce((acc, v) => acc + (paraFloatBR(v.estoque_atual) || 0), 0);
 
   return (
@@ -518,15 +605,28 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
       </div>
 
       {!somenteLeitura && (
-        <button type="button" className="prod-btn-gerenciar-opcoes" onClick={onGerenciarOpcoes}>
-          ⚙️ Gerenciar tamanhos, cores e gênero
-        </button>
+        <div className="prod-var-acoes">
+          <button type="button" className="prod-var-acao" onClick={onGerenciarOpcoes}>
+            <span className="prod-var-acao-icone">⚙️</span>
+            <span className="prod-var-acao-texto"><strong>Tamanhos e cores</strong><small>Sua lista de sugestões</small></span>
+          </button>
+          <button type="button" className={`prod-var-acao destaque${gradeAberta ? ' aberta' : ''}`} onClick={() => setGradeAberta(a => !a)}
+            title="Escolha vários tamanhos e várias cores de uma vez — o sistema cria todas as combinações">
+            <span className="prod-var-acao-icone">⚡</span>
+            <span className="prod-var-acao-texto"><strong>Montar grade</strong><small>Vários tamanhos × cores de uma vez</small></span>
+          </button>
+          <button type="button" className="prod-var-acao" onClick={() => adicionar()}>
+            <span className="prod-var-acao-icone">＋</span>
+            <span className="prod-var-acao-texto"><strong>Variação avulsa</strong><small>Uma linha em branco</small></span>
+          </button>
+        </div>
       )}
+      {!somenteLeitura && gradeAberta && PAINEL_GRADE}
 
       {erroImagem && <div className="prod-modal-erro">⚠️ {erroImagem}</div>}
 
       {variacoes.length === 0 && (
-        <div className="prod-variacoes-vazio">Nenhuma variação ainda — clique em "+ Adicionar variação" abaixo.</div>
+        <div className="prod-variacoes-vazio">Nenhuma variação ainda — use “Montar grade” para criar várias de uma vez ou “Variação avulsa” para uma só.</div>
       )}
 
       {variacoes.length > 1 && (
@@ -733,72 +833,7 @@ function VariacoesTabela({ variacoes, setVariacoes, opcoesTamanho, opcoesCor, op
         {opcoesGenero.map(o => <option key={o} value={o} />)}
       </datalist>
 
-      {!somenteLeitura && (
-        <div className="prod-grade">
-          <button type="button" className="prod-btn-add-variacao prod-grade-toggle" onClick={() => setGradeAberta(a => !a)}
-            title="Escolha vários tamanhos e várias cores de uma vez — o sistema cria todas as combinações">
-            {gradeAberta ? '▾' : '▸'} ⚡ Montar grade (vários tamanhos × cores de uma vez)
-          </button>
-          {gradeAberta && (() => {
-            const { lista, jaExistem } = combinacoesGrade();
-            const bloco = (tipo, titulo, opcoes) => {
-              const todas = [...opcoes, ...gradeSel[tipo].filter(x => !opcoes.some(o => o.toLowerCase() === x.toLowerCase()))];
-              return (
-                <div className="prod-grade-bloco">
-                  <div className="prod-grade-titulo">{titulo}</div>
-                  <div className="prod-grade-chips">
-                    {todas.length === 0 && <span className="prod-label-hint">Nenhuma cadastrada — digite abaixo.</span>}
-                    {todas.map(o => (
-                      <button type="button" key={o} className={`prod-grade-chip${gradeSel[tipo].includes(o) ? ' ativo' : ''}`} onClick={() => alternarGrade(tipo, o)}>{o}</button>
-                    ))}
-                  </div>
-                  <div className="prod-grade-novo">
-                    <input className="prod-input" maxLength={120} placeholder="Outro? Digite (separe com vírgula)" value={gradeNovo[tipo]}
-                      onChange={e => setGradeNovo(p => ({ ...p, [tipo]: e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarValorGrade(tipo); } }} />
-                    <button type="button" className="prod-btn-scan" onClick={() => adicionarValorGrade(tipo)} disabled={!gradeNovo[tipo].trim()}>+</button>
-                  </div>
-                </div>
-              );
-            };
-            return (
-              <div className="prod-grade-painel">
-                {bloco('tamanho', '📏 Tamanhos', opcoesTamanho)}
-                {bloco('cor', '🎨 Cores', opcoesCor)}
-                {opcoesGenero.length > 0 && bloco('genero', '🚻 Gênero (opcional)', opcoesGenero)}
-                <div className="prod-grade-bloco">
-                  <div className="prod-grade-titulo">Valores iguais para todas as novas (opcional) <CampoAjuda texto="Se preencher, todas as variações criadas já nascem com esse estoque e esses preços. Em branco = estoque zerado e preços iguais ao da última variação (ou ao preço padrão do produto). Depois você pode ajustar qualquer linha individualmente." /></div>
-                  <div className="prod-grade-valores">
-                    <label>Estoque de cada{unidadeMedida === 'kg' ? ' (kg)' : ''}
-                      <input className="prod-input" inputMode="numeric" placeholder="0" value={gradeDados.estoque}
-                        onChange={e => setGradeDados(d => ({ ...d, estoque: digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0) }))} />
-                    </label>
-                    <label>Preço de custo
-                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.custo}
-                        onChange={e => setGradeDados(d => ({ ...d, custo: digitarValorMascarado(e.target.value, 2) }))} />
-                    </label>
-                    <label>Preço de venda
-                      <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.venda}
-                        onChange={e => setGradeDados(d => ({ ...d, venda: digitarValorMascarado(e.target.value, 2) }))} />
-                    </label>
-                  </div>
-                </div>
-                <div className="prod-grade-rodape">
-                  <span>
-                    {lista.length > 0 ? `Vai criar ${lista.length} variaç${lista.length > 1 ? 'ões' : 'ão'}` : 'Escolha tamanhos e cores acima'}
-                    {jaExistem > 0 && ` (${jaExistem} já existe${jaExistem > 1 ? 'm' : ''} e não será repetida)`}.
-                    {' '}Depois é só ajustar o que for diferente em cada uma.
-                  </span>
-                  <button type="button" className="prod-btn-add-variacao" onClick={gerarGrade} disabled={!lista.length}>✓ Criar variações</button>
-                </div>
-                {gradeMsg && <div className="prod-label-hint" style={{ color: 'var(--est-danger)' }}>{gradeMsg}</div>}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {!somenteLeitura && (
+      {!somenteLeitura && variacoes.length > 0 && (
         <div className="prod-variacao-add-barra">
           <button type="button" className="prod-btn-add-variacao" onClick={() => adicionar()}>
             + Adicionar variação em branco

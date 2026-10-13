@@ -1,18 +1,12 @@
 // src/pages/Estabelecimento/Estoque/GerenciarOpcoesVariacao.jsx
 import { confirmar } from '../../../components/Dialogo/dialogo';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../../utils/api';
+import {
+  MODELOS_PRONTOS, CORES_BASICAS, GENEROS_BASICOS,
+  carregarModelosProprios, salvarModelosProprios, separarValores,
+} from './modelosVariacao';
 import '../Estoque.css';
-
-// Sugestões prontas de gênero/público — cobre tanto lojas de moda quanto
-// qualquer outro tipo de estabelecimento que queira usar essa dimensão.
-// Aparecem como um atalho de "adicionar tudo de uma vez" quando a lista
-// de gênero ainda tá vazia; o comerciante pode remover as que não usa.
-const SUGESTOES_GENERO = ['Masculino', 'Feminino', 'Unissex', 'Infantil'];
-const SUGESTOES_TAMANHO = {
-  roupas:   { rotulo: 'Roupas (PP, P, M, G, GG, XG)', valores: ['PP', 'P', 'M', 'G', 'GG', 'XG'] },
-  calcados: { rotulo: 'Calçados (34 ao 44)', valores: ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'] },
-};
 
 const LABEL_ABA = { tamanho: 'Tamanhos', cor: 'Cores', genero: 'Gêneros' };
 const LABEL_ABA_SINGULAR = { tamanho: 'tamanho', cor: 'cor', genero: 'gênero' };
@@ -24,7 +18,22 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
   const [loading,   setLoading]   = useState(true);
   const [salvando,  setSalvando]  = useState(false);
   const [erro,      setErro]      = useState('');
-  const [adicionandoSugestoes, setAdicionandoSugestoes] = useState(false);
+  const [ocupado,   setOcupado]   = useState(false);
+
+  // Tipos de produto (modelos de tamanho)
+  const [proprios,  setProprios]  = useState(() => carregarModelosProprios(estabelecimentoId));
+  const [modeloId,  setModeloId]  = useState(null);          // modelo aberto
+  const [marcados,  setMarcados]  = useState([]);             // tamanhos marcados no modelo aberto
+  const [criando,   setCriando]   = useState(false);
+  const [novoTipo,  setNovoTipo]  = useState({ nome: '', tamanhos: '' });
+  const [agrupar,   setAgrupar]   = useState(false);          // lista: juntos / por tipo
+  // Sugestões de cor/gênero (marcação múltipla)
+  const [sugMarcadas, setSugMarcadas] = useState({ cor: [], genero: [] });
+
+  const modelos = useMemo(
+    () => [...MODELOS_PRONTOS, ...proprios.map(m => ({ ...m, icone: '🏷️', proprio: true }))],
+    [proprios]
+  );
 
   async function carregar() {
     setLoading(true);
@@ -43,27 +52,42 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  async function adicionar(e) {
-    e.preventDefault();
-    if (!novoValor.trim()) return;
-    setSalvando(true);
-    setErro('');
+  const jaTem = (tipo, valor) => (opcoes[tipo] || []).some(o => o.valor.toLowerCase() === valor.toLowerCase());
+
+  // Adiciona vários de uma vez (pula os que já existem).
+  async function adicionarVarios(tipo, valores) {
+    const novos = valores.filter(v => !jaTem(tipo, v));
+    if (!novos.length) { setErro('Esses já estão na lista.'); return false; }
+    setOcupado(true); setErro('');
     try {
-      const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ tipo: aba, valor: novoValor.trim() }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || 'Erro ao adicionar.');
-      setNovoValor('');
+      for (const valor of novos) {
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo, valor }),
+        });
+        if (!resp.ok) {
+          const d = await resp.json().catch(() => ({}));
+          throw new Error(d.error || `Não foi possível adicionar "${valor}".`);
+        }
+      }
       await carregar();
       onAlterado?.();
+      return true;
     } catch (err) {
       setErro(err.message);
-    } finally {
-      setSalvando(false);
-    }
+      await carregar();
+      onAlterado?.();
+      return false;
+    } finally { setOcupado(false); }
+  }
+
+  async function adicionar(e) {
+    e.preventDefault();
+    const valores = separarValores(novoValor, 30);
+    if (!valores.length) return;
+    setSalvando(true);
+    if (await adicionarVarios(aba, valores)) setNovoValor('');
+    setSalvando(false);
   }
 
   async function remover(opt) {
@@ -72,114 +96,232 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
       await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao/${opt.id}`, { method: 'DELETE' });
       await carregar();
       onAlterado?.();
-    } catch { /* se falhar, a lista simplesmente não atualiza — sem drama */ }
+    } catch { /* se falhar, a lista simplesmente não atualiza */ }
   }
 
-  // Adiciona de uma vez as sugestões prontas de gênero (Masculino, Feminino,
-  // Unissex, Infantil) — atalho pra não ter que digitar uma por uma.
-  async function adicionarSugestoesGenero() { return adicionarSugestoes('genero', SUGESTOES_GENERO); }
-  async function adicionarSugestoes(tipo, valores) {
-    setAdicionandoSugestoes(true);
-    try {
-      for (const valor of valores) {
-        if ((opcoes[tipo] || []).some(o => o.valor.toLowerCase() === valor.toLowerCase())) continue;
-        await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/opcoes-variacao`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ tipo, valor }),
-        });
-      }
-      await carregar();
-      onAlterado?.();
-    } catch { /* falha parcial não é grave — o que entrou, entrou */ }
-    setAdicionandoSugestoes(false);
+  /* ── tipos de produto ── */
+  function abrirModelo(m) {
+    if (modeloId === m.id) { setModeloId(null); return; }
+    setCriando(false);
+    setModeloId(m.id);
+    setMarcados(m.tamanhos.filter(t => !jaTem('tamanho', t)));
+  }
+  const modeloAberto = modelos.find(m => m.id === modeloId) || null;
+  function alternarMarcado(t) {
+    setMarcados(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  }
+  async function adicionarMarcados() {
+    if (await adicionarVarios('tamanho', marcados)) setMarcados([]);
+  }
+  async function excluirModelo(m) {
+    if (!(await confirmar({ titulo: `Excluir o tipo "${m.nome}"?`, texto: 'Só o atalho do tipo é apagado. Os tamanhos já cadastrados continuam na sua lista.', perigo: true, botao: 'Excluir' }))) return;
+    const lista = proprios.filter(x => x.id !== m.id);
+    setProprios(lista); salvarModelosProprios(estabelecimentoId, lista); setModeloId(null);
+  }
+  async function salvarNovoTipo(e) {
+    e.preventDefault();
+    const nome = novoTipo.nome.trim().slice(0, 40);
+    const tamanhos = separarValores(novoTipo.tamanhos, 60);
+    if (!nome) { setErro('Dê um nome ao tipo de produto (ex.: Boné).'); return; }
+    if (!tamanhos.length) { setErro('Digite os tamanhos desse tipo, separados por vírgula (ex.: 56, 58, 60).'); return; }
+    if (modelos.some(m => m.nome.toLowerCase() === nome.toLowerCase())) { setErro('Já existe um tipo com esse nome.'); return; }
+    setErro('');
+    const novo = { id: `p-${Date.now().toString(36)}`, nome, tamanhos };
+    const lista = [...proprios, novo];
+    setProprios(lista); salvarModelosProprios(estabelecimentoId, lista);
+    setNovoTipo({ nome: '', tamanhos: '' }); setCriando(false);
+    await adicionarVarios('tamanho', tamanhos);
+    setModeloId(novo.id); setMarcados([]);
   }
 
+  // Lista cadastrada, juntos ou por tipo
   const lista = opcoes[aba] || [];
+  const grupos = useMemo(() => {
+    if (aba !== 'tamanho' || !agrupar) return null;
+    const usados = new Set();
+    const out = [];
+    for (const m of modelos) {
+      const itens = lista.filter(o => !usados.has(o.id) && m.tamanhos.some(t => t.toLowerCase() === o.valor.toLowerCase()));
+      itens.forEach(o => usados.add(o.id));
+      if (itens.length) out.push({ titulo: `${m.icone} ${m.nome}`, itens });
+    }
+    const resto = lista.filter(o => !usados.has(o.id));
+    if (resto.length) out.push({ titulo: '📦 Outros', itens: resto });
+    return out;
+  }, [aba, agrupar, lista, modelos]);
+
+  const chipLista = (opt) => (
+    <span key={opt.id} className="prod-opcao-chip">
+      {opt.valor}
+      <button type="button" onClick={() => remover(opt)} title={`Remover "${opt.valor}"`}>✕</button>
+    </span>
+  );
+
+  // Sugestões de cor / gênero com marcação múltipla
+  const blocoSugestoes = (tipo, titulo, valores) => {
+    const faltam = valores.filter(v => !jaTem(tipo, v));
+    const sel = sugMarcadas[tipo].filter(v => faltam.includes(v));
+    if (!faltam.length) return null;
+    return (
+      <div className="gov-sug">
+        <div className="gov-sug-topo">
+          <span className="gov-sug-titulo">{titulo}</span>
+          <button type="button" className="etq-link" onClick={() => setSugMarcadas(p => ({ ...p, [tipo]: sel.length === faltam.length ? [] : [...faltam] }))}>
+            {sel.length === faltam.length ? 'Limpar' : 'Marcar todas'}
+          </button>
+        </div>
+        <div className="gov-chips">
+          {faltam.map(v => (
+            <button key={v} type="button" className={`gov-chip${sel.includes(v) ? ' on' : ''}`}
+              onClick={() => setSugMarcadas(p => ({ ...p, [tipo]: sel.includes(v) ? sel.filter(x => x !== v) : [...sel, v] }))}>
+              {sel.includes(v) ? '✓ ' : '+ '}{v}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="gov-btn-principal" disabled={!sel.length || ocupado}
+          onClick={async () => { if (await adicionarVarios(tipo, sel)) setSugMarcadas(p => ({ ...p, [tipo]: [] })); }}>
+          {ocupado ? 'Adicionando…' : sel.length ? `Adicionar ${sel.length} selecionad${tipo === 'cor' ? 'a' : 'o'}${sel.length > 1 ? 's' : ''}` : 'Marque as opções acima'}
+        </button>
+      </div>
+    );
+  };
+
+  const ABAS = [
+    { id: 'tamanho', icone: '📏', rotulo: 'Tamanhos' },
+    { id: 'cor',     icone: '🎨', rotulo: 'Cores' },
+    { id: 'genero',  icone: '🚻', rotulo: 'Gênero' },
+  ];
 
   return (
     <div className="prod-modal-overlay" onClick={onClose}>
-      <div className="prod-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+      <div className="prod-modal gov-modal" onClick={e => e.stopPropagation()}>
 
-        <div className="prod-modal-titulo">⚙️ Gerenciar tamanhos, cores e gênero</div>
-        <p className="prod-label-hint" style={{ display: 'block', marginBottom: 14, lineHeight: 1.5, color: 'var(--est-text-soft)' }}>
-          Variação é cada versão do mesmo produto — por exemplo, uma camiseta nos tamanhos P, M e G ou nas cores azul e preta. O que você cadastrar aqui aparece como sugestão na hora de preencher tamanho, cor ou gênero, pra não precisar digitar tudo de novo. Remover um valor daqui não muda os produtos que já usam ele.
-        </p>
+        <div className="gov-topo">
+          <span className="gov-topo-icone">⚙️</span>
+          <div>
+            <div className="gov-titulo">Tamanhos, cores e gênero</div>
+            <div className="gov-sub">Cadastre uma vez e use em todos os produtos. Aparecem como sugestão ao montar as variações. Remover daqui não muda produtos que já usam o valor.</div>
+          </div>
+        </div>
 
-        <div className="prod-unidade-toggle" style={{ marginBottom: 14, gridTemplateColumns: '1fr 1fr 1fr' }}>
-          <button type="button" className={`prod-unidade-btn${aba === 'tamanho' ? ' ativo' : ''}`} onClick={() => setAba('tamanho')}>
-            <span className="prod-unidade-icon">📏</span>
-            <span className="prod-unidade-label">Tamanhos</span>
-          </button>
-          <button type="button" className={`prod-unidade-btn${aba === 'cor' ? ' ativo' : ''}`} onClick={() => setAba('cor')}>
-            <span className="prod-unidade-icon">🎨</span>
-            <span className="prod-unidade-label">Cores</span>
-          </button>
-          <button type="button" className={`prod-unidade-btn${aba === 'genero' ? ' ativo' : ''}`} onClick={() => setAba('genero')}>
-            <span className="prod-unidade-icon">🚻</span>
-            <span className="prod-unidade-label">Gênero</span>
-          </button>
+        <div className="gov-abas" role="tablist">
+          {ABAS.map(a => (
+            <button key={a.id} type="button" role="tab" aria-selected={aba === a.id}
+              className={`gov-aba${aba === a.id ? ' ativa' : ''}`} onClick={() => { setAba(a.id); setErro(''); }}>
+              <span>{a.icone}</span> {a.rotulo}
+              <em>{(opcoes[a.id] || []).length}</em>
+            </button>
+          ))}
         </div>
 
         {erro && <div className="prod-modal-erro">⚠️ {erro}</div>}
 
-        <form onSubmit={adicionar} className="prod-codigo-row" style={{ marginBottom: 14 }}>
-          <input maxLength={50}
-            className="prod-input"
-            placeholder={aba === 'tamanho' ? 'Novo tamanho — ex: XG' : aba === 'cor' ? 'Nova cor — ex: Verde musgo' : 'Novo gênero — ex: Infantil'}
-            value={novoValor}
-            onChange={e => setNovoValor(e.target.value)}
-            disabled={salvando}
-            autoFocus
-          />
-          <button type="submit" className="prod-btn-scan" disabled={salvando || !novoValor.trim()} title="Adicionar à lista (ou aperte Enter)">
-            {salvando ? '…' : '+'}
+        <form onSubmit={adicionar} className="gov-add">
+          <input maxLength={200} className="prod-input"
+            placeholder={aba === 'tamanho' ? 'Digite um ou vários — ex: XG, 48, 50' : aba === 'cor' ? 'Digite uma ou várias — ex: Verde musgo, Azul bebê' : 'Digite um ou vários — ex: Infantil'}
+            value={novoValor} onChange={e => setNovoValor(e.target.value)} disabled={salvando} autoFocus />
+          <button type="submit" className="gov-btn-principal gov-btn-add" disabled={salvando || !novoValor.trim()} title="Adicionar (ou Enter). Separe vários com vírgula.">
+            {salvando ? '…' : '+ Adicionar'}
           </button>
         </form>
 
+        {/* ── Tamanhos: por tipo de produto ── */}
         {aba === 'tamanho' && !loading && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            {Object.entries(SUGESTOES_TAMANHO).map(([k, g]) => (
-              <button key={k} type="button" className="prod-btn-gerenciar-opcoes" style={{ width: 'auto', flex: '1 1 auto' }}
-                onClick={() => adicionarSugestoes('tamanho', g.valores)} disabled={adicionandoSugestoes}>
-                {adicionandoSugestoes ? '…' : `+ ${g.rotulo}`}
+          <div className="gov-secao">
+            <div className="gov-secao-titulo">Por tipo de produto <span>— escolha um para ver os tamanhos dele</span></div>
+            <div className="gov-chips">
+              {modelos.map(m => (
+                <button key={m.id} type="button" className={`gov-tipo${modeloId === m.id ? ' on' : ''}`} onClick={() => abrirModelo(m)}>
+                  <span>{m.icone}</span> {m.nome}
+                </button>
+              ))}
+              <button type="button" className={`gov-tipo gov-tipo-novo${criando ? ' on' : ''}`} onClick={() => { setCriando(c => !c); setModeloId(null); setErro(''); }}>
+                ＋ Outro produto…
               </button>
-            ))}
-          </div>
-        )}
+            </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 24, color: 'var(--est-text-muted)', fontSize: '0.85rem' }}>
-            Carregando…
-          </div>
-        ) : lista.length === 0 ? (
-          <div className="prod-variacoes-vazio">
-            Nenhum{aba === 'cor' ? 'a' : ''} {LABEL_ABA_SINGULAR[aba]} cadastrado{aba === 'cor' ? 'a' : ''} ainda.
-            {aba === 'genero' && (
-              <div style={{ marginTop: 10 }}>
-                <button
-                  type="button"
-                  className="prod-btn-gerenciar-opcoes"
-                  onClick={adicionarSugestoesGenero}
-                  disabled={adicionandoSugestoes}
-                >
-                  {adicionandoSugestoes ? '…' : '+ Adicionar sugestões (Masculino, Feminino, Unissex, Infantil)'}
+            {modeloAberto && (
+              <div className="gov-painel">
+                <div className="gov-painel-topo">
+                  <strong>{modeloAberto.icone} {modeloAberto.nome}</strong>
+                  <span>
+                    <button type="button" className="etq-link" onClick={() => {
+                      const faltam = modeloAberto.tamanhos.filter(t => !jaTem('tamanho', t));
+                      setMarcados(marcados.length === faltam.length ? [] : faltam);
+                    }}>Marcar / limpar todos</button>
+                    {modeloAberto.proprio && <button type="button" className="etq-link gov-perigo" onClick={() => excluirModelo(modeloAberto)}>Excluir tipo</button>}
+                  </span>
+                </div>
+                <div className="gov-chips">
+                  {modeloAberto.tamanhos.map(t => {
+                    const tem = jaTem('tamanho', t);
+                    return (
+                      <button key={t} type="button" disabled={tem}
+                        className={`gov-chip${marcados.includes(t) ? ' on' : ''}${tem ? ' feito' : ''}`}
+                        onClick={() => alternarMarcado(t)} title={tem ? 'Já está na sua lista' : ''}>
+                        {tem ? '✓ ' : marcados.includes(t) ? '✓ ' : '+ '}{t}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button type="button" className="gov-btn-principal" disabled={!marcados.length || ocupado} onClick={adicionarMarcados}>
+                  {ocupado ? 'Adicionando…' : marcados.length ? `Adicionar ${marcados.length} tamanho${marcados.length > 1 ? 's' : ''}` : 'Todos já estão na sua lista'}
                 </button>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="prod-opcoes-chips">
-            {lista.map(opt => (
-              <span key={opt.id} className="prod-opcao-chip">
-                {opt.valor}
-                <button type="button" onClick={() => remover(opt)} title={`Remover "${opt.valor}"`}>✕</button>
-              </span>
-            ))}
+
+            {criando && (
+              <form className="gov-painel" onSubmit={salvarNovoTipo}>
+                <div className="gov-painel-topo"><strong>🏷️ Novo tipo de produto</strong></div>
+                <label className="gov-campo">Nome do produto / tipo
+                  <input className="prod-input" maxLength={40} placeholder="ex: Boné, Cinto, Meia" value={novoTipo.nome}
+                    onChange={e => setNovoTipo(p => ({ ...p, nome: e.target.value }))} autoFocus />
+                </label>
+                <label className="gov-campo">Tamanhos (separe com vírgula)
+                  <input className="prod-input" maxLength={300} placeholder="ex: 56, 58, 60  ou  Único" value={novoTipo.tamanhos}
+                    onChange={e => setNovoTipo(p => ({ ...p, tamanhos: e.target.value }))} />
+                </label>
+                <button type="submit" className="gov-btn-principal" disabled={ocupado}>Salvar tipo e adicionar os tamanhos</button>
+                <small className="gov-nota">O tipo fica salvo neste navegador, como atalho. Você pode organizar do jeito que quiser — ou ignorar e digitar os tamanhos direto no campo acima.</small>
+              </form>
+            )}
           </div>
         )}
 
-        <div className="prod-modal-acoes" style={{ marginTop: 18 }}>
+        {/* ── Cores / Gênero: sugestões prontas ── */}
+        {aba === 'cor' && !loading && blocoSugestoes('cor', 'Cores mais usadas — marque várias de uma vez', CORES_BASICAS)}
+        {aba === 'genero' && !loading && blocoSugestoes('genero', 'Sugestões', GENEROS_BASICOS)}
+
+        {/* ── Lista cadastrada ── */}
+        <div className="gov-secao">
+          <div className="gov-secao-titulo gov-secao-linha">
+            <span>Sua lista de {LABEL_ABA[aba].toLowerCase()} <span>({lista.length})</span></span>
+            {aba === 'tamanho' && lista.length > 1 && (
+              <span className="gov-seg">
+                <button type="button" className={!agrupar ? 'on' : ''} onClick={() => setAgrupar(false)}>Juntos</button>
+                <button type="button" className={agrupar ? 'on' : ''} onClick={() => setAgrupar(true)}>Por tipo</button>
+              </span>
+            )}
+          </div>
+          {loading ? (
+            <div className="gov-vazio">Carregando…</div>
+          ) : lista.length === 0 ? (
+            <div className="gov-vazio">
+              Nenhum{aba === 'cor' ? 'a' : ''} {LABEL_ABA_SINGULAR[aba]} cadastrado{aba === 'cor' ? 'a' : ''} ainda. Use as sugestões acima ou digite no campo.
+            </div>
+          ) : grupos ? (
+            grupos.map(g => (
+              <div key={g.titulo} className="gov-grupo">
+                <div className="gov-grupo-titulo">{g.titulo}</div>
+                <div className="prod-opcoes-chips">{g.itens.map(chipLista)}</div>
+              </div>
+            ))
+          ) : (
+            <div className="prod-opcoes-chips">{lista.map(chipLista)}</div>
+          )}
+        </div>
+
+        <div className="prod-modal-acoes" style={{ marginTop: 14 }}>
           <button type="button" className="prod-modal-btn-cancelar" onClick={onClose}>Fechar (Esc)</button>
         </div>
 

@@ -2943,3 +2943,70 @@
 .prod-variacao-mini { font-size: .75rem; opacity: .7; white-space: nowrap; margin-left: auto; }
 .prod-variacao-recolher-barra { display: flex; gap: 14px; justify-content: flex-end; font-size: .8rem; margin-bottom: 6px; }
 .prod-variacao-recolher-barra .etq-link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; opacity: .8; }
+
+/* ===== Variações — ações em cartões (12/10/2026) ===== */
+.prod-var-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.prod-var-acao { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--est-border); background: var(--est-input); color: var(--est-text); cursor: pointer; text-align: left; font-family: inherit; transition: transform .12s, border-color .15s, box-shadow .15s, background .15s; min-width: 0; }
+.prod-var-acao:hover { border-color: var(--est-accent); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.10); }
+.prod-var-acao:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--est-accent-dim); border-color: var(--est-accent); }
+.prod-var-acao-icone { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 1.15rem; background: var(--est-accent-dim); color: var(--est-accent); }
+.prod-var-acao-texto { display: flex; flex-direction: column; min-width: 0; }
+.prod-var-acao-texto strong { font-size: calc(.86rem * var(--prod-modal-font-scale, 1)); line-height: 1.2; }
+.prod-var-acao-texto small { font-size: calc(.7rem * var(--prod-modal-font-scale, 1)); color: var(--est-text-muted); line-height: 1.25; margin-top: 2px; }
+.prod-var-acao.destaque { background: linear-gradient(135deg, var(--est-accent), #0d9488); border-color: transparent; color: #fff; }
+.prod-var-acao.destaque .prod-var-acao-icone { background: rgba(255,255,255,.2); color: #fff; }
+.prod-var-acao.destaque small { color: rgba(255,255,255,.85); }
+.prod-var-acao.destaque.aberta { box-shadow: 0 0 0 3px var(--est-accent-dim); }
+@media (max-width: 640px) { .prod-var-acoes { grid-template-columns: 1fr; } }
+
+.prod-grade-painel-novo { border: 1px solid var(--est-border-accent, var(--est-accent)); border-radius: 14px; padding: 14px; background: var(--est-input); margin-bottom: 14px; display: flex; flex-direction: column; gap: 14px; }
+.prod-grade-titulo-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.prod-grade-titulo-linha .etq-link { background: none; border: 0; padding: 0; color: var(--est-accent); text-decoration: underline; cursor: pointer; font-size: .75rem; font-weight: 600; }
+.prod-grade-tipos { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.prod-grade-tipo { padding: 4px 11px; border-radius: 8px; border: 1px solid var(--est-border); background: transparent; color: var(--est-text-muted); font-size: .74rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.prod-grade-tipo.ativo { background: var(--est-accent-dim); color: var(--est-accent); border-color: var(--est-accent); }
+.prod-grade-chip.sugestao { border-style: dashed; color: var(--est-text-muted); }
+.prod-grade-chip.sugestao:hover { border-color: var(--est-accent); color: var(--est-accent); }
+
+/* ===== Modal Tamanhos, cores e gênero ===== */
+.gov-modal { max-width: 620px; width: 100%; max-height: 92vh; overflow-y: auto; }
+.gov-topo { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+.gov-topo-icone { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 1.4rem; background: linear-gradient(135deg, var(--est-accent), #0d9488); color: #fff; }
+.gov-titulo { font-size: 1.15rem; font-weight: 800; color: var(--est-text); }
+.gov-sub { font-size: .8rem; line-height: 1.45; color: var(--est-text-soft, var(--est-text-muted)); margin-top: 3px; }
+.gov-abas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: var(--est-input); border: 1px solid var(--est-border); margin-bottom: 14px; }
+.gov-aba { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--est-text-muted); font-weight: 700; font-size: .85rem; cursor: pointer; font-family: inherit; }
+.gov-aba em { font-style: normal; font-size: .68rem; padding: 1px 7px; border-radius: 999px; background: var(--est-border); color: var(--est-text-muted); }
+.gov-aba.ativa { background: var(--est-accent); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.gov-aba.ativa em { background: rgba(255,255,255,.25); color: #fff; }
+.gov-add { display: flex; gap: 8px; margin-bottom: 14px; }
+.gov-add .prod-input { flex: 1; min-width: 0; }
+.gov-btn-principal { padding: 9px 16px; border: 0; border-radius: 10px; background: var(--est-accent); color: #fff; font-weight: 700; font-size: .84rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.gov-btn-principal:disabled { opacity: .45; cursor: not-allowed; }
+.gov-btn-principal:not(:disabled):hover { filter: brightness(1.08); }
+.gov-secao { margin-bottom: 14px; }
+.gov-secao-titulo { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--est-text-muted); margin-bottom: 8px; }
+.gov-secao-titulo span { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: .8; }
+.gov-secao-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.gov-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gov-tipo, .gov-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--est-border); background: var(--est-input); color: var(--est-text); font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.gov-tipo:hover, .gov-chip:hover:not(:disabled) { border-color: var(--est-accent); }
+.gov-tipo.on, .gov-chip.on { background: var(--est-accent); border-color: var(--est-accent); color: #fff; }
+.gov-tipo-novo { border-style: dashed; color: var(--est-accent); }
+.gov-chip.feito { opacity: .5; cursor: default; background: transparent; }
+.gov-painel, .gov-sug { margin-top: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--est-border); background: var(--est-input); display: flex; flex-direction: column; gap: 10px; }
+.gov-sug { margin: 0 0 14px; }
+.gov-painel-topo, .gov-sug-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .9rem; }
+.gov-sug-titulo { font-size: .78rem; font-weight: 700; color: var(--est-text-muted); }
+.gov-painel .etq-link, .gov-sug .etq-link, .gov-secao .etq-link { background: none; border: 0; padding: 0; margin-left: 12px; color: var(--est-accent); text-decoration: underline; cursor: pointer; font-size: .76rem; font-weight: 600; font-family: inherit; }
+.gov-sug .etq-link { margin-left: 0; }
+.gov-painel .gov-perigo { color: var(--est-danger); }
+.gov-campo { display: flex; flex-direction: column; gap: 5px; font-size: .78rem; font-weight: 700; color: var(--est-text-muted); }
+.gov-nota { font-size: .72rem; color: var(--est-text-muted); line-height: 1.4; }
+.gov-seg { display: inline-flex; border: 1px solid var(--est-border); border-radius: 9px; overflow: hidden; }
+.gov-seg button { padding: 4px 11px; border: 0; background: transparent; color: var(--est-text-muted); font-size: .72rem; font-weight: 700; cursor: pointer; font-family: inherit; text-transform: none; }
+.gov-seg button.on { background: var(--est-accent); color: #fff; }
+.gov-vazio { padding: 16px; text-align: center; font-size: .82rem; color: var(--est-text-muted); border: 1px dashed var(--est-border); border-radius: 12px; }
+.gov-grupo { margin-bottom: 10px; }
+.gov-grupo-titulo { font-size: .76rem; font-weight: 700; color: var(--est-text-muted); margin-bottom: 6px; }
+@media (max-width: 520px) { .gov-add { flex-direction: column; } }
