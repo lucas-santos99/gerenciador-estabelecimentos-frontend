@@ -3039,7 +3039,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
 
   function selecionarProduto(produto) {
     const estoque = parseFloat(produto.estoque_atual);
-    if (estoque <= 0) { mostrarStatus('erro', `"${produto.nome}" sem estoque!`); limparBusca(); return; }
+    // Com variações o estoque do produto não vale (a coluna pode ficar zerada): a checagem é por variação, logo abaixo.
+    if (!produto.tem_variacoes && estoque <= 0) { mostrarStatus('erro', `"${produto.nome}" sem estoque!`); limparBusca(); return; }
 
     // ── Produto com variações (tamanho/cor) → escolhe a variação antes
     // de tudo. O estoque "geral" do produto é só a soma — a checagem de
