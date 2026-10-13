@@ -7,6 +7,13 @@ import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import { identidadeRecibo } from '../../../utils/relatorioIdentidade';
 import './PDV.css';
 
+// Texto da variação: o servidor manda `rotulo` já na ordem dos atributos da loja; se não vier
+// (servidor antigo), monta com os 3 campos fixos.
+function rotuloDaVariacao(v) {
+  if (v && v.rotulo) return v.rotulo;
+  return [v?.tamanho, v?.cor, v?.genero].filter(Boolean).join(' · ');
+}
+
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 // Mesmo formato de fmt(), mas sem o "R$" embutido — usado onde o cifrão
 // já é um elemento visual separado (ex: prefixo fixo ao lado do campo),
@@ -3107,9 +3114,8 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
   // preço se tiver um específico, e o id da variação pra ir junto na venda).
   function escolherVariacao(variacao, baseOverride = null) {
     const base = baseOverride || itemEscolherVariacao;
-    const nomeComVariacao = base.nome + (variacao.tamanho || variacao.cor || variacao.genero
-      ? ` (${[variacao.tamanho, variacao.cor, variacao.genero].filter(Boolean).join(' ')})`
-      : '');
+    const rotuloVar = rotuloDaVariacao(variacao);
+    const nomeComVariacao = base.nome + (rotuloVar ? ` (${rotuloVar.replace(/ · /g, ' ')})` : '');
     const produtoComVariacao = {
       ...base,
       produto_variacao_id: variacao.id,
@@ -3391,7 +3397,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
         </div>
       )}
 
-      {/* Modal de escolher variação (tamanho/cor) */}
+      {/* Modal de escolher variação (atributos da loja) */}
       {itemEscolherVariacao && (
         <div className="pdv-modal-overlay" onClick={fecharSeletorVariacao}>
           <div
@@ -3406,7 +3412,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
               {itemEscolherVariacao.nome}
               {itemEscolherVariacao.marca && <span className="pdv-modal-qtd-marca"> · {itemEscolherVariacao.marca}</span>}
             </div>
-            <span className="pdv-pagamento-label">Tamanho / Cor  ↑ ↓ Enter</span>
+            <span className="pdv-pagamento-label">Escolha a opção  ↑ ↓ Enter</span>
             <ul className="pdv-meios-lista">
               {itemEscolherVariacao.variacoes.map((v, i) => {
                 const precoVar = v.preco_venda != null ? v.preco_venda : itemEscolherVariacao.preco_venda;
@@ -3418,7 +3424,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                     onClick={() => escolherVariacao(v)}
                   >
                     <span style={{ flex: 1 }}>
-                      {[v.tamanho, v.cor, v.genero].filter(Boolean).join(' · ') || '—'}
+                      {rotuloDaVariacao(v) || '—'}
                     </span>
                     <span className="pdv-label-hint" style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
                       {fmt(precoVar)} · {estoqueVar.toLocaleString('pt-BR', itemEscolherVariacao.unidade_medida === 'kg' ? { minimumFractionDigits: 3 } : {})} {itemEscolherVariacao.unidade_medida}
