@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
-import { confirmar } from '../../../components/Dialogo/dialogo';
+import { confirmar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
@@ -419,7 +419,13 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
     finally { setSalvandoConta(false); }
   }
 
-  async function marcarPaga(contaId) {
+  async function marcarPaga(conta) {
+    const contaId = conta.id;
+    if (!(await confirmar({
+      titulo: 'Marcar como paga?',
+      texto: `"${conta.descricao}" — ${fmt(conta.valor)}. Ela passa a descontar do Lucro Líquido do DRE. Se foi sem querer, dá para desfazer depois.`,
+      botao: 'Marcar como paga',
+    }))) return;
     setSalvandoConta(true);
     try {
       const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(contaId)}/pagar`, {
@@ -434,6 +440,28 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
       } else {
         carregarContas(filtroStatus);
       }
+    } catch (err) { setErroContas(err.message); }
+    finally { setSalvandoConta(false); }
+  }
+
+  async function desfazerPagamento(conta) {
+    const motivo = await perguntar({
+      titulo: 'Desfazer o pagamento?',
+      texto: `"${conta.descricao}" — ${fmt(conta.valor)} volta para pendente e deixa de descontar do Lucro Líquido.`,
+      rotulo: 'Motivo (obrigatório)', placeholder: 'Ex.: cliquei em pagar sem querer…',
+      perigo: true, botao: 'Desfazer pagamento', botaoCancelar: 'Voltar', obrigatorio: true, maximo: 200,
+    });
+    if (!motivo) return;
+    setSalvandoConta(true);
+    try {
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(conta.id)}/desfazer-pagamento`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ estabelecimentoId, motivo }),
+      });
+      if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+      carregarResumo();
+      carregarContas(filtroStatus);
     } catch (err) { setErroContas(err.message); }
     finally { setSalvandoConta(false); }
   }
@@ -1165,11 +1193,26 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                           <span className="fin-conta-info-valor valor-grande">{fmt(conta.valor)}</span>
                         </div>
                       </div>
+                      {conta.status === 'paga' && (
+                        <>
+                          {conta.data_pagamento && (
+                            <div className="fin-conta-info-row" style={{ padding: '0 16px 4px' }}>
+                              <span className="fin-conta-info-label">Pago em</span>
+                              <span className="fin-conta-info-valor">{formatarData(conta.data_pagamento)}</span>
+                            </div>
+                          )}
+                          <div className="fin-conta-acoes">
+                            <button className="fin-conta-btn desfazer" title="Marcar como pendente de novo (pagamento feito por engano)" onClick={e => { e.stopPropagation(); desfazerPagamento(conta); }} disabled={salvandoConta}>
+                              ↩️ Desfazer pagamento
+                            </button>
+                          </div>
+                        </>
+                      )}
                       {(conta.status === 'pendente' || conta.status === 'atrasada') && (
                         <div className="fin-conta-acoes">
                           <button className="fin-conta-btn editar" onClick={e => { e.stopPropagation(); abrirFormEditar(conta); }}>✏️ Editar</button>
                           <button className="fin-conta-btn excluir" title="Excluir esta conta" aria-label="Excluir esta conta" onClick={e => { e.stopPropagation(); excluirConta(conta.id); }}>🗑</button>
-                          <button className="fin-conta-btn pagar" title="Marcar esta conta como paga" onClick={e => { e.stopPropagation(); marcarPaga(conta.id); }} disabled={salvandoConta}>
+                          <button className="fin-conta-btn pagar" title="Marcar esta conta como paga" onClick={e => { e.stopPropagation(); marcarPaga(conta); }} disabled={salvandoConta}>
                             ✅ Pagar
                           </button>
                         </div>

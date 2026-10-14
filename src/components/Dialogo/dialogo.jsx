@@ -54,7 +54,7 @@ export function avisar(opcoes) {
   return abrir({ tipo: 'avisar', ...normalizar(opcoes) });
 }
 
-/** Pede um texto. Devolve o texto digitado (pode ser vazio) ou null se a pessoa desistiu. */
+/** Pede um texto. Com `obrigatorio: true` o botão só habilita com texto. Devolve o texto digitado (pode ser vazio) ou null se a pessoa desistiu. */
 export function perguntar(opcoes) {
   return abrir({ tipo: 'perguntar', ...normalizar(opcoes) });
 }
@@ -88,7 +88,8 @@ function Host() {
     p.resolve(resposta);
   }
   const cancelar  = () => fechar(atual.tipo === 'confirmar' ? false : atual.tipo === 'perguntar' ? null : undefined);
-  const confirma  = () => fechar(atual.tipo === 'confirmar' ? true : atual.tipo === 'perguntar' ? valor.trim() : undefined);
+  const faltaMotivo = !!(atual && atual.tipo === 'perguntar' && atual.obrigatorio && !valor.trim());
+  const confirma  = () => { if (faltaMotivo) return; fechar(atual.tipo === 'confirmar' ? true : atual.tipo === 'perguntar' ? valor.trim() : undefined); };
 
   // Abriu uma janela nova: guarda o foco, limpa o campo e foca o botão/campo certo
   useEffect(() => {
@@ -180,6 +181,7 @@ function Host() {
             className={`dlg-btn ${perigo ? 'dlg-btn-perigo' : 'dlg-btn-pri'}`}
             {...(atual.tipo !== 'perguntar' ? { 'data-dlg-foco': true } : {})}
             onClick={confirma}
+            disabled={faltaMotivo}
           >
             {txtOk} <kbd>Enter</kbd>
           </button>

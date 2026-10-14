@@ -191,3 +191,5 @@ body.light .dlg-btn-sec kbd { background: #e2e8f0; }
 }
 @keyframes dlg-aparecer { from { opacity: 0; } to { opacity: 1; } }
 @keyframes dlg-subir { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+.dlg-btn:disabled { opacity: .45; cursor: not-allowed; }

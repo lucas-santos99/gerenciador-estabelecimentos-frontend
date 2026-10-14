@@ -827,6 +827,8 @@
 .fin-conta-btn.excluir:hover  { background: var(--est-danger); color: #fff; }
 .fin-conta-btn.pagar          { color: var(--est-success); font-weight: 800; }
 .fin-conta-btn.pagar:hover    { background: var(--est-success); color: #fff; }
+.fin-conta-btn.desfazer         { color: var(--est-text-2, var(--est-text)); font-weight: 700; }
+.fin-conta-btn.desfazer:hover   { background: var(--est-hover); color: var(--est-accent); }
 
 /* ── Nota explicativa no topo de Contas a Pagar (Fluxo de Caixa e
    Contas a Pagar reaproveitam essas mesmas classes) ──────────── */

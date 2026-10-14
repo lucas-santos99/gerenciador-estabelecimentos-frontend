@@ -70,6 +70,7 @@ export const ACAO_LABEL = {
   conta_editada:    '✏️ Conta a pagar editada',
   conta_excluida:   '🗑️ Conta a pagar excluída',
   conta_paga:       '✅ Conta paga',
+  conta_pagamento_desfeito: '↩️ Pagamento desfeito',
 
   // Lembretes (central de notificações)
   lembrete_criado:   '➕ Lembrete criado',
