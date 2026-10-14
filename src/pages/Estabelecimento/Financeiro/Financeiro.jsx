@@ -1204,7 +1204,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                       />
                     </div>
                     <div className="fin-form-group">
-                      <label className="fin-form-label">Valor (R$) *</label>
+                      <label className="fin-form-label">Valor (R$) * <Dica texto="Digite só os números: a vírgula anda sozinha (1234 vira 12,34)." /></label>
                       <input maxLength={15}
                         className="fin-form-input"
                         type="text"
@@ -1216,7 +1216,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                       />
                     </div>
                     <div className="fin-form-group">
-                      <label className="fin-form-label">Vencimento *</label>
+                      <label className="fin-form-label">Vencimento * <Dica texto="Dia em que a conta vence. Se passar desse dia sem você marcar como paga, ela aparece como Atrasada. Em conta fixa, este é o primeiro vencimento — os próximos repetem o mesmo dia." /></label>
                       <input
                         className="fin-form-input"
                         type="date"
@@ -1233,12 +1233,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                     <div className="fin-fixa-box">
                       <label className="fin-fixa-check">
                         <input type="checkbox" checked={formData.fixa} onChange={e => setFormData(p => ({ ...p, fixa: e.target.checked }))} />
-                        <span>🔁 <strong>Conta fixa</strong> — repete todo mês (aluguel, internet, energia…)</span>
+                        <span>🔁 <strong>Conta fixa</strong> — repete todo mês (aluguel, internet, energia…) <Dica texto="Use para contas que voltam todo mês. O sistema cria a conta do mês sozinho, 10 dias antes do vencimento, e te lembra de conferir o valor (a conta de energia, por exemplo, muda todo mês)." /></span>
                       </label>
                       {formData.fixa && (
                         <div className="fin-fixa-opcoes">
                           <div className="fin-form-group">
-                            <label className="fin-form-label">Como pagar</label>
+                            <label className="fin-form-label">Como pagar <Dica texto="Manual: você paga e marca como paga. Automático: o sistema só REGISTRA a conta como paga na data (ele não paga o boleto por você) e só faz isso se o valor do mês estiver confirmado. Se marcar sem querer, use Desfazer pagamento." /></label>
                             <select className="fin-form-input" value={formData.pagamento} onChange={e => setFormData(p => ({ ...p, pagamento: e.target.value }))}>
                               <option value="manual">Eu pago e marco como paga</option>
                               <option value="no_vencimento">Registrar como paga automaticamente no vencimento</option>
@@ -1247,14 +1247,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                           </div>
                           {formData.pagamento === 'antes' && (
                             <div className="fin-form-group">
-                              <label className="fin-form-label">Quantos dias antes?</label>
+                              <label className="fin-form-label">Quantos dias antes? <Dica texto="A conta é registrada como paga essa quantidade de dias antes do vencimento (de 1 a 15). Útil para quem paga adiantado." /></label>
                               <input className="fin-form-input" type="number" min="1" max="15" value={formData.dias_antes}
                                 onChange={e => setFormData(p => ({ ...p, dias_antes: e.target.value }))} />
                             </div>
                           )}
                           <label className="fin-fixa-check">
                             <input type="checkbox" checked={formData.lembrar_valor} onChange={e => setFormData(p => ({ ...p, lembrar_valor: e.target.checked }))} />
-                            <span>Lembrar de conferir o valor todo mês (a conta e a notificação pedem para você confirmar ou atualizar)</span>
+                            <span>Lembrar de conferir o valor todo mês <Dica texto="A conta do mês nasce com o valor do mês passado marcada como 'Confira o valor' e você recebe uma notificação. Atualize o valor (ou toque em Valor está certo). Enquanto não confirmar, ela não é registrada como paga automaticamente." /></span>
                           </label>
                           <small className="fin-fixa-nota">
                             A conta de cada mês aparece 10 dias antes do vencimento. O pagamento automático só <strong>registra</strong> a conta como paga
@@ -1282,9 +1282,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
 
             {fixas.length > 0 && (
               <div className="fin-fixas">
-                <button className="fin-fixas-titulo" onClick={() => setFixasAberto(v => !v)} aria-expanded={fixasAberto}>
-                  🔁 Contas fixas ({fixas.length}) <span>{fixasAberto ? '▲' : '▼'}</span>
-                </button>
+                <div className="fin-fixas-cabeca">
+                  <button className="fin-fixas-titulo" onClick={() => setFixasAberto(v => !v)} aria-expanded={fixasAberto}>
+                    <span>🔁 Contas fixas ({fixas.length})</span> <span>{fixasAberto ? '▲' : '▼'}</span>
+                  </button>
+                  <Dica texto="Modelos das contas que se repetem todo mês. Aqui você muda o valor, o dia, o jeito de pagar, pausa ou remove. Remover não apaga as contas já geradas." />
+                </div>
                 {fixasAberto && (
                   <div className="fin-fixas-lista">
                     {fixaEdit && (
@@ -1302,12 +1305,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                               onChange={e => setFixaEdit(p => ({ ...p, valorTxt: digitarValorMascarado(e.target.value, 2) }))} />
                           </div>
                           <div className="fin-form-group">
-                            <label className="fin-form-label">Dia do vencimento *</label>
+                            <label className="fin-form-label">Dia do vencimento * <Dica texto="Dia do mês em que a conta vence (1 a 31). Em meses mais curtos vale o último dia (ex.: dia 31 vira 28 em fevereiro). Vale a partir da próxima conta gerada." /></label>
                             <input className="fin-form-input" type="number" min="1" max="31" required value={fixaEdit.dia_vencimento}
                               onChange={e => setFixaEdit(p => ({ ...p, dia_vencimento: e.target.value }))} />
                           </div>
                           <div className="fin-form-group">
-                            <label className="fin-form-label">Como pagar</label>
+                            <label className="fin-form-label">Como pagar <Dica texto="Manual: você paga e marca como paga. Automático: o sistema só REGISTRA a conta como paga na data (não paga o boleto) e só com o valor confirmado." /></label>
                             <select className="fin-form-input" value={fixaEdit.pagamento} onChange={e => setFixaEdit(p => ({ ...p, pagamento: e.target.value }))}>
                               <option value="manual">Eu pago e marco como paga</option>
                               <option value="no_vencimento">Registrar como paga automaticamente no vencimento</option>
@@ -1324,7 +1327,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                         </div>
                         <label className="fin-fixa-check" style={{ marginTop: 10 }}>
                           <input type="checkbox" checked={fixaEdit.lembrar_valor} onChange={e => setFixaEdit(p => ({ ...p, lembrar_valor: e.target.checked }))} />
-                          <span>Lembrar de conferir o valor todo mês</span>
+                          <span>Lembrar de conferir o valor todo mês <Dica texto="A conta de cada mês pede para você confirmar ou atualizar o valor antes de ser paga automaticamente." /></span>
                         </label>
                         <div className="fin-conta-form-acoes">
                           <button type="button" className="fin-btn-cancelar-conta" onClick={() => setFixaEdit(null)}>Cancelar</button>
@@ -1391,7 +1394,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                       </div>
                       {conta.conta_fixa_id && conta.valor_confirmado === false && conta.status !== 'paga' && (
                         <div className="fin-conta-conferir">
-                          <span>⚠️ Confira o valor deste mês — ainda é o do mês passado.</span>
+                          <span>⚠️ Confira o valor deste mês — ainda é o do mês passado. <Dica texto="Se o valor mudou, toque em Editar e salve o novo (ele vale também para os próximos meses). Se está igual, toque em Valor está certo." /></span>
                           <button className="fin-conta-btn pagar" onClick={e => { e.stopPropagation(); confirmarValor(conta); }} disabled={salvandoConta}>✔ Valor está certo</button>
                         </div>
                       )}

@@ -1575,3 +1575,5 @@ body.light .fin-relop-meio.fiado    { background: rgba(239, 68, 68, 0.1);  color
 .fin-tag-fixa.auto { background: var(--est-hover); color: var(--est-text); }
 .fin-conta-conferir { display: flex; flex-direction: column; gap: 8px; margin: 0 14px 10px; padding: 10px 12px; border-radius: 10px; background: rgba(245, 158, 11, 0.14); color: var(--est-text); font-size: 0.82rem; }
 .fin-conta-conferir .fin-conta-btn { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--est-border); border-radius: 10px; }
+.fin-fixas-cabeca { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+.fin-fixas-cabeca .fin-fixas-titulo { flex: 1; }
