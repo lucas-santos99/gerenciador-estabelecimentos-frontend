@@ -28,7 +28,16 @@ export default function PainelEstabelecimento() {
   const { user, profile, logout } = useAuth();
   const navigate                  = useNavigate();
 
-  const [abaAtiva,            setAbaAtiva]           = useState("pdv");
+  // Lembra a aba aberta (por loja, por aba do navegador) pra o F5 voltar
+  // pro mesmo módulo em vez de cair sempre no PDV.
+  const chaveAba = `est-aba-${estabelecimentoId}`;
+  const [abaAtiva,            setAbaAtiva]           = useState(() => {
+    try { return sessionStorage.getItem(`est-aba-${estabelecimentoId}`) || "pdv"; }
+    catch { return "pdv"; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveAba, abaAtiva); } catch { /* ignora */ }
+  }, [chaveAba, abaAtiva]);
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
   const [logoUrl,             setLogoUrl]            = useState("");
   const [licencaInfo,         setLicencaInfo]        = useState(null); // { status_assinatura, data_vencimento }

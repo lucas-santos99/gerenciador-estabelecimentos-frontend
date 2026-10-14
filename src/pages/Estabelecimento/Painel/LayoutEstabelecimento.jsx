@@ -143,9 +143,9 @@ const Icons = {
 /* ── Abas base (todos os roles) ───────────────────────────── */
 const ABAS_BASE = [
   { key: "pdv",        label: "PDV (Caixa)",     icon: Icons.PDV,        shortcut: "F2" },
-  { key: "estoque",    label: "Estoque",          icon: Icons.Estoque,    shortcut: "F3" },
-  { key: "clientes",   label: "Clientes / Fiado", icon: Icons.Clientes,   shortcut: "F4" },
-  { key: "financeiro", label: "Financeiro",       icon: Icons.Financeiro, shortcut: "F5" },
+  { key: "estoque",    label: "Estoque",          icon: Icons.Estoque,    shortcut: null },
+  { key: "clientes",   label: "Clientes / Fiado", icon: Icons.Clientes,   shortcut: null },
+  { key: "financeiro", label: "Financeiro",       icon: Icons.Financeiro, shortcut: null },
 ];
 
 /* ── Abas exclusivas do merchant ─────────────────────────── */
@@ -177,7 +177,7 @@ const ABA_AUDITORIA = {
 // Config sempre por último, tanto pro merchant quanto pro operador —
 // não faz parte do "pool" de abas extras, é tratado à parte no final.
 const ABA_CONFIG = {
-  key: "config", label: "Configurações", icon: Icons.Config, shortcut: "F6",
+  key: "config", label: "Configurações", icon: Icons.Config, shortcut: null,
 };
 
 const SIDEBAR_KEY = "est_sidebar_collapsed";
@@ -492,13 +492,13 @@ export default function LayoutEstabelecimento({
     }
   }
 
-  /* ── atalhos de teclado F2–F6 ────────────────────────────── */
+  /* ── atalho de teclado F2 (PDV) ────────────────────────────── */
   useEffect(() => {
     function handleKey(e) {
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
-      const mapa = { F2:"pdv", F3:"estoque", F4:"clientes", F5:"financeiro", F6:"config" };
+      const mapa = { F2:"pdv" };
       if (mapa[e.key]) {
         e.preventDefault();
         onAbaChange?.(mapa[e.key]);
