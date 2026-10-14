@@ -1553,3 +1553,25 @@ body.light .fin-relop-meio.fiado    { background: rgba(239, 68, 68, 0.1);  color
   flex-shrink: 0;
 }
 @media print { .fin-aviso-dados-novos { display: none; } }
+
+/* ── Contas fixas (recorrentes) ───────────────────────────── */
+.fin-fixa-box { margin-top: 12px; padding: 12px; border: 1px dashed var(--est-border-accent, var(--est-border)); border-radius: 12px; background: var(--est-accent-dim); }
+.fin-fixa-check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.85rem; color: var(--est-text); cursor: pointer; }
+.fin-fixa-check input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+.fin-fixa-opcoes { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.fin-fixa-nota { color: var(--est-text-2, var(--est-text)); opacity: .85; line-height: 1.4; }
+.fin-fixa-dica { margin-top: 10px; padding: 8px 12px; border-radius: 10px; background: var(--est-accent-dim); font-size: 0.82rem; color: var(--est-text); }
+.fin-fixas { margin-bottom: 14px; border: 1px solid var(--est-border); border-radius: 14px; background: var(--est-card); overflow: hidden; }
+.fin-fixas-titulo { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: transparent; border: 0; color: var(--est-text); font-weight: 800; font-size: 0.9rem; cursor: pointer; }
+.fin-fixas-lista { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.fin-fixa-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--est-border); border-radius: 12px; }
+.fin-fixa-item.pausada { opacity: .6; }
+.fin-fixa-item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 0.85rem; }
+.fin-fixa-item-info small { color: var(--est-text-2, var(--est-text)); opacity: .8; }
+.fin-fixa-item-acoes { display: flex; gap: 6px; flex: 0 0 auto; }
+.fin-fixa-item-acoes .fin-conta-btn { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--est-border); border-radius: 10px; }
+.fin-conta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fin-tag-fixa { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--est-accent-dim); color: var(--est-accent); }
+.fin-tag-fixa.auto { background: var(--est-hover); color: var(--est-text); }
+.fin-conta-conferir { display: flex; flex-direction: column; gap: 8px; margin: 0 14px 10px; padding: 10px 12px; border-radius: 10px; background: rgba(245, 158, 11, 0.14); color: var(--est-text); font-size: 0.82rem; }
+.fin-conta-conferir .fin-conta-btn { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--est-border); border-radius: 10px; }

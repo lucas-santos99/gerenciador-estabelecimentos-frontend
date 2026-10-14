@@ -1,4 +1,5 @@
 // src/pages/Estabelecimento/Financeiro/Financeiro.jsx
+import { digitarValorMascarado, valorBRparaNumero } from '../../../utils/mascaraMoeda';
 import { confirmar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
@@ -98,7 +99,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
     localStorage.removeItem('fin-aviso-contas-fechado');
   }
   const [formAberto,   setFormAberto]   = useState(false);
-  const [formData,     setFormData]     = useState({ descricao: '', valor: '', data_vencimento: '' });
+  const FORM_VAZIO = { descricao: '', valor: '', data_vencimento: '', fixa: false, pagamento: 'manual', dias_antes: '3', lembrar_valor: true };
+  const [formData,     setFormData]     = useState(FORM_VAZIO);
+  // Contas fixas (recorrentes) — SQL 39
+  const [fixas,        setFixas]        = useState([]);
+  const [fixasAberto,  setFixasAberto]  = useState(false);
+  const [fixaEdit,     setFixaEdit]     = useState(null);   // conta fixa em edição (objeto) ou null
   const [contaEditId,  setContaEditId]  = useState(null);
   const [salvandoConta,setSalvandoConta] = useState(false);
   // Navegação por teclado (item 22) — setas navegam os cards, Delete exclui,
@@ -174,6 +180,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
   useEffect(() => {
     if (abaAtiva === 'contas' && podeContas && estabelecimentoId) carregarContas(filtroStatus);
   }, [abaAtiva, filtroStatus, estabelecimentoId, podeContas]);
+
+  useEffect(() => {
+    if (abaAtiva === 'contas' && podeContas && estabelecimentoId) carregarFixas();
+  }, [abaAtiva, estabelecimentoId, podeContas]);
 
   // Se a aba aberta deixou de ser permitida, vai para a que é.
   useEffect(() => {
@@ -358,7 +368,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
 
   function abrirFormNovaConta() {
     setContaEditId(null);
-    setFormData({ descricao: '', valor: '', data_vencimento: '' });
+    setFormData(FORM_VAZIO);
     setFormAberto(true);
   }
 
@@ -368,6 +378,7 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
       descricao:       conta.descricao || '',
       valor:           parseFloat(conta.valor || 0).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 }),
       data_vencimento: conta.data_vencimento ? conta.data_vencimento.split('T')[0] : hoje(),
+      fixa: false, pagamento: 'manual', dias_antes: '3', lembrar_valor: true,
     });
     setFormAberto(true);
   }
@@ -375,15 +386,14 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
   function cancelarForm() {
     setFormAberto(false);
     setContaEditId(null);
-    setFormData({ descricao: '', valor: '', data_vencimento: '' });
+    setFormData(FORM_VAZIO);
     setErroContas('');
   }
 
   async function salvarConta(e) {
     e.preventDefault();
     // "1.234,56" → 1234.56 (antes só a vírgula era trocada e o valor ia errado)
-    const txtValor = String(formData.valor || '').trim().replace(/[R$\s]/g, '');
-    const valorNum = parseFloat(txtValor.includes(',') ? txtValor.replace(/\./g, '').replace(',', '.') : txtValor);
+    const valorNum = valorBRparaNumero(formData.valor);
     if (!Number.isFinite(valorNum) || valorNum <= 0) {
       setErroContas('Informe um valor válido, maior que zero (ex.: 1.234,56).');
       return;
@@ -391,9 +401,10 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
     setSalvandoConta(true);
     setErroContas('');
     try {
+      const criaFixa = !contaEditId && formData.fixa;
       const url    = contaEditId
         ? `/api/financeiro/${encodeURIComponent(contaEditId)}`
-        : `/api/financeiro`;
+        : criaFixa ? `/api/financeiro/fixas` : `/api/financeiro`;
       const method = contaEditId ? 'PUT' : 'POST';
 
       const resp = await apiFetch(url, {
@@ -404,10 +415,12 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
           descricao:       formData.descricao,
           valor:           valorNum,
           data_vencimento: formData.data_vencimento,
+          ...(criaFixa ? { pagamento: formData.pagamento, dias_antes: parseInt(formData.dias_antes, 10) || 1, lembrar_valor: formData.lembrar_valor } : {}),
         }),
       });
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error || 'Erro ao salvar');
+      if (criaFixa) carregarFixas();
 
       if (contaEditId) {
         setContas(prev => prev.map(c => c.id === contaEditId ? result : c));
@@ -418,6 +431,79 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
     } catch (err) { setErroContas(err.message); }
     finally { setSalvandoConta(false); }
   }
+
+  async function carregarFixas() {
+    if (!podeContas) return;
+    try {
+      const resp = await apiFetch('/api/financeiro/fixas');
+      if (resp.ok) { const d = await resp.json(); setFixas(Array.isArray(d) ? d : []); }
+    } catch { /* lista de contas fixas é opcional */ }
+  }
+
+  async function salvarFixa(e) {
+    e.preventDefault();
+    const valor = valorBRparaNumero(fixaEdit.valorTxt);
+    if (!Number.isFinite(valor) || valor <= 0) { setErroContas('Informe um valor válido, maior que zero.'); return; }
+    setSalvandoConta(true); setErroContas('');
+    try {
+      const resp = await apiFetch(`/api/financeiro/fixas/${encodeURIComponent(fixaEdit.id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          descricao: fixaEdit.descricao, valor, dia_vencimento: fixaEdit.dia_vencimento,
+          pagamento: fixaEdit.pagamento, dias_antes: parseInt(fixaEdit.dias_antes, 10) || 1,
+          lembrar_valor: fixaEdit.lembrar_valor, ativa: fixaEdit.ativa,
+        }),
+      });
+      const d = await resp.json();
+      if (!resp.ok) throw new Error(d.error || 'Erro ao salvar');
+      setFixaEdit(null);
+      carregarFixas();
+    } catch (err) { setErroContas(err.message); }
+    finally { setSalvandoConta(false); }
+  }
+
+  async function alternarFixa(f) {
+    setSalvandoConta(true);
+    try {
+      const resp = await apiFetch(`/api/financeiro/fixas/${encodeURIComponent(f.id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...f, ativa: !f.ativa }),
+      });
+      if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+      carregarFixas();
+    } catch (err) { setErroContas(err.message); }
+    finally { setSalvandoConta(false); }
+  }
+
+  async function removerFixa(f) {
+    if (!(await confirmar({
+      titulo: 'Remover esta conta fixa?', perigo: true, botao: 'Remover',
+      texto: `"${f.descricao}" deixa de se repetir todo mês. As contas já criadas continuam na lista.`,
+    }))) return;
+    setSalvandoConta(true);
+    try {
+      const resp = await apiFetch(`/api/financeiro/fixas/${encodeURIComponent(f.id)}`, { method: 'DELETE' });
+      if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+      carregarFixas();
+      carregarContas(filtroStatus);
+    } catch (err) { setErroContas(err.message); }
+    finally { setSalvandoConta(false); }
+  }
+
+  async function confirmarValor(conta) {
+    setSalvandoConta(true);
+    try {
+      const resp = await apiFetch(`/api/financeiro/${encodeURIComponent(conta.id)}/confirmar-valor`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      });
+      if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+      setContas(prev => prev.map(c => c.id === conta.id ? { ...c, valor_confirmado: true } : c));
+    } catch (err) { setErroContas(err.message); }
+    finally { setSalvandoConta(false); }
+  }
+
+  const textoModoFixa = (f) => f.pagamento === 'no_vencimento' ? 'registra como paga no vencimento'
+    : f.pagamento === 'antes' ? `registra como paga ${f.dias_antes} dia(s) antes` : 'você paga manualmente';
 
   async function marcarPaga(conta) {
     const contaId = conta.id;
@@ -1123,8 +1209,9 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                         className="fin-form-input"
                         type="text"
                         placeholder="0,00"
+                        inputMode="numeric"
                         value={formData.valor}
-                        onChange={e => setFormData(p => ({ ...p, valor: e.target.value }))}
+                        onChange={e => setFormData(p => ({ ...p, valor: digitarValorMascarado(e.target.value, 2) }))}
                         required
                       />
                     </div>
@@ -1139,6 +1226,44 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                       />
                     </div>
                   </div>
+                  {contaEditId && contas.find(c => c.id === contaEditId)?.conta_fixa_id && (
+                    <div className="fin-fixa-dica">🔁 Esta conta é <strong>fixa</strong>: o valor que você salvar aqui também vale para os próximos meses.</div>
+                  )}
+                  {!contaEditId && (
+                    <div className="fin-fixa-box">
+                      <label className="fin-fixa-check">
+                        <input type="checkbox" checked={formData.fixa} onChange={e => setFormData(p => ({ ...p, fixa: e.target.checked }))} />
+                        <span>🔁 <strong>Conta fixa</strong> — repete todo mês (aluguel, internet, energia…)</span>
+                      </label>
+                      {formData.fixa && (
+                        <div className="fin-fixa-opcoes">
+                          <div className="fin-form-group">
+                            <label className="fin-form-label">Como pagar</label>
+                            <select className="fin-form-input" value={formData.pagamento} onChange={e => setFormData(p => ({ ...p, pagamento: e.target.value }))}>
+                              <option value="manual">Eu pago e marco como paga</option>
+                              <option value="no_vencimento">Registrar como paga automaticamente no vencimento</option>
+                              <option value="antes">Registrar como paga automaticamente antes do vencimento</option>
+                            </select>
+                          </div>
+                          {formData.pagamento === 'antes' && (
+                            <div className="fin-form-group">
+                              <label className="fin-form-label">Quantos dias antes?</label>
+                              <input className="fin-form-input" type="number" min="1" max="15" value={formData.dias_antes}
+                                onChange={e => setFormData(p => ({ ...p, dias_antes: e.target.value }))} />
+                            </div>
+                          )}
+                          <label className="fin-fixa-check">
+                            <input type="checkbox" checked={formData.lembrar_valor} onChange={e => setFormData(p => ({ ...p, lembrar_valor: e.target.checked }))} />
+                            <span>Lembrar de conferir o valor todo mês (a conta e a notificação pedem para você confirmar ou atualizar)</span>
+                          </label>
+                          <small className="fin-fixa-nota">
+                            A conta de cada mês aparece 10 dias antes do vencimento. O pagamento automático só <strong>registra</strong> a conta como paga
+                            (o sistema não paga o boleto) e só acontece com o valor confirmado. Se foi por engano, use "Desfazer pagamento".
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {erroContas && <div className="fin-erro" style={{ marginTop: 10 }}>⚠️ {erroContas}</div>}
                   {contaEditId && <Rastro entidade="conta" id={contaEditId} />}
                   <div className="fin-conta-form-acoes">
@@ -1154,6 +1279,81 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
             )}
 
             {erroContas && !formAberto && <div className="fin-erro">⚠️ {erroContas}</div>}
+
+            {fixas.length > 0 && (
+              <div className="fin-fixas">
+                <button className="fin-fixas-titulo" onClick={() => setFixasAberto(v => !v)} aria-expanded={fixasAberto}>
+                  🔁 Contas fixas ({fixas.length}) <span>{fixasAberto ? '▲' : '▼'}</span>
+                </button>
+                {fixasAberto && (
+                  <div className="fin-fixas-lista">
+                    {fixaEdit && (
+                      <form className="fin-conta-form" onSubmit={salvarFixa}>
+                        <div className="fin-conta-form-titulo">✏️ Editar conta fixa</div>
+                        <div className="fin-conta-form-grid">
+                          <div className="fin-form-group">
+                            <label className="fin-form-label">Descrição *</label>
+                            <input className="fin-form-input" maxLength={150} required value={fixaEdit.descricao}
+                              onChange={e => setFixaEdit(p => ({ ...p, descricao: e.target.value }))} />
+                          </div>
+                          <div className="fin-form-group">
+                            <label className="fin-form-label">Valor (R$) *</label>
+                            <input className="fin-form-input" inputMode="numeric" maxLength={15} required value={fixaEdit.valorTxt}
+                              onChange={e => setFixaEdit(p => ({ ...p, valorTxt: digitarValorMascarado(e.target.value, 2) }))} />
+                          </div>
+                          <div className="fin-form-group">
+                            <label className="fin-form-label">Dia do vencimento *</label>
+                            <input className="fin-form-input" type="number" min="1" max="31" required value={fixaEdit.dia_vencimento}
+                              onChange={e => setFixaEdit(p => ({ ...p, dia_vencimento: e.target.value }))} />
+                          </div>
+                          <div className="fin-form-group">
+                            <label className="fin-form-label">Como pagar</label>
+                            <select className="fin-form-input" value={fixaEdit.pagamento} onChange={e => setFixaEdit(p => ({ ...p, pagamento: e.target.value }))}>
+                              <option value="manual">Eu pago e marco como paga</option>
+                              <option value="no_vencimento">Registrar como paga automaticamente no vencimento</option>
+                              <option value="antes">Registrar como paga automaticamente antes do vencimento</option>
+                            </select>
+                          </div>
+                          {fixaEdit.pagamento === 'antes' && (
+                            <div className="fin-form-group">
+                              <label className="fin-form-label">Quantos dias antes?</label>
+                              <input className="fin-form-input" type="number" min="1" max="15" value={fixaEdit.dias_antes}
+                                onChange={e => setFixaEdit(p => ({ ...p, dias_antes: e.target.value }))} />
+                            </div>
+                          )}
+                        </div>
+                        <label className="fin-fixa-check" style={{ marginTop: 10 }}>
+                          <input type="checkbox" checked={fixaEdit.lembrar_valor} onChange={e => setFixaEdit(p => ({ ...p, lembrar_valor: e.target.checked }))} />
+                          <span>Lembrar de conferir o valor todo mês</span>
+                        </label>
+                        <div className="fin-conta-form-acoes">
+                          <button type="button" className="fin-btn-cancelar-conta" onClick={() => setFixaEdit(null)}>Cancelar</button>
+                          <button type="submit" className="fin-btn-gerar" disabled={salvandoConta}>{salvandoConta ? '⏳…' : '✓ Salvar'}</button>
+                        </div>
+                      </form>
+                    )}
+                    {fixas.map(f => (
+                      <div key={f.id} className={`fin-fixa-item${f.ativa ? '' : ' pausada'}`}>
+                        <div className="fin-fixa-item-info">
+                          <strong>{f.descricao}</strong>
+                          <span>{fmt(f.valor)} · todo dia {f.dia_vencimento}{f.ativa ? '' : ' · ⏸ pausada'}</span>
+                          <small>{textoModoFixa(f)}{f.lembrar_valor ? ' · lembra de conferir o valor' : ''}</small>
+                        </div>
+                        <div className="fin-fixa-item-acoes">
+                          <button className="fin-conta-btn editar" onClick={() => setFixaEdit({
+                            ...f, valorTxt: parseFloat(f.valor).toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2 }),
+                          })}>✏️</button>
+                          <button className="fin-conta-btn desfazer" title={f.ativa ? 'Pausar: não gera as próximas contas' : 'Reativar'} onClick={() => alternarFixa(f)} disabled={salvandoConta}>
+                            {f.ativa ? '⏸' : '▶️'}
+                          </button>
+                          <button className="fin-conta-btn excluir" title="Remover conta fixa" onClick={() => removerFixa(f)} disabled={salvandoConta}>🗑</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {loadingContas ? (
               <div className="fin-loading"><div className="est-spinner" /> Carregando…</div>
@@ -1182,7 +1382,19 @@ export default function Financeiro({ estabelecimentoId, logoUrl, nomeFantasia, p
                           <span className="fin-conta-descricao">{conta.descricao}</span>
                           <span className={`fin-badge-status ${conta.status}`}>{conta.status}</span>
                         </div>
+                        {(conta.conta_fixa_id || conta.pago_automaticamente) && (
+                          <div className="fin-conta-tags">
+                            {conta.conta_fixa_id && <span className="fin-tag-fixa">🔁 Fixa</span>}
+                            {conta.pago_automaticamente && <span className="fin-tag-fixa auto">⚡ Paga automaticamente</span>}
+                          </div>
+                        )}
                       </div>
+                      {conta.conta_fixa_id && conta.valor_confirmado === false && conta.status !== 'paga' && (
+                        <div className="fin-conta-conferir">
+                          <span>⚠️ Confira o valor deste mês — ainda é o do mês passado.</span>
+                          <button className="fin-conta-btn pagar" onClick={e => { e.stopPropagation(); confirmarValor(conta); }} disabled={salvandoConta}>✔ Valor está certo</button>
+                        </div>
+                      )}
                       <div className="fin-conta-card-body">
                         <div className="fin-conta-info-row">
                           <span className="fin-conta-info-label">Vencimento</span>
