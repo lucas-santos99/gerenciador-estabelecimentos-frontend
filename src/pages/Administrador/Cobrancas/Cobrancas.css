@@ -150,8 +150,9 @@
   cursor: pointer;
 }
 
+.cob-item-detalhes span { min-width: 0; overflow-wrap: anywhere; }
 .cob-item-detalhes {
-  display: flex; gap: 14px; flex-wrap: wrap;
+  display: flex; gap: 6px 14px; flex-wrap: wrap;
   font-size: calc(0.78rem * var(--cob-font-scale, 1));
   color: var(--text-secondary);
 }
@@ -400,6 +401,7 @@
 @media (max-width: 768px) {
   .cob-wrapper { padding: 16px; }
   .cob-item { flex-wrap: wrap; }
+  .cob-item-info { flex: 1 1 calc(100% - 30px); }
   .cob-item-acoes { width: 100%; }
 }
 

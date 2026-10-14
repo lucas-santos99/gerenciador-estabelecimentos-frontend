@@ -704,6 +704,10 @@
 
 @media (max-width: 480px) {
   .op-table th:nth-child(3), .op-table td:nth-child(3) { display: none; }
+  /* O nome dividia a linha com avatar + status + dois botões e quebrava em 3 linhas */
+  .op-table th:nth-child(1), .op-table td:nth-child(1) { display: none; }
+  .op-table th, .op-table td { padding-left: 10px; padding-right: 8px; }
+  .op-table td:nth-child(2) { width: 100%; overflow-wrap: anywhere; }
 }
 
 /* ========================= */

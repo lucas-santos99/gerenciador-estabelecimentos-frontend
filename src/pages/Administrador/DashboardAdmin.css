@@ -751,8 +751,8 @@ body.light {
     gap: 8px;
   }
 
-  /* Botão "Ver Excluídas" ocupa a linha toda */
-  .dash-actions .btn:last-child {
+  /* Botão "Ver Excluídas" ocupa a linha toda (A− / A+ ficam lado a lado na linha de baixo) */
+  .dash-actions .dash-btn-excluidas {
     grid-column: 1 / -1;
   }
 
@@ -813,13 +813,9 @@ body.light {
     font-size: 1.35rem;
   }
 
-  /* No celular menor, 1 coluna nos botões */
-  .dash-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .dash-actions .btn:last-child {
-    grid-column: 1;
+  /* No celular menor, botões principais em linha inteira; A− / A+ continuam lado a lado */
+  .dash-actions .btn:not(.dash-zoom-btn) {
+    grid-column: 1 / -1;
   }
 
   .dash-table th:nth-child(1),

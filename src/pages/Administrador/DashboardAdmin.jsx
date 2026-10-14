@@ -426,7 +426,7 @@ export default function DashboardAdmin() {
             )}
 
             <button
-              className="btn btn-ghost"
+              className="btn btn-ghost dash-btn-excluidas"
               onClick={() => navigate("/admin/estabelecimentos/excluidas")}
             >
               <Icon.Trash /> Ver Excluídas

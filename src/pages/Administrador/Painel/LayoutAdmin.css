@@ -44,4 +44,16 @@
     margin-left: 0;           /* sidebar vira overlay no mobile */
     padding-top: 64px;        /* espaço pro botão hamburger */
   }
+
+  /* Faixa fixa atrás do hambúrguer: o conteúdo some por baixo dela ao rolar, em vez de
+     passar "misturado" com o botão. Fica abaixo do botão (60) e do menu aberto. */
+  .admin-container::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 62px;
+    background: var(--bg-page, #070d14);
+    z-index: 40;
+    pointer-events: none;
+  }
 }
