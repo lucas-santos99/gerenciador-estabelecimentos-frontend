@@ -1,5 +1,5 @@
 // src/pages/Estabelecimento/Fornecedores/Fornecedores.jsx
-import { confirmar, avisar } from '../../../components/Dialogo/dialogo';
+import { confirmar, avisar, perguntar } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from '../../../utils/planilha';
 import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioIdentidade';
@@ -297,6 +297,29 @@ export default function Fornecedores({ estabelecimentoId, permissoes = null, isM
   );
 }
 
+// Desfaz um pagamento marcado por engano: pede o motivo (obrigatório) e
+// chama o mesmo endpoint do Financeiro. Devolve true se desfez.
+async function desfazerPagamentoConta(contaId, titulo) {
+  const motivo = await perguntar({
+    titulo: 'Desfazer o pagamento?',
+    texto: `${titulo} volta para pendente.`,
+    rotulo: 'Motivo (obrigatório)', placeholder: 'Ex.: cliquei em pagar sem querer…',
+    perigo: true, botao: 'Desfazer pagamento', botaoCancelar: 'Voltar', obrigatorio: true, maximo: 200,
+  });
+  if (!motivo) return false;
+  try {
+    const resp = await apiFetch(`/api/financeiro/${contaId}/desfazer-pagamento`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) { avisar(data.error || 'Erro ao desfazer o pagamento.'); return false; }
+    return true;
+  } catch { avisar('Erro ao desfazer o pagamento.'); return false; }
+}
+
+
 /* ════════════════════════════════════════════════════════════
    CONTAS A PAGAR DE FORNECEDORES — visão agregada, todos os
    fornecedores juntos numa lista só (não precisa abrir um por um)
@@ -356,6 +379,13 @@ function ContasFornecedores({ fontScale = 1, destino = null, podePagar = true, s
       if (!resp.ok) { avisar(data.error || 'Erro ao marcar como paga.'); setPagando(null); return; }
       carregar();
     } catch { avisar('Erro ao marcar como paga.'); }
+    setPagando(null);
+  }
+
+  async function desfazer(contaId, fornecedorNome) {
+    if (!podePagar) return;
+    setPagando(contaId);
+    if (await desfazerPagamentoConta(contaId, `Compra de "${fornecedorNome}"`)) carregar();
     setPagando(null);
   }
 
@@ -452,6 +482,16 @@ function ContasFornecedores({ fontScale = 1, destino = null, podePagar = true, s
                 <button className="forn-contapag-card-btn ver" onClick={() => setCompraDetalheId(c.compra_id)}>
                   👁 Ver
                 </button>
+                {c.status === 'paga' && (
+                  <button
+                    className="forn-contapag-card-btn ver"
+                    disabled={!podePagar || pagando === c.conta_a_pagar_id}
+                    title={!podePagar ? semPermMsg : 'Marcar como pendente de novo (pagamento feito por engano)'}
+                    onClick={podePagar ? () => desfazer(c.conta_a_pagar_id, c.fornecedor_nome) : undefined}
+                  >
+                    ↩️ Desfazer
+                  </button>
+                )}
                 {c.status !== 'paga' && (
                   <button
                     className="forn-contapag-card-btn pagar"
@@ -550,6 +590,19 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
       setDados(await respD.json());
       onAtualizar?.();
     } catch { avisar('Erro ao marcar como paga.'); }
+    setPagando(null);
+  }
+
+  async function desfazerCompra(contaId, nomeFornecedor) {
+    if (!podePagar) return;
+    setPagando(contaId);
+    if (await desfazerPagamentoConta(contaId, `Compra de "${nomeFornecedor}"`)) {
+      try {
+        const respD = await apiFetch(`/api/fornecedores/${fornecedorId}`);
+        setDados(await respD.json());
+        onAtualizar?.();
+      } catch { /* a tela atualiza no próximo carregamento */ }
+    }
     setPagando(null);
   }
 
@@ -779,6 +832,16 @@ function DetalhesFornecedor({ fornecedorId, onFechar, onAtualizar, fontScale = 1
                       <span className="forn-compra-valor">{fmt(c.valor_total)}</span>
                       {c.status === 'ativa' && (
                         <div className="forn-compra-acoes" onClick={e => e.stopPropagation()}>
+                          {c.forma_pagamento === 'a_prazo' && c.conta_a_pagar_id && c.status_conta_pagar === 'paga' && (
+                            <button
+                              className="forn-compra-pagar forn-compra-desfazer"
+                              disabled={!podePagar || pagando === c.conta_a_pagar_id}
+                              title={!podePagar ? semPermMsg : 'Marcar como pendente de novo (pagamento feito por engano)'}
+                              onClick={podePagar ? () => desfazerCompra(c.conta_a_pagar_id, dados.nome) : undefined}
+                            >
+                              {pagando === c.conta_a_pagar_id ? '⏳' : '↩️ Desfazer'}
+                            </button>
+                          )}
                           {c.forma_pagamento === 'a_prazo' && c.conta_a_pagar_id && ['pendente', 'atrasada'].includes(c.status_conta_pagar) && (
                             <button
                               className="forn-compra-pagar"
@@ -873,6 +936,16 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago, podePag
     return () => window.removeEventListener('keydown', esc);
   }, [onFechar]);
 
+  async function desfazerAqui() {
+    if (!podePagar || !compra?.conta_a_pagar_id) return;
+    setPagando(true);
+    if (await desfazerPagamentoConta(compra.conta_a_pagar_id, `Compra de "${compra.fornecedor_nome}"`)) {
+      setCompra(prev => ({ ...prev, status_conta_pagar: 'pendente' }));
+      onPago?.();
+    }
+    setPagando(false);
+  }
+
   async function pagarAqui() {
     if (!podePagar) return;
     if (!compra?.conta_a_pagar_id) return;
@@ -941,7 +1014,14 @@ function DetalheCompraModal({ compraId, onFechar, fontScale = 1, onPago, podePag
 
             {compra.forma_pagamento === 'a_prazo' && compra.conta_a_pagar_id && (
               compra.status_conta_pagar === 'paga' ? (
-                <div className="forn-compra-paga-box">✓ Essa conta já está paga</div>
+                <>
+                  <div className="forn-compra-paga-box">✓ Essa conta já está paga</div>
+                  {compra.status === 'ativa' && (
+                    <button className="forn-compra-pagar forn-compra-pagar--grande forn-compra-desfazer" disabled={!podePagar || pagando} title={!podePagar ? semPermMsg : undefined} onClick={podePagar ? desfazerAqui : undefined}>
+                      {pagando ? '⏳ Desfazendo…' : '↩️ Desfazer pagamento'}
+                    </button>
+                  )}
+                </>
               ) : compra.status === 'ativa' && (
                 <button className="forn-compra-pagar forn-compra-pagar--grande" disabled={!podePagar || pagando} title={!podePagar ? semPermMsg : undefined} onClick={podePagar ? pagarAqui : undefined}>
                   {pagando ? '⏳ Marcando…' : '💰 Marcar como paga'}

@@ -990,3 +990,9 @@ body.dark .forn-contapag-badge.pendente { color: var(--est-warning); }
   background: var(--est-danger-dim);
   color: var(--est-danger);
 }
+
+.forn-compra-desfazer {
+  background: transparent;
+  border-color: var(--est-border);
+  color: var(--est-text);
+}
