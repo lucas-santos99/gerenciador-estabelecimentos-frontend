@@ -301,6 +301,12 @@
 
 @media (max-width: 768px) {
   .aud-wrapper { padding: 16px; }
-  .aud-filters-box { flex-direction: column; align-items: stretch; }
-  .aud-filter-group { min-width: 0; }
+  /* Em coluna, o "flex: 1 1 130px" virava ALTURA e cada filtro ficava com ~80px de vazio.
+     Agora é uma grade de 2 colunas, cada filtro com a altura do próprio conteúdo. */
+  .aud-filters-box { display: grid; grid-template-columns: 1fr 1fr; align-items: end; padding: 14px; }
+  .aud-filter-group,
+  .aud-filter-group--data,
+  .aud-filter-group--pequeno,
+  .aud-filter-group--busca { flex: none; min-width: 0; }
+  .aud-filter-group--busca { grid-column: 1 / -1; }
 }
