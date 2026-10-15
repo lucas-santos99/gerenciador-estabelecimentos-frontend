@@ -3167,3 +3167,13 @@
 .prod-card:not(.modo-grade) .prod-card-foto-nav,.prod-card:not(.modo-grade) .prod-card-foto-pontos{display:none}
 
 .prod-lightbox-overlay{touch-action:none;overscroll-behavior:contain}
+
+.prod-card-imagem{touch-action:pan-y}
+.prod-codigo-row{flex-wrap:wrap}
+.prod-codigo-row .prod-input{min-width:0}
+.prod-variacao-codigo-linha{flex-wrap:wrap}
+.prod-variacao-codigo-input{min-width:0}
+@media (max-width:520px){
+  .prod-codigo-row .prod-input{flex:1 1 100%}
+  .prod-codigo-row .prod-btn-gerar-codigo{flex:1 1 auto;padding:9px 12px;white-space:normal}
+}

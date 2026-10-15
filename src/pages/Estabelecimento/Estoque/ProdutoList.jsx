@@ -1161,7 +1161,17 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
   const fotoAtual = fotos.length ? fotos[Math.min(fotoIdx, fotos.length - 1)] : null;
   const alternar = (e) => { e.stopPropagation(); setFotoIdx(i => (i + 1) % fotos.length); setImgErro(false); };
   const imagem = (
-    <div className="prod-card-imagem">
+    <div
+      className="prod-card-imagem"
+      onTouchStart={fotos.length > 1 ? (e => { e.currentTarget.dataset.x = e.touches[0].clientX; e.currentTarget.dataset.feito = ''; }) : undefined}
+      onTouchMove={fotos.length > 1 ? (e => {
+        const el = e.currentTarget; const dx = e.touches[0].clientX - Number(el.dataset.x || 0);
+        if (!el.dataset.feito && Math.abs(dx) > 35) {
+          el.dataset.feito = '1';
+          setFotoIdx(i => (i + (dx < 0 ? 1 : -1) + fotos.length) % fotos.length); setImgErro(false);
+        }
+      }) : undefined}
+    >
       {fotoAtual && !imgErro ? (
         <img
           src={fotoAtual}
