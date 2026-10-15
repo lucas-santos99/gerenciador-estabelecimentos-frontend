@@ -3124,3 +3124,12 @@
 .atl-sug-x { color: var(--est-text-muted); border-left: 1px dashed var(--est-border) !important; padding: 7px 10px !important; }
 .atl-sug-x:hover:not(:disabled) { color: var(--est-danger); }
 .atl-sug button:disabled { opacity: .4; cursor: default; }
+
+/* 15/10/2026 — a faixa Editar / Etiquetas / Excluir aparecia cortada no card: a linha da grade
+   ficava menor que o conteúdo. Agora a linha sempre tem a altura do conteúdo e o corpo do card
+   nunca encolhe por cima das ações. */
+.estoque-grid { grid-auto-rows: max-content; }
+.prod-card { min-height: fit-content; }
+.prod-card-corpo { flex: 1 0 auto; }
+.prod-card-acoes { flex-shrink: 0; }
+.prod-btn-acao { white-space: nowrap; line-height: 1.3; }
