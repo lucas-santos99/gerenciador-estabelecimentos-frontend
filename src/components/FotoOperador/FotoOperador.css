@@ -9,3 +9,4 @@
 .fotoop-btn:disabled{opacity:.6;cursor:not-allowed}
 .fotoop-btn--remover{color:var(--est-danger,#dc2626)}
 .fotoop-erro{flex-basis:100%;font-size:.78rem;color:var(--est-danger,#dc2626)}
+.fotoop-avatar--zoom{cursor:zoom-in}

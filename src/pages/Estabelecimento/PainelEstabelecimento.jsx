@@ -392,6 +392,7 @@ export default function PainelEstabelecimento() {
       onAbaChange={handleAbaChange}
       nomeEstabelecimento={nomeEstabelecimento}
       logoUrl={logoUrl}
+      onLogoAtualizada={handleLogoAtualizada}
       permissoes={permissoes}
       licencaInfo={licencaInfo}
       estabelecimentoId={estabelecimentoId}

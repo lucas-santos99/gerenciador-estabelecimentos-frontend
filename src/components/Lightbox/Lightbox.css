@@ -1,0 +1,4 @@
+.lbx-overlay{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.lbx-img{max-width:min(92vw,900px);max-height:88vh;object-fit:contain;border-radius:14px;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5);cursor:default}
+.lbx-fechar{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:1.1rem;cursor:pointer}
+.lbx-fechar:hover{background:rgba(255,255,255,.3)}

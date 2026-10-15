@@ -1140,3 +1140,31 @@ body.light select {
 @media (max-width: 768px) {
   .est-comunicados-fixos { right: 10px; bottom: 10px; left: 10px; width: auto; }
 }
+/* ── Cabeçalho do menu: logo maior, nome à direita, Sair no topo ── */
+.est-sidebar-brand{gap:12px;padding:16px 14px;min-height:84px;overflow:visible}
+.est-brand-logo-wrap{position:relative;flex-shrink:0}
+.est-brand-logo-btn{background:none;border:none;padding:0;cursor:pointer;border-radius:14px;display:block;position:relative}
+.est-brand-logo-btn.enviando{opacity:.5;pointer-events:none}
+.est-brand-logo-btn:hover .est-brand-logo,.est-brand-logo-btn:hover .est-brand-initials{box-shadow:0 0 0 3px var(--est-border-accent)}
+.est-brand-logo,.est-brand-initials{width:52px;height:52px;border-radius:14px;transition:box-shadow .15s}
+.est-brand-initials{font-size:1rem}
+.est-brand-text{flex:1;min-width:0}
+.est-brand-name{font-size:.92rem}
+.est-brand-acoes{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.est-brand-sair{width:30px;height:30px;border-radius:9px;border:none;background:none;color:rgba(248,113,113,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.est-brand-sair svg{width:17px;height:17px}
+.est-brand-sair:hover{background:var(--est-danger-dim);color:var(--est-danger)}
+.est-logo-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:200;min-width:170px;background:var(--est-card-solid);border:1px solid var(--est-border-accent);border-radius:12px;box-shadow:var(--est-shadow);padding:6px;display:flex;flex-direction:column;gap:2px}
+.est-logo-menu button{background:none;border:none;text-align:left;padding:9px 10px;border-radius:8px;color:var(--est-text);font:inherit;font-size:.84rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.est-logo-menu button:hover:not(:disabled){background:var(--est-hover);color:var(--est-accent)}
+.est-logo-menu-vazio{padding:8px 10px;font-size:.8rem;color:var(--est-text-soft)}
+/* Recolhido (desktop): só a logo; o Sair volta pro rodapé */
+.est-sidebar.collapsed .est-brand-acoes{display:none}
+.est-sidebar:not(.collapsed) .est-logout-btn,
+.est-sidebar:not(.collapsed) .est-sidebar-footer .est-footer-divider:last-of-type{display:none}
+.est-sidebar.collapsed .est-sidebar-brand{padding:16px 8px;justify-content:center}
+@media (max-width:768px){
+  .est-sidebar.collapsed .est-brand-acoes{display:flex}
+  .est-sidebar.collapsed .est-logout-btn,.est-sidebar.collapsed .est-sidebar-footer .est-footer-divider:last-of-type{display:none}
+  .est-sidebar.collapsed .est-sidebar-brand{padding:16px 14px;justify-content:flex-start}
+}

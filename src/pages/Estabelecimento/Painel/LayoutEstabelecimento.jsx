@@ -8,6 +8,8 @@ import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from ".
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import Lightbox from "../../../components/Lightbox/Lightbox";
+import { enviarLogoEstabelecimento } from "../../../utils/enviarLogo";
 import ResumoLogin from "../../../components/Notificacoes/ResumoLogin";
 import { useNotificacoes } from "../../../components/Notificacoes/NotificacoesContext";
 import "./LayoutEstabelecimento.css";
@@ -192,6 +194,7 @@ export default function LayoutEstabelecimento({
   permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
   licencaInfo = null, // { status_assinatura, data_vencimento } — vem do PainelEstabelecimento
   estabelecimentoId = null,
+  onLogoAtualizada = null, // troca de logo feita pelo menu
   onLicencaAtualizada = null, // callback pro PainelEstabelecimento atualizar o licencaInfo após renovação antecipada
 }) {
   const navigate  = useNavigate();
@@ -201,6 +204,36 @@ export default function LayoutEstabelecimento({
 
   /* ── abas disponíveis para este role/permissões ───────────── */
   const isMerchant = profile?.role === 'merchant';
+
+  /* ── logo do menu: ampliar / trocar ───────────────────────── */
+  const podeTrocarLogo = isMerchant || (Array.isArray(permissoes) && permissoes.includes('config_editar_logo'));
+  const [menuLogo, setMenuLogo] = useState(false);
+  const [logoAmpliada, setLogoAmpliada] = useState(false);
+  const [trocandoLogo, setTrocandoLogo] = useState(false);
+  const logoInputRef = useRef(null);
+  const menuLogoRef = useRef(null);
+  useEffect(() => {
+    if (!menuLogo) return;
+    const fora = (e) => { if (!menuLogoRef.current?.contains(e.target)) setMenuLogo(false); };
+    const esc = (e) => { if (e.key === 'Escape') setMenuLogo(false); };
+    document.addEventListener('mousedown', fora);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', fora); document.removeEventListener('keydown', esc); };
+  }, [menuLogo]);
+  async function trocarLogoMenu(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo || !estabelecimentoId) return;
+    setTrocandoLogo(true);
+    try {
+      const novaUrl = await enviarLogoEstabelecimento(estabelecimentoId, arquivo);
+      onLogoAtualizada?.(novaUrl);
+    } catch (err) {
+      avisar(err.message || 'Erro ao trocar a logo.');
+    } finally {
+      setTrocandoLogo(false);
+    }
+  }
 
   /* ── status da licença (só exibido para merchant) ─────────── */
   // Tick a cada 60s só pra manter a contagem regressiva do último dia
@@ -569,10 +602,34 @@ export default function LayoutEstabelecimento({
 
         {/* Brand */}
         <div className="est-sidebar-brand">
-          {logoUrl
-            ? <img src={logoUrl} alt="Logo" className="est-brand-logo" />
-            : <div className="est-brand-initials">{iniciais(nomeEstabelecimento)}</div>
-          }
+          <div className="est-brand-logo-wrap" ref={menuLogoRef}>
+            <button
+              type="button"
+              className={`est-brand-logo-btn${trocandoLogo ? " enviando" : ""}`}
+              onClick={(e) => { e.stopPropagation(); setMenuLogo(m => !m); }}
+              title="Logo do estabelecimento"
+              aria-label="Opções da logo"
+            >
+              {logoUrl
+                ? <img src={logoUrl} alt="Logo" className="est-brand-logo" />
+                : <div className="est-brand-initials">{iniciais(nomeEstabelecimento)}</div>
+              }
+            </button>
+            {menuLogo && (
+              <div className="est-logo-menu" onClick={e => e.stopPropagation()}>
+                {logoUrl && (
+                  <button type="button" onClick={() => { setMenuLogo(false); setLogoAmpliada(true); }}>🔍 Ver ampliada</button>
+                )}
+                {podeTrocarLogo && (
+                  <button type="button" disabled={trocandoLogo} onClick={() => { setMenuLogo(false); logoInputRef.current?.click(); }}>
+                    {logoUrl ? "🔄 Trocar logo" : "📷 Adicionar logo"}
+                  </button>
+                )}
+                {!logoUrl && !podeTrocarLogo && <span className="est-logo-menu-vazio">Sem logo cadastrada</span>}
+              </div>
+            )}
+            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={trocarLogoMenu} />
+          </div>
           <div className="est-brand-text">
             <span className="est-brand-name">
               {nomeEstabelecimento || "Estabelecimento"}
@@ -581,8 +638,20 @@ export default function LayoutEstabelecimento({
               {profile?.role === 'merchant' ? 'Administrador' : 'Operador'}
             </span>
           </div>
-          <SinoNotificacoes />
+          <div className="est-brand-acoes">
+            <SinoNotificacoes />
+            <button
+              type="button"
+              className="est-brand-sair"
+              onClick={(e) => { e.stopPropagation(); setModalLogout(true); }}
+              title="Sair"
+              aria-label="Sair"
+            >
+              <Icons.Logout />
+            </button>
+          </div>
         </div>
+        {logoAmpliada && <Lightbox url={logoUrl} alt="Logo do estabelecimento" onClose={() => setLogoAmpliada(false)} />}
 
         {/* Nav */}
         <ul className="est-nav">

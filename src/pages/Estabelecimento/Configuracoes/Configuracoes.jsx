@@ -4,6 +4,7 @@ import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import HistoricoRenovacoes from '../../../components/HistoricoRenovacoes';
+import Lightbox from '../../../components/Lightbox/Lightbox';
 import '../Configuracoes.css';
 
 /* ════════════════════════════════════════════════════════════
@@ -299,6 +300,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const podeEditarLogo  = pode('config_editar_logo');
   const podeEditarDados = pode('config_editar_dados');
 
+  const [logoAmpliada, setLogoAmpliada] = useState(false);
   const [dados,          setDados]          = useState(null);
   // Muda a cada alteração salva nesta tela, para a linha "Cadastrado por /
   // Última alteração por" (aba Dados) buscar de novo.
@@ -614,7 +616,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               <span className="cfg-section-titulo">🖼️ Logo do Estabelecimento</span>
               {podeEditarLogo ? (
                 <p className="cfg-guia-intro">
-                  Você pode alterar a logo diretamente. A imagem anterior é removida automaticamente do sistema para não ocupar espaço desnecessário.
+                  Você pode trocar a logo aqui ou clicando nela no canto superior esquerdo do menu. A imagem é reduzida e otimizada automaticamente, e a anterior é apagada do sistema para não ocupar espaço. Clique na imagem para ampliar.
                 </p>
               ) : (
                 <div className="cfg-alert info">🔒 Você pode ver a logo, mas não trocar. Peça ao dono da loja para liberar.</div>
@@ -622,7 +624,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
 
               <div className="cfg-logo-preview cfg-logo-preview--grande">
                 {(dados?.logo_url || logoUrlProp) ? (
-                  <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" />
+                  <img src={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" style={{ cursor: 'zoom-in' }} title="Clique para ampliar" onClick={() => setLogoAmpliada(true)} />
                 ) : (
                   <div className="cfg-logo-preview-vazio">
                     <span>🖼</span>
@@ -655,11 +657,14 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                 <div className="cfg-logo-req-item">✅ Formatos aceitos: PNG, JPG, WEBP</div>
                 <div className="cfg-logo-req-item">✅ Tamanho máximo: 2MB</div>
                 <div className="cfg-logo-req-item">✅ Recomendado: imagem quadrada, fundo transparente</div>
+                <div className="cfg-logo-req-item">⚡ A imagem é otimizada automaticamente (fica leve e rápida)</div>
                 <div className="cfg-logo-req-item">🗑️ A logo anterior é removida automaticamente</div>
               </div>
             </div>
           </div>
         )}
+
+        {logoAmpliada && <Lightbox url={dados?.logo_url || logoUrlProp} alt="Logo do estabelecimento" onClose={() => setLogoAmpliada(false)} />}
 
         {/* ══ ABA PAGAMENTOS ══ */}
         {abaCfg === 'pagamentos' && (

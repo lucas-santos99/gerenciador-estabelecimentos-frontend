@@ -2,6 +2,7 @@
 import { confirmar as confirmarDialogo } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import Lightbox from '../../../components/Lightbox/Lightbox';
 import FotoOperador from '../../../components/FotoOperador/FotoOperador';
 import './OperadoresEstabelecimento.css';
 import { erroSenhaFraca } from '../../../utils/senha';
@@ -102,6 +103,7 @@ const STATUS_COR   = { ativo: 'verde', inativo: 'cinza' };
 
 /* ════════════════════════════════════════════════════════════ */
 export default function OperadoresEstabelecimento({ estabelecimentoId }) {
+  const [fotoAmpliada, setFotoAmpliada] = useState(null); // { url, nome }
 
   const [operadores,    setOperadores]    = useState([]);
   const [limite,        setLimite]        = useState({ limite: 3, total: 0, pode_criar: true });
@@ -218,6 +220,7 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
   /* ════════════════════════════════════════════════════════ */
   return (
     <div className="opest-container">
+      {fotoAmpliada && <Lightbox url={fotoAmpliada.url} alt={fotoAmpliada.nome} onClose={() => setFotoAmpliada(null)} />}
 
       {/* Modal criar/editar */}
       {modalAberto && (
@@ -309,7 +312,12 @@ export default function OperadoresEstabelecimento({ estabelecimentoId }) {
             >
 
               {/* Avatar */}
-              <div className="opest-avatar">
+              <div
+                className="opest-avatar"
+                style={op.foto_url ? { cursor: 'zoom-in' } : undefined}
+                title={op.foto_url ? 'Clique para ampliar' : undefined}
+                onClick={op.foto_url ? (e) => { e.stopPropagation(); setFotoAmpliada({ url: op.foto_url, nome: op.nome }); } : undefined}
+              >
                 {op.foto_url
                   ? <img src={op.foto_url} alt={op.nome} className="opest-avatar-img" />
                   : <span className="opest-avatar-inicial">{op.nome[0]?.toUpperCase()}</span>

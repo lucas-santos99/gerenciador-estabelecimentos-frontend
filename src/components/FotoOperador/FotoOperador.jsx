@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { apiFetch } from "../../utils/api";
 import { confirmar } from "../Dialogo/dialogo";
+import Lightbox from "../Lightbox/Lightbox";
 import "./FotoOperador.css";
 
 /**
@@ -13,6 +14,7 @@ export default function FotoOperador({ operadorId, nome, fotoUrl, admin = false,
   const inputRef = useRef(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [ampliada, setAmpliada] = useState(false);
 
   const urlEnviar  = admin ? `/admin/operadores/${operadorId}/upload-foto` : `/api/operadores/${operadorId}/foto`;
   const urlRemover = admin ? `/admin/operadores/${operadorId}/remover-foto` : `/api/operadores/${operadorId}/foto`;
@@ -53,11 +55,16 @@ export default function FotoOperador({ operadorId, nome, fotoUrl, admin = false,
 
   return (
     <div className="fotoop">
-      <div className="fotoop-avatar">
+      <div
+        className={`fotoop-avatar${fotoUrl ? " fotoop-avatar--zoom" : ""}`}
+        onClick={() => fotoUrl && setAmpliada(true)}
+        title={fotoUrl ? "Clique para ampliar" : undefined}
+      >
         {fotoUrl
           ? <img src={fotoUrl} alt={nome || "Foto"} loading="lazy" decoding="async" />
           : <span>{(nome || "?")[0]?.toUpperCase()}</span>}
       </div>
+      {ampliada && <Lightbox url={fotoUrl} alt={nome || "Foto"} onClose={() => setAmpliada(false)} />}
       <div className="fotoop-acoes">
         <button type="button" className="fotoop-btn" onClick={() => inputRef.current?.click()} disabled={enviando || desabilitado}>
           {enviando ? "⏳ Enviando…" : fotoUrl ? "🔄 Trocar foto" : "📷 Adicionar foto"}
