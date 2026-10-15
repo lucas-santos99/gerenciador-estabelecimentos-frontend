@@ -1183,3 +1183,9 @@ button.ntf-stat {
 
 /* Botão "Testar som" */
 .ntf-btn-som { align-self: flex-start; margin-top: 6px; }
+
+/* 15/10/2026 — filtros (Pendentes / Adiadas / Ocultas) quebram de linha em tela estreita
+   em vez de ficar escondidos atrás de uma rolagem lateral. */
+@media (max-width: 400px) {
+  .ntf-seg { flex-wrap: wrap; max-width: 100%; }
+}

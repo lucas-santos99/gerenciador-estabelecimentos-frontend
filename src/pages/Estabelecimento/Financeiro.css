@@ -1577,3 +1577,9 @@ body.light .fin-relop-meio.fiado    { background: rgba(239, 68, 68, 0.1);  color
 .fin-conta-conferir .fin-conta-btn { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--est-border); border-radius: 10px; }
 .fin-fixas-cabeca { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
 .fin-fixas-cabeca .fin-fixas-titulo { flex: 1; }
+
+/* 15/10/2026 — telas bem estreitas (320 px): as duas abas cabem sem precisar rolar de lado. */
+@media (max-width: 360px) {
+  .fin-tab-btn { padding: 10px 5px; font-size: 0.66rem; }
+  .fin-tabs { gap: 4px; }
+}
