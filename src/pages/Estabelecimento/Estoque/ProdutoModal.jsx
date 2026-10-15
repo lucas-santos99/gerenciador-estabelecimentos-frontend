@@ -368,7 +368,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
   // Atributos que aparecem na tabela: os ativos da loja (na ordem dela) + os
   // ocultos que ainda têm valor em alguma variação (nunca esconde dado salvo).
   const preenchidas = chavesPreenchidas(variacoes);
-  const todosAtributos = (atributosLoja && atributosLoja.length) ? atributosLoja : ATRIBUTOS_BASE;
+  const todosAtributos = Array.isArray(atributosLoja) ? atributosLoja : ATRIBUTOS_BASE;
   const atributos = todosAtributos.filter(a => a.ativo || preenchidas.has(a.chave));
   const nomeAtributo = (chave) => (todosAtributos.find(a => a.chave === chave)?.nome) || chave;
   const opcoesDe = (chave) => (opcoesPorChave && opcoesPorChave[chave]) || [];
@@ -1123,7 +1123,7 @@ export default function ProdutoModal({
 
   const [variacoes,     setVariacoes]     = useState([]);
   const [opcoesPorChave, setOpcoesPorChave] = useState({});   // chave do atributo → valores sugeridos
-  const [atributosLoja,  setAtributosLoja]  = useState([]);   // atributos da loja (ativos e ocultos)
+  const [atributosLoja,  setAtributosLoja]  = useState(null);   // atributos da loja (ativos e ocultos); null = ainda carregando
   const [gerenciarOpcoesAberto, setGerenciarOpcoesAberto] = useState(false);
   const [comoConfigurarAberto, setComoConfigurarAberto]   = useState(false);
 
@@ -1293,7 +1293,7 @@ export default function ProdutoModal({
       if (respOp.ok) setOpcoesPorChave(await respOp.json());
       if (respAt.ok) {
         const d = await respAt.json();
-        if (Array.isArray(d.atributos) && d.atributos.length) setAtributosLoja(d.atributos);
+        if (Array.isArray(d.atributos)) setAtributosLoja(d.atributos);
       }
     } catch { /* sugestão é acessório, falha silenciosa */ }
   }

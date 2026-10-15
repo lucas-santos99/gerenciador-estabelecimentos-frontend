@@ -2,7 +2,7 @@
 //
 // "Atributos da loja": o que varia nos produtos DESTA loja (tamanho, cor, gênero e o que
 // mais ela quiser: personagem, nº de peças, material, voltagem…). Dá para criar, renomear,
-// ocultar ou excluir (só se nenhum produto usa) e reordenar. Também oferece modelos prontos como ponto de partida.
+// ocultar ou excluir (só se nenhum produto usa), sugestões por tipo de loja e reordenar. Também oferece modelos prontos como ponto de partida.
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
@@ -21,6 +21,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
   const base = `/api/estabelecimentos/${estabelecimentoId}`;
   const [atributos, setAtributos] = useState([]);
   const [modelos,   setModelos]   = useState([]);
+  const [sugestoes, setSugestoes] = useState([]);   // sugestões do tipo de estabelecimento (ainda não adicionadas)
   const [limites,   setLimites]   = useState(LIMITES_PADRAO);
   const [pronto,    setPronto]    = useState(true);
   const [loading,   setLoading]   = useState(true);
@@ -40,6 +41,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
         const d = await resp.json();
         setAtributos(d.atributos || []);
         setModelos(d.modelos_prontos || []);
+        setSugestoes(d.sugestoes || []);
         setLimites({ ...LIMITES_PADRAO, ...(d.limites || {}) });
         setPronto(d.pronto !== false);
       } else setErro(await lerErro(resp, 'Não foi possível carregar os atributos.'));
@@ -116,10 +118,23 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
     await alterar(a, { ativo: !a.ativo });
   }
 
+  async function sugestao(x, acao) {
+    setOcupado(true); setErro('');
+    try {
+      const resp = await apiFetch(`${base}/atributos-variacao/sugestoes/${x.chave}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao }),
+      });
+      if (!resp.ok) throw new Error(await lerErro(resp, 'Não foi possível salvar.'));
+      avisarMudanca();
+    } catch (err) { setErro(err.message); }
+    await carregar();
+    setOcupado(false);
+  }
+
   async function excluir(a) {
     const ok = await confirmar({
       titulo: `Excluir "${a.nome}" de vez?`,
-      texto: 'O atributo e os valores sugeridos dele serão apagados. Só é possível se nenhum produto usa esse atributo — se algum usar, o sistema avisa e você pode apenas ocultar.',
+      texto: 'O atributo e os valores sugeridos dele serão apagados. Só é possível se nenhum produto usa esse atributo — se algum usar, o sistema avisa e você pode apenas ocultar.' + (a.legado ? ' Como ele é uma sugestão para o seu tipo de estabelecimento, pode voltar a aparecer nas sugestões (e lá dá para dispensar).' : ''),
       perigo: true, botao: 'Excluir',
     });
     if (!ok) return;
@@ -206,7 +221,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
 
   return createPortal(
     <div className="prod-modal-overlay" style={{ zIndex: 3100 }} onClick={e => { e.stopPropagation(); fechar(); }}>
-      <div className="prod-modal gov-modal" onClick={e => e.stopPropagation()}>
+      <div className="prod-modal gov-modal atl-modal" onClick={e => e.stopPropagation()}>
 
         <div className="gov-topo">
           <span className="gov-topo-icone">🧩</span>
@@ -225,7 +240,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
           <div className="gov-secao-titulo gov-secao-linha">
             <span>
               Seus atributos <span>({usados} de {limites.atributos_loja})</span>{' '}
-              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ser ocultados (dá para mostrar de novo) ou, se os criou e nenhum produto usa, excluídos. Os 'padrão' só podem ser ocultados.`} />
+              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ser ocultados (dá para mostrar de novo) ou excluídos, se nenhum produto usa.`} />
             </span>
             {ocultos > 0 && (
               <button type="button" className="etq-link" onClick={() => setVerOcultos(v => !v)}>
@@ -254,7 +269,6 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
                     ) : (
                       <>
                         <strong>{a.nome}</strong>
-                        {a.legado && <em title="Atributo que já vem com o sistema">padrão</em>}
                         {!a.ativo && <em className="oculto-tag">oculto</em>}
                       </>
                     )}
@@ -267,16 +281,33 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
                     )}
                     <button type="button" className={`etq-link${a.ativo ? ' gov-perigo' : ''}`} disabled={ocupado || !pronto}
                       onClick={() => alternarAtivo(a)}>{a.ativo ? 'Ocultar' : 'Mostrar'}</button>
-                    {!a.legado && (
-                      <button type="button" className="etq-link gov-perigo" disabled={ocupado || !pronto}
-                        onClick={() => excluir(a)}>Excluir</button>
-                    )}
+                    <button type="button" className="etq-link gov-perigo" disabled={ocupado || !pronto}
+                      onClick={() => excluir(a)}>Excluir</button>
                   </span>
                 </li>
               ))}
             </ul>
           )}
         </div>
+
+        {sugestoes.length > 0 && (
+          <div className="gov-secao atl-sugestoes">
+            <div className="gov-secao-titulo">
+              Sugestões para o seu tipo de estabelecimento{' '}
+              <Dica texto="São os atributos mais comuns para o seu tipo de loja. Clique no nome para adicionar, ou no ✕ para dispensar a sugestão (ela some daqui). Nada é adicionado sozinho." />
+            </div>
+            <div className="gov-chips">
+              {sugestoes.map(x => (
+                <span key={x.chave} className="atl-sug">
+                  <button type="button" className="atl-sug-add" disabled={ocupado || !pronto || noLimite}
+                    onClick={() => sugestao(x, 'adicionar')} title={`Adicionar "${x.nome}"`}>＋ {x.nome}</button>
+                  <button type="button" className="atl-sug-x" disabled={ocupado || !pronto}
+                    onClick={() => sugestao(x, 'dispensar')} title="Dispensar esta sugestão" aria-label={`Dispensar a sugestão ${x.nome}`}>✕</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={criar} className="gov-add">
           <input maxLength={limites.nome_atributo} className="prod-input" placeholder="Novo atributo — ex: Material, Voltagem, Sabor"

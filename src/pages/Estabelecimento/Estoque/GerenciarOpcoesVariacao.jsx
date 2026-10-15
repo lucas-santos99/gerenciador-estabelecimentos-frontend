@@ -61,7 +61,7 @@ export default function GerenciarOpcoesVariacao({ estabelecimentoId, onClose, on
       const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/atributos-variacao`);
       if (resp.ok) {
         const d = await resp.json();
-        if (Array.isArray(d.atributos) && d.atributos.length) setAtributos(d.atributos);
+        if (Array.isArray(d.atributos)) setAtributos(d.atributos);
       }
     } catch { /* mantém os 3 padrão */ }
   }
