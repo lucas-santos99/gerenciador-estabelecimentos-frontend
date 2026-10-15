@@ -60,7 +60,7 @@ function estoqueStatus(produto) {
 
 /* ════════════════════════════════════════════════════════════ */
 export default function ProdutoList({ estabelecimentoId, permissoes = null, isMerchant = true }) {
-  const [imagemExpandida, setImagemExpandida] = useState(null); // url da imagem em tela cheia, ou null
+  const [imagemExpandida, setImagemExpandida] = useState(null); // { lista:[urls], idx } em tela cheia, ou null
   const [produtoEtiquetas, setProdutoEtiquetas] = useState(null); // produto cujas etiquetas estão sendo impressas
   const pode = (p) => isMerchant || !permissoes || permissoes.includes(p);
   const SEM_PERM = 'Sem permissão — contate o administrador';
@@ -1118,7 +1118,10 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       {imagemExpandida && (
         <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
           <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
-          <img src={imagemExpandida} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+          {imagemExpandida.lista.length > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); setImagemExpandida(l => ({ ...l, idx: (l.idx - 1 + l.lista.length) % l.lista.length })); }} aria-label="Foto anterior">‹</button>}
+          <img src={imagemExpandida.lista[imagemExpandida.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+          {imagemExpandida.lista.length > 1 && <button className="prod-lightbox-nav dir" onClick={e => { e.stopPropagation(); setImagemExpandida(l => ({ ...l, idx: (l.idx + 1) % l.lista.length })); }} aria-label="Próxima foto">›</button>}
+          {imagemExpandida.lista.length > 1 && <span className="prod-lightbox-contador">{imagemExpandida.idx + 1} / {imagemExpandida.lista.length}</span>}
         </div>
       )}
     </div>
@@ -1131,6 +1134,7 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
   const unSufixo = produto.unidade_medida === 'kg' ? '/kg' : '/un';
   const modoGrade = visualizacao === 'grade';
   const [imgErro, setImgErro] = useState(false);
+  const [fotoIdx, setFotoIdx] = useState(0);
 
   // Com variações, cada linha pode ter preço próprio (ou herdar o preço
   // base do produto, quando não sobrescrito) — mostra faixa se os
@@ -1144,18 +1148,29 @@ function ProdutoCard({ produto, focado, onEditar, onDeletar, podeEditar = true, 
     precoVendaExibido = min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
   }
 
+  const fotos = [produto.imagem_url, produto.imagem_extra_url].filter(Boolean);
+  const fotoAtual = fotos.length ? fotos[Math.min(fotoIdx, fotos.length - 1)] : null;
+  const alternar = (e) => { e.stopPropagation(); setFotoIdx(i => (i + 1) % fotos.length); setImgErro(false); };
   const imagem = (
     <div className="prod-card-imagem">
-      {produto.imagem_url && !imgErro ? (
+      {fotoAtual && !imgErro ? (
         <img
-          src={produto.imagem_url}
+          src={fotoAtual}
           alt=""
           loading="lazy"
+          decoding="async"
           onError={() => setImgErro(true)}
-          onClick={e => { e.stopPropagation(); onExpandirImagem?.(produto.imagem_url); }}
+          onClick={e => { e.stopPropagation(); onExpandirImagem?.({ lista: fotos, idx: Math.min(fotoIdx, fotos.length - 1) }); }}
         />
       ) : (
         <IconePacote className="prod-card-imagem-placeholder" />
+      )}
+      {fotos.length > 1 && (
+        <>
+          <button type="button" className="prod-card-foto-nav esq" onClick={alternar} aria-label="Alternar foto">‹</button>
+          <button type="button" className="prod-card-foto-nav dir" onClick={alternar} aria-label="Alternar foto">›</button>
+          <span className="prod-card-foto-pontos">{fotos.map((_, i) => <i key={i} className={i === Math.min(fotoIdx, fotos.length - 1) ? 'on' : ''} />)}</span>
+        </>
       )}
     </div>
   );

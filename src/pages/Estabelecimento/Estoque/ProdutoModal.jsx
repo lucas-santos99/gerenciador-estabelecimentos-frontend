@@ -1613,8 +1613,11 @@ export default function ProdutoModal({
       try {
         setEnviandoImagem(true);
         const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem`, { method: 'DELETE' });
+        const d = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error('Erro ao remover imagem.');
-        setForm(prev => ({ ...prev, imagem_url: '', imagem_origem: '' }));
+        // se havia 2ª foto, o servidor a promoveu a principal
+        setForm(prev => ({ ...prev, imagem_url: d.imagem_url || '', imagem_origem: d.imagem_url ? 'upload' : '' }));
+        if (d.imagem_url) setImagemExtra('');
       } catch (err) {
         setErro(err.message);
       } finally {
