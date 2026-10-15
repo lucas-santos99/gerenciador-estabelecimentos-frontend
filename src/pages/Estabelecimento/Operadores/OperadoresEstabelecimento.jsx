@@ -2,6 +2,7 @@
 import { confirmar as confirmarDialogo } from '../../../components/Dialogo/dialogo';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../utils/api';
+import FotoOperador from '../../../components/FotoOperador/FotoOperador';
 import './OperadoresEstabelecimento.css';
 import { erroSenhaFraca } from '../../../utils/senha';
 import Dica from '../../../components/Notificacoes/Dica';
@@ -388,11 +389,14 @@ function ModalOperador({ operador, onClose, onSalvo }) {
   });
   const [salvando, setSalvando] = useState(false);
   const [erro,     setErro]     = useState('');
+  const [fotoUrl,  setFotoUrl]  = useState(operador?.foto_url || null);
+  const fotoMudouRef = useRef(false); // trocou a foto → ao fechar, recarrega a lista
+  const fechar = () => (fotoMudouRef.current ? onSalvo() : onClose());
   const nomeRef = useRef(null);
 
   useEffect(() => {
     setTimeout(() => nomeRef.current?.focus(), 0);
-    function handleEsc(e) { if (e.key === 'Escape') onClose(); }
+    function handleEsc(e) { if (e.key === 'Escape') (fotoMudouRef.current ? onSalvo() : onClose()); }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
@@ -440,6 +444,16 @@ function ModalOperador({ operador, onClose, onSalvo }) {
 
         {erro && <div className="opest-modal-erro">⚠️ {erro}</div>}
 
+        {isEdit && (
+          <FotoOperador
+            operadorId={operador.id}
+            nome={form.nome}
+            fotoUrl={fotoUrl}
+            desabilitado={salvando}
+            onChange={url => { setFotoUrl(url); fotoMudouRef.current = true; }}
+          />
+        )}
+
         <form onSubmit={salvar} className="opest-modal-form">
           <div className="opest-form-group">
             <label className="opest-form-label">Nome completo *</label>
@@ -478,7 +492,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
 
           <div className="opest-modal-acoes">
             <button type="button" className="opest-modal-btn-cancelar"
-              onClick={onClose} disabled={salvando}>
+              onClick={fechar} disabled={salvando}>
               Cancelar (Esc)
             </button>
             <button type="submit" className="opest-modal-btn-salvar" disabled={salvando}>

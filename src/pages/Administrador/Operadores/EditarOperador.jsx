@@ -7,6 +7,7 @@ import { apiFetch } from "../../../utils/api";
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import { avisar } from '../../../components/Dialogo/dialogo';
+import FotoOperador from '../../../components/FotoOperador/FotoOperador';
 
 export default function EditarOperador() {
   const { id }   = useParams();
@@ -16,6 +17,7 @@ export default function EditarOperador() {
   const [form, setForm] = useState({
     nome: "", email: "", telefone: "", status: "ativo",
   });
+  const [fotoUrl, setFotoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -32,6 +34,7 @@ export default function EditarOperador() {
           telefone: data.telefone || "",
           status:   data.status   || "ativo",
         });
+        setFotoUrl(data.foto_url || null);
       } else { navigate(-1); }
     } catch { navigate(-1); }
     setLoading(false);
@@ -105,6 +108,7 @@ export default function EditarOperador() {
           {/* SEÇÃO — Dados */}
           <div className="op-form-section">
             <div className="op-form-section-title">👤 Dados do Operador</div>
+            <FotoOperador admin operadorId={id} nome={form.nome} fotoUrl={fotoUrl} desabilitado={salvando} onChange={setFotoUrl} />
             <div className="op-form-grid">
               <div className="op-form-group op-form-full">
                 <label className="op-label">Nome *</label>

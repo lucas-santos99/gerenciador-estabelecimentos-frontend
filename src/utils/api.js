@@ -22,7 +22,8 @@ function renovarSessao() {
 
 async function chamar(path, options, token) {
   const headers = {
-    "Content-Type": "application/json",
+    // FormData (upload de arquivo) precisa que o navegador defina o Content-Type com o boundary
+    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
