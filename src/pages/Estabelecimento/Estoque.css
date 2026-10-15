@@ -3132,4 +3132,7 @@
 .prod-card { min-height: fit-content; }
 .prod-card-corpo { flex: 1 0 auto; }
 .prod-card-acoes { flex-shrink: 0; }
-.prod-btn-acao { white-space: nowrap; line-height: 1.3; }
+.prod-card-acoes { flex-wrap: wrap; }
+/* Os botões dividem a linha; se não couberem (card estreito), o último desce para a linha de baixo
+   em vez de ser cortado pela borda do card. */
+.prod-btn-acao { flex: 1 1 74px; min-width: 0; line-height: 1.3; box-shadow: 0 -1px 0 var(--est-border); }
