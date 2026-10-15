@@ -245,28 +245,50 @@ function formatarValorBRSeTiver(valor, casasDecimais) {
   return formatarValorBR(valor, casasDecimais);
 }
 
-/* ── Comprime a foto no navegador antes de enviar — nunca sobe a
-   imagem em tamanho original. Redimensiona pro maior lado ficar em
-   720px e converte pra JPEG 82%, deixando cada foto na faixa de
-   60-180KB — ainda leve, mas com definição boa o suficiente pra
-   expandir em tela cheia sem ficar borrada. Fica em escopo de módulo
-   (não dentro do ProdutoModal) pra VariacoesTabela também poder usar,
-   na foto por variação. ── */
+/* ── Comprime a foto no navegador antes de enviar — nunca sobe a imagem em
+   tamanho original, e o sistema não pode ficar lento por causa de foto:
+   • maior lado em 800 px (boa para ampliar na tela, leve para carregar);
+   • WebP quando o navegador sabe gerar (≈30% menor que JPEG), senão JPEG;
+   • qualidade vai baixando até a foto ficar com no máximo ~120 KB; se ainda
+     passar, reduz as dimensões. O servidor recusa acima de 300 KB.
+   Fica em escopo de módulo para a foto por variação também usar. ── */
+const ALVO_FOTO_KB = 120;
+let _suportaWebp = null;
+function suportaWebp() {
+  if (_suportaWebp === null) {
+    try { _suportaWebp = document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp'); }
+    catch { _suportaWebp = false; }
+  }
+  return _suportaWebp;
+}
+const kbDoDataUrl = (d) => Math.round((d.length - d.indexOf(',') - 1) * 0.75 / 1024);
+
 function comprimirImagem(file) {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader();
     leitor.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 720;
-        let { width, height } = img;
-        if (width > height && width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
-        else if (height >= width && height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
+        const tipo = suportaWebp() ? 'image/webp' : 'image/jpeg';
+        let MAX = 800;
+        let resultado = '';
+        for (let tentativa = 0; tentativa < 4; tentativa++) {
+          let { width, height } = img;
+          const maior = Math.max(width, height);
+          if (maior > MAX) { const f = MAX / maior; width = Math.round(width * f); height = Math.round(height * f); }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height); // PNG com fundo transparente não vira preto
+          ctx.drawImage(img, 0, 0, width, height);
+          for (let q = 0.82; q >= 0.46; q -= 0.12) {
+            resultado = canvas.toDataURL(tipo, q);
+            if (kbDoDataUrl(resultado) <= ALVO_FOTO_KB) return resolve(resultado);
+          }
+          MAX = Math.round(MAX * 0.8); // ainda pesada: diminui as dimensões e tenta de novo
+        }
+        if (kbDoDataUrl(resultado) > 280) return reject(new Error('Essa foto ficou pesada demais mesmo comprimida. Tente outra.'));
+        resolve(resultado);
       };
       img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
       img.src = e.target.result;
@@ -359,7 +381,7 @@ const variacaoSemValor = (v) => CHAVES_LEGADO.every(k => !String(v?.[k] || '').t
 
 // Tabela de variações (atributos da loja: tamanho, cor…) — cada linha tem estoque próprio, e
 // preço opcional (em branco = usa o preço de venda padrão do produto).
-function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChave, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto }) {
+function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChave, unidadeMedida, somenteLeitura, precoBase, precoCustoBase, onGerenciarOpcoes, estabelecimentoId, produtoId, isEdit, nomeProduto, onAmpliar }) {
   const [etiquetaProd, setEtiquetaProd] = useState(null);
   const [gradeAberta, setGradeAberta] = useState(false);
   const [gradeSel, setGradeSel] = useState({});   // chave do atributo → valores marcados
@@ -788,29 +810,24 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
             <div className="prod-variacao-foto-wrap">
               <button
                 type="button"
-                className="prod-variacao-foto-btn"
-                onClick={() => abrirSeletorImagem(idx)}
-                disabled={somenteLeitura || !isEdit || !v.id || enviandoImagemIdx === idx}
-                title={!isEdit || !v.id ? 'Salve o produto primeiro pra poder adicionar foto desta variação' : 'Foto desta variação'}
+                className={'prod-variacao-foto-btn' + (v.imagem_url ? ' tem-foto' : '')}
+                onClick={() => (v.imagem_url && onAmpliar ? onAmpliar([v.imagem_url], 0) : abrirSeletorImagem(idx))}
+                disabled={(!v.imagem_url && (somenteLeitura || !isEdit || !v.id)) || enviandoImagemIdx === idx}
+                title={v.imagem_url ? 'Clique para ampliar a foto' : (!isEdit || !v.id ? 'Salve o produto primeiro pra poder adicionar foto desta variação' : 'Adicionar foto desta variação')}
               >
                 {enviandoImagemIdx === idx ? (
                   <span className="prod-variacao-foto-loading">⏳</span>
                 ) : v.imagem_url ? (
-                  <img src={v.imagem_url} alt="" />
+                  <img src={v.imagem_url} alt="" loading="lazy" decoding="async" />
                 ) : (
-                  <IconePacote className="prod-variacao-foto-placeholder" />
+                  <><IconePacote className="prod-variacao-foto-placeholder" /><span className="prod-variacao-foto-add">+ Foto</span></>
                 )}
               </button>
               {v.imagem_url && !somenteLeitura && (
-                <button
-                  type="button"
-                  className="prod-variacao-foto-remover"
-                  onClick={() => removerImagemVariacao(idx)}
-                  disabled={enviandoImagemIdx === idx}
-                  title="Remover foto desta variação"
-                >
-                  ✕
-                </button>
+                <div className="prod-variacao-foto-acoes">
+                  <button type="button" onClick={() => abrirSeletorImagem(idx)} disabled={enviandoImagemIdx === idx || !v.id}>Trocar</button>
+                  <button type="button" className="perigo" onClick={() => removerImagemVariacao(idx)} disabled={enviandoImagemIdx === idx}>Remover</button>
+                </div>
               )}
             </div>
             <div className="prod-variacao-preco-item">
@@ -1143,7 +1160,12 @@ export default function ProdutoModal({
   const [etiquetaPrincipal, setEtiquetaPrincipal] = useState(false);
   const [gerandoCodigo,     setGerandoCodigo]     = useState(false);
   const [imagemErro,        setImagemErro]        = useState(false);
-  const [imagemExpandidaAberta, setImagemExpandidaAberta] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // { lista: [url…], idx } — ampliação de foto (produto ou variação)
+  const [imagemExtra,        setImagemExtra]        = useState('');    // 2ª foto do produto (URL)
+  const [imagemExtraPendente, setImagemExtraPendente] = useState(null); // 2ª foto escolhida antes de o produto novo existir
+  const [enviandoExtra,      setEnviandoExtra]      = useState(false);
+  const [extraPronta,        setExtraPronta]        = useState(true);  // false = SQL 41 ainda não rodou
+  const imagemExtraInputRef = useRef(null);
   const [imagemPendenteBase64, setImagemPendenteBase64] = useState(null); // foto própria staged até o produto (novo) ganhar um id
   const [enviandoImagem,       setEnviandoImagem]       = useState(false);
   const imagemInputRef = useRef(null);
@@ -1414,7 +1436,7 @@ export default function ProdutoModal({
     function handleEsc(e) {
       if (e.key === 'Escape') {
         if (showCamera) return;
-        if (imagemExpandidaAberta) setImagemExpandidaAberta(false);
+        if (lightbox) setLightbox(null);
         else if (novaCatAberta) setNovaCatAberta(false);
         else if (etapaAtiva) { if (!voltarEtapa()) onClose(); }
         else onClose();
@@ -1422,7 +1444,7 @@ export default function ProdutoModal({
     }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [imagemExpandidaAberta, novaCatAberta, onClose, showCamera, etapaAtiva, etapaHistorico]);
+  }, [lightbox, novaCatAberta, onClose, showCamera, etapaAtiva, etapaHistorico]);
 
   /* ── Atualizar campo ─────────────────────────────────────── */
   function atualizar(e) {
@@ -1603,6 +1625,68 @@ export default function ProdutoModal({
       setForm(prev => ({ ...prev, imagem_url: '', imagem_origem: '' }));
     }
   }
+
+  // ── 2ª foto do produto (opcional) ──
+  // Só é lida quando o produto é aberto para editar — não pesa na lista nem no PDV.
+  useEffect(() => {
+    setImagemExtra(''); setImagemExtraPendente(null);
+    if (!produtoEditar?.id) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem-extra`);
+        if (!resp.ok || !vivo) return;
+        const d = await resp.json();
+        setImagemExtra(d.imagem_extra_url || '');
+        setExtraPronta(d.pronto !== false);
+      } catch { /* foto extra é acessório */ }
+    })();
+    return () => { vivo = false; };
+  }, [produtoEditar?.id, estabelecimentoId]); // eslint-disable-line
+
+  async function selecionarImagemExtra(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErro('Selecione um arquivo de imagem.'); return; }
+    setErro('');
+    try {
+      const base64 = await comprimirImagem(file);
+      if (isEdit && produtoEditar?.id) {
+        setEnviandoExtra(true);
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem-extra`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem_base64: base64 }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error || 'Erro ao enviar imagem.');
+        setImagemExtra(data.imagem_extra_url || '');
+      } else {
+        setImagemExtraPendente(base64); // produto novo: sobe depois de salvar
+      }
+    } catch (err) {
+      setErro(err.message || 'Erro ao processar a imagem.');
+    } finally {
+      setEnviandoExtra(false);
+    }
+  }
+
+  async function removerImagemExtra() {
+    if (isEdit && imagemExtra) {
+      try {
+        setEnviandoExtra(true);
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem-extra`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Erro ao remover imagem.');
+        setImagemExtra('');
+      } catch (err) {
+        setErro(err.message || 'Erro ao remover a imagem.');
+      } finally {
+        setEnviandoExtra(false);
+      }
+    } else {
+      setImagemExtraPendente(null);
+    }
+  }
+  const imagemExtraPreview = imagemExtraPendente || imagemExtra || '';
 
   const imagemPreview = imagemPendenteBase64 || form.imagem_url || '';
   useEffect(() => { setImagemErro(false); }, [imagemPreview]);
@@ -1848,6 +1932,14 @@ export default function ProdutoModal({
           // Produto já foi criado normalmente — só a foto que não subiu,
           // dá pra adicionar depois editando o produto
         }
+      }
+
+      if (!isEdit && imagemExtraPendente && data?.id) {
+        try {
+          await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${data.id}/imagem-extra`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem_base64: imagemExtraPendente }),
+          });
+        } catch { /* produto já foi criado; a 2ª foto dá para enviar editando */ }
       }
 
       // Produto salvo — se tinha ajuste de estoque preenchido, aplica agora
@@ -2135,13 +2227,13 @@ export default function ProdutoModal({
 
                 <div className="prod-form-group prod-form-full">
                   <label className="prod-label">
-                    Imagem do produto
-                    <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas." />
+                    Fotos do produto
+                    <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas. Você pode ter até 2 fotos por produto; elas são reduzidas automaticamente para carregar rápido." />
                   </label>
-                  <div className="prod-imagem-row">
+                  <div className="prod-fotos-grid"><div className="prod-foto-slot"><span className="prod-foto-slot-titulo">Foto principal</span><div className="prod-imagem-row">
                     <div className="prod-imagem-preview">
                       {imagemPreview && !imagemErro ? (
-                        <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} onClick={() => setImagemExpandidaAberta(true)} />
+                        <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} onClick={() => setLightbox({ lista: [imagemPreview, imagemExtraPreview].filter(Boolean), idx: 0 })} />
                       ) : (
                         <IconePacote className="prod-imagem-placeholder" />
                       )}
@@ -2206,6 +2298,35 @@ export default function ProdutoModal({
                         onChange={selecionarImagem}
                       />
                     </div>
+                  </div>
+                  </div>
+                  <div className="prod-foto-slot">
+                    <span className="prod-foto-slot-titulo">Segunda foto <em>(opcional)</em></span>
+                    <div className="prod-imagem-row">
+                      <div className="prod-imagem-preview">
+                        {imagemExtraPreview ? (
+                          <img src={imagemExtraPreview} alt="" loading="lazy" onClick={() => setLightbox({ lista: [imagemPreview, imagemExtraPreview].filter(Boolean), idx: imagemPreview ? 1 : 0 })} />
+                        ) : (
+                          <IconePacote className="prod-imagem-placeholder" />
+                        )}
+                        {enviandoExtra && <div className="prod-imagem-overlay">⏳</div>}
+                      </div>
+                      <div className="prod-imagem-acoes">
+                        {!extraPronta && <span className="prod-imagem-origem">Em breve (falta atualizar o banco)</span>}
+                        {!somenteLeitura && extraPronta && (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button type="button" className="prod-imagem-btn" onClick={() => imagemExtraInputRef.current?.click()} disabled={enviandoExtra}>
+                              {imagemExtraPreview ? '🔄 Trocar' : '🖼️ Adicionar'}
+                            </button>
+                            {imagemExtraPreview && (
+                              <button type="button" className="prod-imagem-btn prod-imagem-btn--remover" onClick={removerImagemExtra} disabled={enviandoExtra}>Remover</button>
+                            )}
+                          </div>
+                        )}
+                        <input ref={imagemExtraInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={selecionarImagemExtra} />
+                      </div>
+                    </div>
+                  </div>
                   </div>
                 </div>
 
@@ -2628,6 +2749,7 @@ export default function ProdutoModal({
                     produtoId={produtoEditar?.id}
                     isEdit={isEdit}
                     nomeProduto={form.nome}
+                    onAmpliar={(lista, idx) => setLightbox({ lista, idx })}
                   />
                 )}
               </div>
@@ -2914,12 +3036,19 @@ export default function ProdutoModal({
         />
       )}
 
-      {imagemExpandidaAberta && imagemPreview && (
-        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandidaAberta(false)}>
-          <button className="prod-lightbox-fechar" onClick={() => setImagemExpandidaAberta(false)}>✕</button>
-          <img src={imagemPreview} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
-        </div>
-      )}
+      {lightbox && lightbox.lista.length > 0 && (() => {
+        const n = lightbox.lista.length;
+        const ir = (d) => setLightbox(l => ({ ...l, idx: (l.idx + d + n) % n }));
+        return (
+          <div className="prod-lightbox-overlay" onClick={() => setLightbox(null)}>
+            <button className="prod-lightbox-fechar" onClick={() => setLightbox(null)} aria-label="Fechar">✕</button>
+            {n > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); ir(-1); }} aria-label="Foto anterior">‹</button>}
+            <img src={lightbox.lista[lightbox.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
+            {n > 1 && <button className="prod-lightbox-nav dir" onClick={e => { e.stopPropagation(); ir(1); }} aria-label="Próxima foto">›</button>}
+            {n > 1 && <span className="prod-lightbox-contador">{lightbox.idx + 1} / {n}</span>}
+          </div>
+        );
+      })()}
     </>
   );
 }
