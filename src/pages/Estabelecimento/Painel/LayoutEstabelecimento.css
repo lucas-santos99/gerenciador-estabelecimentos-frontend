@@ -1167,4 +1167,5 @@ body.light select {
   .est-sidebar.collapsed .est-brand-acoes{display:flex}
   .est-sidebar.collapsed .est-logout-btn,.est-sidebar.collapsed .est-sidebar-footer .est-footer-divider:last-of-type{display:none}
   .est-sidebar.collapsed .est-sidebar-brand{padding:16px 14px;justify-content:flex-start}
+  .est-sidebar.collapsed .est-sidebar-brand .ntf-sino{display:inline-flex !important}
 }
