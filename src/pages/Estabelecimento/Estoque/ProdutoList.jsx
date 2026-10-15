@@ -246,10 +246,17 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
   /* ── Fechar lightbox de imagem com Esc ───────────────────── */
   useEffect(() => {
     if (!imagemExpandida) return;
-    function handleEsc(e) { if (e.key === 'Escape') setImagemExpandida(null); }
+    function handleEsc(e) {
+      if (e.key === 'Escape') setImagemExpandida(null);
+      else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && imagemExpandida.lista.length > 1) {
+        e.preventDefault();
+        const d = e.key === 'ArrowRight' ? 1 : -1;
+        setImagemExpandida(l => ({ ...l, idx: (l.idx + d + l.lista.length) % l.lista.length }));
+      }
+    }
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [imagemExpandida]);
+  }, [imagemExpandida]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Navegação por teclado na lista (item 22) ────────────────
      Reaproveita o campo de busca (já fica com foco o tempo todo, mesmo
@@ -1116,7 +1123,9 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
 
       {produtoEtiquetas && <EtiquetasModal produto={produtoEtiquetas} onFechar={() => setProdutoEtiquetas(null)} />}
       {imagemExpandida && (
-        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}>
+        <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}
+          onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; }}
+          onTouchEnd={e => { const dx = e.changedTouches[0].clientX - Number(e.currentTarget.dataset.x || 0); const n = imagemExpandida.lista.length; if (n > 1 && Math.abs(dx) > 50) setImagemExpandida(l => ({ ...l, idx: (l.idx + (dx < 0 ? 1 : -1) + n) % n })); }}>
           <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
           {imagemExpandida.lista.length > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); setImagemExpandida(l => ({ ...l, idx: (l.idx - 1 + l.lista.length) % l.lista.length })); }} aria-label="Foto anterior">‹</button>}
           <img src={imagemExpandida.lista[imagemExpandida.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />

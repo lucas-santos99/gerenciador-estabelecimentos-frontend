@@ -1434,6 +1434,12 @@ export default function ProdutoModal({
 
   useEffect(() => {
     function handleEsc(e) {
+      if (lightbox && lightbox.lista.length > 1 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const d = e.key === 'ArrowRight' ? 1 : -1;
+        setLightbox(l => ({ ...l, idx: (l.idx + d + l.lista.length) % l.lista.length }));
+        return;
+      }
       if (e.key === 'Escape') {
         if (showCamera) return;
         if (lightbox) setLightbox(null);
@@ -1690,6 +1696,31 @@ export default function ProdutoModal({
     }
   }
   const imagemExtraPreview = imagemExtraPendente || imagemExtra || '';
+
+  // Escolhe qual das 2 fotos é a principal (a da grade do estoque / PDV)
+  async function tornarExtraPrincipal() {
+    setErro('');
+    if (isEdit && imagemExtra) {
+      try {
+        setEnviandoExtra(true);
+        const resp = await apiFetch(`/api/estabelecimentos/${estabelecimentoId}/produtos/${produtoEditar.id}/imagem-extra/principal`, { method: 'POST' });
+        const d = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(d.error || 'Erro ao trocar a foto principal.');
+        setForm(prev => ({ ...prev, imagem_url: d.imagem_url || '', imagem_origem: 'upload' }));
+        setImagemExtra(d.imagem_extra_url || '');
+      } catch (err) {
+        setErro(err.message);
+      } finally {
+        setEnviandoExtra(false);
+      }
+    } else if (imagemPendenteBase64 && imagemExtraPendente) {
+      // produto novo (nada salvo ainda): só inverte as prévias locais
+      setImagemPendenteBase64(imagemExtraPendente);
+      setImagemExtraPendente(imagemPendenteBase64);
+    }
+  }
+  const podeTrocarPrincipal = !somenteLeitura && extraPronta && !!imagemExtraPreview && !!(imagemPendenteBase64 || form.imagem_url)
+    && (isEdit ? !!imagemExtra : !!(imagemPendenteBase64 && imagemExtraPendente));
 
   const imagemPreview = imagemPendenteBase64 || form.imagem_url || '';
   useEffect(() => { setImagemErro(false); }, [imagemPreview]);
@@ -2233,7 +2264,7 @@ export default function ProdutoModal({
                     Fotos do produto
                     <CampoAjuda texto="Quando o código de barras é reconhecido, uma imagem sugerida já vem preenchida sozinha. Pode trocar por uma foto sua a qualquer momento — a foto própria fica só nesse estabelecimento, nunca é compartilhada com outras lojas. Você pode ter até 2 fotos por produto; elas são reduzidas automaticamente para carregar rápido." />
                   </label>
-                  <div className="prod-fotos-grid"><div className="prod-foto-slot"><span className="prod-foto-slot-titulo">Foto principal</span><div className="prod-imagem-row">
+                  <div className="prod-fotos-grid"><div className="prod-foto-slot"><span className="prod-foto-slot-titulo">Foto principal <em>(a que aparece no estoque e no PDV)</em></span><div className="prod-imagem-row">
                     <div className="prod-imagem-preview">
                       {imagemPreview && !imagemErro ? (
                         <img src={imagemPreview} alt="" loading="lazy" onError={() => setImagemErro(true)} onClick={() => setLightbox({ lista: [imagemPreview, imagemExtraPreview].filter(Boolean), idx: 0 })} />
@@ -2321,6 +2352,9 @@ export default function ProdutoModal({
                             <button type="button" className="prod-imagem-btn" onClick={() => imagemExtraInputRef.current?.click()} disabled={enviandoExtra}>
                               {imagemExtraPreview ? '🔄 Trocar' : '🖼️ Adicionar'}
                             </button>
+                            {podeTrocarPrincipal && (
+                              <button type="button" className="prod-imagem-btn" onClick={tornarExtraPrincipal} disabled={enviandoExtra} title="Esta foto passa a aparecer na grade do estoque e no PDV">⭐ Tornar principal</button>
+                            )}
                             {imagemExtraPreview && (
                               <button type="button" className="prod-imagem-btn prod-imagem-btn--remover" onClick={removerImagemExtra} disabled={enviandoExtra}>Remover</button>
                             )}
@@ -3043,7 +3077,7 @@ export default function ProdutoModal({
         const n = lightbox.lista.length;
         const ir = (d) => setLightbox(l => ({ ...l, idx: (l.idx + d + n) % n }));
         return (
-          <div className="prod-lightbox-overlay" onClick={() => setLightbox(null)}>
+          <div className="prod-lightbox-overlay" onClick={() => setLightbox(null)} onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; }} onTouchEnd={e => { const dx = e.changedTouches[0].clientX - Number(e.currentTarget.dataset.x || 0); if (n > 1 && Math.abs(dx) > 50) ir(dx < 0 ? 1 : -1); }}>
             <button className="prod-lightbox-fechar" onClick={() => setLightbox(null)} aria-label="Fechar">✕</button>
             {n > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); ir(-1); }} aria-label="Foto anterior">‹</button>}
             <img src={lightbox.lista[lightbox.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />
