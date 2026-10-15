@@ -3077,7 +3077,7 @@ export default function ProdutoModal({
         const n = lightbox.lista.length;
         const ir = (d) => setLightbox(l => ({ ...l, idx: (l.idx + d + n) % n }));
         return (
-          <div className="prod-lightbox-overlay" onClick={() => setLightbox(null)} onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; }} onTouchEnd={e => { const dx = e.changedTouches[0].clientX - Number(e.currentTarget.dataset.x || 0); if (n > 1 && Math.abs(dx) > 50) ir(dx < 0 ? 1 : -1); }}>
+          <div className="prod-lightbox-overlay" onClick={() => setLightbox(null)} onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; e.currentTarget.dataset.feito = ''; }} onTouchMove={e => { const el = e.currentTarget; const dx = e.touches[0].clientX - Number(el.dataset.x || 0); if (n > 1 && !el.dataset.feito && Math.abs(dx) > 50) { el.dataset.feito = '1'; ir(dx < 0 ? 1 : -1); } }}>
             <button className="prod-lightbox-fechar" onClick={() => setLightbox(null)} aria-label="Fechar">✕</button>
             {n > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); ir(-1); }} aria-label="Foto anterior">‹</button>}
             <img src={lightbox.lista[lightbox.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />

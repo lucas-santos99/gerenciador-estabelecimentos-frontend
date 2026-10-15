@@ -1124,8 +1124,8 @@ export default function ProdutoList({ estabelecimentoId, permissoes = null, isMe
       {produtoEtiquetas && <EtiquetasModal produto={produtoEtiquetas} onFechar={() => setProdutoEtiquetas(null)} />}
       {imagemExpandida && (
         <div className="prod-lightbox-overlay" onClick={() => setImagemExpandida(null)}
-          onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; }}
-          onTouchEnd={e => { const dx = e.changedTouches[0].clientX - Number(e.currentTarget.dataset.x || 0); const n = imagemExpandida.lista.length; if (n > 1 && Math.abs(dx) > 50) setImagemExpandida(l => ({ ...l, idx: (l.idx + (dx < 0 ? 1 : -1) + n) % n })); }}>
+          onTouchStart={e => { e.currentTarget.dataset.x = e.touches[0].clientX; e.currentTarget.dataset.feito = ''; }}
+          onTouchMove={e => { const el = e.currentTarget; const dx = e.touches[0].clientX - Number(el.dataset.x || 0); const n = imagemExpandida.lista.length; if (n > 1 && !el.dataset.feito && Math.abs(dx) > 50) { el.dataset.feito = '1'; setImagemExpandida(l => ({ ...l, idx: (l.idx + (dx < 0 ? 1 : -1) + n) % n })); } }}>
           <button className="prod-lightbox-fechar" onClick={() => setImagemExpandida(null)}>✕</button>
           {imagemExpandida.lista.length > 1 && <button className="prod-lightbox-nav esq" onClick={e => { e.stopPropagation(); setImagemExpandida(l => ({ ...l, idx: (l.idx - 1 + l.lista.length) % l.lista.length })); }} aria-label="Foto anterior">‹</button>}
           <img src={imagemExpandida.lista[imagemExpandida.idx]} alt="" className="prod-lightbox-img" onClick={e => e.stopPropagation()} />

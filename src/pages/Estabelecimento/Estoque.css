@@ -3165,3 +3165,5 @@
 .prod-card-foto-pontos i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.55)}
 .prod-card-foto-pontos i.on{background:#fff}
 .prod-card:not(.modo-grade) .prod-card-foto-nav,.prod-card:not(.modo-grade) .prod-card-foto-pontos{display:none}
+
+.prod-lightbox-overlay{touch-action:none;overscroll-behavior:contain}

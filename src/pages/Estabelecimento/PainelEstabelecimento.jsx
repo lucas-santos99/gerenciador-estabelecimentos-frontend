@@ -1,6 +1,6 @@
 // src/pages/Estabelecimento/PainelEstabelecimento.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthProvider";
 import { apiFetch } from "../../utils/api";
 import { useAvisosEstabelecimento } from "../../utils/realtimeEstab";
@@ -27,6 +27,7 @@ export default function PainelEstabelecimento() {
   const { id: estabelecimentoId } = useParams();
   const { user, profile, logout } = useAuth();
   const navigate                  = useNavigate();
+  const location                  = useLocation();
 
   // Lembra a aba aberta (por loja, por aba do navegador) pra o F5 voltar
   // pro mesmo módulo em vez de cair sempre no PDV.
@@ -38,6 +39,27 @@ export default function PainelEstabelecimento() {
   useEffect(() => {
     try { sessionStorage.setItem(chaveAba, abaAtiva); } catch { /* ignora */ }
   }, [chaveAba, abaAtiva]);
+  // Histórico do navegador: cada troca de módulo vira uma entrada no histórico, então o botão
+  // "voltar" (celular ou Chrome) volta pro módulo anterior em vez de sair do sistema.
+  const abaRef = useRef(abaAtiva);
+  abaRef.current = abaAtiva;
+  const registrarAba = useCallback((aba, replace = false) => {
+    navigate(location.pathname + location.search, { replace, state: { aba } });
+  }, [navigate, location.pathname, location.search]);
+  // marca a entrada atual com a aba (pra voltar até ela restaurar o módulo certo)
+  useEffect(() => {
+    if (!location.state?.aba) navigate(location.pathname + location.search, { replace: true, state: { aba: abaRef.current } });
+  }, [estabelecimentoId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // voltar/avançar do navegador → troca o módulo
+  useEffect(() => {
+    const alvo = location.state?.aba;
+    if (!alvo || alvo === abaRef.current) return;
+    if (abaRef.current === 'pdv' && pdvInterceptorRef.current && pdvInterceptorRef.current(alvo) === false) {
+      navigate(1); // PDV com venda em andamento: ele mostra o aviso e a navegação fica pra depois
+      return;
+    }
+    setAbaAtiva(alvo);
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
   const [logoUrl,             setLogoUrl]            = useState("");
   const [licencaInfo,         setLicencaInfo]        = useState(null); // { status_assinatura, data_vencimento }
@@ -84,8 +106,9 @@ export default function PainelEstabelecimento() {
       const podeSair = pdvInterceptorRef.current(novaAba);
       if (podeSair === false) return; // PDV vai mostrar o modal internamente
     }
+    if (novaAba !== abaAtiva) registrarAba(novaAba);
     setAbaAtiva(novaAba);
-  }, [abaAtiva]);
+  }, [abaAtiva, registrarAba]);
 
   // Central de Notificações (23/09/2026): "Abrir" num aviso leva pro módulo
   // certo já no item (cliente, conta, produto) — o módulo lê o destino.
@@ -104,11 +127,12 @@ export default function PainelEstabelecimento() {
   /* ── Ouvir evento de navegação confirmada pelo PDV ─────── */
   useEffect(() => {
     function handlePdvNavegar(e) {
+      if (e.detail !== abaRef.current) registrarAba(e.detail);
       setAbaAtiva(e.detail);
     }
     window.addEventListener('pdv-navegar', handlePdvNavegar);
     return () => window.removeEventListener('pdv-navegar', handlePdvNavegar);
-  }, []);
+  }, [registrarAba]);
 
   /* ── Carregar dados do estabelecimento + permissões ─────── */
   useEffect(() => {
@@ -165,6 +189,7 @@ export default function PainelEstabelecimento() {
           // Redirecionar para primeira aba permitida se pdv não estiver liberado
           if (!perms.includes('pdv') && perms.length > 0) {
             setAbaAtiva(perms[0]);
+            registrarAba(perms[0], true);
           }
         }
       } catch (err) {
