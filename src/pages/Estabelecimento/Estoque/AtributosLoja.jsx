@@ -2,7 +2,7 @@
 //
 // "Atributos da loja": o que varia nos produtos DESTA loja (tamanho, cor, gênero e o que
 // mais ela quiser: personagem, nº de peças, material, voltagem…). Dá para criar, renomear,
-// ocultar (nunca apaga dado) e reordenar. Também oferece modelos prontos como ponto de partida.
+// ocultar ou excluir (só se nenhum produto usa) e reordenar. Também oferece modelos prontos como ponto de partida.
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
@@ -116,6 +116,23 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
     await alterar(a, { ativo: !a.ativo });
   }
 
+  async function excluir(a) {
+    const ok = await confirmar({
+      titulo: `Excluir "${a.nome}" de vez?`,
+      texto: 'O atributo e os valores sugeridos dele serão apagados. Só é possível se nenhum produto usa esse atributo — se algum usar, o sistema avisa e você pode apenas ocultar.',
+      perigo: true, botao: 'Excluir',
+    });
+    if (!ok) return;
+    setOcupado(true); setErro('');
+    try {
+      const resp = await apiFetch(`${base}/atributos-variacao/${a.chave}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error(await lerErro(resp, 'Não foi possível excluir o atributo.'));
+      avisarMudanca();
+    } catch (err) { setErro(err.message); }
+    await carregar();
+    setOcupado(false);
+  }
+
   // Troca de lugar com o vizinho (considera só os que estão na lista visível).
   async function mover(a, delta) {
     const lista = visiveis;
@@ -208,7 +225,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
           <div className="gov-secao-titulo gov-secao-linha">
             <span>
               Seus atributos <span>({usados} de {limites.atributos_loja})</span>{' '}
-              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ficar ocultos — nada é apagado e dá para mostrar de novo.`} />
+              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ser ocultados (dá para mostrar de novo) ou, se os criou e nenhum produto usa, excluídos. Os \"padrão\" só podem ser ocultados.`} />
             </span>
             {ocultos > 0 && (
               <button type="button" className="etq-link" onClick={() => setVerOcultos(v => !v)}>
@@ -250,6 +267,10 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
                     )}
                     <button type="button" className={`etq-link${a.ativo ? ' gov-perigo' : ''}`} disabled={ocupado || !pronto}
                       onClick={() => alternarAtivo(a)}>{a.ativo ? 'Ocultar' : 'Mostrar'}</button>
+                    {!a.legado && (
+                      <button type="button" className="etq-link gov-perigo" disabled={ocupado || !pronto}
+                        onClick={() => excluir(a)}>Excluir</button>
+                    )}
                   </span>
                 </li>
               ))}
