@@ -260,6 +260,7 @@ export default function DetalhesEstabelecimento() {
         <div className="est-info-grid">          <div className="est-info-block">
             <div className="est-info-block-title">Dados da Empresa</div>
             {[
+              { label: "Dono",                value: dados.dono_nome,     mono: false },
               { label: "CNPJ",                value: dados.cnpj,          mono: true  },
               { label: "Telefone principal",  value: dados.telefone,      mono: true  },
               { label: "E-mail",              value: dados.email_contato, mono: false },

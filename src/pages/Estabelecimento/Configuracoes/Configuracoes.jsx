@@ -12,6 +12,7 @@ import '../Configuracoes.css';
    ════════════════════════════════════════════════════════════ */
 const CAMPOS_ALTERAVEIS = [
   { key: 'nome_fantasia',     label: 'Nome do Estabelecimento' },
+  { key: 'dono_nome',         label: 'Nome do dono' },
   { key: 'cnpj',              label: 'CNPJ' },
   { key: 'telefone',          label: 'Telefone/celular principal' },
   { key: 'telefones_extras',  label: 'Telefones adicionais' },
@@ -45,6 +46,7 @@ function formatarChavePixTelefone(valor) {
 function valorAtualDoCampo(key, dadosAtuais) {
   switch (key) {
     case 'nome_fantasia':     return dadosAtuais.nome_fantasia || '';
+    case 'dono_nome':          return dadosAtuais.dono_nome || '';
     case 'cnpj':               return dadosAtuais.cnpj || '';
     case 'telefone':           return dadosAtuais.telefone || '';
     case 'telefones_extras':   return (dadosAtuais.telefones_extras || []).join(', ');
@@ -585,6 +587,7 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
               <span className="cfg-section-titulo">🏪 Dados do Estabelecimento</span>
               <div className="cfg-form-grid">
                 <Campo label="Nome Fantasia"          valor={dados?.nome_fantasia} />
+                <Campo label="Nome do dono"          valor={dados?.dono_nome} />
                 <Campo label="CNPJ"                   valor={dados?.cnpj} />
                 <Campo label="Telefone/celular principal" valor={dados?.telefone} />
                 <Campo label="E-mail de contato"      valor={dados?.email_contato} />

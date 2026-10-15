@@ -54,6 +54,7 @@ export default function EditarEstabelecimento() {
 
   const [form, setForm] = useState({
     nome_fantasia:     "",
+    dono_nome:         "",
     cnpj:              "",
     telefone:          "",
     telefones_extras:  [],
@@ -99,6 +100,7 @@ export default function EditarEstabelecimento() {
 
         setForm({
           nome_fantasia:     data.nome_fantasia     || "",
+          dono_nome:         data.dono_nome         || "",
           cnpj:              docComMascara,
           telefone:          data.telefone          || "",
           telefones_extras:  Array.isArray(data.telefones_extras) ? data.telefones_extras : [],
@@ -496,6 +498,7 @@ export default function EditarEstabelecimento() {
             <div className="est-info-block">
               <div className="est-info-block-title">Dados da Empresa</div>
               {[
+                { label: "Dono",       value: form.dono_nome,          mono: false },
                 { label: "CPF / CNPJ", value: form.cnpj,            mono: true },
                 { label: "Telefone", value: form.telefone,           mono: true },
                 { label: "E-mail",   value: form.email_contato,      mono: false },
@@ -623,6 +626,17 @@ export default function EditarEstabelecimento() {
                   name="nome_fantasia"
                   value={form.nome_fantasia}
                   onChange={atualizar}
+                />
+              </div>
+
+              <div className="est-form-group est-form-full">
+                <label className="est-label">Nome do dono (quem vai usar o sistema)</label>
+                <input maxLength={150}
+                  className="est-input"
+                  name="dono_nome"
+                  value={form.dono_nome}
+                  onChange={atualizar}
+                  placeholder="Ex.: João da Silva"
                 />
               </div>
 

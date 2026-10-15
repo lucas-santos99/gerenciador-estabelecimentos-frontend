@@ -191,6 +191,7 @@ export default function LayoutEstabelecimento({
   children,
   nomeEstabelecimento,
   logoUrl,
+  infoLoja = null, // dados da loja pro cartão da logo
   permissoes = [], // array de IDs de permissão do operador (vazio = merchant/sem restrição)
   licencaInfo = null, // { status_assinatura, data_vencimento } — vem do PainelEstabelecimento
   estabelecimentoId = null,
@@ -617,8 +618,8 @@ export default function LayoutEstabelecimento({
             </button>
             {menuLogo && (
               <div className="est-logo-menu" onClick={e => e.stopPropagation()}>
-                {logoUrl && (
-                  <button type="button" onClick={() => { setMenuLogo(false); setLogoAmpliada(true); }}>🔍 Ver ampliada</button>
+                {(logoUrl || infoLoja) && (
+                  <button type="button" onClick={() => { setMenuLogo(false); setLogoAmpliada(true); }}>🔍 Ver logo e informações</button>
                 )}
                 {podeTrocarLogo && (
                   <button type="button" disabled={trocandoLogo} onClick={() => { setMenuLogo(false); logoInputRef.current?.click(); }}>
@@ -651,7 +652,22 @@ export default function LayoutEstabelecimento({
             </button>
           </div>
         </div>
-        {logoAmpliada && <Lightbox url={logoUrl} alt="Logo do estabelecimento" onClose={() => setLogoAmpliada(false)} />}
+        {logoAmpliada && (
+          <Lightbox
+            url={logoUrl}
+            alt="Logo do estabelecimento"
+            titulo={nomeEstabelecimento || "Estabelecimento"}
+            subtitulo={infoLoja?.tipo_estabelecimento || ""}
+            infos={[
+              { label: "Dono",     valor: infoLoja?.dono_nome },
+              { label: "Telefone", valor: infoLoja?.telefone },
+              { label: "E-mail",   valor: infoLoja?.email_contato },
+              { label: "CNPJ/CPF", valor: infoLoja?.cnpj },
+              { label: "Endereço", valor: infoLoja?.endereco_completo },
+            ]}
+            onClose={() => setLogoAmpliada(false)}
+          />
+        )}
 
         {/* Nav */}
         <ul className="est-nav">

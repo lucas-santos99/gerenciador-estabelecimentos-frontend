@@ -62,6 +62,7 @@ export default function PainelEstabelecimento() {
   }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
   const [nomeEstabelecimento, setNomeEstabelecimento] = useState("");
   const [logoUrl,             setLogoUrl]            = useState("");
+  const [infoLoja,            setInfoLoja]           = useState(null);
   const [licencaInfo,         setLicencaInfo]        = useState(null); // { status_assinatura, data_vencimento }
   const [carregando,          setCarregando]         = useState(true);
   const [permissoes,          setPermissoes]         = useState([]); // [] = carregando, null = merchant
@@ -168,6 +169,7 @@ export default function PainelEstabelecimento() {
 
           setNomeEstabelecimento(data.nome_fantasia || data.nome || "");
           setLogoUrl(data.logo_url || "");
+          setInfoLoja({ dono_nome: data.dono_nome, tipo_estabelecimento: data.tipo_estabelecimento, telefone: data.telefone, email_contato: data.email_contato, cnpj: data.cnpj, endereco_completo: data.endereco_completo });
           // Identidade dos relatórios (23/09/2026): dados da loja pro
           // cabeçalho + pré-carrega configuração e logos, pra impressão
           // abrir na hora do clique já com tudo pronto.
@@ -230,6 +232,7 @@ export default function PainelEstabelecimento() {
         data_vencimento:   data.data_vencimento   || null,
       });
       definirLojaIdentidade(data);
+      setInfoLoja({ dono_nome: data.dono_nome, tipo_estabelecimento: data.tipo_estabelecimento, telefone: data.telefone, email_contato: data.email_contato, cnpj: data.cnpj, endereco_completo: data.endereco_completo });
     } catch { /* silencioso — o próximo aviso tenta de novo */ }
   }, [estabelecimentoId, profile?.role, navigate, sairLojaDesativada]);
 
@@ -392,6 +395,7 @@ export default function PainelEstabelecimento() {
       onAbaChange={handleAbaChange}
       nomeEstabelecimento={nomeEstabelecimento}
       logoUrl={logoUrl}
+      infoLoja={infoLoja}
       onLogoAtualizada={handleLogoAtualizada}
       permissoes={permissoes}
       licencaInfo={licencaInfo}

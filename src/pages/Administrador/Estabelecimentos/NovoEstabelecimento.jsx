@@ -47,6 +47,7 @@ export default function NovoEstabelecimento() {
 
   const [form, setForm] = useState({
     nome_fantasia:        "",
+    dono_nome:            "",
     cnpj:                 "",
     telefone:             "",
     telefones_extras:     [], // telefones adicionais, além do principal acima
@@ -288,6 +289,17 @@ export default function NovoEstabelecimento() {
                   value={form.nome_fantasia}
                   onChange={atualizar}
                   required
+                />
+              </div>
+
+              <div className="est-form-group est-form-full">
+                <label className="est-label">Nome do dono (quem vai usar o sistema)</label>
+                <input maxLength={150}
+                  className="est-input"
+                  name="dono_nome"
+                  value={form.dono_nome}
+                  onChange={atualizar}
+                  placeholder="Ex.: João da Silva"
                 />
               </div>
 
