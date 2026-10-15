@@ -498,6 +498,12 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
   function resumoVariacao(v) {
     return atributos.map(a => valorAtributo(v, a.chave).trim()).filter(Boolean).join(' · ');
   }
+  // Igual ao resumo, mas com o nome do atributo: "Tamanho M · Cor Branco" (só para a tela).
+  function resumoRotulado(v) {
+    return atributos
+      .map(a => { const x = valorAtributo(v, a.chave).trim(); return x ? `${a.nome} ${x}` : ''; })
+      .filter(Boolean).join(' · ');
+  }
   function atualizarCampo(idx, campo, valor) {
     setVariacoes(prev => prev.map((v, i) => i === idx ? { ...v, [campo]: valor } : v));
   }
@@ -506,7 +512,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
   }
   async function remover(idx) {
     const v = variacoes[idx];
-    const nome = resumoVariacao(v) || `Variação ${idx + 1}`;
+    const nome = resumoRotulado(v) || `Variação ${idx + 1}`;
     const ok = await confirmar({
       titulo: 'Remover variação?',
       texto: v?.id
@@ -727,7 +733,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
           nome de cada campo em cima (antes só a 1ª linha tinha cabeçalho). */}
       {variacoes.map((v, idx) => {
         const chave = v.id || v._key || idx;
-        const resumo = resumoVariacao(v);
+        const resumo = resumoRotulado(v);
         const recolhida = recolhidas.has(chave);
         return (
         <div className="prod-variacao-grupo prod-variacao-card" key={chave}>
@@ -912,7 +918,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
                 <option value="ultima">a última variação</option>
                 {variacoes.map((v, i) => (
                   <option key={v.id || v._key || i} value={String(i)}>
-                    Variação {i + 1}{resumoVariacao(v) ? ` — ${resumoVariacao(v)}` : ''}
+                    Variação {i + 1}{resumoRotulado(v) ? ` — ${resumoRotulado(v)}` : ''}
                   </option>
                 ))}
               </select>
