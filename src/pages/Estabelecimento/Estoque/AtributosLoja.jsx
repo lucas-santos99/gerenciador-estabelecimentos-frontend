@@ -225,7 +225,7 @@ export default function AtributosLoja({ estabelecimentoId, onClose, onAlterado }
           <div className="gov-secao-titulo gov-secao-linha">
             <span>
               Seus atributos <span>({usados} de {limites.atributos_loja})</span>{' '}
-              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ser ocultados (dá para mostrar de novo) ou, se os criou e nenhum produto usa, excluídos. Os \"padrão\" só podem ser ocultados.`} />
+              <Dica texto={`Cada produto com variações pode usar até ${limites.atributos_produto} atributos ao mesmo tempo. Os que você não usa podem ser ocultados (dá para mostrar de novo) ou, se os criou e nenhum produto usa, excluídos. Os 'padrão' só podem ser ocultados.`} />
             </span>
             {ocultos > 0 && (
               <button type="button" className="etq-link" onClick={() => setVerOcultos(v => !v)}>
