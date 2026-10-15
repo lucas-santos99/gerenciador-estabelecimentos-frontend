@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthProvider";
 import { apiFetch } from "../../../utils/api";
+import AvatarUsuario from "../../../components/AvatarUsuario/AvatarUsuario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
 import { useNotificacoes } from "../../../components/Notificacoes/NotificacoesContext";
 import "./Sidebar.css";
@@ -247,6 +248,8 @@ export default function Sidebar() {
           </div>
           <SinoNotificacoes />
         </div>
+
+        <AvatarUsuario />
 
         {/* MENU */}
         <ul className="sidebar-menu">

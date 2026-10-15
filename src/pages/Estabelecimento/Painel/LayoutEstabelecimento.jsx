@@ -8,6 +8,7 @@ import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from ".
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import AvatarUsuario from "../../../components/AvatarUsuario/AvatarUsuario";
 import Lightbox from "../../../components/Lightbox/Lightbox";
 import { enviarLogoEstabelecimento } from "../../../utils/enviarLogo";
 import ResumoLogin from "../../../components/Notificacoes/ResumoLogin";
@@ -668,6 +669,8 @@ export default function LayoutEstabelecimento({
             onClose={() => setLogoAmpliada(false)}
           />
         )}
+
+        <AvatarUsuario />
 
         {/* Nav */}
         <ul className="est-nav">
