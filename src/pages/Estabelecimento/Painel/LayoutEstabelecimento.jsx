@@ -8,7 +8,7 @@ import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from ".
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
-import AvatarUsuario from "../../../components/AvatarUsuario/AvatarUsuario";
+import useMeuPerfil from "../../../components/AvatarUsuario/useMeuPerfil";
 import Lightbox from "../../../components/Lightbox/Lightbox";
 import { enviarLogoEstabelecimento } from "../../../utils/enviarLogo";
 import ResumoLogin from "../../../components/Notificacoes/ResumoLogin";
@@ -207,21 +207,14 @@ export default function LayoutEstabelecimento({
   /* ── abas disponíveis para este role/permissões ───────────── */
   const isMerchant = profile?.role === 'merchant';
 
-  /* ── logo do menu: ampliar / trocar ───────────────────────── */
+  /* ── identidade do menu: imagem da loja ⇄ foto de quem está logado ── */
   const podeTrocarLogo = isMerchant || (Array.isArray(permissoes) && permissoes.includes('config_editar_logo'));
-  const [menuLogo, setMenuLogo] = useState(false);
-  const [logoAmpliada, setLogoAmpliada] = useState(false);
+  const { perfil, enviando: enviandoFoto, trocar: trocarFoto, remover: removerFoto } = useMeuPerfil();
+  const [slide, setSlide] = useState(0);            // 0 = loja, 1 = usuário
+  const [ampliado, setAmpliado] = useState(false);
   const [trocandoLogo, setTrocandoLogo] = useState(false);
   const logoInputRef = useRef(null);
-  const menuLogoRef = useRef(null);
-  useEffect(() => {
-    if (!menuLogo) return;
-    const fora = (e) => { if (!menuLogoRef.current?.contains(e.target)) setMenuLogo(false); };
-    const esc = (e) => { if (e.key === 'Escape') setMenuLogo(false); };
-    document.addEventListener('mousedown', fora);
-    document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('mousedown', fora); document.removeEventListener('keydown', esc); };
-  }, [menuLogo]);
+  const fotoInputRef = useRef(null);
   async function trocarLogoMenu(e) {
     const arquivo = e.target.files?.[0];
     e.target.value = '';
@@ -236,6 +229,8 @@ export default function LayoutEstabelecimento({
       setTrocandoLogo(false);
     }
   }
+  const nomeUsuario = perfil?.nome || profile?.nome || '';
+  const inicialUsuario = (nomeUsuario.trim()[0] || '?').toUpperCase();
 
   /* ── status da licença (só exibido para merchant) ─────────── */
   // Tick a cada 60s só pra manter a contagem regressiva do último dia
@@ -602,43 +597,39 @@ export default function LayoutEstabelecimento({
           <Icons.Chevron />
         </button>
 
-        {/* Brand */}
+        {/* Brand: imagem da loja ⇄ foto do usuário (‹ ›), nome da loja e, abaixo, o do usuário */}
         <div className="est-sidebar-brand">
-          <div className="est-brand-logo-wrap" ref={menuLogoRef}>
+          <div className="est-brand-img-col">
             <button
               type="button"
-              className={`est-brand-logo-btn${trocandoLogo ? " enviando" : ""}`}
-              onClick={(e) => { e.stopPropagation(); setMenuLogo(m => !m); }}
-              title="Logo do estabelecimento"
-              aria-label="Opções da logo"
+              className={`est-brand-logo-btn${(trocandoLogo || enviandoFoto) ? " enviando" : ""}${slide === 1 ? " usuario" : ""}`}
+              onClick={(e) => { e.stopPropagation(); setAmpliado(true); }}
+              title={slide === 0 ? "Ver a logo e as informações da loja" : "Ver a sua foto e informações"}
+              aria-label={slide === 0 ? "Ver a logo da loja" : "Ver a sua foto"}
             >
-              {logoUrl
-                ? <img src={logoUrl} alt="Logo" className="est-brand-logo" />
-                : <div className="est-brand-initials">{iniciais(nomeEstabelecimento)}</div>
-              }
+              {slide === 0
+                ? (logoUrl
+                    ? <img src={logoUrl} alt="Logo" className="est-brand-logo" />
+                    : <div className="est-brand-initials">{iniciais(nomeEstabelecimento)}</div>)
+                : (perfil?.foto_url
+                    ? <img src={perfil.foto_url} alt={nomeUsuario} className="est-brand-logo" />
+                    : <div className="est-brand-initials">{inicialUsuario}</div>)}
             </button>
-            {menuLogo && (
-              <div className="est-logo-menu" onClick={e => e.stopPropagation()}>
-                {(logoUrl || infoLoja) && (
-                  <button type="button" onClick={() => { setMenuLogo(false); setLogoAmpliada(true); }}>🔍 Ver logo e informações</button>
-                )}
-                {podeTrocarLogo && (
-                  <button type="button" disabled={trocandoLogo} onClick={() => { setMenuLogo(false); logoInputRef.current?.click(); }}>
-                    {logoUrl ? "🔄 Trocar logo" : "📷 Adicionar logo"}
-                  </button>
-                )}
-                {!logoUrl && !podeTrocarLogo && <span className="est-logo-menu-vazio">Sem logo cadastrada</span>}
-              </div>
-            )}
+            <div className="est-brand-setas">
+              <button type="button" aria-label="Imagem anterior" onClick={(e) => { e.stopPropagation(); setSlide(s => (s + 1) % 2); }}>‹</button>
+              <span className={`est-brand-ponto${slide === 0 ? " on" : ""}`} />
+              <span className={`est-brand-ponto${slide === 1 ? " on" : ""}`} />
+              <button type="button" aria-label="Próxima imagem" onClick={(e) => { e.stopPropagation(); setSlide(s => (s + 1) % 2); }}>›</button>
+            </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={trocarLogoMenu} />
+            <input ref={fotoInputRef} type="file" accept="image/*" style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; trocarFoto(f); }} />
           </div>
           <div className="est-brand-text">
-            <span className="est-brand-name">
+            <span className="est-brand-name" title={nomeEstabelecimento || ""}>
               {nomeEstabelecimento || "Estabelecimento"}
             </span>
-            <span className="est-brand-role">
-              {profile?.role === 'merchant' ? 'Administrador' : 'Operador'}
-            </span>
+            {nomeUsuario && <span className="est-brand-user" title={`${nomeUsuario} · ${perfil?.papel || ""}`}>{nomeUsuario}</span>}
           </div>
           <div className="est-brand-acoes">
             <SinoNotificacoes />
@@ -653,7 +644,7 @@ export default function LayoutEstabelecimento({
             </button>
           </div>
         </div>
-        {logoAmpliada && (
+        {ampliado && slide === 0 && (
           <Lightbox
             url={logoUrl}
             alt="Logo do estabelecimento"
@@ -666,11 +657,32 @@ export default function LayoutEstabelecimento({
               { label: "CNPJ/CPF", valor: infoLoja?.cnpj },
               { label: "Endereço", valor: infoLoja?.endereco_completo },
             ]}
-            onClose={() => setLogoAmpliada(false)}
+            acoes={podeTrocarLogo ? [{
+              label: trocandoLogo ? "⏳ Enviando…" : (logoUrl ? "🔄 Trocar logo" : "📷 Adicionar logo"),
+              disabled: trocandoLogo,
+              onClick: () => logoInputRef.current?.click(),
+            }] : []}
+            onClose={() => setAmpliado(false)}
           />
         )}
-
-        <AvatarUsuario />
+        {ampliado && slide === 1 && (
+          <Lightbox
+            url={perfil?.foto_url || ""}
+            alt={nomeUsuario}
+            titulo={nomeUsuario || "Usuário"}
+            subtitulo={perfil?.papel || ""}
+            infos={[
+              { label: "E-mail",   valor: perfil?.email },
+              { label: "Telefone", valor: perfil?.telefone },
+              { label: "Loja",     valor: perfil?.loja || nomeEstabelecimento },
+            ]}
+            acoes={[
+              { label: enviandoFoto ? "⏳ Enviando…" : (perfil?.foto_url ? "🔄 Trocar foto" : "📷 Adicionar foto"), disabled: enviandoFoto, onClick: () => fotoInputRef.current?.click() },
+              ...(perfil?.foto_url ? [{ label: "🗑️ Remover", perigo: true, disabled: enviandoFoto, onClick: removerFoto }] : []),
+            ]}
+            onClose={() => setAmpliado(false)}
+          />
+        )}
 
         {/* Nav */}
         <ul className="est-nav">

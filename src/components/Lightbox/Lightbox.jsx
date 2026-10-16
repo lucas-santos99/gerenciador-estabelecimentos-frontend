@@ -6,7 +6,7 @@ import "./Lightbox.css";
  * Imagem ampliada em tela cheia. Fecha com clique fora, no ✕ ou Esc.
  * Opcional: `titulo` e `infos` ([{ label, valor }]) mostram um cartão de informações sob a imagem.
  */
-export default function Lightbox({ url, alt = "Imagem", titulo = "", subtitulo = "", infos = [], onClose }) {
+export default function Lightbox({ url, alt = "Imagem", titulo = "", subtitulo = "", infos = [], acoes = [], onClose }) {
   useEffect(() => {
     if (!url && !titulo) return;
     const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose?.(); } };
@@ -16,7 +16,7 @@ export default function Lightbox({ url, alt = "Imagem", titulo = "", subtitulo =
 
   if (!url && !titulo) return null;
   const linhas = (infos || []).filter(i => i && i.valor);
-  const comCartao = !!titulo || linhas.length > 0;
+  const comCartao = !!titulo || linhas.length > 0 || acoes.length > 0;
   return createPortal(
     <div className="lbx-overlay" onClick={onClose} role="dialog" aria-label={alt}>
       <button type="button" className="lbx-fechar" onClick={onClose} aria-label="Fechar">✕</button>
@@ -32,6 +32,13 @@ export default function Lightbox({ url, alt = "Imagem", titulo = "", subtitulo =
                 <span className="lbx-cartao-valor">{i.valor}</span>
               </div>
             ))}
+            {acoes.length > 0 && (
+              <div className="lbx-acoes">
+                {acoes.map(a => (
+                  <button key={a.label} type="button" className={`lbx-acao${a.perigo ? " lbx-acao--perigo" : ""}`} disabled={a.disabled} onClick={a.onClick}>{a.label}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

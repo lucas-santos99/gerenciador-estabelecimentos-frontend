@@ -1151,7 +1151,7 @@ body.light select {
 .est-brand-text{flex:1;min-width:0}
 .est-brand-name{font-size:.92rem}
 .est-brand-acoes{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
-.est-brand-sair{width:30px;height:30px;border-radius:9px;border:none;background:none;color:rgba(248,113,113,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.est-brand-sair{width:28px;height:28px;border-radius:9px;border:none;background:none;color:rgba(248,113,113,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .est-brand-sair svg{width:17px;height:17px}
 .est-brand-sair:hover{background:var(--est-danger-dim);color:var(--est-danger)}
 .est-logo-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:200;min-width:170px;background:var(--est-card-solid);border:1px solid var(--est-border-accent);border-radius:12px;box-shadow:var(--est-shadow);padding:6px;display:flex;flex-direction:column;gap:2px}
@@ -1171,4 +1171,25 @@ body.light select {
   /* O botão do menu (X) fica fixo no canto: o cabeçalho desce pra não ficar embaixo dele */
   .est-sidebar-brand,.est-sidebar.collapsed .est-sidebar-brand{padding-top:62px}
   .est-brand-name{white-space:normal;overflow:visible;line-height:1.2;word-break:break-word}
+}
+
+/* ── Cabeçalho unificado: imagem (loja ⇄ usuário) + nome da loja + nome do usuário ── */
+.est-sidebar-brand{align-items:flex-start;gap:10px;padding:14px 14px 10px;min-height:0}
+.est-brand-img-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.est-brand-logo,.est-brand-initials{width:48px;height:48px;border-radius:13px}
+.est-brand-logo-btn.usuario .est-brand-logo,.est-brand-logo-btn.usuario .est-brand-initials{border-radius:50%}
+.est-brand-setas{display:flex;align-items:center;gap:3px;height:14px}
+.est-brand-setas button{background:none;border:none;padding:0 3px;font-size:.95rem;line-height:1;color:var(--est-text-soft,#6b7280);cursor:pointer;font-weight:700}
+.est-brand-setas button:hover{color:var(--est-accent,#14b8a6)}
+.est-brand-ponto{width:5px;height:5px;border-radius:50%;background:var(--est-border,rgba(128,128,128,.4))}
+.est-brand-ponto.on{background:var(--est-accent,#14b8a6)}
+.est-brand-text{justify-content:center;min-height:48px;gap:2px;white-space:normal;overflow:hidden}
+.est-brand-name{font-size:.86rem;line-height:1.2;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:break-word;word-break:normal}
+.est-brand-user{font-size:.7rem;font-weight:600;color:var(--est-text-soft,#6b7280);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.est-brand-acoes{align-items:center;gap:2px}
+.est-sidebar.collapsed .est-brand-setas{display:none}
+@media (max-width:768px){
+  .est-sidebar.collapsed .est-brand-setas{display:flex}
+  .est-sidebar-brand,.est-sidebar.collapsed .est-sidebar-brand{padding-top:62px}
+  .est-brand-name{white-space:normal;overflow:hidden;line-height:1.2}
 }

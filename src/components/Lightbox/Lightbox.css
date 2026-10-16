@@ -10,3 +10,8 @@
 .lbx-cartao-linha{display:flex;gap:10px;font-size:.84rem;padding-top:6px;border-top:1px solid var(--est-border,rgba(128,128,128,.25))}
 .lbx-cartao-label{flex:0 0 84px;color:var(--est-text-soft,#6b7280);font-weight:600}
 .lbx-cartao-valor{flex:1;min-width:0;word-break:break-word;font-weight:600}
+.lbx-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:10px;border-top:1px solid var(--est-border,rgba(128,128,128,.25))}
+.lbx-acao{flex:1;min-width:120px;padding:10px 12px;border-radius:10px;border:1px solid var(--est-border-accent,rgba(20,184,166,.5));background:var(--est-accent-dim,rgba(20,184,166,.12));color:var(--est-accent,#0d9488);font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}
+.lbx-acao:hover:not(:disabled){filter:brightness(.95)}
+.lbx-acao:disabled{opacity:.6;cursor:not-allowed}
+.lbx-acao--perigo{border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.08);color:var(--est-danger,#dc2626)}
