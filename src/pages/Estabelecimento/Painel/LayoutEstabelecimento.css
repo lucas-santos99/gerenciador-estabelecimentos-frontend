@@ -1168,4 +1168,7 @@ body.light select {
   .est-sidebar.collapsed .est-logout-btn,.est-sidebar.collapsed .est-sidebar-footer .est-footer-divider:last-of-type{display:none}
   .est-sidebar.collapsed .est-sidebar-brand{padding:16px 14px;justify-content:flex-start}
   .est-sidebar.collapsed .est-sidebar-brand .ntf-sino{display:inline-flex !important}
+  /* O botão do menu (X) fica fixo no canto: o cabeçalho desce pra não ficar embaixo dele */
+  .est-sidebar-brand,.est-sidebar.collapsed .est-sidebar-brand{padding-top:62px}
+  .est-brand-name{white-space:normal;overflow:visible;line-height:1.2;word-break:break-word}
 }
