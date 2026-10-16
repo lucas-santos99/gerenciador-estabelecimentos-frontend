@@ -36,7 +36,7 @@ export default function BarraInferior({ cfg, licenca, isDark, nome, onFaleConosc
             licenca && (
           <div className={`bar-licenca bar-licenca--${licenca.tipo}`} title={licenca.dataFmt ? `${licenca.texto} · ${licenca.dataFmt}` : licenca.texto}>
             <span className="bar-licenca-dot" />
-            <span className="bar-licenca-txt">{licenca.texto}{licenca.dataFmt ? <em> · {licenca.dataFmt}</em> : null}</span>
+            <span className="bar-licenca-txt">{licenca.texto}{licenca.dataFmt && !licenca.texto.includes(licenca.dataFmt) ? <em> · {licenca.dataFmt}</em> : null}</span>
           </div>
         )
           )}

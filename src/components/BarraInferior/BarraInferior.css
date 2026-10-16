@@ -71,3 +71,7 @@ a.bar-texto:hover{filter:brightness(1.15)}
   .textos--menu + .redes--menu{margin-top:0;border-top:0}
   .bar-texto--menu{max-width:100%;white-space:normal;overflow:visible}
 }
+
+/* Telas médias: botões só com ícone (o nome aparece ao passar o mouse) e textos não são espremidos */
+@media (max-width:1280px){.bar-btn .bar-rot{display:none}.bar-btn{padding:0 8px}}
+.bar-texto{flex-shrink:0}
