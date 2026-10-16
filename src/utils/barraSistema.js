@@ -2,14 +2,21 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "./api";
 
 const textoPadrao = (t) => ({ ativa: false, texto: t, link: "", fonte: "padrao", tamanho: 12, negrito: false, italico: false, sublinhado: false, cor: "", cor_escuro: "" });
-export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio", mostrar_prefixo: true, prefixo: "Desenvolvido por", redes: { instagram: "", facebook: "", whatsapp: "", twitter: "" }, ordem_blocos: ["licenca", "boas_vindas", "marca", "redes", "livre", "versao"], ordem_redes: ["instagram", "facebook", "whatsapp", "twitter"], ordem_botoes: ["fale_conosco", "tema", "sair"],
-  textos: { boas_vindas: textoPadrao("Bem-vindo, {nome}!"), livre: textoPadrao("") }, mostrar_versao: false, versao: "", posicoes: { licenca: "esq", boas_vindas: "esq", marca: "esq", redes: "esq", livre: "esq", versao: "esq" } };
+export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio", mostrar_prefixo: true, prefixo: "Desenvolvido por", redes: { instagram: "", facebook: "", whatsapp: "", twitter: "" }, ordem_blocos: ["licenca", "boas_vindas", "marca", "redes", "livre", "versao", "whatsapp"], ordem_redes: ["instagram", "facebook", "whatsapp", "twitter"], ordem_botoes: ["fale_conosco", "tema", "sair"],
+  textos: { boas_vindas: textoPadrao("Bem-vindo, {nome}!"), livre: textoPadrao("") }, mostrar_versao: false, versao: "", posicoes: { licenca: "esq", boas_vindas: "esq", marca: "esq", redes: "esq", livre: "esq", versao: "esq", whatsapp: "centro" },
+  whatsapp_cta: { ativo: false, animar: true, contratar: { ativa: true, texto: "Contrate o assistente de WhatsApp", estilo: "verde" }, pendente: { ativa: true, texto: "Conclua seu WhatsApp", estilo: "laranja" }, assinante: { ativa: true, texto: "Agente de WhatsApp", estilo: "roxo" } } };
 /** Junta o que veio do servidor com o padrão (inclusive dentro de redes e textos). */
 export function mesclarBarra(d = {}) {
   return {
     ...BARRA_PADRAO, ...d,
     redes: { ...BARRA_PADRAO.redes, ...(d.redes || {}) },
     posicoes: { ...BARRA_PADRAO.posicoes, ...(d.posicoes || {}) },
+    whatsapp_cta: {
+      ...BARRA_PADRAO.whatsapp_cta, ...(d.whatsapp_cta || {}),
+      contratar: { ...BARRA_PADRAO.whatsapp_cta.contratar, ...(d.whatsapp_cta?.contratar || {}) },
+      pendente: { ...BARRA_PADRAO.whatsapp_cta.pendente, ...(d.whatsapp_cta?.pendente || {}) },
+      assinante: { ...BARRA_PADRAO.whatsapp_cta.assinante, ...(d.whatsapp_cta?.assinante || {}) },
+    },
     textos: {
       boas_vindas: { ...BARRA_PADRAO.textos.boas_vindas, ...(d.textos?.boas_vindas || {}) },
       livre: { ...BARRA_PADRAO.textos.livre, ...(d.textos?.livre || {}) },

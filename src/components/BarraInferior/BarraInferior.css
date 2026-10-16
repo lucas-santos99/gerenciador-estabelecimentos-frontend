@@ -84,3 +84,23 @@ a.bar-texto:hover{filter:brightness(1.15)}
 .bar-zona--dir .bar-espaco{flex:1 1 0;min-width:0}
 .bar-zona--dir .bar-btn{flex-shrink:0}
 .bar-zona--centro:empty{display:none}
+
+/* Chamada do assistente de WhatsApp (destaque) */
+.bar-wa{--wa-a:#25d366;--wa-b:#128c7e;display:flex;align-items:center;gap:8px;height:calc(var(--est-barra-h,38px) - 8px);padding:0 14px 0 10px;border:0;border-radius:999px;color:#fff;font:inherit;font-size:var(--b-fs);font-weight:800;cursor:pointer;white-space:nowrap;min-width:0;flex-shrink:0;background:linear-gradient(135deg,var(--wa-a),var(--wa-b));box-shadow:0 2px 10px color-mix(in srgb,var(--wa-a) 45%,transparent);transition:transform .15s,box-shadow .15s,filter .15s}
+.bar-wa:hover{transform:translateY(-1px);filter:brightness(1.08);box-shadow:0 4px 16px color-mix(in srgb,var(--wa-a) 55%,transparent)}
+.bar-wa-ico{display:flex;width:calc(var(--b-ico) + 2px);height:calc(var(--b-ico) + 2px);flex:0 0 auto}
+.bar-wa-ico svg{width:100%;height:100%}
+.bar-wa-txt{overflow:hidden;text-overflow:ellipsis;max-width:min(30vw,280px)}
+.bar-wa-seta{font-weight:900;transition:transform .15s}
+.bar-wa:hover .bar-wa-seta{transform:translateX(3px)}
+.bar-wa-dot{width:8px;height:8px;border-radius:50%;background:#bbf7d0;box-shadow:0 0 0 0 rgba(187,247,208,.7);animation:bar-wa-ping 1.8s infinite}
+.bar-wa--verde{--wa-a:#25d366;--wa-b:#0e9f6e}
+.bar-wa--roxo{--wa-a:#8b5cf6;--wa-b:#6d28d9}
+.bar-wa--azul{--wa-a:#3b82f6;--wa-b:#1d4ed8}
+.bar-wa--laranja{--wa-a:#f59e0b;--wa-b:#ea580c}
+.bar-wa--escuro{--wa-a:#334155;--wa-b:#0f172a}
+.bar-wa--pulsa{animation:bar-wa-pulsa 2.2s ease-in-out infinite}
+@keyframes bar-wa-pulsa{0%,100%{box-shadow:0 2px 10px color-mix(in srgb,var(--wa-a) 45%,transparent),0 0 0 0 color-mix(in srgb,var(--wa-a) 55%,transparent)}50%{box-shadow:0 2px 10px color-mix(in srgb,var(--wa-a) 45%,transparent),0 0 0 7px transparent}}
+@keyframes bar-wa-ping{0%{box-shadow:0 0 0 0 rgba(187,247,208,.7)}70%,100%{box-shadow:0 0 0 7px rgba(187,247,208,0)}}
+@media (prefers-reduced-motion:reduce){.bar-wa--pulsa,.bar-wa-dot{animation:none}}
+@media (max-width:768px){.bar-wa{padding:0 10px}.bar-wa-txt,.bar-wa-seta{display:none}}

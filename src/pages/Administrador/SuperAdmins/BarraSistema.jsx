@@ -19,6 +19,13 @@ import { FONTES, estiloTexto } from "../../../components/BarraInferior/TextoBarr
 import "./SuperAdmins.css";
 import "./BarraSistema.css";
 
+const ESTILOS_WA = [
+  { v: "verde", t: "Verde", c: "linear-gradient(135deg,#25d366,#0e9f6e)" },
+  { v: "roxo", t: "Roxo", c: "linear-gradient(135deg,#8b5cf6,#6d28d9)" },
+  { v: "azul", t: "Azul", c: "linear-gradient(135deg,#3b82f6,#1d4ed8)" },
+  { v: "laranja", t: "Laranja", c: "linear-gradient(135deg,#f59e0b,#ea580c)" },
+  { v: "escuro", t: "Escuro", c: "linear-gradient(135deg,#334155,#0f172a)" },
+];
 const EXIBICOES = [
   { v: "nome",        t: "Só o nome" },
   { v: "logo",        t: "Só a logo" },
@@ -31,7 +38,7 @@ const TAMANHOS = [
 ];
 const LICENCA_EXEMPLO = { tipo: "ativa", texto: "Ativa até 27/12/2026", dataFmt: "" };
 
-const TODAS = ["marca", "mensagens", "redes", "ordem", "tamanho", "versao"];
+const TODAS = ["marca", "mensagens", "whatsapp", "redes", "ordem", "tamanho", "versao"];
 
 function Secao({ id, icone, titulo, resumo, abertas, alternar, children }) {
   const aberta = abertas.includes(id);
@@ -85,7 +92,19 @@ function EditorTexto({ titulo, dica, item, onChange, previaEscura }) {
   );
 }
 
-function PreviaReal({ cfg, escura, setEscura, onClose }) {
+function SeletorWa({ valor, onChange }) {
+  return (
+    <label className="bs-wa-sel">Ver como dono:
+      <select value={valor} onChange={e => onChange(e.target.value)}>
+        <option value="nenhum">sem WhatsApp</option>
+        <option value="pendente">pedido pendente</option>
+        <option value="ativo">com WhatsApp ativo</option>
+      </select>
+    </label>
+  );
+}
+
+function PreviaReal({ cfg, escura, setEscura, previaWa, setPreviaWa, onClose }) {
   useEffect(() => {
     const k = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", k);
@@ -97,12 +116,13 @@ function PreviaReal({ cfg, escura, setEscura, onClose }) {
         <div className="bs-real-topo">
           <b>Prévia em tamanho real</b>
           <span>Como a barra aparece em um computador. No celular os textos e as redes vão para o fim do menu.</span>
+          <SeletorWa valor={previaWa} onChange={setPreviaWa} />
           <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setEscura(v => !v)}>{escura ? "☀️ Claro" : "🌙 Escuro"}</button>
           <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={onClose}>✕ Fechar</button>
         </div>
         <div className={`bs-previa ${escura ? "escuro" : "claro"}`} style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
           <div className="bs-previa-tela">Tela do sistema</div>
-          <BarraInferior cfg={cfg} nome="Maria Souza" licenca={LICENCA_EXEMPLO} isDark={escura} onFaleConosco={() => {}} onTema={() => setEscura(v => !v)} onSair={() => {}} />
+          <BarraInferior cfg={cfg} nome="Maria Souza" whatsapp={previaWa} onWhatsApp={() => {}} licenca={LICENCA_EXEMPLO} isDark={escura} onFaleConosco={() => {}} onTema={() => setEscura(v => !v)} onSair={() => {}} />
         </div>
       </div>
     </div>,
@@ -121,6 +141,7 @@ export default function BarraSistema() {
   const logoRef = useRef(null);
   const [abertas, setAbertas] = useState(["marca"]);
   const [ampliada, setAmpliada] = useState(false);
+  const [previaWa, setPreviaWa] = useState("nenhum");
   const alternar = (id) => setAbertas(a => a.includes(id) ? a.filter(x => x !== id) : [...a, id]);
 
   useEffect(() => {
@@ -144,7 +165,9 @@ export default function BarraSistema() {
     [l[i], l[j]] = [l[j], l[i]];
     return { ...c, [campo]: l };
   });
-  const NOMES_BLOCOS = { licenca: "Situação da licença", boas_vindas: "Mensagem de boas-vindas", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais", livre: "Texto livre / link", versao: "Versão do sistema" };
+  const NOMES_BLOCOS = { licenca: "Situação da licença", boas_vindas: "Mensagem de boas-vindas", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais", livre: "Texto livre / link", versao: "Versão do sistema", whatsapp: "Chamada do assistente de WhatsApp" };
+  const setWa = (campo, v) => setCfg(c => ({ ...c, whatsapp_cta: { ...c.whatsapp_cta, [campo]: v } }));
+  const setWaItem = (k, campo, v) => setCfg(c => ({ ...c, whatsapp_cta: { ...c.whatsapp_cta, [k]: { ...c.whatsapp_cta[k], [campo]: v } } }));
   const setPos = (b, v) => setCfg(c => ({ ...c, posicoes: { ...c.posicoes, [b]: v } }));
   const setTexto = (k, campo, v) => setCfg(c => ({ ...c, textos: { ...c.textos, [k]: { ...c.textos[k], [campo]: v } } }));
   const NOMES_BOTOES = { fale_conosco: "Fale Conosco", tema: "Modo escuro / claro", sair: "Sair" };
@@ -286,6 +309,46 @@ export default function BarraSistema() {
                 </div>
 
                 </Secao>
+                <Secao id="whatsapp" icone="🤖" titulo="Chamada do WhatsApp" resumo="Convida a contratar e mostra o agente para quem já assina" abertas={abertas} alternar={alternar}>
+                <div className="bs-campo">
+                  <label className="bs-chave">
+                    <input type="checkbox" checked={!!cfg.whatsapp_cta.ativo} onChange={e => setWa("ativo", e.target.checked)} />
+                    <span><b>Mostrar a chamada do WhatsApp na barra</b></span>
+                  </label>
+                  <span className="sa-config-hint">Aparece só para o dono do estabelecimento (quem pode contratar). Clicar leva direto à tela do WhatsApp dele. Escolha o lado da barra em “Ordem e posição”. No celular vira só o ícone.</span>
+                </div>
+                {cfg.whatsapp_cta.ativo && (
+                  <>
+                    <label className="bs-chave">
+                      <input type="checkbox" checked={!!cfg.whatsapp_cta.animar} onChange={e => setWa("animar", e.target.checked)} />
+                      <span>Botão pulsando (chama mais atenção) nos convites</span>
+                    </label>
+                    {[
+                      ["contratar", "Ainda não contratou", "Convite para contratar. Ícone do WhatsApp."],
+                      ["pendente", "Pediu e falta concluir", "Plano pedido, aguardando ativação ou pagamento."],
+                      ["assinante", "Já assina (agente ativo)", "Mostra o robô com uma bolinha de “ativo”."],
+                    ].map(([k, titulo, dica]) => (
+                      <div key={k} className="bs-texto">
+                        <label className="bs-chave">
+                          <input type="checkbox" checked={!!cfg.whatsapp_cta[k].ativa} onChange={e => setWaItem(k, "ativa", e.target.checked)} />
+                          <span><b>{titulo}</b></span>
+                        </label>
+                        {cfg.whatsapp_cta[k].ativa && (
+                          <>
+                            <input className="sa-config-textfield" maxLength={50} value={cfg.whatsapp_cta[k].texto} onChange={e => setWaItem(k, "texto", e.target.value)} />
+                            <span className="sa-config-hint">{dica}</span>
+                            <div className="bs-estilos">
+                              {ESTILOS_WA.map(o => (
+                                <button key={o.v} type="button" className={cfg.whatsapp_cta[k].estilo === o.v ? "on" : ""} style={{ background: o.c }} onClick={() => setWaItem(k, "estilo", o.v)} title={o.t} aria-label={o.t} />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+                </Secao>
                 <Secao id="redes" icone="🔗" titulo="Redes sociais" resumo="Instagram, Facebook, WhatsApp e X" abertas={abertas} alternar={alternar}>
                 <div className="bs-campo">
                   <span className="sa-config-hint">Use as setas ▲ ▼ para mudar a ordem dos ícones.</span>
@@ -374,6 +437,7 @@ export default function BarraSistema() {
                   </div>
                 </div>
                 <div className="bs-previa-botoes">
+                  <SeletorWa valor={previaWa} onChange={setPreviaWa} />
                   <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAmpliada(true)}>⤢ Ampliar</button>
                   <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setPreviaEscura(v => !v)}>{previaEscura ? "☀️ Claro" : "🌙 Escuro"}</button>
                 </div>
@@ -381,7 +445,7 @@ export default function BarraSistema() {
               <div className="sa-config-body">
                 <div className={`bs-previa bs-previa--mini ${previaEscura ? "escuro" : "claro"}`} onClick={() => setAmpliada(true)} title="Clique para ver em tamanho real" style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
                   <div className="bs-previa-tela">Tela do sistema</div>
-                  <BarraInferior cfg={cfg} nome="Maria Souza" licenca={LICENCA_EXEMPLO} isDark={previaEscura} onFaleConosco={() => {}} onTema={() => setPreviaEscura(v => !v)} onSair={() => {}} />
+                  <BarraInferior cfg={cfg} nome="Maria Souza" whatsapp={previaWa} onWhatsApp={() => {}} licenca={LICENCA_EXEMPLO} isDark={previaEscura} onFaleConosco={() => {}} onTema={() => setPreviaEscura(v => !v)} onSair={() => {}} />
                 </div>
               </div>
             </div>
@@ -389,7 +453,7 @@ export default function BarraSistema() {
         )}
       </div>
       {ampliada && (
-        <PreviaReal cfg={cfg} escura={previaEscura} setEscura={setPreviaEscura} onClose={() => setAmpliada(false)} />
+        <PreviaReal cfg={cfg} escura={previaEscura} setEscura={setPreviaEscura} previaWa={previaWa} setPreviaWa={setPreviaWa} onClose={() => setAmpliada(false)} />
       )}
     </LayoutAdmin>
   );

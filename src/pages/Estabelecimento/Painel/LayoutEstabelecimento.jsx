@@ -332,6 +332,20 @@ export default function LayoutEstabelecimento({
 
   useEffect(() => { buscarNotificacoes(); }, [buscarNotificacoes]);
 
+  // Situação do WhatsApp da loja (só o dono): alimenta a chamada destacada da barra inferior.
+  const [waStatus, setWaStatus] = useState(null);
+  useEffect(() => {
+    if (!estabelecimentoId || !isMerchant || !barraCfg.whatsapp_cta?.ativo) { setWaStatus(null); return; }
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await apiFetch('/api/whatsapp/loja/status');
+        if (r.ok) { const d = await r.json(); if (vivo) setWaStatus(d.situacao || null); }
+      } catch { /* a chamada só não aparece */ }
+    })();
+    return () => { vivo = false; };
+  }, [estabelecimentoId, isMerchant, barraCfg.whatsapp_cta?.ativo, abaAtiva]);
+
   // Tempo real (22/09/2026) — quando o admin atende ou recusa, o aviso
   // aparece na hora (antes: polling de 30s). O polling continua só como
   // reserva, a cada 5 min e só com a aba visível.
@@ -742,6 +756,8 @@ export default function LayoutEstabelecimento({
       <BarraInferior
         cfg={barraCfg}
         nome={nomeUsuario}
+        whatsapp={isMerchant ? waStatus : null}
+        onWhatsApp={() => { onAbaChange?.("whatsapp"); setMobileOpen(false); }}
         licenca={licenca}
         isDark={isDark}
         onFaleConosco={abrirFaleConosco}

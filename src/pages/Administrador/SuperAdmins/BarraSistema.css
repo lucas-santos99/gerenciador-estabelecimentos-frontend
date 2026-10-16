@@ -78,3 +78,11 @@
 .bs-real-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .bs-real-topo span{flex:1 1 240px;font-size:.78rem;color:var(--text-secondary)}
 .bs-real .bs-previa{min-height:340px}
+
+.bs-estilos{display:flex;gap:8px}
+.bs-estilos button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;outline-offset:2px}
+.bs-estilos button.on{border-color:var(--text-primary);box-shadow:0 0 0 2px var(--bg-card-solid,#fff) inset}
+.bs-wa-sel{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-secondary)}
+.bs-wa-sel select{background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:5px 6px;font:inherit}
+.bs-previa-box .sa-config-header{flex-wrap:wrap;gap:8px}
+.bs-previa-botoes{flex-wrap:wrap;align-items:center}
