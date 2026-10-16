@@ -23,7 +23,7 @@ export default function ChamadaWhatsApp({ cfg, situacao, onAbrir, className = ""
   const item = cta[chave];
   if (!item?.ativa || !item.texto) return null;
   return (
-    <button type="button" onClick={onAbrir} title={item.texto}
+    <button type="button" onClick={onAbrir} title={situacao === "ativo" ? `${item.texto} — abrir a conversa no WhatsApp` : item.texto}
       className={`bar-wa bar-wa--${item.estilo}${cta.animar && situacao !== "ativo" ? " bar-wa--pulsa" : ""} ${className}`}>
       <span className="bar-wa-ico">{situacao === "ativo" ? <IcoRobo /> : <IcoWa />}</span>
       <span className="bar-wa-txt">{item.texto}</span>

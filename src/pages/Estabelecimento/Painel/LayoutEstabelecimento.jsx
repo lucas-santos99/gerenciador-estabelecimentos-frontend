@@ -334,13 +334,14 @@ export default function LayoutEstabelecimento({
 
   // Situação do WhatsApp da loja (só o dono): alimenta a chamada destacada da barra inferior.
   const [waStatus, setWaStatus] = useState(null);
+  const [waNumero, setWaNumero] = useState('');
   useEffect(() => {
     if (!estabelecimentoId || !isMerchant || !barraCfg.whatsapp_cta?.ativo) { setWaStatus(null); return; }
     let vivo = true;
     (async () => {
       try {
         const r = await apiFetch('/api/whatsapp/loja/status');
-        if (r.ok) { const d = await r.json(); if (vivo) setWaStatus(d.situacao || null); }
+        if (r.ok) { const d = await r.json(); if (vivo) { setWaStatus(d.situacao || null); setWaNumero(d.numero || ''); } }
       } catch { /* a chamada só não aparece */ }
     })();
     return () => { vivo = false; };
@@ -757,7 +758,11 @@ export default function LayoutEstabelecimento({
         cfg={barraCfg}
         nome={nomeUsuario}
         whatsapp={isMerchant ? waStatus : null}
-        onWhatsApp={() => { onAbaChange?.("whatsapp"); setMobileOpen(false); }}
+        onWhatsApp={() => {
+          // Quem já assina vai direto para a conversa com o assistente (número da API); os demais, para a tela de contratação.
+          if (waStatus === "ativo" && waNumero) window.open(`https://wa.me/${waNumero}?text=${encodeURIComponent("menu")}`, "_blank", "noopener,noreferrer");
+          else { onAbaChange?.("whatsapp"); setMobileOpen(false); }
+        }}
         licenca={licenca}
         isDark={isDark}
         onFaleConosco={abrirFaleConosco}
