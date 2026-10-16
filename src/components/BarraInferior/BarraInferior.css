@@ -58,3 +58,4 @@ a.bar-marca:hover{filter:brightness(1.1);box-shadow:0 0 0 3px var(--est-accent-d
   .redes--menu .redes-link svg{width:19px;height:19px}
 }
 @media (max-width:520px){.bar-prefixo{display:none}}
+.bar-marca-bloco{flex-shrink:0}

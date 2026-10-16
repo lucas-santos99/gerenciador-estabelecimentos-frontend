@@ -26,3 +26,6 @@
 .bs-rede-ico{flex:0 0 auto;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(127,127,127,.12)}
 .bs-rede-ico svg{width:19px;height:19px}
 .bs-rede .sa-config-textfield{flex:1;min-width:0}
+/* Prévia estreita: só ícones nos botões, para a marca não ser espremida */
+.bs-previa .bar-rot{display:none}
+.bs-previa .bar-btn{padding-left:8px;padding-right:8px;min-width:0}
