@@ -24,6 +24,9 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
   const base = Array.isArray(cfg.ordem_blocos) ? cfg.ordem_blocos : [];
   const ordem = [...base, ...["licenca", "marca", "redes"].filter(x => !base.includes(x))];
 
+  const bb = Array.isArray(cfg.ordem_botoes) ? cfg.ordem_botoes : [];
+  const botoes = [...bb, ...["fale_conosco", "tema", "sair"].filter(x => !bb.includes(x))];
+
   return (
     <footer className={`bar-inferior bar-${cfg.tamanho || "medio"}`}>
       {ordem.map(id => (
@@ -52,15 +55,19 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
 
       <span className="bar-espaco" />
 
-      <button type="button" className="bar-btn" onClick={onFaleConosco} title="Fale Conosco">
-        <span className="bar-ico"><IcoChat /></span><span className="bar-rot">Fale Conosco</span>
-      </button>
-      <button type="button" className="bar-btn" onClick={onTema} title={isDark ? "Modo claro" : "Modo escuro"}>
-        <span className="bar-ico">{isDark ? <IcoSol /> : <IcoLua />}</span><span className="bar-rot">{isDark ? "Modo claro" : "Modo escuro"}</span>
-      </button>
-      <button type="button" className="bar-btn bar-btn--sair" onClick={onSair} title="Sair">
-        <span className="bar-ico"><IcoSair /></span><span className="bar-rot">Sair</span>
-      </button>
+      {botoes.map(id => id === "fale_conosco" ? (
+        <button key={id} type="button" className="bar-btn" onClick={onFaleConosco} title="Fale Conosco">
+          <span className="bar-ico"><IcoChat /></span><span className="bar-rot">Fale Conosco</span>
+        </button>
+      ) : id === "tema" ? (
+        <button key={id} type="button" className="bar-btn" onClick={onTema} title={isDark ? "Modo claro" : "Modo escuro"}>
+          <span className="bar-ico">{isDark ? <IcoSol /> : <IcoLua />}</span><span className="bar-rot">{isDark ? "Modo claro" : "Modo escuro"}</span>
+        </button>
+      ) : (
+        <button key={id} type="button" className="bar-btn bar-btn--sair" onClick={onSair} title="Sair">
+          <span className="bar-ico"><IcoSair /></span><span className="bar-rot">Sair</span>
+        </button>
+      ))}
     </footer>
   );
 }

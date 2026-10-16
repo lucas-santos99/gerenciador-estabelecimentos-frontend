@@ -62,6 +62,7 @@ export default function BarraSistema() {
     return { ...c, [campo]: l };
   });
   const NOMES_BLOCOS = { licenca: "Situação da licença", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais" };
+  const NOMES_BOTOES = { fale_conosco: "Fale Conosco", tema: "Modo escuro / claro", sair: "Sair" };
   const Setas = ({ campo, i, total }) => (
     <span className="bs-setas">
       <button type="button" disabled={i === 0} onClick={() => mover(campo, i, -1)} title="Subir (mais à esquerda)" aria-label="Mover para antes">▲</button>
@@ -205,7 +206,17 @@ export default function BarraSistema() {
                       <Setas campo="ordem_blocos" i={i} total={cfg.ordem_blocos.length} />
                     </div>
                   ))}
-                  <span className="sa-config-hint">Os botões Fale Conosco, Modo escuro e Sair ficam sempre no canto direito.</span>
+                </div>
+
+                <div className="bs-campo">
+                  <span className="sa-config-item-label">Botões do canto direito</span>
+                  {cfg.ordem_botoes.map((b, i) => (
+                    <div key={b} className="bs-ordem-item">
+                      <span className="bs-ordem-n">{i + 1}</span><span className="bs-ordem-txt">{NOMES_BOTOES[b]}</span>
+                      <Setas campo="ordem_botoes" i={i} total={cfg.ordem_botoes.length} />
+                    </div>
+                  ))}
+                  <span className="sa-config-hint">Os botões ficam sempre juntos, no canto direito da barra.</span>
                 </div>
 
                 <div className="bs-campo">

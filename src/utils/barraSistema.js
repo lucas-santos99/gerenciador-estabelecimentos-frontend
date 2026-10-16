@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "./api";
 
-export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio", mostrar_prefixo: true, prefixo: "Desenvolvido por", redes: { instagram: "", facebook: "", whatsapp: "", twitter: "" }, ordem_blocos: ["licenca", "marca", "redes"], ordem_redes: ["instagram", "facebook", "whatsapp", "twitter"] };
+export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio", mostrar_prefixo: true, prefixo: "Desenvolvido por", redes: { instagram: "", facebook: "", whatsapp: "", twitter: "" }, ordem_blocos: ["licenca", "marca", "redes"], ordem_redes: ["instagram", "facebook", "whatsapp", "twitter"], ordem_botoes: ["fale_conosco", "tema", "sair"] };
 // Altura da barra (px) por tamanho — também usada pra descontar do conteúdo da tela.
 export const BARRA_ALTURAS = { pequeno: 30, medio: 38, grande: 48 };
 
