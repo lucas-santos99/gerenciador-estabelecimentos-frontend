@@ -21,25 +21,34 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
     </>
   );
 
+  const base = Array.isArray(cfg.ordem_blocos) ? cfg.ordem_blocos : [];
+  const ordem = [...base, ...["licenca", "marca", "redes"].filter(x => !base.includes(x))];
+
   return (
     <footer className={`bar-inferior bar-${cfg.tamanho || "medio"}`}>
-      {licenca && (
-        <div className={`bar-licenca bar-licenca--${licenca.tipo}`} title={licenca.dataFmt ? `${licenca.texto} · ${licenca.dataFmt}` : licenca.texto}>
-          <span className="bar-licenca-dot" />
-          <span className="bar-licenca-txt">{licenca.texto}{licenca.dataFmt ? <em> · {licenca.dataFmt}</em> : null}</span>
-        </div>
-      )}
-
-      {cfg.mostrar_marca && (mostrarLogo || mostrarNome) && (
-        <span className="bar-marca-bloco">
-          {cfg.mostrar_prefixo && cfg.prefixo && <span className="bar-prefixo">{cfg.prefixo}</span>}
-          {cfg.link
-            ? <a className="bar-marca" href={cfg.link} target="_blank" rel="noopener noreferrer" title={cfg.nome}>{marca}</a>
-            : <span className="bar-marca bar-marca--sem-link" title={cfg.nome}>{marca}</span>}
-        </span>
-      )}
-
-      <RedesSociais redes={cfg.redes} className="redes--barra" />
+      {ordem.map(id => (
+        <React.Fragment key={id}>
+          {id === "licenca" && (
+            licenca && (
+          <div className={`bar-licenca bar-licenca--${licenca.tipo}`} title={licenca.dataFmt ? `${licenca.texto} · ${licenca.dataFmt}` : licenca.texto}>
+            <span className="bar-licenca-dot" />
+            <span className="bar-licenca-txt">{licenca.texto}{licenca.dataFmt ? <em> · {licenca.dataFmt}</em> : null}</span>
+          </div>
+        )
+          )}
+          {id === "marca" && (
+            cfg.mostrar_marca && (mostrarLogo || mostrarNome) && (
+          <span className="bar-marca-bloco">
+            {cfg.mostrar_prefixo && cfg.prefixo && <span className="bar-prefixo">{cfg.prefixo}</span>}
+            {cfg.link
+              ? <a className="bar-marca" href={cfg.link} target="_blank" rel="noopener noreferrer" title={cfg.nome}>{marca}</a>
+              : <span className="bar-marca bar-marca--sem-link" title={cfg.nome}>{marca}</span>}
+          </span>
+        )
+          )}
+          {id === "redes" && <RedesSociais redes={cfg.redes} ordem={cfg.ordem_redes} className="redes--barra" />}
+        </React.Fragment>
+      ))}
 
       <span className="bar-espaco" />
 

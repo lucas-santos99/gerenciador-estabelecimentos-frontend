@@ -55,6 +55,19 @@ export default function BarraSistema() {
 
   const set = (campo, v) => setCfg(c => ({ ...c, [campo]: v }));
   const setRede = (r, v) => setCfg(c => ({ ...c, redes: { ...c.redes, [r]: v } }));
+  const mover = (campo, i, d) => setCfg(c => {
+    const l = [...c[campo]]; const j = i + d;
+    if (j < 0 || j >= l.length) return c;
+    [l[i], l[j]] = [l[j], l[i]];
+    return { ...c, [campo]: l };
+  });
+  const NOMES_BLOCOS = { licenca: "Situação da licença", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais" };
+  const Setas = ({ campo, i, total }) => (
+    <span className="bs-setas">
+      <button type="button" disabled={i === 0} onClick={() => mover(campo, i, -1)} title="Subir (mais à esquerda)" aria-label="Mover para antes">▲</button>
+      <button type="button" disabled={i === total - 1} onClick={() => mover(campo, i, 1)} title="Descer (mais à direita)" aria-label="Mover para depois">▼</button>
+    </span>
+  );
   const DICAS = { instagram: "@seuusuario ou link", facebook: "nome da página ou link", whatsapp: "(53) 99999-9999", twitter: "@seuusuario ou link" };
   const mudou = JSON.stringify(cfg) !== original;
 
@@ -185,13 +198,25 @@ export default function BarraSistema() {
                 </div>
 
                 <div className="bs-campo">
-                  <span className="sa-config-item-label">Redes sociais</span>
-                  {ORDEM_REDES.map(r => (
+                  <span className="sa-config-item-label">Ordem na barra (da esquerda para a direita)</span>
+                  {cfg.ordem_blocos.map((b, i) => (
+                    <div key={b} className="bs-ordem-item">
+                      <span className="bs-ordem-n">{i + 1}</span><span className="bs-ordem-txt">{NOMES_BLOCOS[b]}</span>
+                      <Setas campo="ordem_blocos" i={i} total={cfg.ordem_blocos.length} />
+                    </div>
+                  ))}
+                  <span className="sa-config-hint">Os botões Fale Conosco, Modo escuro e Sair ficam sempre no canto direito.</span>
+                </div>
+
+                <div className="bs-campo">
+                  <span className="sa-config-item-label">Redes sociais (use as setas para mudar a ordem dos ícones)</span>
+                  {cfg.ordem_redes.map((r, i) => (
                     <div key={r} className="bs-rede">
                       <span className="bs-rede-ico" style={{ color: REDES[r].cor }} title={REDES[r].nome}>
                         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={REDES[r].path} /></svg>
                       </span>
                       <input className="sa-config-textfield" maxLength={300} value={cfg.redes?.[r] || ""} placeholder={`${REDES[r].nome}: ${DICAS[r]}`} onChange={e => setRede(r, e.target.value)} />
+                      <Setas campo="ordem_redes" i={i} total={cfg.ordem_redes.length} />
                     </div>
                   ))}
                   <span className="sa-config-hint">Aceita link, @usuário ou (no WhatsApp) só o número. Em branco, o ícone não aparece. No celular, os ícones ficam no fim do menu.</span>

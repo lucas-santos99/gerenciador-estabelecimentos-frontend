@@ -2,8 +2,9 @@ import React from "react";
 import { REDES, ORDEM_REDES } from "../../utils/redesIcones";
 
 /** Ícones oficiais das redes configuradas pelo admin. Só aparecem as que têm link. */
-export default function RedesSociais({ redes, className = "" }) {
-  const lista = ORDEM_REDES.filter(r => redes?.[r]);
+export default function RedesSociais({ redes, ordem, className = "" }) {
+  const base = Array.isArray(ordem) && ordem.length ? [...ordem, ...ORDEM_REDES.filter(r => !ordem.includes(r))] : ORDEM_REDES;
+  const lista = base.filter(r => redes?.[r]);
   if (!lista.length) return null;
   return (
     <div className={`redes ${className}`}>

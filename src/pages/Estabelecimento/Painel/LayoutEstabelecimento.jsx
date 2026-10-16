@@ -734,7 +734,7 @@ export default function LayoutEstabelecimento({
           ))}
         </ul>
 
-        <RedesSociais redes={barraCfg.redes} className="redes--menu" />
+        <RedesSociais redes={barraCfg.redes} ordem={barraCfg.ordem_redes} className="redes--menu" />
       </aside>
 
       <BarraInferior
