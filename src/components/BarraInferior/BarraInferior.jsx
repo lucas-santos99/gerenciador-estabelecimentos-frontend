@@ -25,12 +25,11 @@ export default function BarraInferior({ cfg, licenca, isDark, nome, onFaleConosc
   const base = Array.isArray(cfg.ordem_blocos) ? cfg.ordem_blocos : [];
   const ordem = [...base, ...["licenca", "boas_vindas", "marca", "redes", "livre", "versao"].filter(x => !base.includes(x))];
 
+  const zona = (id) => ["esq", "centro", "dir"].includes(cfg.posicoes?.[id]) ? cfg.posicoes[id] : "esq";
   const bb = Array.isArray(cfg.ordem_botoes) ? cfg.ordem_botoes : [];
   const botoes = [...bb, ...["fale_conosco", "tema", "sair"].filter(x => !bb.includes(x))];
 
-  return (
-    <footer className={`bar-inferior bar-${cfg.tamanho || "medio"}`}>
-      {ordem.map(id => (
+  const renderBloco = (id) => (
         <React.Fragment key={id}>
           {id === "licenca" && (
             licenca && (
@@ -54,9 +53,15 @@ export default function BarraInferior({ cfg, licenca, isDark, nome, onFaleConosc
           {id === "versao" && <VersaoBarra cfg={cfg} className="bar-versao--barra" />}
           {id === "redes" && <RedesSociais redes={cfg.redes} ordem={cfg.ordem_redes} className="redes--barra" />}
         </React.Fragment>
-      ))}
+  );
 
-      <span className="bar-espaco" />
+  return (
+    <footer className={`bar-inferior bar-${cfg.tamanho || "medio"}`}>
+      <div className="bar-zona bar-zona--esq">{ordem.filter(id => zona(id) === "esq").map(renderBloco)}</div>
+      <div className="bar-zona bar-zona--centro">{ordem.filter(id => zona(id) === "centro").map(renderBloco)}</div>
+      <div className="bar-zona bar-zona--dir">
+        {ordem.filter(id => zona(id) === "dir").map(renderBloco)}
+        <span className="bar-espaco" />
 
       {botoes.map(id => id === "fale_conosco" ? (
         <button key={id} type="button" className="bar-btn" onClick={onFaleConosco} title="Fale Conosco">
@@ -71,6 +76,7 @@ export default function BarraInferior({ cfg, licenca, isDark, nome, onFaleConosc
           <span className="bar-ico"><IcoSair /></span><span className="bar-rot">Sair</span>
         </button>
       ))}
+      </div>
     </footer>
   );
 }

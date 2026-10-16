@@ -27,8 +27,8 @@
 .bs-rede-ico svg{width:19px;height:19px}
 .bs-rede .sa-config-textfield{flex:1;min-width:0}
 /* Prévia estreita: só ícones nos botões, para a marca não ser espremida */
-.bs-previa .bar-rot{display:none}
-.bs-previa .bar-btn{padding-left:8px;padding-right:8px;min-width:0}
+.bs-previa--mini .bar-rot{display:none}
+.bs-previa--mini .bar-btn{padding-left:8px;padding-right:8px;min-width:0}
 
 .bs-ordem-item{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;border-radius:10px;background:rgba(127,127,127,.1)}
 .bs-ordem-n{width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
@@ -49,3 +49,32 @@
 .bs-cor input[type=color]{width:38px;height:30px;border:0;padding:0;background:none;cursor:pointer}
 .bs-texto-previa{padding:8px 10px;border-radius:8px;border:1px dashed rgba(127,127,127,.4);word-break:break-word}
 .bs-previa.escuro .bs-texto-previa{background:#111}
+
+/* Seções recolhíveis */
+.bs-barra-acoes{display:flex;gap:8px;justify-content:flex-end;margin-bottom:-6px}
+.bs-secao{border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.bs-secao.aberta{border-color:rgba(139,92,246,.45);box-shadow:0 2px 14px rgba(139,92,246,.08)}
+.bs-secao-cab{width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.bs-secao-cab:hover{background:var(--bg-hover)}
+.bs-secao-ico{width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,.12);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex:0 0 auto}
+.bs-secao-tit{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bs-secao-tit b{font-size:.93rem}
+.bs-secao-tit small{font-size:.75rem;color:var(--text-secondary)}
+.bs-secao-seta{font-size:1rem;color:var(--text-secondary);flex:0 0 auto}
+.bs-secao-corpo{padding:6px 14px 16px;display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--border)}
+.bs-secao-corpo>*:first-child{margin-top:12px}
+/* Posição (esquerda/centro/direita) */
+.bs-ordem-item{flex-wrap:wrap}
+.bs-pos{display:inline-flex;border:1px solid rgba(127,127,127,.35);border-radius:9px;overflow:hidden;flex:0 0 auto}
+.bs-pos button{border:0;background:transparent;color:inherit;font:inherit;font-size:.72rem;font-weight:600;padding:5px 9px;cursor:pointer}
+.bs-pos button+button{border-left:1px solid rgba(127,127,127,.3)}
+.bs-pos button.on{background:#7c3aed;color:#fff}
+/* Prévia: mini clicável + ampliada */
+.bs-previa-botoes{display:flex;gap:6px}
+.bs-previa--mini{cursor:zoom-in;overflow-x:auto}
+.bs-previa--mini .bar-inferior{min-width:620px}
+.bs-real-fundo{position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.bs-real{width:min(100%,1500px);max-height:94vh;overflow:auto;background:var(--bg-card-solid,#fff);color:var(--text-primary);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.bs-real-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bs-real-topo span{flex:1 1 240px;font-size:.78rem;color:var(--text-secondary)}
+.bs-real .bs-previa{min-height:340px}

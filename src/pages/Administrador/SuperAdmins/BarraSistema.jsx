@@ -7,6 +7,7 @@
 // config_sistema.barra_sistema (GET/PUT /superadmin/barra-sistema).
 // ============================================================
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
@@ -29,6 +30,22 @@ const TAMANHOS = [
   { v: "grande",  t: "Grande",  d: "48 px" },
 ];
 const LICENCA_EXEMPLO = { tipo: "ativa", texto: "Ativa até 27/12/2026", dataFmt: "" };
+
+const TODAS = ["marca", "mensagens", "redes", "ordem", "tamanho", "versao"];
+
+function Secao({ id, icone, titulo, resumo, abertas, alternar, children }) {
+  const aberta = abertas.includes(id);
+  return (
+    <section className={`bs-secao${aberta ? " aberta" : ""}`}>
+      <button type="button" className="bs-secao-cab" onClick={() => alternar(id)} aria-expanded={aberta}>
+        <span className="bs-secao-ico">{icone}</span>
+        <span className="bs-secao-tit"><b>{titulo}</b><small>{resumo}</small></span>
+        <span className="bs-secao-seta" aria-hidden="true">{aberta ? "▾" : "▸"}</span>
+      </button>
+      {aberta && <div className="bs-secao-corpo">{children}</div>}
+    </section>
+  );
+}
 
 function EditorTexto({ titulo, dica, item, onChange, previaEscura }) {
   const cor = previaEscura ? "cor_escuro" : "cor";
@@ -68,6 +85,31 @@ function EditorTexto({ titulo, dica, item, onChange, previaEscura }) {
   );
 }
 
+function PreviaReal({ cfg, escura, setEscura, onClose }) {
+  useEffect(() => {
+    const k = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return createPortal(
+    <div className="bs-real-fundo" onClick={onClose}>
+      <div className="bs-real" onClick={e => e.stopPropagation()}>
+        <div className="bs-real-topo">
+          <b>Prévia em tamanho real</b>
+          <span>Como a barra aparece em um computador. No celular os textos e as redes vão para o fim do menu.</span>
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setEscura(v => !v)}>{escura ? "☀️ Claro" : "🌙 Escuro"}</button>
+          <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={onClose}>✕ Fechar</button>
+        </div>
+        <div className={`bs-previa ${escura ? "escuro" : "claro"}`} style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
+          <div className="bs-previa-tela">Tela do sistema</div>
+          <BarraInferior cfg={cfg} nome="Maria Souza" licenca={LICENCA_EXEMPLO} isDark={escura} onFaleConosco={() => {}} onTema={() => setEscura(v => !v)} onSair={() => {}} />
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function BarraSistema() {
   const navigate = useNavigate();
   const [cfg, setCfg] = useState(BARRA_PADRAO);
@@ -77,6 +119,9 @@ export default function BarraSistema() {
   const [enviando, setEnviando] = useState(false);
   const [previaEscura, setPreviaEscura] = useState(false);
   const logoRef = useRef(null);
+  const [abertas, setAbertas] = useState(["marca"]);
+  const [ampliada, setAmpliada] = useState(false);
+  const alternar = (id) => setAbertas(a => a.includes(id) ? a.filter(x => x !== id) : [...a, id]);
 
   useEffect(() => {
     (async () => {
@@ -100,6 +145,7 @@ export default function BarraSistema() {
     return { ...c, [campo]: l };
   });
   const NOMES_BLOCOS = { licenca: "Situação da licença", boas_vindas: "Mensagem de boas-vindas", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais", livre: "Texto livre / link", versao: "Versão do sistema" };
+  const setPos = (b, v) => setCfg(c => ({ ...c, posicoes: { ...c.posicoes, [b]: v } }));
   const setTexto = (k, campo, v) => setCfg(c => ({ ...c, textos: { ...c.textos, [k]: { ...c.textos[k], [campo]: v } } }));
   const NOMES_BOTOES = { fale_conosco: "Fale Conosco", tema: "Modo escuro / claro", sair: "Sair" };
   const Setas = ({ campo, i, total }) => (
@@ -167,12 +213,17 @@ export default function BarraSistema() {
                 <div className="sa-config-header-left">
                   <span className="sa-config-icon">🧭</span>
                   <div>
-                    <div className="sa-config-title">Marca e tamanho</div>
+                    <div className="sa-config-title">Configurações da barra</div>
                     <div className="sa-config-subtitle">A barra fica no rodapé do sistema de todos os estabelecimentos, junto com a licença, o Fale Conosco, o tema e o Sair.</div>
                   </div>
                 </div>
               </div>
               <div className="sa-config-body bs-corpo">
+                <div className="bs-barra-acoes">
+                  <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAbertas(TODAS)}>Expandir tudo</button>
+                  <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAbertas([])}>Recolher tudo</button>
+                </div>
+                <Secao id="marca" icone="🏷️" titulo="Marca e logo" resumo="Nome, link, logo e o texto “Desenvolvido por”" abertas={abertas} alternar={alternar}>
                 <label className="bs-chave">
                   <input type="checkbox" checked={!!cfg.mostrar_marca} onChange={e => set("mostrar_marca", e.target.checked)} />
                   <span>Mostrar a marca do sistema na barra</span>
@@ -226,43 +277,42 @@ export default function BarraSistema() {
                   </div>
                 </div>
 
+                </Secao>
+                <Secao id="mensagens" icone="💬" titulo="Mensagens" resumo="Boas-vindas e texto livre, com fonte, cor e link" abertas={abertas} alternar={alternar}>
                 <div className="bs-campo">
-                  <span className="sa-config-item-label">Tamanho da barra</span>
-                  <div className="bs-opcoes">
-                    {TAMANHOS.map(o => (
-                      <button key={o.v} type="button" className={`bs-opcao${cfg.tamanho === o.v ? " ativo" : ""}`} onClick={() => set("tamanho", o.v)}>
-                        {o.t}<small>{o.d}</small>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bs-campo">
-                  <span className="sa-config-item-label">Mensagens na barra</span>
                   <EditorTexto titulo="Mensagem de boas-vindas" dica="Use {nome} para o primeiro nome de quem entrou. Ex.: Bem-vindo, {nome}!" item={cfg.textos.boas_vindas} onChange={(c, v) => setTexto("boas_vindas", c, v)} previaEscura={previaEscura} />
                   <EditorTexto titulo="Texto livre / link" dica="Um aviso, uma promoção, um link de suporte… o que você quiser." item={cfg.textos.livre} onChange={(c, v) => setTexto("livre", c, v)} previaEscura={previaEscura} />
                   <span className="sa-config-hint">As cores mudam conforme o tema da prévia (use o botão Claro/Escuro ao lado). No celular, as mensagens aparecem no fim do menu.</span>
                 </div>
 
+                </Secao>
+                <Secao id="redes" icone="🔗" titulo="Redes sociais" resumo="Instagram, Facebook, WhatsApp e X" abertas={abertas} alternar={alternar}>
                 <div className="bs-campo">
-                  <span className="sa-config-item-label">Versão do sistema</span>
-                  <label className="bs-chave">
-                    <input type="checkbox" checked={!!cfg.mostrar_versao} onChange={e => set("mostrar_versao", e.target.checked)} />
-                    <span>Mostrar a versão na barra</span>
-                  </label>
-                  {cfg.mostrar_versao && (
-                    <>
-                      <input className="sa-config-textfield" maxLength={30} value={cfg.versao} placeholder={`Ex.: 1.4.0 (em branco = automático: ${BUILD_ID || "data do build"})`} onChange={e => set("versao", e.target.value)} />
-                      <span className="sa-config-hint">Em branco, mostra a data e o código da última atualização do sistema, que muda sozinha a cada publicação.</span>
-                    </>
-                  )}
+                  <span className="sa-config-hint">Use as setas ▲ ▼ para mudar a ordem dos ícones.</span>
+                  {cfg.ordem_redes.map((r, i) => (
+                    <div key={r} className="bs-rede">
+                      <span className="bs-rede-ico" style={{ color: REDES[r].cor }} title={REDES[r].nome}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={REDES[r].path} /></svg>
+                      </span>
+                      <input className="sa-config-textfield" maxLength={300} value={cfg.redes?.[r] || ""} placeholder={`${REDES[r].nome}: ${DICAS[r]}`} onChange={e => setRede(r, e.target.value)} />
+                      <Setas campo="ordem_redes" i={i} total={cfg.ordem_redes.length} />
+                    </div>
+                  ))}
+                  <span className="sa-config-hint">Aceita link, @usuário ou (no WhatsApp) só o número. Em branco, o ícone não aparece. No celular, os ícones ficam no fim do menu.</span>
                 </div>
 
+                </Secao>
+                <Secao id="ordem" icone="↔️" titulo="Ordem e posição na barra" resumo="O que vem primeiro e em que lado fica" abertas={abertas} alternar={alternar}>
                 <div className="bs-campo">
-                  <span className="sa-config-item-label">Ordem na barra (da esquerda para a direita)</span>
+                  <span className="sa-config-hint">Use as setas para mudar a ordem. Em cada item, escolha em qual parte da barra ele fica: esquerda, centro ou direita.</span>
                   {cfg.ordem_blocos.map((b, i) => (
                     <div key={b} className="bs-ordem-item">
                       <span className="bs-ordem-n">{i + 1}</span><span className="bs-ordem-txt">{NOMES_BLOCOS[b]}</span>
+                      <span className="bs-pos" role="group" aria-label="Posição na barra">
+                        {[["esq", "Esquerda"], ["centro", "Centro"], ["dir", "Direita"]].map(([v, t]) => (
+                          <button key={v} type="button" className={cfg.posicoes?.[b] === v ? "on" : ""} onClick={() => setPos(b, v)} title={`Colocar na ${t.toLowerCase()}`}>{t}</button>
+                        ))}
+                      </span>
                       <Setas campo="ordem_blocos" i={i} total={cfg.ordem_blocos.length} />
                     </div>
                   ))}
@@ -278,20 +328,34 @@ export default function BarraSistema() {
                   ))}
                   <span className="sa-config-hint">Os botões ficam sempre juntos, no canto direito da barra.</span>
                 </div>
-
+                </Secao>
+                <Secao id="tamanho" icone="📐" titulo="Tamanho da barra" resumo="Pequena, média ou grande" abertas={abertas} alternar={alternar}>
                 <div className="bs-campo">
-                  <span className="sa-config-item-label">Redes sociais (use as setas para mudar a ordem dos ícones)</span>
-                  {cfg.ordem_redes.map((r, i) => (
-                    <div key={r} className="bs-rede">
-                      <span className="bs-rede-ico" style={{ color: REDES[r].cor }} title={REDES[r].nome}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={REDES[r].path} /></svg>
-                      </span>
-                      <input className="sa-config-textfield" maxLength={300} value={cfg.redes?.[r] || ""} placeholder={`${REDES[r].nome}: ${DICAS[r]}`} onChange={e => setRede(r, e.target.value)} />
-                      <Setas campo="ordem_redes" i={i} total={cfg.ordem_redes.length} />
-                    </div>
-                  ))}
-                  <span className="sa-config-hint">Aceita link, @usuário ou (no WhatsApp) só o número. Em branco, o ícone não aparece. No celular, os ícones ficam no fim do menu.</span>
+                  <div className="bs-opcoes">
+                    {TAMANHOS.map(o => (
+                      <button key={o.v} type="button" className={`bs-opcao${cfg.tamanho === o.v ? " ativo" : ""}`} onClick={() => set("tamanho", o.v)}>
+                        {o.t}<small>{o.d}</small>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                </Secao>
+                <Secao id="versao" icone="🔖" titulo="Versão do sistema" resumo="Mostrar ou não a versão" abertas={abertas} alternar={alternar}>
+                <div className="bs-campo">
+                  <label className="bs-chave">
+                    <input type="checkbox" checked={!!cfg.mostrar_versao} onChange={e => set("mostrar_versao", e.target.checked)} />
+                    <span>Mostrar a versão na barra</span>
+                  </label>
+                  {cfg.mostrar_versao && (
+                    <>
+                      <input className="sa-config-textfield" maxLength={30} value={cfg.versao} placeholder={`Ex.: 1.4.0 (em branco = automático: ${BUILD_ID || "data do build"})`} onChange={e => set("versao", e.target.value)} />
+                      <span className="sa-config-hint">Em branco, mostra a data e o código da última atualização do sistema, que muda sozinha a cada publicação.</span>
+                    </>
+                  )}
+                </div>
+
+                </Secao>
 
                 <div className="bs-acoes">
                   <button type="button" className="sa-btn sa-btn-ghost" disabled={!mudou || salvando} onClick={() => setCfg(JSON.parse(original))}>Desfazer</button>
@@ -309,10 +373,13 @@ export default function BarraSistema() {
                     <div className="sa-config-subtitle">Como a barra aparece para o estabelecimento.</div>
                   </div>
                 </div>
-                <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setPreviaEscura(v => !v)}>{previaEscura ? "☀️ Claro" : "🌙 Escuro"}</button>
+                <div className="bs-previa-botoes">
+                  <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setAmpliada(true)}>⤢ Ampliar</button>
+                  <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => setPreviaEscura(v => !v)}>{previaEscura ? "☀️ Claro" : "🌙 Escuro"}</button>
+                </div>
               </div>
               <div className="sa-config-body">
-                <div className={`bs-previa ${previaEscura ? "escuro" : "claro"}`} style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
+                <div className={`bs-previa bs-previa--mini ${previaEscura ? "escuro" : "claro"}`} onClick={() => setAmpliada(true)} title="Clique para ver em tamanho real" style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
                   <div className="bs-previa-tela">Tela do sistema</div>
                   <BarraInferior cfg={cfg} nome="Maria Souza" licenca={LICENCA_EXEMPLO} isDark={previaEscura} onFaleConosco={() => {}} onTema={() => setPreviaEscura(v => !v)} onSair={() => {}} />
                 </div>
@@ -321,6 +388,9 @@ export default function BarraSistema() {
           </div>
         )}
       </div>
+      {ampliada && (
+        <PreviaReal cfg={cfg} escura={previaEscura} setEscura={setPreviaEscura} onClose={() => setAmpliada(false)} />
+      )}
     </LayoutAdmin>
   );
 }
