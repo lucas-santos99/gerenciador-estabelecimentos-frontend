@@ -39,3 +39,22 @@ a.bar-marca:hover{filter:brightness(1.1);box-shadow:0 0 0 3px var(--est-accent-d
   .bar-licenca-txt em{display:none}
   .bar-marca-nome{max-width:110px}
 }
+
+.bar-marca-bloco{display:flex;align-items:center;gap:7px;min-width:0}
+.bar-prefixo{font-size:var(--b-fs);font-weight:600;color:var(--est-text-soft);white-space:nowrap}
+
+/* Redes sociais: ícones oficiais, cor da marca ao passar o mouse */
+.redes{display:flex;align-items:center;gap:2px}
+.redes-link{display:flex;align-items:center;justify-content:center;width:calc(var(--est-barra-h,38px) - 10px);height:calc(var(--est-barra-h,38px) - 10px);border-radius:9px;color:var(--est-text-soft);transition:color .15s,background .15s,transform .15s}
+.redes-link svg{width:var(--b-ico,16px);height:var(--b-ico,16px)}
+.redes-link:hover{color:var(--rede-cor);background:var(--est-hover);transform:translateY(-1px)}
+.redes--barra{margin-left:2px}
+/* No menu do celular (rodapé do menu): maiores, só aparecem lá */
+.redes--menu{display:none}
+@media (max-width:768px){
+  .redes--barra{display:none}
+  .redes--menu{display:flex;justify-content:center;gap:6px;padding:10px 8px;border-top:1px solid var(--est-sidebar-border);margin-top:auto}
+  .redes--menu .redes-link{width:40px;height:40px;background:var(--est-hover)}
+  .redes--menu .redes-link svg{width:19px;height:19px}
+}
+@media (max-width:520px){.bar-prefixo{display:none}}

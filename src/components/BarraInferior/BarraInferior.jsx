@@ -1,4 +1,5 @@
 import React from "react";
+import RedesSociais from "./RedesSociais";
 import "./BarraInferior.css";
 
 const IcoChat = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>);
@@ -30,10 +31,15 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
       )}
 
       {cfg.mostrar_marca && (mostrarLogo || mostrarNome) && (
-        cfg.link
-          ? <a className="bar-marca" href={cfg.link} target="_blank" rel="noopener noreferrer" title={cfg.nome}>{marca}</a>
-          : <span className="bar-marca bar-marca--sem-link" title={cfg.nome}>{marca}</span>
+        <span className="bar-marca-bloco">
+          {cfg.mostrar_prefixo && cfg.prefixo && <span className="bar-prefixo">{cfg.prefixo}</span>}
+          {cfg.link
+            ? <a className="bar-marca" href={cfg.link} target="_blank" rel="noopener noreferrer" title={cfg.nome}>{marca}</a>
+            : <span className="bar-marca bar-marca--sem-link" title={cfg.nome}>{marca}</span>}
+        </span>
       )}
+
+      <RedesSociais redes={cfg.redes} className="redes--barra" />
 
       <span className="bar-espaco" />
 

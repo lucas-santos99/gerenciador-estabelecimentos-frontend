@@ -21,3 +21,8 @@
 .bs-previa .bar-inferior{position:static;box-shadow:none;border-radius:0}
 .bs-previa.claro{background:#f0f4f8;--est-sidebar:#fff;--est-sidebar-border:rgba(0,0,0,.07);--est-text:#0f172a;--est-text-soft:#64748b;--est-accent:#0f766e;--est-accent-dim:rgba(15,118,110,.08);--est-border-accent:rgba(15,118,110,.25);--est-hover:rgba(15,118,110,.06);--est-danger:#dc2626;--est-danger-dim:rgba(220,38,38,.08);--est-success:#16a34a;--est-success-dim:rgba(22,163,74,.08);--est-warning:#d97706;--est-warning-dim:rgba(217,119,6,.08)}
 .bs-previa.escuro{background:#0b1220;--est-sidebar:#111a2b;--est-sidebar-border:rgba(255,255,255,.08);--est-text:#e5edf7;--est-text-soft:#93a4bd;--est-accent:#2dd4bf;--est-accent-dim:rgba(45,212,191,.12);--est-border-accent:rgba(45,212,191,.3);--est-hover:rgba(45,212,191,.08);--est-danger:#f87171;--est-danger-dim:rgba(248,113,113,.12);--est-success:#4ade80;--est-success-dim:rgba(74,222,128,.12);--est-warning:#fbbf24;--est-warning-dim:rgba(251,191,36,.12)}
+
+.bs-rede{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bs-rede-ico{flex:0 0 auto;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(127,127,127,.12)}
+.bs-rede-ico svg{width:19px;height:19px}
+.bs-rede .sa-config-textfield{flex:1;min-width:0}

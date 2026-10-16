@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import LayoutAdmin from "../Painel/LayoutAdmin";
 import { apiFetch } from "../../../utils/api";
 import { avisar, confirmar } from "../../../components/Dialogo/dialogo";
+import { REDES, ORDEM_REDES } from "../../../utils/redesIcones";
 import BarraInferior from "../../../components/BarraInferior/BarraInferior";
 import { BARRA_PADRAO, BARRA_ALTURAS } from "../../../utils/barraSistema";
 import "./SuperAdmins.css";
@@ -43,7 +44,8 @@ export default function BarraSistema() {
       try {
         const resp = await apiFetch("/superadmin/barra-sistema");
         if (resp.ok) {
-          const d = { ...BARRA_PADRAO, ...(await resp.json()) };
+          const j = await resp.json();
+          const d = { ...BARRA_PADRAO, ...j, redes: { ...BARRA_PADRAO.redes, ...(j.redes || {}) } };
           setCfg(d); setOriginal(JSON.stringify(d));
         }
       } catch { /* mantém o padrão */ }
@@ -52,6 +54,8 @@ export default function BarraSistema() {
   }, []);
 
   const set = (campo, v) => setCfg(c => ({ ...c, [campo]: v }));
+  const setRede = (r, v) => setCfg(c => ({ ...c, redes: { ...c.redes, [r]: v } }));
+  const DICAS = { instagram: "@seuusuario ou link", facebook: "nome da página ou link", whatsapp: "(53) 99999-9999", twitter: "@seuusuario ou link" };
   const mudou = JSON.stringify(cfg) !== original;
 
   async function enviarLogo(e) {
@@ -81,7 +85,7 @@ export default function BarraSistema() {
       const resp = await apiFetch("/superadmin/barra-sistema", { method: "PUT", body: JSON.stringify(cfg) });
       const d = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(d.error || "Erro ao salvar.");
-      const novo = { ...BARRA_PADRAO, ...d.config };
+      const novo = { ...BARRA_PADRAO, ...d.config, redes: { ...BARRA_PADRAO.redes, ...(d.config?.redes || {}) } };
       setCfg(novo); setOriginal(JSON.stringify(novo));
       avisar("Barra salva. Quem está com o sistema aberto vê a mudança ao recarregar a página.");
     } catch (err) { avisar(err.message || "Erro ao salvar."); }
@@ -120,6 +124,17 @@ export default function BarraSistema() {
                   <input type="checkbox" checked={!!cfg.mostrar_marca} onChange={e => set("mostrar_marca", e.target.checked)} />
                   <span>Mostrar a marca do sistema na barra</span>
                 </label>
+
+                <label className="bs-chave">
+                  <input type="checkbox" checked={!!cfg.mostrar_prefixo} onChange={e => set("mostrar_prefixo", e.target.checked)} />
+                  <span>Mostrar texto antes da marca</span>
+                </label>
+                {cfg.mostrar_prefixo && (
+                  <div className="bs-campo">
+                    <span className="sa-config-item-label">Texto antes da marca</span>
+                    <input className="sa-config-textfield" maxLength={30} value={cfg.prefixo} placeholder="Desenvolvido por" onChange={e => set("prefixo", e.target.value)} />
+                  </div>
+                )}
 
                 <div className="bs-campo">
                   <span className="sa-config-item-label">Nome</span>
@@ -167,6 +182,19 @@ export default function BarraSistema() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="bs-campo">
+                  <span className="sa-config-item-label">Redes sociais</span>
+                  {ORDEM_REDES.map(r => (
+                    <div key={r} className="bs-rede">
+                      <span className="bs-rede-ico" style={{ color: REDES[r].cor }} title={REDES[r].nome}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={REDES[r].path} /></svg>
+                      </span>
+                      <input className="sa-config-textfield" maxLength={300} value={cfg.redes?.[r] || ""} placeholder={`${REDES[r].nome}: ${DICAS[r]}`} onChange={e => setRede(r, e.target.value)} />
+                    </div>
+                  ))}
+                  <span className="sa-config-hint">Aceita link, @usuário ou (no WhatsApp) só o número. Em branco, o ícone não aparece. No celular, os ícones ficam no fim do menu.</span>
                 </div>
 
                 <div className="bs-acoes">

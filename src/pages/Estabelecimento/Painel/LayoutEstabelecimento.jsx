@@ -8,6 +8,7 @@ import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from ".
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import RedesSociais from "../../../components/BarraInferior/RedesSociais";
 import BarraInferior from "../../../components/BarraInferior/BarraInferior";
 import { useBarraSistema, BARRA_ALTURAS } from "../../../utils/barraSistema";
 import useMeuPerfil from "../../../components/AvatarUsuario/useMeuPerfil";
@@ -733,6 +734,7 @@ export default function LayoutEstabelecimento({
           ))}
         </ul>
 
+        <RedesSociais redes={barraCfg.redes} className="redes--menu" />
       </aside>
 
       <BarraInferior

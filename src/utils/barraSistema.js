@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "./api";
 
-export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio" };
+export const BARRA_PADRAO = { mostrar_marca: true, nome: "Lucas J. Systems", link: "", logo_url: "", exibicao: "nome", tamanho: "medio", mostrar_prefixo: true, prefixo: "Desenvolvido por", redes: { instagram: "", facebook: "", whatsapp: "", twitter: "" } };
 // Altura da barra (px) por tamanho — também usada pra descontar do conteúdo da tela.
 export const BARRA_ALTURAS = { pequeno: 30, medio: 38, grande: 48 };
 
@@ -17,7 +17,7 @@ export function useBarraSistema() {
         const resp = await apiFetch("/superadmin/barra-sistema");
         if (!resp.ok) return;
         const d = await resp.json();
-        cache = { ...BARRA_PADRAO, ...d };
+        cache = { ...BARRA_PADRAO, ...d, redes: { ...BARRA_PADRAO.redes, ...(d.redes || {}) } };
         if (vivo) setCfg(cache);
       } catch { /* mantém o padrão */ }
     })();
