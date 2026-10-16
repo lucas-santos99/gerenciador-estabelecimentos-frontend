@@ -209,7 +209,7 @@ export default function BarraSistema() {
       if (!resp.ok) throw new Error(d.error || "Erro ao salvar.");
       const novo = mesclarBarra(d.config);
       setCfg(novo); setOriginal(JSON.stringify(novo));
-      avisar("Barra salva. Quem está com o sistema aberto vê a mudança ao recarregar a página.");
+      avisar({ titulo: "Barra salva", texto: "Quem está com o sistema aberto vê a mudança ao recarregar a página.", tom: "ok" });
     } catch (err) { avisar(err.message || "Erro ao salvar."); }
     setSalvando(false);
   }
