@@ -1193,3 +1193,18 @@ body.light select {
   .est-sidebar-brand,.est-sidebar.collapsed .est-sidebar-brand{padding-top:62px}
   .est-brand-name{white-space:normal;overflow:hidden;line-height:1.2}
 }
+
+/* ── Barra inferior: o menu e as telas descontam a altura dela ── */
+.est-sidebar{height:calc(100vh - var(--est-barra-h,0px))}
+.est-main{padding-bottom:var(--est-barra-h,0px)}
+.pdv-container,.estoque-container,.inv-container,.cfg-container,.cli-container,.fin-container{height:calc(100vh - var(--est-barra-h,0px)) !important}
+.est-mobile-toggle{z-index:70}
+@media (max-width:768px){
+  .est-sidebar{height:100vh}
+  .pdv-container{height:calc(100vh - 64px - var(--est-barra-h,0px)) !important}
+}
+
+/* ── Tamanho da logo no menu (Configurações → Logo) ── */
+.est-brand-logo,.est-brand-initials{width:var(--est-logo-tam,54px);height:var(--est-logo-tam,54px);border-radius:calc(var(--est-logo-tam,54px) * .27)}
+.est-brand-logo-btn.usuario .est-brand-logo,.est-brand-logo-btn.usuario .est-brand-initials{border-radius:50%}
+.est-brand-text{min-height:var(--est-logo-tam,54px)}

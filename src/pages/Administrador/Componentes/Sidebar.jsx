@@ -196,6 +196,7 @@ export default function Sidebar() {
         // contatos de suporte) são onlyMaster no backend.
         { label: "Configurações Globais", path: "/admin/configuracoes-globais", icon: Icons.Settings, soMaster: true },
         { label: "Identidade dos Relatórios", path: "/admin/identidade-relatorios", icon: Icons.Relatorio },
+        { label: "Barra do Sistema",     path: "/admin/barra-sistema",       icon: Icons.Settings },
       ],
     },
   ];

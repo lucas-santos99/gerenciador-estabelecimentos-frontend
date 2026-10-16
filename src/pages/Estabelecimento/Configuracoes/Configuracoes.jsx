@@ -303,6 +303,16 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
   const podeEditarDados = pode('config_editar_dados');
 
   const [logoAmpliada, setLogoAmpliada] = useState(false);
+  // Tamanho da logo no menu: preferência deste aparelho (40 a 64 px).
+  const chaveLogoTam = `est-logo-tam-${estabelecimentoId || ''}`;
+  const [logoTam, setLogoTam] = useState(() => {
+    try { const n = parseInt(localStorage.getItem(chaveLogoTam), 10); return n >= 40 && n <= 64 ? n : 54; } catch { return 54; }
+  });
+  function mudarLogoTam(n) {
+    setLogoTam(n);
+    try { localStorage.setItem(chaveLogoTam, String(n)); } catch { /* sem armazenamento: vale só nesta sessão */ }
+    window.dispatchEvent(new CustomEvent('est-logo-tam', { detail: n }));
+  }
   const [dados,          setDados]          = useState(null);
   // Muda a cada alteração salva nesta tela, para a linha "Cadastrado por /
   // Última alteração por" (aba Dados) buscar de novo.
@@ -634,6 +644,16 @@ export default function Configuracoes({ estabelecimentoId, onLogoAtualizada, log
                     <p>Sem logo cadastrada</p>
                   </div>
                 )}
+              </div>
+
+              <div className="cfg-logo-tam">
+                <span className="cfg-label">Tamanho da logo no menu</span>
+                <div className="cfg-logo-tam-linha">
+                  <input type="range" min={40} max={64} step={2} value={logoTam} onChange={e => mudarLogoTam(Number(e.target.value))} aria-label="Tamanho da logo no menu" />
+                  <span className="cfg-logo-tam-valor">{logoTam}px</span>
+                  {logoTam !== 54 && <button type="button" className="cfg-logo-tam-padrao" onClick={() => mudarLogoTam(54)}>Padrão</button>}
+                </div>
+                <span className="cfg-logo-tam-dica">Muda na hora, no menu à esquerda. Fica salvo neste aparelho.</span>
               </div>
 
               <input

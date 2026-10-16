@@ -17,6 +17,7 @@ import SuperAdmins from "./pages/Administrador/SuperAdmins/SuperAdmins";
 import AuditoriaAdmin from "./pages/Administrador/SuperAdmins/AuditoriaAdmin";
 import ConfiguracoesGlobais from "./pages/Administrador/SuperAdmins/ConfiguracoesGlobais";
 import IdentidadeRelatorios from "./pages/Administrador/SuperAdmins/IdentidadeRelatorios";
+import BarraSistema from "./pages/Administrador/SuperAdmins/BarraSistema";
 import Cobrancas from "./pages/Administrador/Cobrancas/Cobrancas";
 import SolicitacoesAdmin from "./pages/Administrador/Solicitacoes/SolicitacoesAdmin";
 import Comunicados from "./pages/Administrador/Comunicados/Comunicados";
@@ -170,6 +171,12 @@ function App() {
       <Route path="/admin/identidade-relatorios" element={
         <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
           <IdentidadeRelatorios />
+        </RoleRoute></ProtectedRoute>
+      }/>
+
+      <Route path="/admin/barra-sistema" element={
+        <ProtectedRoute><RoleRoute allowedRoles={["super_admin"]}>
+          <BarraSistema />
         </RoleRoute></ProtectedRoute>
       }/>
 

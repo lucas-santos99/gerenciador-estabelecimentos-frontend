@@ -8,6 +8,8 @@ import { useAvisosEstabelecimento, useAvisosGlobais, usePollingReserva } from ".
 import RenovacaoAntecipada from "../../../components/RenovacaoAntecipada";
 import { hojeStrTZ, fimDiaTZ, diasEntre, TIMEZONE_PADRAO } from "../../../utils/fusoHorario";
 import SinoNotificacoes, { IconeSino } from "../../../components/Notificacoes/SinoNotificacoes";
+import BarraInferior from "../../../components/BarraInferior/BarraInferior";
+import { useBarraSistema, BARRA_ALTURAS } from "../../../utils/barraSistema";
 import useMeuPerfil from "../../../components/AvatarUsuario/useMeuPerfil";
 import Lightbox from "../../../components/Lightbox/Lightbox";
 import { enviarLogoEstabelecimento } from "../../../utils/enviarLogo";
@@ -229,6 +231,19 @@ export default function LayoutEstabelecimento({
       setTrocandoLogo(false);
     }
   }
+  /* ── tamanho da logo no menu: preferência de quem usa (Configurações → Logo) ── */
+  const chaveTam = `est-logo-tam-${estabelecimentoId || ''}`;
+  const [logoTam, setLogoTam] = useState(() => {
+    try { const n = parseInt(localStorage.getItem(chaveTam), 10); return n >= 40 && n <= 64 ? n : 54; } catch { return 54; }
+  });
+  useEffect(() => {
+    const ouvir = (e) => { const n = Number(e.detail); if (n >= 40 && n <= 64) setLogoTam(n); };
+    window.addEventListener('est-logo-tam', ouvir);
+    return () => window.removeEventListener('est-logo-tam', ouvir);
+  }, []);
+  const barraCfg = useBarraSistema();
+  const barraAltura = BARRA_ALTURAS[barraCfg.tamanho] || BARRA_ALTURAS.medio;
+
   const nomeUsuario = perfil?.nome || profile?.nome || '';
   const inicialUsuario = (nomeUsuario.trim()[0] || '?').toUpperCase();
 
@@ -561,7 +576,7 @@ export default function LayoutEstabelecimento({
 
   /* ════════════════════════════════════════════════════════ */
   return (
-    <div className="est-layout">
+    <div className="est-layout" style={{ "--est-barra-h": `${barraAltura}px`, "--est-logo-tam": `${logoTam}px` }}>
 
       {/* BOTÃO MOBILE */}
       <button
@@ -633,15 +648,6 @@ export default function LayoutEstabelecimento({
           </div>
           <div className="est-brand-acoes">
             <SinoNotificacoes />
-            <button
-              type="button"
-              className="est-brand-sair"
-              onClick={(e) => { e.stopPropagation(); setModalLogout(true); }}
-              title="Sair"
-              aria-label="Sair"
-            >
-              <Icons.Logout />
-            </button>
           </div>
         </div>
         {ampliado && slide === 0 && (
@@ -727,61 +733,16 @@ export default function LayoutEstabelecimento({
           ))}
         </ul>
 
-        {/* Footer */}
-        <div className="est-sidebar-footer">
-
-          {/* Badge de licença — só merchant */}
-          {licenca && (
-            <div className={`est-licenca-badge est-licenca-badge--${licenca.tipo}`} title={licenca.dataFmt ? `Vencimento: ${licenca.dataFmt}` : ''}>
-              <span className="est-licenca-dot" />
-              <span className="est-licenca-textos">
-                <span className="est-licenca-texto">{licenca.texto}</span>
-                {licenca.dataFmt && <span className="est-licenca-data">{licenca.dataFmt}</span>}
-              </span>
-            </div>
-          )}
-
-          {/* Identidade Lucas J. Systems */}
-          <div className="est-ljs-badge">
-            <span className="est-ljs-dot" />
-            <span className="est-ljs-label">Lucas J. Systems</span>
-          </div>
-
-          <div className="est-footer-divider" />
-
-          {/* Fale Conosco */}
-          <button className="est-theme-btn" onClick={abrirFaleConosco}>
-            <span className="est-nav-icon">💬</span>
-            <span className="est-footer-label">Fale Conosco</span>
-          </button>
-
-          <div className="est-footer-divider" />
-
-          {/* Tema */}
-          <button className="est-theme-btn" onClick={toggleTheme}>
-            <span className="est-nav-icon">
-              {isDark ? <Icons.Sun /> : <Icons.Moon />}
-            </span>
-            <span className="est-footer-label">
-              {isDark ? "Modo claro" : "Modo escuro"}
-            </span>
-          </button>
-
-          <div className="est-footer-divider" />
-
-          {/* Sair */}
-          <button className="est-logout-btn" onClick={() => setModalLogout(true)}>
-            <span className="est-nav-icon"><Icons.Logout /></span>
-            <span className="est-footer-label">Sair</span>
-          </button>
-
-          {/* Tooltip do footer collapsed */}
-          <span className="est-footer-tooltip">
-            {isDark ? "Modo claro" : "Modo escuro"} · Sair
-          </span>
-        </div>
-
       </aside>
+
+      <BarraInferior
+        cfg={barraCfg}
+        licenca={licenca}
+        isDark={isDark}
+        onFaleConosco={abrirFaleConosco}
+        onTema={toggleTheme}
+        onSair={() => setModalLogout(true)}
+      />
 
       {/* ── CONTEÚDO PRINCIPAL ─────────────────────────────── */}
       <main className={`est-main${collapsed ? " collapsed" : ""}`}>

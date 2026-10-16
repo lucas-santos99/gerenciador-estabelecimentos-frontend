@@ -1116,3 +1116,11 @@
 .cfg-radio-card.cfg-sem-permissao:not(.ativo):hover {
   border-color: var(--est-border);
 }
+
+/* Tamanho da logo no menu */
+.cfg-logo-tam{display:flex;flex-direction:column;gap:6px;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--est-border,rgba(128,128,128,.25));background:var(--est-input,rgba(128,128,128,.06))}
+.cfg-logo-tam-linha{display:flex;align-items:center;gap:10px}
+.cfg-logo-tam-linha input[type=range]{flex:1;accent-color:var(--est-accent,#14b8a6)}
+.cfg-logo-tam-valor{font-weight:800;font-size:.85rem;min-width:42px;text-align:right}
+.cfg-logo-tam-padrao{border:1px solid var(--est-border-accent,rgba(20,184,166,.4));background:none;color:var(--est-accent,#14b8a6);border-radius:8px;padding:4px 10px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}
+.cfg-logo-tam-dica{font-size:.74rem;color:var(--est-text-soft,#6b7280)}
