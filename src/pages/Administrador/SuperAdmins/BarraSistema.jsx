@@ -13,7 +13,8 @@ import { apiFetch } from "../../../utils/api";
 import { avisar, confirmar } from "../../../components/Dialogo/dialogo";
 import { REDES, ORDEM_REDES } from "../../../utils/redesIcones";
 import BarraInferior from "../../../components/BarraInferior/BarraInferior";
-import { BARRA_PADRAO, BARRA_ALTURAS } from "../../../utils/barraSistema";
+import { BARRA_PADRAO, BARRA_ALTURAS, BUILD_ID, mesclarBarra } from "../../../utils/barraSistema";
+import { FONTES, estiloTexto } from "../../../components/BarraInferior/TextoBarra";
 import "./SuperAdmins.css";
 import "./BarraSistema.css";
 
@@ -28,6 +29,44 @@ const TAMANHOS = [
   { v: "grande",  t: "Grande",  d: "48 px" },
 ];
 const LICENCA_EXEMPLO = { tipo: "ativa", texto: "Ativa até 27/12/2026", dataFmt: "" };
+
+function EditorTexto({ titulo, dica, item, onChange, previaEscura }) {
+  const cor = previaEscura ? "cor_escuro" : "cor";
+  return (
+    <div className="bs-texto">
+      <label className="bs-chave">
+        <input type="checkbox" checked={!!item.ativa} onChange={e => onChange("ativa", e.target.checked)} />
+        <span><b>{titulo}</b></span>
+      </label>
+      {item.ativa && (
+        <>
+          <input className="sa-config-textfield" maxLength={140} value={item.texto} placeholder="Digite a mensagem" onChange={e => onChange("texto", e.target.value)} />
+          <span className="sa-config-hint">{dica}</span>
+          <input className="sa-config-textfield" maxLength={300} value={item.link} placeholder="Link ao clicar (opcional): https://…" onChange={e => onChange("link", e.target.value)} />
+          <div className="bs-fmt">
+            <select className="sa-config-textfield bs-fmt-fonte" value={item.fonte} onChange={e => onChange("fonte", e.target.value)} style={{ fontFamily: FONTES[item.fonte]?.css }}>
+              {Object.entries(FONTES).map(([k, f]) => <option key={k} value={k} style={{ fontFamily: f.css }}>{f.nome}</option>)}
+            </select>
+            <div className="bs-fmt-tam">
+              <button type="button" disabled={item.tamanho <= 10} onClick={() => onChange("tamanho", item.tamanho - 1)} title="Letra menor">A−</button>
+              <span>{item.tamanho}px</span>
+              <button type="button" disabled={item.tamanho >= 20} onClick={() => onChange("tamanho", item.tamanho + 1)} title="Letra maior">A+</button>
+            </div>
+            <button type="button" className={`bs-fmt-btn${item.negrito ? " on" : ""}`} onClick={() => onChange("negrito", !item.negrito)} title="Negrito"><b>N</b></button>
+            <button type="button" className={`bs-fmt-btn${item.italico ? " on" : ""}`} onClick={() => onChange("italico", !item.italico)} title="Itálico"><i>I</i></button>
+            <button type="button" className={`bs-fmt-btn${item.sublinhado ? " on" : ""}`} onClick={() => onChange("sublinhado", !item.sublinhado)} title="Sublinhado"><u>S</u></button>
+          </div>
+          <div className="bs-cor">
+            <span>Cor no tema {previaEscura ? "escuro" : "claro"}:</span>
+            <input type="color" value={item[cor] || (previaEscura ? "#e5e7eb" : "#374151")} onChange={e => onChange(cor, e.target.value)} />
+            {item[cor] ? <button type="button" className="sa-btn sa-btn-ghost sa-btn-sm" onClick={() => onChange(cor, "")}>Usar a cor padrão</button> : <small>cor padrão do tema</small>}
+          </div>
+          <div className="bs-texto-previa" style={estiloTexto(item, previaEscura)}>{item.texto || "…"}</div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function BarraSistema() {
   const navigate = useNavigate();
@@ -44,8 +83,7 @@ export default function BarraSistema() {
       try {
         const resp = await apiFetch("/superadmin/barra-sistema");
         if (resp.ok) {
-          const j = await resp.json();
-          const d = { ...BARRA_PADRAO, ...j, redes: { ...BARRA_PADRAO.redes, ...(j.redes || {}) } };
+          const d = mesclarBarra(await resp.json());
           setCfg(d); setOriginal(JSON.stringify(d));
         }
       } catch { /* mantém o padrão */ }
@@ -61,7 +99,8 @@ export default function BarraSistema() {
     [l[i], l[j]] = [l[j], l[i]];
     return { ...c, [campo]: l };
   });
-  const NOMES_BLOCOS = { licenca: "Situação da licença", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais" };
+  const NOMES_BLOCOS = { licenca: "Situação da licença", boas_vindas: "Mensagem de boas-vindas", marca: "Marca do sistema (Desenvolvido por…)", redes: "Redes sociais", livre: "Texto livre / link", versao: "Versão do sistema" };
+  const setTexto = (k, campo, v) => setCfg(c => ({ ...c, textos: { ...c.textos, [k]: { ...c.textos[k], [campo]: v } } }));
   const NOMES_BOTOES = { fale_conosco: "Fale Conosco", tema: "Modo escuro / claro", sair: "Sair" };
   const Setas = ({ campo, i, total }) => (
     <span className="bs-setas">
@@ -99,7 +138,7 @@ export default function BarraSistema() {
       const resp = await apiFetch("/superadmin/barra-sistema", { method: "PUT", body: JSON.stringify(cfg) });
       const d = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(d.error || "Erro ao salvar.");
-      const novo = { ...BARRA_PADRAO, ...d.config, redes: { ...BARRA_PADRAO.redes, ...(d.config?.redes || {}) } };
+      const novo = mesclarBarra(d.config);
       setCfg(novo); setOriginal(JSON.stringify(novo));
       avisar("Barra salva. Quem está com o sistema aberto vê a mudança ao recarregar a página.");
     } catch (err) { avisar(err.message || "Erro ao salvar."); }
@@ -199,6 +238,27 @@ export default function BarraSistema() {
                 </div>
 
                 <div className="bs-campo">
+                  <span className="sa-config-item-label">Mensagens na barra</span>
+                  <EditorTexto titulo="Mensagem de boas-vindas" dica="Use {nome} para o primeiro nome de quem entrou. Ex.: Bem-vindo, {nome}!" item={cfg.textos.boas_vindas} onChange={(c, v) => setTexto("boas_vindas", c, v)} previaEscura={previaEscura} />
+                  <EditorTexto titulo="Texto livre / link" dica="Um aviso, uma promoção, um link de suporte… o que você quiser." item={cfg.textos.livre} onChange={(c, v) => setTexto("livre", c, v)} previaEscura={previaEscura} />
+                  <span className="sa-config-hint">As cores mudam conforme o tema da prévia (use o botão Claro/Escuro ao lado). No celular, as mensagens aparecem no fim do menu.</span>
+                </div>
+
+                <div className="bs-campo">
+                  <span className="sa-config-item-label">Versão do sistema</span>
+                  <label className="bs-chave">
+                    <input type="checkbox" checked={!!cfg.mostrar_versao} onChange={e => set("mostrar_versao", e.target.checked)} />
+                    <span>Mostrar a versão na barra</span>
+                  </label>
+                  {cfg.mostrar_versao && (
+                    <>
+                      <input className="sa-config-textfield" maxLength={30} value={cfg.versao} placeholder={`Ex.: 1.4.0 (em branco = automático: ${BUILD_ID || "data do build"})`} onChange={e => set("versao", e.target.value)} />
+                      <span className="sa-config-hint">Em branco, mostra a data e o código da última atualização do sistema, que muda sozinha a cada publicação.</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="bs-campo">
                   <span className="sa-config-item-label">Ordem na barra (da esquerda para a direita)</span>
                   {cfg.ordem_blocos.map((b, i) => (
                     <div key={b} className="bs-ordem-item">
@@ -254,7 +314,7 @@ export default function BarraSistema() {
               <div className="sa-config-body">
                 <div className={`bs-previa ${previaEscura ? "escuro" : "claro"}`} style={{ "--est-barra-h": `${BARRA_ALTURAS[cfg.tamanho] || 38}px` }}>
                   <div className="bs-previa-tela">Tela do sistema</div>
-                  <BarraInferior cfg={cfg} licenca={LICENCA_EXEMPLO} isDark={previaEscura} onFaleConosco={() => {}} onTema={() => setPreviaEscura(v => !v)} onSair={() => {}} />
+                  <BarraInferior cfg={cfg} nome="Maria Souza" licenca={LICENCA_EXEMPLO} isDark={previaEscura} onFaleConosco={() => {}} onTema={() => setPreviaEscura(v => !v)} onSair={() => {}} />
                 </div>
               </div>
             </div>

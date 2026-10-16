@@ -37,3 +37,15 @@
 .bs-setas button{border:0;background:rgba(127,127,127,.18);color:inherit;border-radius:5px;width:26px;height:17px;font-size:.6rem;line-height:1;cursor:pointer}
 .bs-setas button:hover:not(:disabled){background:#7c3aed;color:#fff}
 .bs-setas button:disabled{opacity:.3;cursor:default}
+
+.bs-texto{padding:10px;margin-bottom:8px;border-radius:12px;background:rgba(127,127,127,.08);display:flex;flex-direction:column;gap:8px}
+.bs-fmt{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bs-fmt-fonte{flex:1 1 150px;min-width:0}
+.bs-fmt-tam{display:flex;align-items:center;gap:4px;font-size:.78rem}
+.bs-fmt-tam button,.bs-fmt-btn{border:1px solid rgba(127,127,127,.35);background:transparent;color:inherit;border-radius:8px;min-width:34px;height:34px;cursor:pointer;font-size:.85rem}
+.bs-fmt-tam button:disabled{opacity:.35;cursor:default}
+.bs-fmt-btn.on{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.bs-cor{display:flex;align-items:center;gap:8px;font-size:.8rem;flex-wrap:wrap}
+.bs-cor input[type=color]{width:38px;height:30px;border:0;padding:0;background:none;cursor:pointer}
+.bs-texto-previa{padding:8px 10px;border-radius:8px;border:1px dashed rgba(127,127,127,.4);word-break:break-word}
+.bs-previa.escuro .bs-texto-previa{background:#111}

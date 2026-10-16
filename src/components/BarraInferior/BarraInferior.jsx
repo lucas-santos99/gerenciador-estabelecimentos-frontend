@@ -1,5 +1,6 @@
 import React from "react";
 import RedesSociais from "./RedesSociais";
+import { TextoBarra, VersaoBarra } from "./TextoBarra";
 import "./BarraInferior.css";
 
 const IcoChat = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>);
@@ -11,7 +12,7 @@ const IcoSair = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
  * Barra fina no rodapé do sistema: licença · marca do sistema · Fale Conosco · tema · Sair.
  * A marca (nome/logo/link) e o tamanho vêm da configuração do admin (useBarraSistema).
  */
-export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onTema, onSair }) {
+export default function BarraInferior({ cfg, licenca, isDark, nome, onFaleConosco, onTema, onSair }) {
   const mostrarLogo = cfg.mostrar_marca && cfg.logo_url && (cfg.exibicao === "logo" || cfg.exibicao === "logo_e_nome");
   const mostrarNome = cfg.mostrar_marca && cfg.nome && (cfg.exibicao === "nome" || cfg.exibicao === "logo_e_nome" || !cfg.logo_url);
   const marca = (
@@ -22,7 +23,7 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
   );
 
   const base = Array.isArray(cfg.ordem_blocos) ? cfg.ordem_blocos : [];
-  const ordem = [...base, ...["licenca", "marca", "redes"].filter(x => !base.includes(x))];
+  const ordem = [...base, ...["licenca", "boas_vindas", "marca", "redes", "livre", "versao"].filter(x => !base.includes(x))];
 
   const bb = Array.isArray(cfg.ordem_botoes) ? cfg.ordem_botoes : [];
   const botoes = [...bb, ...["fale_conosco", "tema", "sair"].filter(x => !bb.includes(x))];
@@ -49,6 +50,8 @@ export default function BarraInferior({ cfg, licenca, isDark, onFaleConosco, onT
           </span>
         )
           )}
+          {(id === "boas_vindas" || id === "livre") && <TextoBarra item={cfg.textos?.[id]} nome={nome} isDark={isDark} className="bar-texto--barra" />}
+          {id === "versao" && <VersaoBarra cfg={cfg} className="bar-versao--barra" />}
           {id === "redes" && <RedesSociais redes={cfg.redes} ordem={cfg.ordem_redes} className="redes--barra" />}
         </React.Fragment>
       ))}
