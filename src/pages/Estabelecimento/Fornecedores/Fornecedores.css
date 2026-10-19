@@ -271,7 +271,8 @@
 .forn-item-estoque-depois.mais { color: var(--est-accent); font-weight: 700; }
 
 @media (max-width: 640px) {
-  .forn-itens-header, .forn-item-linha {
+  .forn-itens-header { display: none; }
+  .forn-item-linha {
     grid-template-columns: 1fr;
     gap: 4px;
   }
