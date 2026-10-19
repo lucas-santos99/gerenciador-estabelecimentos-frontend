@@ -17,11 +17,19 @@ export function valorBRparaNumero(texto) {
 // "1" → "1" · "1,5" → "1,5" · "1.350" → "1,350" (ponto vira vírgula) · "999" → "999".
 // Aceita uma vírgula só e no máximo `casas` casas depois dela; sem zero à esquerda sobrando.
 export function digitarDecimalLivre(valorBruto, casas = 3, maxInteiros = 6) {
-  let t = String(valorBruto || '').replace(/[^\d.,]/g, '').replace(/\./g, ',');
+  // Com vírgula: os pontos são separador de milhar ("1.234,5" → "1234,5").
+  // Sem vírgula: o primeiro ponto vira a vírgula decimal ("1.5" → "1,5").
+  let t = String(valorBruto || '').replace(/[^\d.,]/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '');
+  else { const p = t.indexOf('.'); if (p !== -1) t = t.slice(0, p) + ',' + t.slice(p + 1).replace(/\./g, ''); }
   const i = t.indexOf(',');
   let inteiro = i === -1 ? t : t.slice(0, i);
   let dec = i === -1 ? null : t.slice(i + 1).replace(/,/g, '').slice(0, casas);
   inteiro = inteiro.replace(/^0+(?=\d)/, '').slice(0, maxInteiros);
   if (dec === null) return inteiro;
   return (inteiro || '0') + ',' + dec;
+}
+// Quantidade: com casas decimais (kg) = digitação livre; sem casas (unidade/gramas) = só inteiros.
+export function digitarQuantidade(valorBruto, casas = 0) {
+  return casas > 0 ? digitarDecimalLivre(valorBruto, casas, 6) : String(valorBruto || '').replace(/\D/g, '').slice(0, 9);
 }

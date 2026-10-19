@@ -6,6 +6,7 @@ import { htmlIdentidade, salvarExcelIdentidade } from '../../../utils/relatorioI
 import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import './Inventario.css';
+import { digitarQuantidade } from '../../../utils/mascaraMoeda';
 
 
 // Item de produto com variação mostra qual variação (ex.: "Camiseta (P · Azul)"). SQL 37.
@@ -1330,7 +1331,7 @@ function AbaAjusteRapido({ estabelecimentoId, permissoes = null, isMerchant = tr
                   type="text"
                   inputMode="decimal"
                   value={quantidade}
-                  onChange={e => setQuantidade(digitarQtdMascarada(e.target.value, casasQtd))}
+                  onChange={e => setQuantidade(digitarQuantidade(e.target.value, casasQtd))}
                   placeholder={casasQtd === 3 ? '0,000' : '0'}
                 />
                 <span className="inv-item-input-unidade inv-item-input-unidade--grande">

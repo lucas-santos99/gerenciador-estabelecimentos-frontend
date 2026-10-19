@@ -8,6 +8,7 @@ import { perguntar, confirmar } from '../../../components/Dialogo/dialogo';
 import Rastro from '../../../components/Rastro/Rastro';
 import EtiquetasModal from './EtiquetasModal';
 import '../Estoque.css';
+import { digitarQuantidade } from '../../../utils/mascaraMoeda';
 
 /* ── Comparação "inteligente" de marcas ──────────────────────
    Normaliza (remove acento, caixa, espaços/hífen/pontuação) e mede
@@ -677,7 +678,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
                   <div className="prod-grade-valores">
                     <label>Estoque de cada{unidadeMedida === 'kg' ? ' (kg)' : ''}
                       <input className="prod-input" inputMode="numeric" placeholder="0" value={gradeDados.estoque}
-                        onChange={e => setGradeDados(d => ({ ...d, estoque: digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0) }))} />
+                        onChange={e => setGradeDados(d => ({ ...d, estoque: digitarQuantidade(e.target.value, unidadeMedida === 'kg' ? 3 : 0) }))} />
                     </label>
                     <label>Preço de custo
                       <input className="prod-input" inputMode="numeric" placeholder="R$ 0,00" value={gradeDados.custo}
@@ -800,7 +801,7 @@ function VariacoesTabela({ variacoes, setVariacoes, atributosLoja, opcoesPorChav
                 inputMode="decimal"
                 placeholder="0"
                 value={v.estoque_atual}
-                onChange={e => atualizarCampo(idx, 'estoque_atual', digitarValorMascarado(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
+                onChange={e => atualizarCampo(idx, 'estoque_atual', digitarQuantidade(e.target.value, unidadeMedida === 'kg' ? 3 : 0))}
                 disabled={somenteLeitura}
               />
             </label>
@@ -1468,7 +1469,7 @@ export default function ProdutoModal({
         [name]: type === 'checkbox'
           ? checked
           : casasPorCampo[name] !== undefined
-            ? digitarValorMascarado(value, casasPorCampo[name])
+            ? (name === 'estoque_atual' || name === 'estoque_minimo' ? digitarQuantidade(value, casasPorCampo[name]) : digitarValorMascarado(value, casasPorCampo[name]))
             : value,
       };
       // Ao desmarcar vendido_por_peso, limpa PLU
@@ -1798,7 +1799,7 @@ export default function ProdutoModal({
   /* ── Ajuste de estoque (edição) — mesma rota do Ajuste Rápido ── */
   function digitarAjusteQtd(valorBruto) {
     const casas = form.unidade_medida === 'kg' ? (ajusteUnidade === 'g' ? 0 : 3) : 0;
-    setAjusteQtd(digitarValorMascarado(valorBruto, casas));
+    setAjusteQtd(digitarQuantidade(valorBruto, casas));
   }
 
   async function enviarAjusteEstoque() {
