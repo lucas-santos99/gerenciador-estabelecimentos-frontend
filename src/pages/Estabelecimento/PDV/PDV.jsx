@@ -6,6 +6,7 @@ import { confirmar } from '../../../components/Dialogo/dialogo';
 import { useAvisosEstabelecimento } from '../../../utils/realtimeEstab';
 import { identidadeRecibo } from '../../../utils/relatorioIdentidade';
 import './PDV.css';
+import { digitarDecimalLivre } from '../../../utils/mascaraMoeda';
 
 // Texto da variação: o servidor manda `rotulo` já na ordem dos atributos da loja; se não vier
 // (servidor antigo), monta com os 3 campos fixos.
@@ -94,15 +95,10 @@ function fmtPeso(kg) {
     : `${Math.round(kg * 1000)} g`;
 }
 
-// Máscara "tipo calculadora" pro peso: os dígitos entram da direita pra
-// esquerda e a vírgula fica sempre fixa em 3 casas decimais — digita
-// "1350" e já vira "1,350" sozinho, sem precisar digitar a vírgula.
-// Se o usuário digitar a vírgula na mão, ela é só ignorada (não quebra).
+// Peso em kg: digitação livre — o que a pessoa digita é o que vale ("1,350" ou "1.350" = 1,350 kg;
+// "999" = 999 kg). Só aceita uma vírgula e até 3 casas depois dela (gramas).
 function digitarPesoMascarado(valorBruto) {
-  const digitos = valorBruto.replace(/\D/g, '').slice(-6); // até 999,999 kg
-  if (!digitos) return '';
-  const numero = parseInt(digitos, 10) / 1000;
-  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return digitarDecimalLivre(valorBruto, 3, 6);
 }
 
 // Converte um número no formato brasileiro (com ponto de milhar e vírgula
@@ -3783,7 +3779,7 @@ function ModalPesoManual({ produto, maxKg = Infinity, onConfirmar, onCancelar })
               setValorPeso(novo);
               setErro("");
             }}
-            placeholder={unidade === "kg" ? "Ex: 1,350" : "Ex: 1350"}
+            placeholder={unidade === "kg" ? "Ex: 1,350 (ou 999 para 999 kg)" : "Ex: 1350"}
           />
           {erro && <div className="pdv-peso-erro">⚠️ {erro}</div>}
 

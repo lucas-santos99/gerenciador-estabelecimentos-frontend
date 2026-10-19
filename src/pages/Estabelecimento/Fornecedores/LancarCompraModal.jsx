@@ -4,6 +4,7 @@ import { apiFetch } from '../../../utils/api';
 import Dica from '../../../components/Notificacoes/Dica';
 import '../Clientes.css';
 import './Fornecedores.css';
+import { digitarDecimalLivre } from '../../../utils/mascaraMoeda';
 
 function digitarValorMascarado(valorBruto, casasDecimais) {
   const digitos = (valorBruto || '').replace(/\D/g, '').slice(-9);
@@ -135,7 +136,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
       if (i.produto_id !== produtoId) return i;
       if (campo === 'quantidade') {
         const casas = i.unidade_medida === 'kg' ? 3 : 0;
-        return { ...i, quantidade: digitarValorMascarado(valor, casas) };
+        return { ...i, quantidade: casas > 0 ? digitarDecimalLivre(valor, casas, 6) : String(valor || '').replace(/\D/g, '').slice(0, 6) };
       }
       if (campo === 'preco_custo_unitario') {
         return { ...i, preco_custo_unitario: digitarValorMascarado(valor, 2) };
