@@ -719,10 +719,10 @@ body.light .fin-historico-operador {
 .rel-estoque-nome-bloco .fin-estoque-nome { margin-bottom: 2px; }
 .rel-estoque-nome-bloco .fin-estoque-cat  { margin-bottom: 0; }
 
-/* Celular: abas e zoom A-/A+ ficam na mesma linha, abas rolam de lado */
+/* Celular: as 3 abas dividem a linha toda (sem esconder nenhuma); zoom A-/A+ vai para a linha de baixo */
 @media (max-width: 600px) {
-  .rel-tabs { padding: 12px 12px 0; gap: 8px; flex-wrap: nowrap; }
-  .rel-tabs .fin-tabs-nav { flex-wrap: nowrap !important; overflow-x: auto; min-width: 0; flex: 1 1 auto; scrollbar-width: none; }
-  .rel-tabs .fin-tabs-nav::-webkit-scrollbar { display: none; }
-  .rel-tab { white-space: nowrap; padding: 8px 12px; }
+  .rel-tabs { padding: 10px 12px 0; gap: 6px; flex-wrap: wrap !important; }
+  .rel-tabs .fin-tabs-nav { flex: 1 1 100%; flex-wrap: nowrap !important; gap: 4px !important; }
+  .rel-tabs .fin-tabs-nav .rel-tab { flex: 1 1 0; min-width: 0; padding: 8px 4px; font-size: calc(0.74rem * var(--rel-font-scale, 1)); line-height: 1.2; white-space: normal; text-align: center; }
+  .rel-tabs > div:last-child { margin-left: auto; padding: 6px 0; }
 }
