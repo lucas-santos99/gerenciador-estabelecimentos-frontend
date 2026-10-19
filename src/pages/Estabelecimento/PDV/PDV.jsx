@@ -3180,7 +3180,23 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
 
   // ── Adicionar produto pesável ao carrinho ─────────────────
   // pesoKg: peso em kg | origem: 'etiqueta' | 'manual'
+  // Quanto ainda dá pra vender (kg) deste produto: estoque menos o que já está no carrinho.
+  function kgDisponivel(produto) {
+    const est = parseFloat(produto.estoque_atual);
+    if (isNaN(est)) return Infinity;
+    const jaNoCarrinho = carrinho
+      .filter(i => i.id === produto.id && (i.produto_variacao_id || null) === (produto.produto_variacao_id || null))
+      .reduce((acc, i) => acc + parseFloat(i.quantidade || 0), 0);
+    return Math.max(0, est - jaNoCarrinho);
+  }
+
+  // Devolve false (e avisa) se o peso passa do estoque; true se adicionou.
   function adicionarProdutoPesavel(produto, pesoKg, origem = 'etiqueta') {
+    const disp = kgDisponivel(produto);
+    if (pesoKg - disp > 0.0005) {
+      mostrarStatus('erro', `Estoque insuficiente de "${produto.nome}": ${fmtPeso(pesoKg)} pedidos, ${fmtPeso(disp)} disponíveis.`);
+      return false;
+    }
     setCarrinho(prev => [
       ...prev,
       {
@@ -3191,6 +3207,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       },
     ]);
     mostrarStatus('sucesso', `✓ ${produto.nome} — ${fmtPeso(pesoKg)} adicionado`);
+    return true;
   }
 
   // Teclado do modal de confirmação de remoção — seta alterna entre
@@ -3488,8 +3505,9 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
       {modalPeso && (
         <ModalPesoManual
           produto={modalPeso.produto}
+          maxKg={kgDisponivel(modalPeso.produto)}
           onConfirmar={(pesoKg) => {
-            adicionarProdutoPesavel(modalPeso.produto, pesoKg, 'manual');
+            if (!adicionarProdutoPesavel(modalPeso.produto, pesoKg, 'manual')) return;
             setModalPeso(null);
             setTimeout(() => inputBuscaRef.current?.focus(), 0);
           }}
@@ -3610,7 +3628,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
                     {item.nome}{item.marca ? <span className="pdv-item-marca"> · {item.marca}</span> : ''}
                     {item.pesavel && (
                       <span className="pdv-item-badge-pesavel">
-                        {item.origem_peso === 'etiqueta' ? '⚖️ etiqueta' : '⚖️ manual'}
+                        {item.origem_peso === 'etiqueta' ? '⚖️ etiqueta' : '⚖️ peso digitado'}
                       </span>
                     )}
                   </span>
@@ -3684,7 +3702,7 @@ export default function PDV({ estabelecimentoId, nomeEstabelecimento, onNavegar,
    MODAL DE PESO MANUAL
    Abre quando produto pesável é selecionado sem etiqueta de balança
    ════════════════════════════════════════════════════════════ */
-function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
+function ModalPesoManual({ produto, maxKg = Infinity, onConfirmar, onCancelar }) {
   const [unidade,    setUnidade]    = useState('kg');
   const [valorPeso,  setValorPeso]  = useState('');
   const [erro,       setErro]       = useState('');
@@ -3713,6 +3731,10 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
   function confirmar(e) {
     e?.preventDefault();
     if (pesoKg <= 0) { setErro('Informe um peso válido maior que zero.'); return; }
+    if (pesoKg - maxKg > 0.0005) {
+      setErro(maxKg > 0 ? `Só há ${fmtPeso(maxKg)} disponíveis em estoque (já descontado o que está no carrinho).` : 'Sem estoque disponível deste produto.');
+      return;
+    }
     onConfirmar(pesoKg);
   }
 
@@ -3728,6 +3750,9 @@ function ModalPesoManual({ produto, onConfirmar, onCancelar }) {
         <div className="pdv-peso-preco-ref">
           {fmt(produto.preco_venda)} / kg
         </div>
+        {Number.isFinite(maxKg) && (
+          <div className="pdv-peso-preco-ref" style={{ opacity: .75 }}>Disponível: {fmtPeso(maxKg)}</div>
+        )}
 
         {/* Toggle kg / g */}
         <div className="pdv-peso-unidade-toggle">
