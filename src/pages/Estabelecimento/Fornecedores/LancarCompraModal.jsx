@@ -202,7 +202,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
         {erro && <div className="cli-modal-erro">⚠️ {erro}</div>}
 
         {/* Fornecedor */}
-        <div className="cli-form-group" style={{ position: 'relative' }}>
+        <div className="cli-form-group" style={{ position: 'relative', zIndex: 30 }}>
           <label className="cli-form-label">Fornecedor *</label>
           {fornecedorId ? (
             <div className="forn-selecionado">
@@ -259,7 +259,7 @@ export default function LancarCompraModal({ estabelecimentoId, fornecedorPresele
         </div>
 
         {/* Produtos */}
-        <div className="cli-form-group" style={{ marginTop: 14, position: 'relative' }}>
+        <div className="cli-form-group" style={{ marginTop: 14, position: 'relative', zIndex: 25 }}>
           <label className="cli-form-label">Adicionar produto <Dica texto="Só dá para lançar produto que já está cadastrado no Estoque. Se for produto novo, cadastre lá primeiro." /></label>
           <input maxLength={100}
             ref={inputProdutoRef}
