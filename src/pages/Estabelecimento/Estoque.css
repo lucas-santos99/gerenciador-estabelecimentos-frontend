@@ -3177,3 +3177,11 @@
   .prod-codigo-row .prod-input{flex:1 1 100%}
   .prod-codigo-row .prod-btn-gerar-codigo{flex:1 1 auto;padding:9px 12px;white-space:normal}
 }
+
+/* Celular: botões do cabeçalho nunca passam da tela; grade em 2 colunas com foto menor */
+@media (max-width: 600px) {
+  .estoque-header-btns { flex-wrap: wrap; min-width: 0; flex-shrink: 1; gap: 6px; }
+  .estoque-atalho { display: none; }
+  .estoque-grid.modo-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .prod-card.modo-grade .prod-card-imagem { height: 96px; }
+}

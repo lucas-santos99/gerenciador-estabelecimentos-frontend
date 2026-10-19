@@ -718,3 +718,11 @@ body.light .fin-historico-operador {
 }
 .rel-estoque-nome-bloco .fin-estoque-nome { margin-bottom: 2px; }
 .rel-estoque-nome-bloco .fin-estoque-cat  { margin-bottom: 0; }
+
+/* Celular: abas e zoom A-/A+ ficam na mesma linha, abas rolam de lado */
+@media (max-width: 600px) {
+  .rel-tabs { padding: 12px 12px 0; gap: 8px; flex-wrap: nowrap; }
+  .rel-tabs .fin-tabs-nav { flex-wrap: nowrap !important; overflow-x: auto; min-width: 0; flex: 1 1 auto; scrollbar-width: none; }
+  .rel-tabs .fin-tabs-nav::-webkit-scrollbar { display: none; }
+  .rel-tab { white-space: nowrap; padding: 8px 12px; }
+}

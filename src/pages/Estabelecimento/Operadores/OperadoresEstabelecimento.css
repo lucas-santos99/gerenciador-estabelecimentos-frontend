@@ -835,3 +835,7 @@
     font-size: 0.78rem;
   }
 }
+
+@media (max-width: 600px) {
+  .opest-card-email { white-space: normal; overflow: visible; text-overflow: clip; word-break: break-all; }
+}
