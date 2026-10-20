@@ -76,6 +76,10 @@ export default function NovoEstabelecimento() {
   const [sugestoes,        setSugestoes]         = useState([]);
   const [salvando,         setSalvando]          = useState(false);
   const [erro,             setErro]              = useState("");
+  // Leva a tela até o aviso de erro (o botão Salvar fica lá embaixo e o aviso lá em cima)
+  useEffect(() => {
+    if (erro) document.querySelector(".est-alert-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [erro]);
   const [logoFile,         setLogoFile]          = useState(null);
   const [logoPreview,      setLogoPreview]       = useState("");
 
