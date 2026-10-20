@@ -8,6 +8,7 @@ import './OperadoresEstabelecimento.css';
 import { erroSenhaFraca } from '../../../utils/senha';
 import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
+import { mascararTelefone, erroTelefone, erroEmail } from '../../../utils/contato';
 
 /* ── Módulos disponíveis com ações granulares ────────────── */
 // ⚠️ FONTE DA VERDADE: ao adicionar módulos ou ações no sistema,
@@ -392,7 +393,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
   const [form,     setForm]     = useState({
     nome:     operador?.nome     || '',
     email:    operador?.email    || '',
-    telefone: operador?.telefone || '',
+    telefone: mascararTelefone(operador?.telefone || ''),
     senha:    '',
   });
   const [salvando, setSalvando] = useState(false);
@@ -410,12 +411,15 @@ function ModalOperador({ operador, onClose, onSalvo }) {
   }, []);
 
   function atualizar(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: name === 'telefone' ? mascararTelefone(value) : value }));
   }
 
   async function salvar(e) {
     e.preventDefault();
     setErro('');
+    const erroCont = erroEmail(form.email, 'E-mail', true) || erroTelefone(form.telefone, 'Telefone');
+    if (erroCont) { setErro(erroCont); return; }
     if (!isEdit) {
       const erroSenha = erroSenhaFraca(form.senha);
       if (erroSenha) { setErro(erroSenha); return; }
@@ -480,7 +484,7 @@ function ModalOperador({ operador, onClose, onSalvo }) {
           </div>
           <div className="opest-form-group">
             <label className="opest-form-label">Telefone</label>
-            <input maxLength={20} className="opest-form-input" name="telefone"
+            <input maxLength={16} inputMode="tel" className="opest-form-input" name="telefone"
               placeholder="(00) 00000-0000" value={form.telefone}
               onChange={atualizar} disabled={salvando} />
           </div>

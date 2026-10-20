@@ -7,6 +7,7 @@ import { apiFetch } from "../../../utils/api";
 import Dica from '../../../components/Notificacoes/Dica';
 import { erroSenhaFraca } from '../../../utils/senha';
 import { avisar } from '../../../components/Dialogo/dialogo';
+import { mascararTelefone, erroTelefone, erroEmail } from "../../../utils/contato";
 
 export default function NovoOperador() {
   const navigate  = useNavigate();
@@ -39,12 +40,15 @@ export default function NovoOperador() {
   useEffect(() => { carregarEstabelecimentos(); }, []);
 
   function atualizar(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: name === "telefone" ? mascararTelefone(value) : value }));
   }
 
   async function salvar(e) {
     e.preventDefault();
     setErro("");
+    const erroCont = erroEmail(form.email, "E-mail", true) || erroTelefone(form.telefone, "Telefone");
+    if (erroCont) { setErro(erroCont); return; }
     const erroSenha = erroSenhaFraca(form.senha);
     if (erroSenha) { setErro(erroSenha); return; }
     setSalvando(true);
@@ -136,7 +140,7 @@ export default function NovoOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">Telefone</label>
-                <input maxLength={20}
+                <input maxLength={16} inputMode="tel"
                   className="op-input"
                   name="telefone"
                   placeholder="(53) 99999-9999"

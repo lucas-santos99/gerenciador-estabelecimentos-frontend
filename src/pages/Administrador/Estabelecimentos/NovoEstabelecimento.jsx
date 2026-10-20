@@ -9,6 +9,7 @@ import { supabase } from "../../../utils/supabaseClient";
 import { erroSenhaFraca } from '../../../utils/senha';
 import Dica from '../../../components/Notificacoes/Dica';
 import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
+import { mascararTelefone, erroTelefone, erroEmail } from "../../../utils/contato";
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -212,6 +213,13 @@ export default function NovoEstabelecimento() {
       tipoFinal = formatarTipo(tipoFinal);
     }
 
+    {
+      const e = erroTelefone(form.telefone, "Telefone principal")
+        || form.telefones_extras.map((t, i) => erroTelefone(t, `Telefone adicional ${i + 1}`)).find(Boolean)
+        || erroEmail(form.email_contato, "E-mail de contato", true);
+      if (e) { setErro(e); return; }
+    }
+
     setSalvando(true);
     try {
       const resp = await apiFetch("/admin/estabelecimentos/criar", {
@@ -394,20 +402,20 @@ export default function NovoEstabelecimento() {
 
               <div className="est-form-group">
                 <label className="est-label">Telefone/celular principal</label>
-                <input maxLength={20}
+                <input maxLength={16} inputMode="tel"
                   className="est-input"
                   name="telefone"
                   placeholder="(53) 99999-9999"
                   value={form.telefone}
-                  onChange={atualizar}
+                  onChange={e => setForm(prev => ({ ...prev, telefone: mascararTelefone(e.target.value) }))}
                 />
                 {form.telefones_extras.map((tel, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input maxLength={20}
+                    <input maxLength={16} inputMode="tel"
                       className="est-input"
                       placeholder="(53) 99999-9999"
                       value={tel}
-                      onChange={e => atualizarTelefoneExtra(idx, e.target.value)}
+                      onChange={e => atualizarTelefoneExtra(idx, mascararTelefone(e.target.value))}
                     />
                     <button type="button" className="est-btn est-btn-ghost" onClick={() => removerTelefoneExtra(idx)}>✕</button>
                   </div>

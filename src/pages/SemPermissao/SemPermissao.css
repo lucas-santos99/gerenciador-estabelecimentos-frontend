@@ -1,0 +1,25 @@
+/* Página "Sem permissão" — cores próprias, claro e escuro. */
+.semperm-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: #eef2f7; color: #0f172a; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.semperm-card {
+  width: 100%; max-width: 420px; text-align: center; padding: 32px 24px;
+  background: #fff; border: 1px solid rgba(100,116,139,0.25); border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+}
+.semperm-icone { font-size: 2.6rem; line-height: 1; margin-bottom: 10px; }
+.semperm-titulo { margin: 0 0 8px; font-size: 1.25rem; font-weight: 800; }
+.semperm-texto { margin: 0 0 22px; font-size: 0.92rem; line-height: 1.5; color: #475569; }
+.semperm-acoes { display: flex; flex-direction: column; gap: 10px; }
+.semperm-btn {
+  border: none; border-radius: 12px; padding: 12px 16px; font: inherit; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg, #0f766e, #14b8a6); color: #fff;
+}
+.semperm-btn.sec { background: transparent; color: #0f766e; border: 1px solid rgba(15,118,110,0.4); }
+@media (prefers-color-scheme: dark) {
+  .semperm-root { background: #0f172a; color: #e2e8f0; }
+  .semperm-card { background: #111c30; border-color: rgba(148,163,184,0.2); box-shadow: none; }
+  .semperm-texto { color: #94a3b8; }
+  .semperm-btn.sec { color: #2dd4bf; border-color: rgba(45,212,191,0.4); }
+}

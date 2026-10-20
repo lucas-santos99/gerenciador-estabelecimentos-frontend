@@ -6,6 +6,7 @@ import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
 import './Fornecedores.css';
 import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
+import { erroTelefone, erroEmail } from '../../../utils/contato';
 
 const CONDICOES_PAGAMENTO = [
   { value: 'a_vista', label: 'À vista' },
@@ -127,6 +128,8 @@ export default function FornecedorModal({ fornecedor, onClose, onSalvo, fontScal
   async function salvar(e) {
     e.preventDefault();
     if (!form.nome.trim()) { setErro('O nome do fornecedor é obrigatório.'); return; }
+    const erroCont = erroTelefone(form.telefone, 'Telefone') || erroTelefone(form.whatsapp, 'WhatsApp') || erroEmail(form.email, 'E-mail');
+    if (erroCont) { setErro(erroCont); return; }
     if (condicaoSelect === 'personalizado' && !diasPersonalizado) {
       setErro('Informe o número de dias da condição personalizada.');
       return;

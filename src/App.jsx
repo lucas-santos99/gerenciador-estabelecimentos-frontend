@@ -25,6 +25,7 @@ import NotificacoesAdmin from "./pages/Administrador/Notificacoes/NotificacoesAd
 import WhatsAppAdmin from "./pages/Administrador/WhatsApp/WhatsAppAdmin";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 import Privacidade from "./pages/Privacidade/Privacidade";
+import SemPermissao from "./pages/SemPermissao/SemPermissao";
 
 // Painéis
 import PainelEstabelecimento from "./pages/Estabelecimento/PainelEstabelecimento";
@@ -266,7 +267,7 @@ function App() {
 
       {/* Auxiliares */}
       <Route path="/bloqueado"     element={<TelaBloqueioWrapper />} />
-      <Route path="/unauthorized"  element={<div style={{ padding: 20 }}>Sem permissão.</div>} />
+      <Route path="/unauthorized"  element={<SemPermissao />} />
       <Route path="*"              element={<div style={{ padding: 20 }}>Página não encontrada.</div>} />
 
     </Routes>

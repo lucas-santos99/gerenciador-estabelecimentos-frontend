@@ -6,6 +6,7 @@ import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import '../Clientes.css';
 import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
+import { mascararTelefone, erroTelefone } from '../../../utils/contato';
 
 
 const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -56,7 +57,7 @@ export default function ClienteModal({
   const isEdit = !!cliente;
 
   const [nome,           setNome]           = useState(cliente?.nome || '');
-  const [telefone,       setTelefone]       = useState(cliente?.telefone || '');
+  const [telefone,       setTelefone]       = useState(mascararTelefone(cliente?.telefone || ''));
   const [cpf,            setCpf]            = useState(formatarCpfCnpj(cliente?.cpf || ''));
   const [permiteFiado,   setPermiteFiado]   = useState(cliente?.permite_fiado !== false);
   const [semLimite,      setSemLimite]      = useState(
@@ -86,6 +87,8 @@ export default function ClienteModal({
   async function salvar(e) {
     e.preventDefault();
     if (!nome.trim()) { setErro('O nome do cliente é obrigatório.'); return; }
+    const erroTel = erroTelefone(telefone, 'Telefone');
+    if (erroTel) { setErro(erroTel); return; }
     setSalvando(true);
     setErro('');
 
@@ -179,12 +182,12 @@ export default function ClienteModal({
             </div>
             <div className="cli-form-group">
               <label className="cli-form-label">Telefone</label>
-              <input maxLength={20}
+              <input maxLength={16} inputMode="tel"
                 className="cli-form-input"
                 type="text"
                 placeholder="(00) 00000-0000"
                 value={telefone}
-                onChange={e => setTelefone(e.target.value)}
+                onChange={e => setTelefone(mascararTelefone(e.target.value))}
                 disabled={salvando}
               />
             </div>

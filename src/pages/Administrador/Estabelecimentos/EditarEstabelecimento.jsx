@@ -14,6 +14,7 @@ import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import HistoricoRenovacoes from '../../../components/HistoricoRenovacoes';
 import ValidarDocumento from '../../../components/ValidarDocumento/ValidarDocumento';
+import { mascararTelefone, erroTelefone, erroEmail } from "../../../utils/contato";
 
 // apiFetch sempre manda Content-Type: application/json, o que quebra
 // upload de arquivo (FormData). Pra upload usamos o token direto.
@@ -102,8 +103,8 @@ export default function EditarEstabelecimento() {
           nome_fantasia:     data.nome_fantasia     || "",
           dono_nome:         data.dono_nome         || "",
           cnpj:              docComMascara,
-          telefone:          data.telefone          || "",
-          telefones_extras:  Array.isArray(data.telefones_extras) ? data.telefones_extras : [],
+          telefone:          mascararTelefone(data.telefone || ""),
+          telefones_extras:  Array.isArray(data.telefones_extras) ? data.telefones_extras.map(mascararTelefone) : [],
           email_contato:     data.email_contato     || "",
           endereco_completo: data.endereco_completo || "",
           enderecos_extras:  Array.isArray(data.enderecos_extras) ? data.enderecos_extras : [],
@@ -313,6 +314,13 @@ export default function EditarEstabelecimento() {
     if (mensTxt !== "" && (Number.isNaN(mensNum) || mensNum < 0)) {
       setErro("Valor da mensalidade inválido.");
       return;
+    }
+
+    {
+      const e = erroTelefone(form.telefone, "Telefone principal")
+        || form.telefones_extras.map((t, i) => erroTelefone(t, `Telefone adicional ${i + 1}`)).find(Boolean)
+        || erroEmail(form.email_contato, "E-mail de contato");
+      if (e) { setErro(e); return; }
     }
 
     setSalvando(true);
@@ -730,14 +738,14 @@ export default function EditarEstabelecimento() {
             <div className="est-form-grid">
               <div className="est-form-group">
                 <label className="est-label">Telefone/celular principal</label>
-                <input maxLength={20} className="est-input" name="telefone" value={form.telefone} onChange={atualizar} />
+                <input maxLength={16} inputMode="tel" className="est-input" name="telefone" placeholder="(53) 99999-9999" value={form.telefone} onChange={e => setForm(prev => ({ ...prev, telefone: mascararTelefone(e.target.value) }))} />
                 {form.telefones_extras.map((tel, idx) => (
                   <div key={idx} style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <input maxLength={20}
+                    <input maxLength={16} inputMode="tel"
                       className="est-input"
                       placeholder="(53) 99999-9999"
                       value={tel}
-                      onChange={e => atualizarTelefoneExtra(idx, e.target.value)}
+                      onChange={e => atualizarTelefoneExtra(idx, mascararTelefone(e.target.value))}
                     />
                     <button type="button" className="est-btn est-btn-ghost" onClick={() => removerTelefoneExtra(idx)}>✕</button>
                   </div>

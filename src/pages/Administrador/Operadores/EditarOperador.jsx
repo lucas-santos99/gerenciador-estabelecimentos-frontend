@@ -8,6 +8,7 @@ import Dica from '../../../components/Notificacoes/Dica';
 import Rastro from '../../../components/Rastro/Rastro';
 import { avisar } from '../../../components/Dialogo/dialogo';
 import FotoOperador from '../../../components/FotoOperador/FotoOperador';
+import { mascararTelefone, erroTelefone, erroEmail } from "../../../utils/contato";
 
 export default function EditarOperador() {
   const { id }   = useParams();
@@ -31,7 +32,7 @@ export default function EditarOperador() {
         setForm({
           nome:     data.nome     || "",
           email:    data.email    || "",
-          telefone: data.telefone || "",
+          telefone: mascararTelefone(data.telefone || ""),
           status:   data.status   || "ativo",
         });
         setFotoUrl(data.foto_url || null);
@@ -44,12 +45,15 @@ export default function EditarOperador() {
   useEffect(() => { carregar(); }, [id]);
 
   function change(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: name === "telefone" ? mascararTelefone(value) : value }));
   }
 
   async function salvar(e) {
     e.preventDefault();
     setErro("");
+    const erroCont = erroEmail(form.email, "E-mail", true) || erroTelefone(form.telefone, "Telefone");
+    if (erroCont) { setErro(erroCont); return; }
     setSalvando(true);
     try {
       const resp = await apiFetch(`/admin/operadores/${id}`, {
@@ -133,7 +137,7 @@ export default function EditarOperador() {
               </div>
               <div className="op-form-group">
                 <label className="op-label">Telefone</label>
-                <input maxLength={20}
+                <input maxLength={16} inputMode="tel"
                   className="op-input"
                   name="telefone"
                   value={form.telefone}
