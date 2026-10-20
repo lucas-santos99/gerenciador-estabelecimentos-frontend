@@ -69,7 +69,7 @@ function TelaBloqueioWrapper() {
   return (
     <TelaBloqueio
       onLogout={handleLogout}
-      nomeFantasia={profile?.nome || ""}
+      nomeFantasia={profile?.role === "merchant" ? (profile?.nome || "") : ""}
       mercearia_id={profile?.mercearia_id || null}
     />
   );

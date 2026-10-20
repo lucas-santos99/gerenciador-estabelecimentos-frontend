@@ -360,7 +360,7 @@ export default function ConfiguracoesGlobais() {
               </div>
               <div className="sa-config-body">
                 <div className="sa-config-hint">
-                  Use <code>**texto**</code> para negrito — funciona só na Mensagem principal. Campo em branco usa o texto padrão do sistema.
+                  Use <code>**texto**</code> para negrito — funciona só na Mensagem principal. Use <code>{"{nome}"}</code> para colocar o nome da loja. Campo em branco usa o texto padrão do sistema.
                 </div>
                 <div className="sa-config-field">
                   <span className="sa-config-item-label">Título</span>

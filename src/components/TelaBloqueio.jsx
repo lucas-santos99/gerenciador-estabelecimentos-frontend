@@ -55,6 +55,8 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   // (desativada pelo administrador) ou 'excluida' (estabelecimento desativado)
   // O painel já manda o status ao redirecionar pra cá (evita piscar o texto
   // de "licença vencida" numa loja inativa); depois é conferido na API.
+  // Nome da LOJA vindo da API (o profile de operador traz o nome da pessoa, não o da loja)
+  const [nomeLoja, setNomeLoja] = useState("");
   const [statusLoja,  setStatusLoja]  = useState(() => location.state?.status || null);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
             const d = await resp.json();
             if (d.data_vencimento) setVencimento(d.data_vencimento);
             if (d.status_assinatura) setStatusLoja(d.status_assinatura);
+            if (d.nome_fantasia) setNomeLoja(d.nome_fantasia);
           } else if (resp.status === 403) {
             const j = await resp.json().catch(() => ({}));
             if (j?.codigo === "LOJA_EXCLUIDA") setStatusLoja("excluida");
@@ -270,13 +273,14 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const semRenovacao = lojaInativa || lojaExcluida;
 
   // {nome} nos textos do SuperAdmin vira o nome fantasia da loja
-  const comNome = (t) => String(t ?? "").replace(/\{nome\}/gi, nomeFantasia || "seu estabelecimento");
+  const nomeExibido = nomeLoja || nomeFantasia;
+  const comNome = (t) => String(t ?? "").replace(/\{nome\}/gi, nomeExibido || "seu estabelecimento");
   const titulo   = lojaExcluida ? "Estabelecimento desativado"
                  : lojaInativa  ? "Acesso desativado"
                  : comNome(config?.titulo || "Acesso Bloqueado");
-  const mensagem = lojaExcluida ? `**${nomeFantasia || "Este estabelecimento"}** foi desativado.`
-                 : lojaInativa  ? `Acesso de **${nomeFantasia || "seu estabelecimento"}** desativado pelo administrador do sistema.`
-                 : comNome(config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`);
+  const mensagem = lojaExcluida ? `**${nomeExibido || "Este estabelecimento"}** foi desativado.`
+                 : lojaInativa  ? `Acesso de **${nomeExibido || "seu estabelecimento"}** desativado pelo administrador do sistema.`
+                 : comNome(config?.mensagem || `A assinatura de **${nomeExibido || "seu estabelecimento"}** expirou ou não foi paga.`);
   const info     = semRenovacao ? "Fale com o suporte."
                  : comNome(config?.info || "Renove sua licença para continuar usando o sistema.");
   const promo    = !semRenovacao && promoValida(config) ? comNome(config.promo_texto) : null;
