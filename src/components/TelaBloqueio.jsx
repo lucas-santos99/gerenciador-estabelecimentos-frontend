@@ -269,15 +269,17 @@ export default function TelaBloqueio({ onLogout, nomeFantasia, mercearia_id }) {
   const lojaExcluida = statusLoja === "excluida";
   const semRenovacao = lojaInativa || lojaExcluida;
 
+  // {nome} nos textos do SuperAdmin vira o nome fantasia da loja
+  const comNome = (t) => String(t ?? "").replace(/\{nome\}/gi, nomeFantasia || "seu estabelecimento");
   const titulo   = lojaExcluida ? "Estabelecimento desativado"
                  : lojaInativa  ? "Acesso desativado"
-                 : (config?.titulo || "Acesso Bloqueado");
+                 : comNome(config?.titulo || "Acesso Bloqueado");
   const mensagem = lojaExcluida ? `**${nomeFantasia || "Este estabelecimento"}** foi desativado.`
                  : lojaInativa  ? `Acesso de **${nomeFantasia || "seu estabelecimento"}** desativado pelo administrador do sistema.`
-                 : (config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`);
+                 : comNome(config?.mensagem || `A assinatura de **${nomeFantasia || "seu estabelecimento"}** expirou ou não foi paga.`);
   const info     = semRenovacao ? "Fale com o suporte."
-                 : (config?.info || "Renove sua licença para continuar usando o sistema.");
-  const promo    = !semRenovacao && promoValida(config) ? config.promo_texto : null;
+                 : comNome(config?.info || "Renove sua licença para continuar usando o sistema.");
+  const promo    = !semRenovacao && promoValida(config) ? comNome(config.promo_texto) : null;
   const venc     = semRenovacao ? null : formatarVencimento(vencimento);
 
   function renderTexto(texto) {
